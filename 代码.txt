@@ -1,0 +1,93 @@
+# 图像灰度化,带透明度、4种方法:
+def image_to_gray(image, method="weighted"):
+    rgba_image = image.convert("RGBA")
+    rgba_array = np.asarray(rgba_image, dtype=np.float32)
+
+    r = rgba_array[:, :, 0]
+    g = rgba_array[:, :, 1]
+    b = rgba_array[:, :, 2]
+    alpha = rgba_array[:, :, 3].astype(np.uint8)
+
+    if method == "weighted":
+        gray_array = 0.299 * r + 0.587 * g + 0.114 * b
+    elif method == "average":
+        gray_array = (r + g + b) / 3
+    elif method == "max":
+        gray_array = np.maximum(np.maximum(r, g), b)
+    elif method == "min":
+        gray_array = np.minimum(np.minimum(r, g), b)
+
+    gray_array = np.clip(gray_array, 0, 255).astype(np.uint8)
+    # 是单通道就可以，但为了保留透明度通道，只好把灰度值复制到 RGB 三个通道上了
+    gray_rgba = np.dstack([gray_array, gray_array, gray_array, alpha])
+    gray_image = Image.fromarray(gray_rgba, mode="RGBA")
+    return gray_array, gray_image
+
+
+# 以下是数字图像处理中讲到的其他类似功能：
+# 分离 RGB 通道
+def split_rgb_channel(image, channel):
+    rgba_array = image_to_rgba_array(image)
+    result = np.zeros_like(rgba_array)
+    channel_indexes = {"red": 0, "green": 1, "blue": 2}
+
+    channel_index = channel_indexes[channel]
+    result[:, :, channel_index] = rgba_array[:, :, channel_index]
+    result[:, :, 3] = rgba_array[:, :, 3]
+    return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+# 二值化
+def binary_image(image, threshold=128, method="weighted"):
+    rgba_array = image_to_rgba_array(image)
+    gray_array = rgb_to_gray_array(rgba_array, method)
+    binary_array = np.where(gray_array >= threshold, 255, 0).astype(np.uint8)
+    result = gray_array_to_rgba(binary_array, rgba_array[:, :, 3])
+    return binary_array, rgba_array_to_image(result)
+
+# 反色
+def invert_image(image):
+    rgba_array = image_to_rgba_array(image)
+    result = rgba_array.copy()
+    result[:, :, :3] = 255 - result[:, :, :3]
+    return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+# 翻转
+def flip_image(image, direction):
+    rgba_array = image_to_rgba_array(image)
+
+    if direction == "horizontal":
+        result = rgba_array[:, ::-1, :]
+    elif direction == "vertical":
+        result = rgba_array[::-1, :, :]
+    return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+# 逆时针旋转 90 度
+def rotate_left_90(image):
+    rgba_array = image_to_rgba_array(image)
+    result = np.rot90(rgba_array, k=1)
+    return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+# 直方图均衡化
+def equalize_gray_histogram(image, method="weighted"):
+    rgba_array = image_to_rgba_array(image)
+    gray_array = rgb_to_gray_array(rgba_array, method)
+    histogram = np.bincount(gray_array.ravel(), minlength=256)
+    cdf = histogram.cumsum()
+    nonzero_cdf = cdf[cdf > 0]
+
+    if nonzero_cdf.size == 0:
+        equalized = gray_array
+    else:
+        cdf_min = nonzero_cdf[0]
+        total_pixels = gray_array.size
+        denominator = total_pixels - cdf_min
+        if denominator == 0:
+            equalized = gray_array
+        else:
+            mapping = np.round((cdf - cdf_min) / denominator * 255)
+            mapping = np.clip(mapping, 0, 255).astype(np.uint8)
+            equalized = mapping[gray_array]
+
+    result = gray_array_to_rgba(equalized, rgba_array[:, :, 3])
+    result[:,:,:3]=(rgba_array[:,:,:3].astype(np.float32)*(equalized.astype(np.float32)/255)[:, :, np.newaxis]).astype(np.uint8)
+    return equalized, rgba_array_to_image(result)

@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计算机视觉实验平台</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='convolution.css') }}">
+</head>
+<body>
+    <main class="page-shell">
+        <header class="app-header">
+            <div>
+                <p class="eyebrow">Computer Vision Lab</p>
+                <h1>计算机视觉实验平台</h1>
+            </div>
+            <p class="subtitle">《计算机视觉》课程实验·徐延飞</p>
+        </header>
+        <section class="lesson-accordion" data-section="imageLesson">
+            <button class="lesson-accordion-header" type="button" data-target="imageLesson" aria-expanded="false">
+                <span>
+                    <strong>第一节：图像处理实验</strong>
+                    <small>上传图片，完成灰度化、通道分离、二值化、反转、翻转、旋转和直方图分析。</small>
+                </span>
+                <i class="accordion-icon" aria-hidden="true">+</i>
+            </button>
+
+        <section id="imageLesson" class="lesson-panel">
+        <section class="hero-card">
+            <div id="dropZone" class="drop-zone">
+                <input id="imageInput" type="file" accept="image/*">
+                <div class="upload-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img">
+                        <path d="M12 3l4.4 4.4-1.4 1.4-2-2V16h-2V6.8l-2 2-1.4-1.4L12 3z"></path>
+                        <path d="M5 15h2v3h10v-3h2v5H5v-5z"></path>
+                    </svg>
+                </div>
+                <h2>拖拽图片到这里</h2>
+                <p>支持 PNG、JPG、JPEG、BMP、GIF，最大 10MB</p>
+                <button id="chooseButton" class="ghost-button" type="button">选择本地图片</button>
+            </div>
+
+            <aside class="control-panel">
+                <div>
+                    <span class="section-label">Operation</span>
+                    <label for="operationSelect">图像处理功能</label>
+                    <select id="operationSelect">
+                        <option value="grayscale">灰度化</option>
+                        <option value="channel">RGB 通道分离</option>
+                        <option value="binary">图像二值化</option>
+                        <option value="invert">颜色反转</option>
+                        <option value="flip_horizontal">水平翻转</option>
+                        <option value="flip_vertical">垂直翻转</option>
+                        <option value="rotate_90">逆时针旋转 90°</option>
+                        <option value="equalize">灰度直方图均衡化</option>
+                    </select>
+                </div>
+
+                <div id="methodControl" class="option-control">
+                    <span class="section-label">Algorithm</span>
+                    <label for="methodSelect">灰度化算法</label>
+                    <select id="methodSelect">
+                        <option value="weighted">加权平均法 0.299R + 0.587G + 0.114B</option>
+                        <option value="average">平均值法 (R + G + B) / 3</option>
+                        <option value="max">最大值法 max(R, G, B)</option>
+                        <option value="min">最小值法 min(R, G, B)</option>
+                    </select>
+                </div>
+
+                <div id="channelControl" class="option-control is-hidden">
+                    <label for="channelSelect">RGB 通道</label>
+                    <select id="channelSelect">
+                        <option value="red">红色通道</option>
+                        <option value="green">绿色通道</option>
+                        <option value="blue">蓝色通道</option>
+                    </select>
+                </div>
+
+                <div id="thresholdControl" class="option-control is-hidden">
+                    <div class="range-header">
+                        <label for="thresholdInput">二值化阈值</label>
+                        <strong id="thresholdValue">128</strong>
+                    </div>
+                    <input id="thresholdInput" type="range" min="0" max="255" value="128">
+                </div>
+
+                <button id="grayButton" class="primary-button" type="button" disabled>
+                    <span class="button-glow"></span>
+                    <span id="grayButtonText">开始处理</span>
+                </button>
+
+                <p id="message" class="message">等待上传图像</p>
+            </aside>
+        </section>
+
+        <section class="compare-section">
+            <div class="section-heading">
+                <span class="section-label">Before / After</span>
+                <h2>拖动滑块，查看图像从彩色到灰度的过渡</h2>
+            </div>
+
+            <div class="compare-workspace">
+                <div id="compareSlider" class="compare-slider empty" style="--split: 50%;">
+                    <div class="empty-state">
+                        <strong>图像对比区</strong>
+                        <span>上传并处理后将在这里显示叠加对比效果</span>
+                    </div>
+                    <img id="beforeImage" class="compare-image before-image" alt="原图">
+                    <div id="afterLayer" class="after-layer">
+                        <img id="afterImage" class="compare-image after-image" alt="灰度图">
+                    </div>
+                    <div id="sliderHandle" class="slider-handle" role="slider" aria-label="图像对比滑块" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                        <span></span>
+                    </div>
+                    <span class="compare-badge compare-badge-left">Original</span>
+                    <span id="methodBadge" class="compare-badge compare-badge-right">Grayscale</span>
+                </div>
+
+                <article class="experiment-card pixel-card">
+                    <div>
+                        <span class="section-label">Pixel Demo</span>
+                        <h2>像素计算示例</h2>
+                    </div>
+                    <div class="pixel-readout">
+                        <span id="pixelPosition">坐标：-</span>
+                        <strong id="pixelRgb">R = -, G = -, B = -</strong>
+                        <code id="pixelFormula">将鼠标移入图片区域，查看单个像素的灰度化计算过程。</code>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="dashboard">
+            <article class="chart-card">
+                <div class="section-heading compact">
+                    <span class="section-label">Histogram</span>
+                    <h2>灰度直方图</h2>
+                </div>
+                <div id="histogramChart" class="histogram-chart"></div>
+            </article>
+
+            <aside class="meta-grid">
+                <div class="meta-card">
+                    <span>文件名</span>
+                    <strong id="infoName">-</strong>
+                </div>
+                <div class="meta-card">
+                    <span>分辨率</span>
+                    <strong id="infoResolution">-</strong>
+                </div>
+                <div class="meta-card">
+                    <span>文件大小</span>
+                    <strong id="infoSize">-</strong>
+                </div>
+                <div class="meta-card accent">
+                    <span>处理耗时</span>
+                    <strong id="infoTime">-</strong>
+                </div>
+            </aside>
+        </section>
+
+        <footer class="footer-actions">
+            <a id="downloadButton" class="download-button disabled" href="#" download="gray_result.png">下载灰度图</a>
+            <span id="infoFormat">格式：-</span>
+        </footer>
+
+        <section class="history-section experiment-card">
+            <div>
+                <span class="section-label">Records</span>
+                <h2>处理记录</h2>
+            </div>
+            <div id="historyList" class="history-list">
+                <p class="history-empty">暂无处理记录</p>
+            </div>
+        </section>
+        </section>
+
+        <section class="lesson-accordion" data-section="convolutionLesson">
+            <button class="lesson-accordion-header" type="button" data-target="convolutionLesson" aria-expanded="false">
+                <span>
+                    <strong>第二节：卷积可视化实验</strong>
+                    <small>逐步观察 padding、stride、dilation、多通道、多卷积核和特殊卷积的计算过程。</small>
+                </span>
+                <i class="accordion-icon" aria-hidden="true">+</i>
+            </button>
+
+        <section id="convolutionLesson" class="lesson-panel convolution-lesson">
+            <section class="conv-hero">
+                <div>
+                    <span class="section-label">Lesson 02</span>
+                    <h2>卷积计算过程可视化系统</h2>
+                    <p>逐步观察输入矩阵、卷积核、padding、stride、dilation、多通道和多卷积核之间的计算关系。</p>
+                </div>
+                <div class="conv-actions">
+                    <button id="convStepBtn" class="primary-button" type="button">单步计算</button>
+                    <button id="convPlayBtn" class="ghost-button" type="button">自动播放</button>
+                    <button id="convResetBtn" class="ghost-button" type="button">重置演示</button>
+                </div>
+            </section>
+
+            <section class="conv-layout">
+                <aside class="conv-panel conv-controls">
+                    <div>
+                        <span class="section-label">Parameters</span>
+                        <h3>参数面板</h3>
+                    </div>
+
+                    <label>输入矩阵大小
+                        <select id="convInputSize">
+                            <option value="5">5 × 5</option>
+                            <option value="7" selected>7 × 7</option>
+                            <option value="9">9 × 9</option>
+                            <option value="10">10 × 10</option>
+                        </select>
+                    </label>
+
+                    <label>卷积核大小
+                        <select id="convKernelSize">
+                            <option value="1">1 × 1</option>
+                            <option value="3" selected>3 × 3</option>
+                            <option value="5">5 × 5</option>
+                        </select>
+                    </label>
+
+                    <label>stride
+                        <select id="convStride">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                        </select>
+                    </label>
+
+                    <label>padding
+                        <select id="convPadding">
+                            <option value="0" selected>0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                        </select>
+                    </label>
+
+                    <label id="dilationControl">dilation
+                        <select id="convDilation">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </label>
+
+                    <label>输入通道数
+                        <select id="convChannels">
+                            <option value="1" selected>1</option>
+                            <option value="3">3</option>
+                        </select>
+                    </label>
+
+                    <label>卷积核数量
+                        <select id="convKernelCount">
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </label>
+
+                    <label>卷积类型
+                        <select id="convType">
+                            <option value="standard" selected>标准卷积</option>
+                            <option value="pointwise">1×1 卷积</option>
+                            <option value="dilated">空洞卷积</option>
+                            <option value="snake">蛇形卷积</option>
+                        </select>
+                    </label>
+
+                    <label id="snakeDirectionControl" class="is-hidden">蛇形方向
+                        <select id="convSnakeDirection">
+                            <option value="horizontal" selected>Horizontal DSConv</option>
+                            <option value="vertical">Vertical DSConv</option>
+                        </select>
+                    </label>
+
+                    <label>连线显示模式
+                        <select id="convLinkMode">
+                            <option value="dynamic" selected>单步动态连线</option>
+                            <option value="all">显示全部对应连线</option>
+                            <option value="none">不显示连线</option>
+                        </select>
+                    </label>
+
+                    <label class="conv-switch">
+                        <input id="allowNegativeKernel" type="checkbox">
+                        <span>允许负数卷积核</span>
+                    </label>
+
+                    <button id="regenInputBtn" class="download-button" type="button">重新生成输入矩阵</button>
+                    <button id="regenKernelBtn" class="download-button" type="button">重新生成卷积核</button>
+                </aside>
+
+                <section class="conv-stage">
+                    <article class="conv-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Input</span>
+                                <h3>输入矩阵 / 多通道输入</h3>
+                            </div>
+                            <strong id="convStepStatus">Step 1</strong>
+                        </div>
+                        <div id="inputMatrices" class="matrix-gallery"></div>
+                    </article>
+
+                    <article class="conv-panel conv-canvas-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Canvas</span>
+                                <h3>当前卷积计算画布</h3>
+                            </div>
+                        </div>
+                        <div id="calcChannelTabs" class="calc-channel-tabs"></div>
+                        <div id="calcCanvas" class="calc-canvas"></div>
+                    </article>
+
+                    <article class="conv-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Feature Maps</span>
+                                <h3>输出特征图</h3>
+                            </div>
+                            <strong id="convOutputShape">-</strong>
+                        </div>
+                        <div id="outputMaps" class="feature-map-gallery"></div>
+                    </article>
+
+                </section>
+
+                <aside class="conv-side">
+                    <article class="conv-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Kernels</span>
+                                <h3>卷积核可视化</h3>
+                            </div>
+                            <strong id="activeKernelLabel">Kernel 1</strong>
+                        </div>
+                        <div id="kernelGallery" class="kernel-gallery"></div>
+                    </article>
+
+                    <article class="conv-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Process</span>
+                                <h3>当前乘加过程</h3>
+                            </div>
+                        </div>
+                        <div id="calculationDetail" class="calculation-detail"></div>
+                    </article>
+
+                    <article class="conv-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Formula</span>
+                                <h3>输出尺寸计算</h3>
+                            </div>
+                        </div>
+                        <div id="outputFormula" class="formula-box"></div>
+                    </article>
+                </aside>
+            </section>
+
+            <section class="conv-results-row">
+                <article class="conv-panel conv-explain">
+                    <span class="section-label">Notes</span>
+                    <h3>卷积类型说明</h3>
+                    <div id="convExplanation"></div>
+                    <div id="snakePathBox" class="snake-path-box"></div>
+                </article>
+            </section>
+        </section>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='convolution.js') }}"></script>
+</body>
+</html>

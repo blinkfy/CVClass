@@ -1,0 +1,40 @@
+@startuml
+title 图3-2 前后端交互时序图（紧凑版）
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam sequence {
+    ArrowColor #2563EB
+    LifeLineBorderColor #94A3B8
+    LifeLineBackgroundColor #F8FAFC
+    ParticipantBorderColor #475569
+    ParticipantBackgroundColor #E2E8F0
+    ActorBorderColor #1D4ED8
+    ActorBackgroundColor #DBEAFE
+}
+skinparam ParticipantPadding 18
+skinparam SequenceMessageAlign center
+
+actor 用户
+participant "浏览器前端" as Frontend
+participant "Flask 后端" as Backend
+participant "图像处理模块" as Processor
+
+用户 -> Frontend : 上传图片并选择功能
+Frontend -> Backend : 发送处理请求
+
+Backend -> Backend : 检查文件合法性
+alt 请求非法
+    Backend --> Frontend : 返回错误信息
+    Frontend --> 用户 : 显示错误提示
+else 请求合法
+    Backend -> Processor : 读取图片并处理
+    Processor -> Processor : RGBA转换 + numpy处理
+    Processor -> Processor : 生结果图 + 统计直方图
+    Processor --> Backend : 返回处理结果
+    Backend --> Frontend : 返回 JSON 数据
+    Frontend --> 用户 : 显示结果图、直方图和下载按钮
+end
+
+@enduml
