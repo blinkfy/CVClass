@@ -3,7 +3,7 @@ body {
 }
 
 .page-shell {
-    width: min(1320px, calc(100% - 32px));
+    width: min(1480px, calc(100% - 20px));
     padding: 22px 0 34px;
 }
 
@@ -153,11 +153,9 @@ body {
 
 .conv-layout {
     display: grid;
-    grid-template-columns: 220px minmax(620px, 1fr) 340px;
+    grid-template-columns: 220px minmax(0, 1fr) minmax(220px, 0.38fr);
     grid-template-areas:
-        "controls input kernels"
-        "controls canvas process"
-        "controls output formula";
+        "controls main side";
     gap: 16px;
     align-items: start;
 }
@@ -170,11 +168,102 @@ body {
 
 .conv-controls {
     grid-area: controls;
+    align-self: start;
+    max-height: var(--conv-controls-max-height, none);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(37, 99, 235, 0.34) transparent;
+}
+
+.conv-controls::-webkit-scrollbar {
+    width: 8px;
+}
+
+.conv-controls::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.conv-controls::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.38), rgba(99, 102, 241, 0.3));
+    background-clip: padding-box;
+}
+
+.conv-controls::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.56), rgba(99, 102, 241, 0.46));
 }
 
 .conv-panel {
     min-width: 0;
     padding: 16px;
+}
+
+.conv-kernel-template {
+    display: grid;
+    gap: 6px;
+    margin: 10px 0 12px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.conv-kernel-template select {
+    min-height: 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 10px;
+    background: #ffffff;
+}
+
+.conv-canvas-controls {
+    display: grid;
+    grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) minmax(140px, 0.86fr) minmax(140px, 0.86fr);
+    gap: 10px;
+    margin: 8px 0 10px;
+    align-items: end;
+}
+
+.conv-canvas-controls label {
+    display: grid;
+    gap: 6px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.conv-canvas-controls select {
+    min-height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 10px;
+    background: #ffffff;
+}
+
+.conv-canvas-controls .conv-switch {
+    min-height: 36px;
+    padding: 0 10px;
+}
+
+.conv-canvas-controls .conv-switch span {
+    font-size: 12px;
+}
+
+.conv-canvas-controls .conv-switch input {
+    width: 15px;
+    height: 15px;
+}
+
+.conv-controls .conv-panel {
+    padding: 14px;
+}
+
+.conv-controls .conv-panel + .conv-panel {
+    margin-top: 0;
 }
 
 .conv-panel h3 {
@@ -217,35 +306,90 @@ body {
 }
 
 .conv-stage {
-    display: contents;
+    display: grid;
+    grid-area: main;
+    gap: 16px;
+    align-content: start;
+}
+
+/* Make the canvas panel fill the available grid row height and align its content to top */
+.conv-canvas-panel {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    align-self: start;
 }
 
 .conv-side {
-    display: contents;
+    display: grid;
+    grid-area: side;
+    gap: 12px;
+    align-content: start;
 }
 
-.conv-stage > .conv-panel:nth-child(1) {
-    grid-area: input;
+.conv-side .conv-panel {
+    align-self: start;
 }
 
-.conv-stage > .conv-panel:nth-child(2) {
-    grid-area: canvas;
+.convolution-lesson.is-single-channel .conv-layout {
+    grid-template-areas:
+        "controls main side";
+    grid-template-columns: 220px minmax(0, 1fr) minmax(220px, 0.38fr);
 }
 
-.conv-stage > .conv-panel:nth-child(3) {
-    grid-area: output;
+.conv-main-panel {
+    display: grid;
+    gap: 12px;
+    align-content: start;
 }
 
-.conv-side > .conv-panel:nth-child(1) {
-    grid-area: kernels;
+.conv-main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: start;
 }
 
-.conv-side > .conv-panel:nth-child(2) {
-    grid-area: process;
+.conv-subpanel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
 }
 
-.conv-side > .conv-panel:nth-child(3) {
-    grid-area: formula;
+.conv-main-grid > .conv-subpanel:nth-child(1) {
+    min-width: 0;
+}
+
+.conv-main-grid > .conv-subpanel:nth-child(2) {
+    width: 100%;
+    justify-self: stretch;
+}
+
+.convolution-lesson.is-single-channel .conv-main-grid {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+
+.convolution-lesson.is-single-channel .conv-main-grid > .conv-subpanel:nth-child(2) {
+    width: 100%;
+    justify-self: stretch;
+}
+
+.convolution-lesson.is-single-channel .feature-output-wrap {
+    width: 100%;
+}
+
+.convolution-lesson.is-single-channel .feature-output-wrap {
+    grid-template-columns: 1fr;
+    align-items: start;
+}
+
+.convolution-lesson.is-single-channel .feature-map-gallery {
+    width: 100%;
+}
+
+.convolution-lesson.is-single-channel .feature-card {
+    min-width: 0;
+    width: max-content;
 }
 
 .conv-section-title {
@@ -317,6 +461,8 @@ body {
     display: grid;
     gap: 3px;
     padding: 8px;
+    --matrix-cell-size: 34px;
+    --matrix-cell-font-size: 13px;
     border-radius: 14px;
     background: #eff6ff;
     box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.45);
@@ -335,13 +481,13 @@ body {
 .matrix-cell {
     position: relative;
     display: grid;
-    width: 34px;
-    height: 34px;
+    width: var(--matrix-cell-size, 34px);
+    height: var(--matrix-cell-size, 34px);
     place-items: center;
     border: 1px solid rgba(148, 163, 184, 0.42);
     border-radius: 8px;
     color: #0f172a;
-    font-size: 13px;
+    font-size: var(--matrix-cell-font-size, 13px);
     font-weight: 800;
     background: rgba(255, 255, 255, 0.92);
     text-shadow: 0 1px 8px rgba(255, 255, 255, 0.6);
@@ -438,6 +584,18 @@ body {
     color: #7c2d12 !important;
 }
 
+.matrix-cell.editable-cell {
+    cursor: text;
+    outline: none;
+}
+
+.matrix-cell.editable-cell:focus {
+    border-color: #2563eb;
+    background: #eff6ff !important;
+    color: #0f172a !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
 .path-index {
     position: absolute;
     top: -7px;
@@ -469,6 +627,12 @@ body {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     background: #f8fafc;
+}
+
+.formula-box code {
+    padding: 8px;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .partial-line {
@@ -538,8 +702,8 @@ body {
 .calc-flow-board {
     position: relative;
     display: grid;
-    min-width: 700px;
-    grid-template-columns: max-content 44px max-content 44px max-content 42px minmax(112px, 0.9fr) 38px minmax(112px, 0.9fr);
+    min-width: 620px;
+    grid-template-columns: max-content 28px max-content 28px max-content 30px minmax(96px, 0.8fr) 28px minmax(96px, 0.8fr);
     align-items: center;
     gap: 10px;
     padding: 12px;
@@ -574,6 +738,8 @@ body {
     display: grid;
     gap: 3px;
     padding: 7px;
+    --calc-cell-size: 31px;
+    --calc-cell-font-size: 12px;
     border-radius: 13px;
     background: #eef6ff;
     box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.42);
@@ -592,13 +758,13 @@ body {
 .calc-cell {
     position: relative;
     display: grid;
-    width: 31px;
-    height: 31px;
+    width: var(--calc-cell-size, 31px);
+    height: var(--calc-cell-size, 31px);
     place-items: center;
     border: 1px solid rgba(148, 163, 184, 0.44);
     border-radius: 8px;
     color: #0f172a;
-    font-size: 12px;
+    font-size: var(--calc-cell-font-size, 12px);
     font-weight: 900;
     background: #ffffff;
 }
@@ -663,14 +829,16 @@ body {
 }
 
 .calc-line {
-    stroke: rgba(100, 116, 139, 0.28);
-    stroke-width: 1.6;
+    stroke: rgba(100, 116, 139, 0.2);
+    stroke-width: 1.25;
     fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .calc-line.is-active {
     stroke: #2563eb;
-    stroke-width: 3;
+    stroke-width: 3.2;
     filter: drop-shadow(0 4px 7px rgba(37, 99, 235, 0.28));
 }
 
@@ -679,11 +847,355 @@ body {
     stroke-dasharray: 5 5;
 }
 
+.anim-stage {
+    position: relative;
+    min-width: 620px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 18px;
+    padding: 14px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.96)),
+        radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.08), transparent 42%);
+}
+
+.anim-stage-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.anim-stage-header {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: #334155;
+    font-weight: 900;
+}
+
+.anim-stage-header span {
+    color: #2563eb;
+}
+
+.anim-stage-body {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: max-content 24px max-content 28px max-content minmax(104px, 0.8fr) minmax(104px, 0.8fr);
+    gap: 9px;
+    align-items: center;
+    width: max-content;
+    min-width: 100%;
+    padding-right: 12px;
+}
+
+.anim-block {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+    transition: transform 0.36s ease, box-shadow 0.36s ease;
+}
+
+.anim-block.is-floating {
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12), inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+}
+
+.anim-block h4 {
+    margin: 0;
+    color: #334155;
+    font-size: 12px;
+}
+
+.anim-grid {
+    display: grid;
+    gap: 4px;
+    padding: 8px;
+    --anim-cell-size: 38px;
+    --anim-cell-font-size: 13px;
+    border-radius: 14px;
+    background: #eef6ff;
+    box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.42);
+}
+
+.anim-kernel-grid {
+    background: #fff7ed;
+    box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.42);
+}
+
+.anim-product-grid {
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.32);
+}
+
+.anim-cell {
+    display: grid;
+    width: var(--anim-cell-size, 38px);
+    height: var(--anim-cell-size, 38px);
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    border-radius: 10px;
+    color: #0f172a;
+    font-size: var(--anim-cell-font-size, 13px);
+    font-weight: 950;
+    background: #ffffff;
+    transition: transform 0.24s ease, background 0.24s ease, box-shadow 0.24s ease, color 0.24s ease;
+}
+
+.anim-stage.is-large-kernel {
+    --anim-cell-size: 33px;
+    --anim-cell-font-size: 12px;
+}
+
+.anim-stage.is-large-kernel .anim-stage-body {
+    gap: 7px;
+}
+
+.anim-stage.is-large-kernel .anim-block {
+    padding: 8px;
+}
+
+.anim-stage.is-large-kernel .anim-grid {
+    gap: 3px;
+    padding: 7px;
+}
+
+.anim-stage.is-large-kernel .anim-cell {
+    border-radius: 9px;
+}
+
+.anim-cell.is-muted {
+    color: transparent;
+    border-style: dashed;
+    background: #f8fafc;
+}
+
+.anim-cell.is-active {
+    color: #ffffff;
+    border-color: #1d4ed8;
+    background: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2), 0 12px 24px rgba(37, 99, 235, 0.25);
+    transform: scale(1.1);
+}
+
+.anim-stage.is-moving .anim-cell.is-approach-from-left {
+    animation: approachFromLeft 0.42s ease both;
+}
+
+.anim-stage.is-moving .anim-cell.is-approach-from-right {
+    animation: approachFromRight 0.42s ease both;
+}
+
+.anim-cell.is-filled {
+    animation: productPop 0.32s ease both;
+}
+
+.anim-cell.is-gathering {
+    animation: gatherPulse 0.56s ease both;
+}
+
+.anim-symbol {
+    color: #64748b;
+    font-size: 24px;
+    font-weight: 950;
+    text-align: center;
+}
+
+.anim-partials {
+    display: grid;
+    gap: 8px;
+}
+
+.anim-partial-pill,
+.anim-final {
+    display: grid;
+    gap: 5px;
+    min-height: 68px;
+    align-content: center;
+    border-radius: 14px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+}
+
+.anim-partial-pill {
+    animation: partialIn 0.32s ease both;
+}
+
+.anim-partial-pill.is-gathering {
+    animation: gatherPulse 0.5s ease both;
+}
+
+.anim-partial-pill span,
+.anim-final span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.anim-partial-pill strong,
+.anim-final strong {
+    color: #0f172a;
+    font-size: 18px;
+}
+
+.anim-final.is-ready {
+    color: #ffffff;
+    background: #2563eb;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.25);
+    animation: finalIn 0.42s ease both;
+}
+
+.anim-final.is-ready span,
+.anim-final.is-ready strong {
+    color: #ffffff;
+}
+
+.anim-guide-line {
+    stroke: #2563eb;
+    stroke-width: 2.6;
+    fill: none;
+    stroke-linecap: round;
+    filter: drop-shadow(0 4px 7px rgba(37, 99, 235, 0.24));
+}
+
+@keyframes productPop {
+    0% {
+        opacity: 0.1;
+        transform: scale(0.78);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes approachFromLeft {
+    0% {
+        transform: scale(1.02) translateX(0);
+    }
+    45% {
+        transform: scale(1.14) translateX(12px);
+    }
+    100% {
+        transform: scale(1.1) translateX(0);
+    }
+}
+
+@keyframes approachFromRight {
+    0% {
+        transform: scale(1.02) translateX(0);
+    }
+    45% {
+        transform: scale(1.14) translateX(-12px);
+    }
+    100% {
+        transform: scale(1.1) translateX(0);
+    }
+}
+
+@keyframes gatherPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.9) translateY(4px);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes partialIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes finalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .conv-results-row {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.46fr);
     gap: 14px;
     margin-top: 14px;
+}
+
+.feature-output-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.conv-image-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 10px 0 12px;
+}
+
+.conv-image-controls input {
+    max-width: 240px;
+}
+
+.conv-image-controls span {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.conv-image-preview {
+    display: grid;
+    min-height: 160px;
+    place-items: center;
+    border-radius: 16px;
+    background:
+        linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+    background-color: #f8fafc;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    background-size: 20px 20px;
+}
+
+.conv-image-preview img {
+    display: none;
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 12px;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.conv-image-preview img.is-visible {
+    display: block;
 }
 
 .snake-path-box {
@@ -694,6 +1206,8 @@ body {
     display: inline-grid;
     gap: 4px;
     padding: 8px;
+    --snake-cell-size: 36px;
+    --snake-cell-font-size: 13px;
     border-radius: 14px;
     background:
         linear-gradient(#d9ead3 1px, transparent 1px),
@@ -705,11 +1219,12 @@ body {
 
 .snake-cell {
     display: grid;
-    width: 36px;
-    height: 36px;
+    width: var(--snake-cell-size, 36px);
+    height: var(--snake-cell-size, 36px);
     place-items: center;
     border-radius: 6px;
     color: #7f1d1d;
+    font-size: var(--snake-cell-font-size, 13px);
     font-weight: 900;
     background: #a9c96f;
     box-shadow: inset 0 0 0 1px rgba(63, 98, 18, 0.32);
@@ -727,17 +1242,49 @@ body {
         grid-template-columns: 1fr;
         grid-template-areas:
             "controls"
-            "input"
+            "main"
             "canvas"
-            "kernels"
-            "output"
-            "process"
-            "formula";
+            "side";
     }
 
-    .conv-side,
-    .conv-stage {
-        display: contents;
+    .conv-stage,
+    .conv-side {
+        display: grid;
+    }
+
+    .conv-controls {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    #convStepStatus {
+        transform: translateX(-8px);
+    }
+
+    .convolution-lesson.is-single-channel .conv-layout {
+        grid-template-areas:
+            "controls"
+            "main"
+            "canvas"
+            "side";
+    }
+
+    .convolution-lesson.is-single-channel .conv-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .convolution-lesson.is-single-channel .conv-main-grid .matrix-gallery {
+        max-width: 100%;
+    }
+
+    .conv-canvas-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .feature-output-wrap,
+    .conv-results-row {
+        grid-template-columns: 1fr;
     }
 
     .conv-hero {
@@ -761,6 +1308,10 @@ body {
 
     .lesson-accordion-header {
         padding: 15px;
+    }
+
+    .conv-canvas-controls {
+        grid-template-columns: 1fr;
     }
 
     .lesson-accordion-header strong {

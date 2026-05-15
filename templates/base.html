@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}计算机视觉实验平台{% endblock %}</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="cv-shell sidebar-collapsed">
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉实验平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">实验首页</a>
+            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">第一节：图像灰度化实验</a>
+            <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">第二节：卷积可视化实验</a>
+            <a class="{{ 'active' if active_page == 'digit' else '' }}" href="{{ url_for('digit_recognition_page') }}">卷积的模型应用</a>
+            <span class="disabled">第三节：</span>
+            <span class="disabled">第四节：</span>
+            <span class="disabled">第五节：</span>
+            <span class="disabled">第六节：</span>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

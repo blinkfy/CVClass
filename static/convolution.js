@@ -13,16 +13,28 @@ const convEls = {
     channels: document.getElementById("convChannels"),
     kernelCount: document.getElementById("convKernelCount"),
     type: document.getElementById("convType"),
+    kernelTemplate: document.getElementById("kernelTemplateSelect"),
     linkMode: document.getElementById("convLinkMode"),
+    demoMode: document.getElementById("convDemoMode"),
+    demoModeControl: document.getElementById("demoModeControl"),
+    showGuideLines: document.getElementById("showGuideLines"),
+    guideLinesControl: document.getElementById("guideLinesControl"),
+    enableMoveAnimation: document.getElementById("enableMoveAnimation"),
+    moveAnimationControl: document.getElementById("moveAnimationControl"),
     allowNegativeKernel: document.getElementById("allowNegativeKernel"),
     regenInput: document.getElementById("regenInputBtn"),
     regenKernel: document.getElementById("regenKernelBtn"),
+    animStep: document.getElementById("animStepBtn"),
     step: document.getElementById("convStepBtn"),
     play: document.getElementById("convPlayBtn"),
     reset: document.getElementById("convResetBtn"),
     inputMatrices: document.getElementById("inputMatrices"),
     kernelGallery: document.getElementById("kernelGallery"),
     outputMaps: document.getElementById("outputMaps"),
+    convImageInput: document.getElementById("convImageInput"),
+    applyImageConv: document.getElementById("applyImageConvBtn"),
+    imageConvMessage: document.getElementById("imageConvMessage"),
+    convImageResult: document.getElementById("convImageResult"),
     calcChannelTabs: document.getElementById("calcChannelTabs"),
     calcCanvas: document.getElementById("calcCanvas"),
     outputFormula: document.getElementById("outputFormula"),
@@ -31,7 +43,9 @@ const convEls = {
     activeKernelLabel: document.getElementById("activeKernelLabel"),
     outputShape: document.getElementById("convOutputShape"),
     explanation: document.getElementById("convExplanation"),
-    snakePathBox: document.getElementById("snakePathBox")
+    snakePathBox: document.getElementById("snakePathBox"),
+    controlsPanel: document.querySelector(".conv-controls"),
+    sidePanel: document.querySelector(".conv-side")
 };
 
 const convState = {
@@ -39,7 +53,10 @@ const convState = {
     kernels: [],
     outputs: [],
     currentStep: 0,
+    animationTermStep: 0,
     activeCanvasChannel: 0,
+    stageTimers: [],
+    renderToken: 0,
     timer: null
 };
 
@@ -48,6 +65,47 @@ const convTypeNames = {
     pointwise: "1×1 卷积",
     dilated: "空洞卷积",
     snake: "蛇形卷积"
+};
+
+const kernelTemplates = {
+    identity: {
+        size: 3,
+        matrix: [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
+    },
+    box_blur: {
+        size: 3,
+        matrix: [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+    },
+    sharpen: {
+        size: 3,
+        matrix: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]]
+    },
+    edge: {
+        size: 3,
+        matrix: [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]
+    },
+    sobel_x: {
+        size: 3,
+        matrix: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
+    },
+    sobel_y: {
+        size: 3,
+        matrix: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
+    },
+    emboss: {
+        size: 3,
+        matrix: [[-2, -1, 0], [-1, 1, 1], [0, 1, 2]]
+    },
+    gaussian_5: {
+        size: 5,
+        matrix: [
+            [1, 4, 6, 4, 1],
+            [4, 16, 24, 16, 4],
+            [6, 24, 36, 24, 6],
+            [4, 16, 24, 16, 4],
+            [1, 4, 6, 4, 1]
+        ]
+    }
 };
 
 function randomInt(min, max) {
@@ -224,7 +282,7 @@ function ensureStateShape(regenInput = false, regenKernel = false) {
     const p = getParams();
     if (regenInput || convState.inputs.length !== p.channels || convState.inputs[0]?.length !== p.inputSize) {
         convState.inputs = Array.from({ length: p.channels }, () =>
-            generateMatrix(p.inputSize, p.inputSize, 0, 255)
+            generateMatrix(p.inputSize, p.inputSize, 0, 249)
         );
     }
 
@@ -298,7 +356,7 @@ function getCellColor(value, options = {}) {
         const range = Math.max(1, max - min);
         const normalized = clamp((numberValue - min) / range, 0, 1);
 
-        const level = Math.round(246 - normalized * 166);
+        const level = Math.round(80 + normalized * 166);
         return {
             background: `rgb(${level}, ${level}, ${level})`,
             color: level < 136 ? "#ffffff" : "#0f172a"
@@ -308,11 +366,88 @@ function getCellColor(value, options = {}) {
     return null;
 }
 
+function measureGridCellSize(container, cols, options = {}) {
+    const {
+        minSize = 22,
+        maxSize = 34,
+        gap = 3,
+        padding = 8,
+        fontRatio = 0.38,
+        minFont = 10,
+        maxFont = 13,
+        digits = 2
+    } = options;
+    const hostCandidates = [
+        options.fitScope,
+        container?.closest?.(".calc-flow-board"),
+        container?.closest?.(".anim-stage"),
+        container?.closest?.(".matrix-gallery"),
+        container?.closest?.(".feature-map-gallery"),
+        container?.closest?.(".kernel-gallery"),
+        container?.closest?.(".conv-subpanel"),
+        container?.closest?.(".calc-block"),
+        container?.closest?.(".anim-block"),
+        container?.parentElement,
+        container
+    ].filter(Boolean);
+
+    let host = 0;
+    for (const el of hostCandidates) {
+        const rect = el.getBoundingClientRect?.();
+        const width = rect?.width || el.clientWidth || 0;
+        if (width > host) host = width;
+    }
+
+    if (host <= 0) {
+        return {
+            size: minSize,
+            font: clamp(Math.round(minSize * fontRatio), minFont, maxFont),
+            gap
+        };
+    }
+
+    const available = Math.max(0, host - padding * 2);
+    const raw = cols > 0 ? Math.floor((available - gap * (cols - 1)) / cols) : minSize;
+    const size = clamp(Number.isFinite(raw) ? raw : minSize, minSize, maxSize);
+    const digitFactor = digits >= 4 ? 0.32 : digits >= 3 ? 0.35 : fontRatio;
+    const font = clamp(Math.round(size * digitFactor), minFont, maxFont);
+    return { size, font, gap };
+}
+
+function estimateMaxDigits(matrix) {
+    let maxDigits = 1;
+    matrix.forEach((row) => {
+        row.forEach((value) => {
+            const len = String(value ?? "").length;
+            if (len > maxDigits) maxDigits = len;
+        });
+    });
+    return maxDigits;
+}
+
 function renderMatrix(container, matrix, options = {}) {
     container.innerHTML = "";
     const grid = document.createElement("div");
     grid.className = `matrix-grid ${options.gridClass || ""}`;
-    grid.style.gridTemplateColumns = `repeat(${matrix[0]?.length || 0}, 34px)`;
+    const cols = matrix[0]?.length || 0;
+    const fit = options.autoFit === false
+        ? {
+            size: options.cellSize || 34,
+            font: options.fontSize || 13,
+            gap: options.gap || 3
+        }
+        : measureGridCellSize(container, cols, {
+            minSize: options.minCellSize || 22,
+            maxSize: options.maxCellSize || 34,
+            gap: options.gap || 3,
+            padding: options.padding || 8,
+            digits: options.maxDigits || estimateMaxDigits(matrix),
+            fitScope: options.fitScope
+        });
+    grid.style.setProperty("--matrix-cell-size", `${fit.size}px`);
+    grid.style.setProperty("--matrix-cell-font-size", `${fit.font}px`);
+    grid.style.gap = `${fit.gap}px`;
+    grid.style.gridTemplateColumns = `repeat(${cols}, ${fit.size}px)`;
     const highlight = new Set((options.highlight || []).map((p) => keyOf(p.r, p.c)));
     const sampled = new Set((options.sampled || []).map((p) => keyOf(p.r, p.c)));
     const skipped = new Set((options.skipped || []).map((p) => keyOf(p.r, p.c)));
@@ -326,6 +461,27 @@ function renderMatrix(container, matrix, options = {}) {
                 cell.classList.add(`channel-${options.channelIndex}`);
             }
             cell.textContent = value;
+            const isSkipped = skipped.has(keyOf(r, c));
+            const canEdit = options.editable && !isSkipped;
+            if (canEdit) {
+                cell.contentEditable = "true";
+                cell.spellcheck = false;
+                cell.classList.add("editable-cell");
+                cell.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        cell.blur();
+                    }
+                });
+                cell.addEventListener("blur", () => {
+                    const parsed = Number(cell.textContent.trim());
+                    if (!Number.isFinite(parsed)) {
+                        cell.textContent = value;
+                        return;
+                    }
+                    options.onEdit?.(r, c, parsed);
+                });
+            }
             const isPadding = options.isPadding?.(r, c);
             const cellColor = getCellColor(value, { ...options, isPadding });
             if (cellColor) {
@@ -335,7 +491,7 @@ function renderMatrix(container, matrix, options = {}) {
             if (isPadding) cell.classList.add("padding-cell");
             if (highlight.has(keyOf(r, c))) cell.classList.add("window-cell");
             if (sampled.has(keyOf(r, c))) cell.classList.add("sample-cell");
-            if (skipped.has(keyOf(r, c))) cell.classList.add("skipped-cell");
+            if (isSkipped) cell.classList.add("skipped-cell");
             if (options.active?.r === r && options.active?.c === c) cell.classList.add("active-output");
             if (options.kernelActive?.r === r && options.kernelActive?.c === c) cell.classList.add("kernel-active");
             if (pathMap.has(keyOf(r, c))) {
@@ -374,7 +530,9 @@ function renderInputMatrices() {
         card.innerHTML = `<h4>Channel ${channelIndex + 1}</h4>`;
         const holder = document.createElement("div");
         card.appendChild(holder);
+        convEls.inputMatrices.appendChild(card);
         renderMatrix(holder, matrix, {
+            fitScope: convEls.inputMatrices,
             highlight: sampled,
             sampled,
             skipped: p.dilation > 1 || p.type === "snake" ? skipped : [],
@@ -387,7 +545,6 @@ function renderInputMatrices() {
                 r >= matrix.length - p.padding ||
                 c >= matrix[0].length - p.padding
         });
-        convEls.inputMatrices.appendChild(card);
     });
 }
 
@@ -412,6 +569,7 @@ function renderKernels() {
     convState.kernels.forEach((kernelChannels, kernelIndex) => {
         const wrapper = document.createElement("div");
         wrapper.className = "kernel-card";
+        convEls.kernelGallery.appendChild(wrapper);
         wrapper.innerHTML = `<h4>Kernel ${kernelIndex + 1}${kernelIndex === step.kernelIndex ? " · 当前" : ""}</h4>`;
 
         kernelChannels.forEach((kernel, channelIndex) => {
@@ -423,14 +581,28 @@ function renderKernels() {
             const gridHolder = document.createElement("div");
             holder.appendChild(gridHolder);
             renderMatrix(gridHolder, kernel, {
+                fitScope: convEls.kernelGallery,
                 gridClass: "kernel-grid",
                 pathLabels: labels,
                 skipped: snakeSkipped,
+                editable: true,
+                onEdit: (r, c, value) => {
+                    convState.kernels[kernelIndex][channelIndex][r][c] = value;
+                    convEls.kernelTemplate.value = "";
+                    convState.outputs = convWithMultipleKernels(
+                        convState.inputs,
+                        convState.kernels,
+                        p.stride,
+                        p.padding,
+                        p.dilation,
+                        p.type
+                    );
+                    renderAll();
+                },
                 kernelActive: kernelIndex === step.kernelIndex ? { r: 0, c: 0 } : null
             });
             wrapper.appendChild(holder);
         });
-        convEls.kernelGallery.appendChild(wrapper);
     });
 
     convEls.activeKernelLabel.textContent = `Kernel ${step.kernelIndex + 1}`;
@@ -449,7 +621,9 @@ function renderOutputs() {
         card.innerHTML = `<h4>Feature Map ${index + 1}</h4>`;
         const holder = document.createElement("div");
         card.appendChild(holder);
+        convEls.outputMaps.appendChild(card);
         renderMatrix(holder, output.length ? output : [[0]], {
+            fitScope: convEls.outputMaps,
             gridClass: "output-grid",
             colorMode: "output",
             outputMin,
@@ -458,13 +632,12 @@ function renderOutputs() {
             kernelCount: p.kernelCount,
             active: index === step.kernelIndex ? { r: step.outR, c: step.outC } : null
         });
-        convEls.outputMaps.appendChild(card);
     });
 }
 
 function getCurrentTermIndex(order) {
     if (!order.length) return 0;
-    return convState.currentStep % order.length;
+    return convState.animationTermStep % order.length;
 }
 
 function buildCalculationData(channelIndex) {
@@ -544,7 +717,26 @@ function renderCalcTabs(channelCount) {
 function renderCalcMiniGrid(matrix, options = {}) {
     const grid = document.createElement("div");
     grid.className = `calc-mini-grid ${options.className || ""}`;
-    grid.style.gridTemplateColumns = `repeat(${matrix[0]?.length || 0}, 31px)`;
+    const cols = matrix[0]?.length || 0;
+    const digits = matrix.reduce((max, row) => Math.max(max, ...row.map((item) => String(item?.value ?? "").length)), 1);
+    const fit = options.autoFit === false
+        ? {
+            size: options.cellSize || 31,
+            font: options.fontSize || 12,
+            gap: options.gap || 3
+        }
+        : measureGridCellSize(options.container, cols, {
+            minSize: options.minCellSize || 20,
+            maxSize: options.maxCellSize || 31,
+            gap: options.gap || 3,
+            padding: options.padding || 7,
+            digits,
+            fitScope: options.fitScope
+        });
+    grid.style.setProperty("--calc-cell-size", `${fit.size}px`);
+    grid.style.setProperty("--calc-cell-font-size", `${fit.font}px`);
+    grid.style.gap = `${fit.gap}px`;
+    grid.style.gridTemplateColumns = `repeat(${cols}, ${fit.size}px)`;
     matrix.forEach((row) => {
         row.forEach((item) => {
             const cell = document.createElement("div");
@@ -563,6 +755,17 @@ function renderCalcMiniGrid(matrix, options = {}) {
 }
 
 function renderCalculationCanvas() {
+    stopStageAnimation();
+    updateDemoControls();
+    const mode = convEls.linkMode?.value === "dynamic" ? (convEls.demoMode?.value || "static") : "static";
+    if (mode === "static") {
+        renderStaticCalculationCanvas();
+        return;
+    }
+    renderAnimatedCalculationStage(mode);
+}
+
+function renderStaticCalculationCanvas() {
     if (!convEls.calcCanvas) return;
     const p = getParams();
     renderCalcTabs(p.channels);
@@ -605,19 +808,25 @@ function renderCalculationCanvas() {
         </div>
     `;
 
+    convEls.calcCanvas.innerHTML = "";
+    convEls.calcCanvas.appendChild(board);
+
     const blocks = board.querySelectorAll(".calc-block");
     blocks[0].appendChild(renderCalcMiniGrid(data.patch, {
+        fitScope: board,
         prefix: "patch",
         orderIndex,
         activeTerm: data.activeTerm
     }));
     blocks[1].appendChild(renderCalcMiniGrid(kernelMatrix, {
+        fitScope: board,
         prefix: "kernel",
         className: "calc-kernel-grid",
         orderIndex,
         activeTerm: data.activeTerm
     }));
     blocks[2].appendChild(renderCalcMiniGrid(data.product, {
+        fitScope: board,
         prefix: "product",
         className: "calc-product-grid",
         orderIndex,
@@ -628,9 +837,245 @@ function renderCalculationCanvas() {
         board.querySelector("[data-node='final'] span").textContent = `final: ${finalExpression}`;
     }
 
+    requestAnimationFrame(() => drawCalculationLines(board, data));
+}
+
+function stopStageAnimation() {
+    convState.renderToken += 1;
+    convState.stageTimers.forEach((timer) => clearTimeout(timer));
+    convState.stageTimers = [];
+}
+
+function scheduleStage(callback, delay, token) {
+    const timer = setTimeout(() => {
+        if (token === convState.renderToken) callback();
+    }, delay);
+    convState.stageTimers.push(timer);
+}
+
+function renderAnimatedCalculationStage(mode = "step") {
+    if (!convEls.calcCanvas) return;
+    const p = getParams();
+    if (mode === "step") {
+        renderCalcTabs(p.channels);
+    } else {
+        convEls.calcChannelTabs.innerHTML = "";
+    }
+    const step = getStepInfo();
+    if (step.outH === 0 || step.outW === 0) {
+        convEls.calcCanvas.innerHTML = "<p>当前参数下没有可展示的卷积窗口。</p>";
+        return;
+    }
+
+    const token = convState.renderToken;
+    const board = document.createElement("div");
+    board.className = "anim-stage";
+    board.classList.toggle("is-large-kernel", p.kernelSize >= 5);
+    board.innerHTML = `
+        <svg class="anim-stage-svg" aria-hidden="true"></svg>
+        <div class="anim-stage-header">
+            <span id="animStagePhase">高亮当前输入窗口</span>
+            <strong>Kernel ${step.kernelIndex + 1} · 输出位置 (${step.outR}, ${step.outC})</strong>
+        </div>
+        <div class="anim-stage-body">
+            <div class="anim-block anim-patch-block"><h4>Patch</h4><div data-stage="patch"></div></div>
+            <div class="anim-symbol">×</div>
+            <div class="anim-block anim-kernel-block"><h4>Kernel Slice</h4><div data-stage="kernel"></div></div>
+            <div class="anim-symbol">→</div>
+            <div class="anim-block anim-product-block"><h4>Product</h4><div data-stage="product"></div></div>
+            <div class="anim-partials" data-stage="partials"></div>
+            <div class="anim-final" data-stage="final">
+                <span>Final output</span>
+                <strong>等待汇聚</strong>
+            </div>
+        </div>
+    `;
+
     convEls.calcCanvas.innerHTML = "";
     convEls.calcCanvas.appendChild(board);
-    requestAnimationFrame(() => drawCalculationLines(board, data));
+
+    const channels = mode === "step" ? [convState.activeCanvasChannel] : Array.from({ length: p.channels }, (_, index) => index);
+    const channelDelay = mode === "auto" ? 520 : 520;
+    let cursor = 0;
+    const partials = [];
+
+    channels.forEach((channelIndex, channelOrder) => {
+        const data = buildCalculationData(channelIndex);
+        if (!data) return;
+        scheduleStage(() => renderAnimatedChannel(board, data, channelIndex), cursor, token);
+        cursor += 260;
+
+        const termIndexes = mode === "step" ? [data.activeTerm] : data.order.map((_, termIndex) => termIndex);
+        termIndexes.forEach((termIndex) => {
+            scheduleStage(() => revealAnimatedTerm(board, data, termIndex), cursor, token);
+            cursor += mode === "auto" ? channelDelay : 430;
+        });
+
+        if (mode === "auto") {
+            scheduleStage(() => {
+                partials[channelIndex] = data.partial;
+                showAnimatedPartial(board, channelIndex, data.partial);
+            }, cursor, token);
+            cursor += 560;
+        } else {
+            scheduleStage(() => {
+                board.querySelector("#animStagePhase").textContent = `分步动画：当前只演示第 ${data.activeTerm + 1} 个乘法项`;
+            }, cursor, token);
+        }
+
+        if (mode === "step" && channelOrder === 0) return;
+    });
+
+    if (mode === "auto") {
+        scheduleStage(() => {
+            const allPartials = convState.inputs.map((_, channelIndex) => buildCalculationData(channelIndex)?.partial || 0);
+            showAnimatedFinal(board, allPartials);
+        }, cursor + 120, token);
+    }
+}
+
+function matrixToStageItems(matrix, orderIndex) {
+    return matrix.map((row, kr) =>
+        row.map((value, kc) => ({
+            value,
+            sampled: orderIndex.has(keyOf(kr, kc)),
+            kr,
+            kc
+        }))
+    );
+}
+
+function renderAnimatedChannel(board, data, channelIndex) {
+    board.querySelector("#animStagePhase").textContent = `Channel ${channelIndex + 1}: 拆出 Patch 与 Kernel Slice`;
+    const orderIndex = new Map(data.order.map(([r, c], index) => [keyOf(r, c), index]));
+    const kernelMatrix = matrixToStageItems(data.kernel, orderIndex);
+    const emptyProduct = data.product.map((row) => row.map((item) => ({ ...item, value: "" })));
+    const patchHolder = board.querySelector("[data-stage='patch']");
+    const kernelHolder = board.querySelector("[data-stage='kernel']");
+    const productHolder = board.querySelector("[data-stage='product']");
+
+    patchHolder.innerHTML = "";
+    kernelHolder.innerHTML = "";
+    productHolder.innerHTML = "";
+    patchHolder.appendChild(renderAnimatedGrid(data.patch, {
+        fitScope: board,
+        prefix: "anim-patch",
+        orderIndex
+    }));
+    kernelHolder.appendChild(renderAnimatedGrid(kernelMatrix, {
+        fitScope: board,
+        prefix: "anim-kernel",
+        orderIndex,
+        className: "anim-kernel-grid"
+    }));
+    productHolder.appendChild(renderAnimatedGrid(emptyProduct, {
+        fitScope: board,
+        prefix: "anim-product",
+        orderIndex,
+        className: "anim-product-grid"
+    }));
+
+    board.querySelectorAll(".anim-block").forEach((block) => block.classList.add("is-floating"));
+    board.classList.toggle("is-moving", Boolean(convEls.enableMoveAnimation?.checked));
+}
+
+function renderAnimatedGrid(matrix, options = {}) {
+    const grid = document.createElement("div");
+    grid.className = `anim-grid ${options.className || ""}`;
+    const cols = matrix[0]?.length || 0;
+    const digits = matrix.reduce((max, row) => Math.max(max, ...row.map((item) => String(item?.value ?? "").length)), 1);
+    const fit = options.autoFit === false
+        ? {
+            size: options.cellSize || 38,
+            font: options.fontSize || 13,
+            gap: options.gap || 4
+        }
+        : measureGridCellSize(options.container, cols, {
+            minSize: options.minCellSize || 24,
+            maxSize: options.maxCellSize || 38,
+            gap: options.gap || 4,
+            padding: options.padding || 8,
+            digits,
+            fitScope: options.fitScope
+        });
+    grid.style.setProperty("--anim-cell-size", `${fit.size}px`);
+    grid.style.setProperty("--anim-cell-font-size", `${fit.font}px`);
+    grid.style.gap = `${fit.gap}px`;
+    grid.style.gridTemplateColumns = `repeat(${cols}, ${fit.size}px)`;
+    matrix.forEach((row) => {
+        row.forEach((item) => {
+            const index = options.orderIndex.get(keyOf(item.kr, item.kc));
+            const cell = document.createElement("div");
+            cell.className = "anim-cell";
+            cell.textContent = item.value;
+            if (!item.sampled) cell.classList.add("is-muted");
+            if (item.sampled) cell.dataset.node = `${options.prefix}-${index}`;
+            grid.appendChild(cell);
+        });
+    });
+    return grid;
+}
+
+function revealAnimatedTerm(board, data, termIndex) {
+    const [kr, kc] = data.order[termIndex];
+    const productValue = data.product[kr][kc].value;
+    board.querySelector("#animStagePhase").textContent = `逐元素乘法：第 ${termIndex + 1} 项`;
+    board.querySelectorAll(".anim-cell.is-active").forEach((cell) => cell.classList.remove("is-active"));
+    const patch = board.querySelector(`[data-node="anim-patch-${termIndex}"]`);
+    const kernel = board.querySelector(`[data-node="anim-kernel-${termIndex}"]`);
+    const product = board.querySelector(`[data-node="anim-product-${termIndex}"]`);
+    [patch, kernel, product].forEach((cell) => cell?.classList.add("is-active"));
+    patch?.classList.add("is-approach-from-left");
+    kernel?.classList.add("is-approach-from-right");
+    if (product) {
+        product.textContent = productValue;
+        product.classList.add("is-filled");
+    }
+    drawAnimatedGuide(board, patch, kernel, product);
+}
+
+function drawAnimatedGuide(board, patch, kernel, product) {
+    const svg = board.querySelector(".anim-stage-svg");
+    if (!svg || !convEls.showGuideLines?.checked) {
+        if (svg) svg.innerHTML = "";
+        return;
+    }
+    const boardRect = board.getBoundingClientRect();
+    const center = (node) => {
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        return { x: rect.left - boardRect.left + rect.width / 2, y: rect.top - boardRect.top + rect.height / 2 };
+    };
+    const draw = (a, b) => {
+        if (!a || !b) return "";
+        const mid = (a.x + b.x) / 2;
+        return `<path class="anim-guide-line" marker-end="url(#animArrow)" d="M ${a.x} ${a.y} C ${mid} ${a.y}, ${mid} ${b.y}, ${b.x} ${b.y}" />`;
+    };
+    svg.innerHTML = `
+        <defs><marker id="animArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" fill="#2563eb"></path></marker></defs>
+        ${draw(center(patch), center(product))}
+        ${draw(center(kernel), center(product))}
+    `;
+}
+
+function showAnimatedPartial(board, channelIndex, partial) {
+    board.querySelector("#animStagePhase").textContent = `Channel ${channelIndex + 1}: Product 汇聚为 partial sum`;
+    board.querySelectorAll(".anim-product-grid .anim-cell.is-filled").forEach((cell) => cell.classList.add("is-gathering"));
+    const partials = board.querySelector("[data-stage='partials']");
+    const item = document.createElement("div");
+    item.className = "anim-partial-pill";
+    item.dataset.partial = channelIndex;
+    item.innerHTML = `<span>partial ${channelIndex + 1}</span><strong>${partial}</strong>`;
+    partials.appendChild(item);
+}
+
+function showAnimatedFinal(board, partials) {
+    const final = partials.reduce((sum, value) => sum + value, 0);
+    board.querySelector("#animStagePhase").textContent = "所有 partial sum 汇聚为 final output";
+    board.querySelectorAll(".anim-partial-pill").forEach((item) => item.classList.add("is-gathering"));
+    const finalBox = board.querySelector("[data-stage='final']");
+    finalBox.classList.add("is-ready");
+    finalBox.innerHTML = `<span>${partials.map((value, index) => `p${index + 1}=${value}`).join(" + ")}</span><strong>${final}</strong>`;
 }
 
 function drawCalculationLines(board, data) {
@@ -651,10 +1096,14 @@ function drawCalculationLines(board, data) {
             y: rect.top - boardRect.top + rect.height / 2
         };
     };
-    const line = (from, to, active = false, extraClass = "") => {
+    const line = (from, to, active = false, extraClass = "", offset = 0) => {
         if (!from || !to) return "";
         const mid = (from.x + to.x) / 2;
-        return `<path class="calc-line ${active ? "is-active" : ""} ${extraClass}" marker-end="url(#calcArrow)" d="M ${from.x} ${from.y} C ${mid} ${from.y}, ${mid} ${to.y}, ${to.x} ${to.y}" />`;
+        const bend = mode === "all" ? offset : 0;
+        const c1y = from.y + bend;
+        const c2y = to.y - bend;
+        const marker = active ? `marker-end="url(#calcArrowActive)"` : `marker-end="url(#calcArrowMuted)"`;
+        return `<path class="calc-line ${active ? "is-active" : ""} ${extraClass}" ${marker} d="M ${from.x} ${from.y} C ${mid} ${c1y}, ${mid} ${c2y}, ${to.x} ${to.y}" />`;
     };
 
     const activeOnly = mode === "dynamic";
@@ -664,14 +1113,21 @@ function drawCalculationLines(board, data) {
             <marker id="calcArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                 <path d="M 0 0 L 8 4 L 0 8 z" fill="#2563eb"></path>
             </marker>
+            <marker id="calcArrowActive" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 z" fill="#2563eb"></path>
+            </marker>
+            <marker id="calcArrowMuted" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#94a3b8"></path>
+            </marker>
         </defs>
     `];
 
     indexes.forEach((index) => {
         const active = index === data.activeTerm;
-        parts.push(line(centerOf(`[data-node="patch-${index}"]`), centerOf(`[data-node="product-${index}"]`), active));
-        parts.push(line(centerOf(`[data-node="kernel-${index}"]`), centerOf(`[data-node="product-${index}"]`), active));
-        parts.push(line(centerOf(`[data-node="product-${index}"]`), centerOf(`[data-node="partial"]`), active));
+        const spread = mode === "all" ? (index - (indexes.length - 1) / 2) * 8 : 0;
+        parts.push(line(centerOf(`[data-node="patch-${index}"]`), centerOf(`[data-node="product-${index}"]`), active, "", spread));
+        parts.push(line(centerOf(`[data-node="kernel-${index}"]`), centerOf(`[data-node="product-${index}"]`), active, "", -spread));
+        parts.push(line(centerOf(`[data-node="product-${index}"]`), centerOf(`[data-node="partial"]`), active, "", spread * 0.9));
     });
 
     if (data.p.type === "snake" && mode !== "none") {
@@ -679,11 +1135,13 @@ function drawCalculationLines(board, data) {
             ? [Math.max(0, data.activeTerm - 1)].filter((index) => index < data.activeTerm)
             : data.order.map((_, index) => index).slice(0, -1);
         snakeIndexes.forEach((index) => {
+            const spread = mode === "all" ? (index - (snakeIndexes.length - 1) / 2) * 7 : 0;
             parts.push(line(
                 centerOf(`[data-node="product-${index}"]`),
                 centerOf(`[data-node="product-${index + 1}"]`),
                 index + 1 === data.activeTerm,
-                "is-path"
+                "is-path",
+                spread
             ));
         });
     }
@@ -698,9 +1156,9 @@ function renderFormula() {
     convEls.outputShape.textContent = `${size.outH} × ${size.outW} × ${p.kernelCount}`;
     convEls.outputFormula.innerHTML = `
         <div>effectiveK = dilation × (K - 1) + 1</div>
-        <code>effectiveK = ${p.dilation} × (${p.kernelSize} - 1) + 1 = ${size.effectiveK}
-outH = floor((${p.inputSize} + 2×${p.padding} - ${size.effectiveK}) / ${p.stride}) + 1 = ${size.outH}
-outW = floor((${p.inputSize} + 2×${p.padding} - ${size.effectiveK}) / ${p.stride}) + 1 = ${size.outW}</code>
+        <code>effectiveK=${p.dilation}×(${p.kernelSize}-1)+1=${size.effectiveK}
+outH=floor((${p.inputSize}+2×${p.padding}-${size.effectiveK})/${p.stride})+1=${size.outH}
+outW=floor((${p.inputSize}+2×${p.padding}-${size.effectiveK})/${p.stride})+1=${size.outW}</code>
         <div>stride=${p.stride} 时，窗口每次移动 ${p.stride} 格；padding=${p.padding} 会在输入外围补 0。</div>
     `;
 }
@@ -766,7 +1224,18 @@ function renderSnakePath(kernelSize) {
     const map = new Map(path.map(([r, c], index) => [keyOf(r, c), index + 1]));
     const grid = document.createElement("div");
     grid.className = "snake-grid";
-    grid.style.gridTemplateColumns = `repeat(${kernelSize}, 36px)`;
+    const fit = measureGridCellSize(convEls.snakePathBox, kernelSize, {
+        minSize: 24,
+        maxSize: 36,
+        gap: 4,
+        padding: 8,
+        digits: 1,
+        fitScope: convEls.snakePathBox
+    });
+    grid.style.setProperty("--snake-cell-size", `${fit.size}px`);
+    grid.style.setProperty("--snake-cell-font-size", `${fit.font}px`);
+    grid.style.gridTemplateColumns = `repeat(${kernelSize}, ${fit.size}px)`;
+    grid.style.gap = `${fit.gap}px`;
     for (let r = 0; r < kernelSize; r += 1) {
         for (let c = 0; c < kernelSize; c += 1) {
             const cell = document.createElement("div");
@@ -816,11 +1285,37 @@ function updateConvTypeControls() {
     }
 }
 
+function updateDemoControls() {
+    const isDynamic = convEls.linkMode?.value === "dynamic";
+    [
+        convEls.demoModeControl,
+        convEls.guideLinesControl,
+        convEls.moveAnimationControl
+    ].forEach((control) => control?.classList.toggle("is-hidden", !isDynamic));
+}
+
+function syncControlPanelHeight() {
+    const controls = convEls.controlsPanel;
+    const side = convEls.sidePanel;
+    if (!controls || !side) return;
+
+    const sideHeight = Math.round(side.getBoundingClientRect().height);
+    if (sideHeight > 0) {
+        controls.style.setProperty("--conv-controls-max-height", `${sideHeight}px`);
+    }
+}
+
 function renderAll() {
     updateConvTypeControls();
+    updateDemoControls();
     ensureStateShape();
     const step = getStepInfo();
     convState.currentStep = Math.min(convState.currentStep, step.total - 1);
+    const p = getParams();
+    document.getElementById("convolutionLesson")?.classList.toggle(
+        "is-single-channel",
+        p.channels === 1 && p.kernelCount === 1
+    );
     renderInputMatrices();
     renderKernels();
     renderOutputs();
@@ -829,10 +1324,21 @@ function renderAll() {
     renderCalculationDetail();
     renderExplanation();
     convEls.stepStatus.textContent = `Step ${convState.currentStep + 1} / ${step.total}`;
+    requestAnimationFrame(syncControlPanelHeight);
+    requestAnimationFrame(() => window.renderAdvancedConvolution?.());
 }
+
+window.getConvolutionLabSnapshot = function getConvolutionLabSnapshot() {
+    return {
+        params: getParams(),
+        inputs: convState.inputs.map((matrix) => matrix.map((row) => row.slice())),
+        kernels: convState.kernels.map((kernel) => kernel.map((channel) => channel.map((row) => row.slice())))
+    };
+};
 
 function resetDemo() {
     convState.currentStep = 0;
+    convState.animationTermStep = 0;
     stopAutoPlay();
     renderAll();
 }
@@ -872,6 +1378,68 @@ function regenerateInput() {
 function regenerateKernel() {
     ensureStateShape(false, true);
     resetDemo();
+}
+
+function applyKernelTemplate() {
+    const template = kernelTemplates[convEls.kernelTemplate?.value];
+    if (!template) return;
+
+    convEls.type.value = "standard";
+    convEls.kernelSize.value = String(template.size);
+    convEls.allowNegativeKernel.checked = template.matrix.flat().some((value) => value < 0);
+    updateConvTypeControls();
+    ensureStateShape(false, true);
+
+    const step = getStepInfo();
+    const targetKernel = Math.min(step.kernelIndex, convState.kernels.length - 1);
+    for (let ch = 0; ch < convState.kernels[targetKernel].length; ch += 1) {
+        convState.kernels[targetKernel][ch] = template.matrix.map((row) => row.slice());
+    }
+    resetDemo();
+}
+
+function nextAnimationTerm() {
+    const p = getParams();
+    const order = getKernelOrder(p.kernelSize, p.type);
+    convState.animationTermStep = (convState.animationTermStep + 1) % Math.max(1, order.length);
+    if (convEls.linkMode?.value === "dynamic" && convEls.demoMode?.value === "static") {
+        convEls.demoMode.value = "step";
+    }
+    renderCalculationCanvas();
+}
+
+function getActiveKernelSlice() {
+    const step = getStepInfo();
+    return convState.kernels[step.kernelIndex]?.[0] || [[1]];
+}
+
+async function applyKernelToImage() {
+    const file = convEls.convImageInput?.files?.[0];
+    if (!file) {
+        convEls.imageConvMessage.textContent = "请先选择一张图片";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("kernel", JSON.stringify(getActiveKernelSlice()));
+
+    convEls.imageConvMessage.textContent = "后端 NumPy 卷积处理中...";
+    try {
+        const response = await fetch("/convolve-image", {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "后端卷积失败");
+        }
+        convEls.convImageResult.src = data.image;
+        convEls.convImageResult.classList.add("is-visible");
+        convEls.imageConvMessage.textContent = `完成：${data.width}×${data.height}，耗时 ${data.elapsed_ms} ms`;
+    } catch (error) {
+        convEls.imageConvMessage.textContent = error.message;
+    }
 }
 
 function handleParamChange() {
@@ -925,18 +1493,43 @@ function initConvolutionLab() {
         convEls.snakeDirection
     ].forEach((control) => control.addEventListener("change", handleParamChange));
 
-    convEls.linkMode?.addEventListener("change", renderCalculationCanvas);
+    convEls.linkMode?.addEventListener("change", () => {
+        updateDemoControls();
+        renderCalculationCanvas();
+    });
+    convEls.kernelTemplate?.addEventListener("change", applyKernelTemplate);
 
     convEls.allowNegativeKernel?.addEventListener("change", () => {
         ensureStateShape(false, true);
         resetDemo();
     });
 
+    [
+        convEls.demoMode,
+        convEls.showGuideLines,
+        convEls.enableMoveAnimation
+    ].forEach((control) => control?.addEventListener("change", renderCalculationCanvas));
+
     convEls.regenInput.addEventListener("click", regenerateInput);
     convEls.regenKernel.addEventListener("click", regenerateKernel);
+    convEls.animStep?.addEventListener("click", nextAnimationTerm);
+    convEls.applyImageConv?.addEventListener("click", applyKernelToImage);
     convEls.step.addEventListener("click", nextStep);
     convEls.play.addEventListener("click", toggleAutoPlay);
     convEls.reset.addEventListener("click", resetDemo);
+
+    if (!window.__convResizeBound) {
+        window.__convResizeBound = true;
+        let resizeTimer = null;
+        window.addEventListener("resize", () => {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(() => {
+                if (document.getElementById("convolutionLesson")) {
+                    renderAll();
+                }
+            }, 120);
+        });
+    }
 }
 
 initConvolutionLab();

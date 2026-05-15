@@ -1,12 +1,13 @@
 from io import BytesIO
 import base64
+import json
 from time import perf_counter
 
 from flask import Flask, jsonify, render_template, request
 from PIL import Image, UnidentifiedImageError
 
-from image_utils import make_histogram, process_image
-
+from models.digit_infer_numpy import get_model_status, predict_digit
+from models.image_utils import convolve_gray_image, make_histogram, process_image
 
 app = Flask(__name__)
 
@@ -45,8 +46,29 @@ def format_file_size(size):
 
 
 @app.route("/")
-def index():
-    return render_template("index.html")
+def home():
+    return render_template("home.html", active_page="home")
+
+
+@app.route("/grayscale", methods=["GET"])
+def grayscale_page():
+    return render_template("grayscale.html", active_page="grayscale")
+
+
+@app.route("/convolution", methods=["GET"])
+def convolution_page():
+    return render_template("convolution.html", active_page="convolution")
+
+
+@app.route("/digit-recognition", methods=["GET"])
+def digit_recognition_page():
+    model_ready, model_message = get_model_status()
+    return render_template(
+        "digit_recognition.html",
+        active_page="digit",
+        model_ready=model_ready,
+        model_message=model_message,
+    )
 
 
 def parse_threshold(value):
@@ -139,6 +161,75 @@ def process():
 @app.route("/grayscale", methods=["POST"])
 def grayscale():
     return handle_process_request(default_operation="grayscale", allow_operation_param=False)
+
+
+@app.route("/convolve-image", methods=["POST"])
+def convolve_image():
+    if "image" not in request.files:
+        return jsonify({"error": "请先选择并上传图片文件"}), 400
+
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"error": "未选择文件"}), 400
+    if not allowed_file(file.filename):
+        return jsonify({"error": "文件类型不是图片或格式不受支持"}), 400
+
+    try:
+        kernel = json.loads(request.form.get("kernel", "[]"))
+        image_bytes = file.read()
+        image = Image.open(BytesIO(image_bytes))
+        image.load()
+
+        start_time = perf_counter()
+        feature_array, result_image = convolve_gray_image(image, kernel)
+        elapsed_ms = (perf_counter() - start_time) * 1000
+
+        return jsonify(
+            {
+                "image": image_to_base64(result_image),
+                "elapsed_ms": round(elapsed_ms, 2),
+                "width": result_image.width,
+                "height": result_image.height,
+                "min": int(feature_array.min()),
+                "max": int(feature_array.max()),
+            }
+        )
+    except (json.JSONDecodeError, ValueError) as error:
+        return jsonify({"error": f"卷积核参数非法：{error}"}), 400
+    except UnidentifiedImageError:
+        return jsonify({"error": "文件类型不是图片或图片已损坏"}), 400
+    except Exception:
+        app.logger.exception("image convolution failed")
+        return jsonify({"error": "后端卷积处理失败，请检查图片和卷积核"}), 500
+
+
+@app.route("/api/digit-recognize", methods=["POST"])
+def digit_recognize():
+    data = request.get_json(silent=True) or {}
+    image_data = data.get("image", "")
+
+    if not image_data:
+        return jsonify({"success": False, "message": "请先在画布中书写数字"}), 400
+
+    try:
+        result = predict_digit(image_data)
+        return jsonify(
+            {
+                "success": True,
+                "prediction": result["prediction"],
+                "confidence": round(result["confidence"], 4),
+                "probabilities": result["probabilities"],
+                "preprocessed_image": result["preprocessed_image"],
+                "message": "识别成功",
+            }
+        )
+    except ValueError as error:
+        return jsonify({"success": False, "message": str(error)}), 400
+    except RuntimeError as error:
+        return jsonify({"success": False, "message": str(error)}), 503
+    except Exception:
+        app.logger.exception("digit recognition failed")
+        return jsonify({"success": False, "message": "后端推理失败，请稍后重试"}), 500
 
 
 @app.errorhandler(413)

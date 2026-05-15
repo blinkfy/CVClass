@@ -1,51 +1,79 @@
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "fontSize": "22px",
-    "fontFamily": "Microsoft YaHei, SimHei, Arial"
+    "fontSize": "15px",
+    "fontFamily": "Arial, Microsoft YaHei, SimHei",
+    "primaryColor": "#EFF6FF",
+    "primaryBorderColor": "#2563EB",
+    "lineColor": "#64748B"
   }
 }}%%
 flowchart TB
-    A([图像灰度化系统功能设计])
+    A([卷积系统总览])
 
-    A --> B[基础要求]
-    A --> C[扩展功能]
+    subgraph P["Pages"]
+        direction TB
+        P1["/convolution"]
+        P2["/digit-recognition"]
+        P3["base / home"]
+    end
 
-    B --> B1[前端上传图片]
-    B1 --> B2[Flask 后端接收图片]
-    B2 --> B3[numpy 实现灰度化]
-    B3 --> B4[返回灰度图并展示]
+    subgraph C["Frontend"]
+        direction TB
+        C1["Basic conv lab"]
+        C2["Advanced study"]
+        C3["Digit canvas"]
+    end
 
-    C --> C0[扩展图像处理能力]
+    subgraph B["Flask"]
+        direction TB
+        B1["GET /convolution"]
+        B2["POST /convolve-image"]
+        B3["POST /api/digit-recognize"]
+        B4["Error handling"]
+    end
 
-    C0 --> C1[灰度相关]
-    C0 --> C2[通道与阈值]
-    C0 --> C3[图像变换]
-    C0 --> C4[系统展示]
+    subgraph M["NumPy"]
+        direction TB
+        M1["image_utils.py"]
+        M2["digit_infer_numpy.py"]
+        M3["numpy_mnist_cnn.npz"]
+        M4["Conv -> ReLU -> Pool -> FC -> Softmax"]
+    end
 
-    C1 --> C11[多种灰度化方法]
-    C1 --> C12[灰度直方图]
-    C1 --> C13[直方图均衡化]
+    subgraph D["Docs"]
+        direction TB
+        D1["README.md"]
+        D2["key_tech.txt"]
+        D3["pic.mmd / pic.puml"]
+    end
 
-    C2 --> C21[RGB 通道分离]
-    C2 --> C22[图像二值化]
+    A --> P1
+    P3 --> C1
+    C1 --> B2
+    B2 --> M1
+    P2 --> C3
+    C3 --> B3
+    B3 --> M2
+    M2 --> M3
+    M2 --> M4
+    C2 --> D1
+    D1 --> D2
+    D2 --> D3
 
-    C3 --> C31[颜色反转]
-    C3 --> C32[翻转 / 旋转]
-
-    C4 --> C41[结果图下载]
-    C4 --> C42[图片信息与处理耗时]
+    P1 -.-> P2
+    P2 -.-> P3
+    C1 -.-> C2
+    C2 -.-> C3
+    B1 -.-> B2
+    B2 -.-> B3
+    B3 -.-> B4
+    M1 -.-> M2
+    M2 -.-> M3
+    M3 -.-> M4
 
     classDef root fill:#1E3A8A,stroke:#1D4ED8,stroke-width:2px,color:#FFFFFF;
-    classDef basicTitle fill:#DBEAFE,stroke:#2563EB,stroke-width:2px,color:#111827;
-    classDef extraTitle fill:#FED7AA,stroke:#EA580C,stroke-width:2px,color:#111827;
-    classDef group fill:#F3F4F6,stroke:#6B7280,stroke-width:1.5px,color:#111827;
-    classDef basic fill:#EFF6FF,stroke:#60A5FA,stroke-width:1.5px,color:#111827;
-    classDef extra fill:#FFF7ED,stroke:#FDBA74,stroke-width:1.5px,color:#111827;
-
+    classDef group fill:#DBEAFE,stroke:#2563EB,stroke-width:2px,color:#0F172A;
+    classDef node fill:#F8FAFC,stroke:#64748B,stroke-width:1.5px,color:#0F172A;
     class A root;
-    class B basicTitle;
-    class C extraTitle;
-    class C0,C1,C2,C3,C4 group;
-    class B1,B2,B3,B4 basic;
-    class C11,C12,C13,C21,C22,C31,C32,C41,C42 extra;
+    class P1,P2,P3,C1,C2,C3,B1,B2,B3,B4,M1,M2,M3,M4,D1,D2,D3 node;

@@ -349,8 +349,8 @@ input[type="range"] {
     --image-height: 100%;
     --slider-left: 50%;
     position: relative;
-    aspect-ratio: 16 / 9;
     min-height: 280px;
+    height: 100%;
     overflow: hidden;
     cursor: ew-resize;
     background-color: #f8fafc;
@@ -372,10 +372,11 @@ input[type="range"] {
 
 .empty-state {
     position: absolute;
-    inset: 0;
+    inset: 0 0 auto 0;
     display: grid;
-    place-content: center;
+    place-content: start center;
     gap: 8px;
+    padding-top: 12px;
     color: var(--slate-500);
     text-align: center;
 }
@@ -712,40 +713,5 @@ input[type="range"] {
         grid-template-columns: 1fr;
     }
 }
-
 /* Accordion styles for lesson sections */
-.lesson-accordion {
-    margin-bottom: 12px;
-}
-.lesson-accordion-header {
-    /* make headers appear as light cards matching other panels */
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border: 1px solid rgba(226, 232, 240, 0.78);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
-    padding: 16px 18px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 16px;
-}
-.lesson-accordion-header .accordion-icon {
-    font-size: 20px;
-    width: 28px;
-    height: 28px;
-    display: inline-grid;
-    place-items: center;
-    background: rgba(15, 23, 42, 0.06);
-    border-radius: 50%;
-}
-.lesson-panel {
-    display: none;
-    margin-bottom: 18px;
-}
-.lesson-panel.is-active {
-    display: block;
-}
 

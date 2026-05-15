@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}卷积的模型应用{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/digit_recognition.css') }}">
+{% endblock %}
+{% block content %}
+<section class="digit-page">
+    <article class="digit-hero">
+        <div>
+            <span class="section-label">Model Application</span>
+            <h1>卷积的模型应用：在线手写数字识别</h1>
+            <p>使用已训练好的 NumPy CNN 参数文件，完成 canvas 手写输入、图像预处理、模型推理和概率分布展示。</p>
+        </div>
+        <div class="model-status {{ 'ready' if model_ready else 'missing' }}">
+            <span>模型状态</span>
+            <strong>{{ model_message }}</strong>
+        </div>
+    </article>
+
+    <section class="digit-layout">
+        <article class="digit-card draw-card">
+            <div class="digit-card-title">
+                <div>
+                    <span class="section-label">Canvas</span>
+                    <h2>手写数字画布</h2>
+                </div>
+                <span id="digitMessage" class="digit-message">在画布中写一个 0~9 的数字</span>
+            </div>
+            <div class="canvas-wrap">
+                <canvas id="digitCanvas" width="280" height="280" aria-label="手写数字画布"></canvas>
+            </div>
+            <div class="digit-actions">
+                <button id="recognizeBtn" class="primary-button" type="button">识别数字</button>
+                <button id="loadExampleBtn" class="ghost-button" type="button">加载示例数字</button>
+                <button id="clearDigitBtn" class="download-button" type="button">清空画布</button>
+                <label class="auto-recognize">
+                    <input id="autoRecognize" type="checkbox" checked>
+                    <span>自动识别</span>
+                </label>
+            </div>
+        </article>
+
+        <article class="digit-card result-card">
+            <span class="section-label">Prediction</span>
+            <h2>识别结果</h2>
+            <div class="prediction-box">
+                <span>预测数字</span>
+                <strong id="predictionDigit">-</strong>
+                <small id="confidenceText">置信度：-</small>
+            </div>
+            <div class="preprocess-preview">
+                <div>
+                    <h3>28×28 预处理输入</h3>
+                    <p>黑底白字，NCHW = (1, 1, 28, 28)</p>
+                </div>
+                <img id="preprocessedImage" alt="28×28 预处理结果">
+            </div>
+        </article>
+
+        <article class="digit-card probability-card">
+            <span class="section-label">Probabilities</span>
+            <h2>0~9 概率分布</h2>
+            <div id="probabilityBars" class="probability-bars"></div>
+        </article>
+    </section>
+
+    <article class="digit-card model-flow-card">
+        <div class="model-flow-head">
+            <div>
+                <span class="section-label">CNN Pipeline</span>
+                <h2>CNN 模型结构</h2>
+            </div>
+            <p>输入经过两层卷积和池化，再连接全连接层完成 10 类分类。</p>
+        </div>
+        <figure class="model-flow-figure">
+            <img src="{{ url_for('static', filename='mnist-cnn.png') }}" alt="CNN 模型结构流程图">
+            <figcaption>Input 1×28×28 → Conv → ReLU → Pool → Conv → ReLU → Pool → FC → Softmax</figcaption>
+        </figure>
+    </article>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/digit_recognition.js') }}"></script>
+{% endblock %}

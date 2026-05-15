@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}实验首页{% endblock %}
+{% block content %}
+<section class="home-hero">
+    <span class="section-label">Computer Vision Lab</span>
+    <h1>计算机视觉实验平台</h1>
+    <p>面向课程实验展示的交互式平台，覆盖图像灰度化、基础图像处理、卷积计算可视化、图像卷积应用和进阶卷积结构调研。</p>
+</section>
+
+<section class="home-grid">
+    <article class="home-card">
+        <span>Lesson 01</span>
+        <h2>第一节：图像灰度化实验</h2>
+        <p>上传图片，观察灰度化方法、通道分离、二值化、反转、翻转、旋转和直方图均衡化等基础图像处理过程。</p>
+        <a href="{{ url_for('grayscale_page') }}">进入实验</a>
+    </article>
+
+    <article class="home-card">
+        <span>Lesson 02</span>
+        <h2>第二节：卷积可视化实验</h2>
+        <p>逐步演示 padding、stride、dilation、多通道、多卷积核、1×1 卷积、空洞卷积和蛇形卷积的计算过程。</p>
+        <a href="{{ url_for('convolution_page') }}">进入实验</a>
+    </article>
+
+    <article class="home-card muted">
+        <span>Lesson 03</span>
+        <h2>第三节：</h2>
+        <p>预留后续课程实验入口。</p>
+        <button type="button" disabled>待开放</button>
+    </article>
+
+    <article class="home-card muted">
+        <span>Lesson 04</span>
+        <h2>第四节：</h2>
+        <p>预留后续课程实验入口。</p>
+        <button type="button" disabled>待开放</button>
+    </article>
+</section>
+{% endblock %}

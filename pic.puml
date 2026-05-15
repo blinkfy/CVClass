@@ -1,9 +1,11 @@
 @startuml
-title 图3-2 前后端交互时序图（紧凑版）
+title 卷积系统关键技术交互时序图
 
 skinparam backgroundColor white
 skinparam shadowing false
-skinparam roundcorner 10
+skinparam roundcorner 12
+skinparam ParticipantPadding 18
+skinparam SequenceMessageAlign center
 skinparam sequence {
     ArrowColor #2563EB
     LifeLineBorderColor #94A3B8
@@ -13,28 +15,47 @@ skinparam sequence {
     ActorBorderColor #1D4ED8
     ActorBackgroundColor #DBEAFE
 }
-skinparam ParticipantPadding 18
-skinparam SequenceMessageAlign center
 
-actor 用户
-participant "浏览器前端" as Frontend
-participant "Flask 后端" as Backend
-participant "图像处理模块" as Processor
+actor User
+participant "Frontend" as Frontend
+participant "/convolution" as ConvPage
+participant "/digit-recognition" as DigitPage
+participant "Flask" as Flask
+participant "image_utils.py" as ImgOps
+participant "digit_infer_numpy.py" as Infer
+database "numpy_mnist_cnn.npz" as Weights
 
-用户 -> Frontend : 上传图片并选择功能
-Frontend -> Backend : 发送处理请求
+== Basic convolution ==
+User -> Frontend : open convolution page
+Frontend -> Flask : GET /convolution
+Flask --> Frontend : convolution.html + CSS/JS
+Frontend -> ConvPage : init matrices and kernels
+ConvPage -> ConvPage : compute output size
+ConvPage -> ConvPage : render input / kernel / feature maps
+User -> ConvPage : step / play / animate
+ConvPage -> ConvPage : highlight window and output cell
 
-Backend -> Backend : 检查文件合法性
-alt 请求非法
-    Backend --> Frontend : 返回错误信息
-    Frontend --> 用户 : 显示错误提示
-else 请求合法
-    Backend -> Processor : 读取图片并处理
-    Processor -> Processor : RGBA转换 + numpy处理
-    Processor -> Processor : 生结果图 + 统计直方图
-    Processor --> Backend : 返回处理结果
-    Backend --> Frontend : 返回 JSON 数据
-    Frontend --> 用户 : 显示结果图、直方图和下载按钮
-end
+== Image convolution ==
+User -> ConvPage : upload image and choose kernel
+ConvPage -> Flask : POST /convolve-image
+Flask -> ImgOps : convolve_gray_image()
+ImgOps -> ImgOps : NumPy convolution
+ImgOps --> Flask : result image
+Flask --> ConvPage : JSON result
+
+== Digit recognition ==
+User -> Frontend : open digit-recognition
+Frontend -> Flask : GET /digit-recognition
+Flask -> Infer : get_model_status()
+Infer -> Weights : check parameter file
+Weights --> Infer : status
+Flask --> Frontend : digit_recognition.html
+
+User -> DigitPage : draw digit
+DigitPage -> Flask : POST /api/digit-recognize
+Flask -> Infer : predict_digit(image)
+Infer -> Infer : decode + preprocess + infer
+Infer --> Flask : prediction / confidence / probabilities
+Flask --> DigitPage : JSON
 
 @enduml
