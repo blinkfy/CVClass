@@ -1,4 +1,10 @@
 (function () {
+    window.cvclassUrl = function cvclassUrl(path) {
+        const basePath = window.CVCLASS_BASE_PATH || "";
+        const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+        return `${basePath}${normalizedPath}`;
+    };
+
     const toggle = document.getElementById("sidebarToggle");
     const overlay = document.getElementById("sidebarOverlay");
 

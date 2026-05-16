@@ -9,6 +9,9 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="cv-shell sidebar-collapsed">
+    <script>
+        window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
+    </script>
     <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
     <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
         <div class="sidebar-brand">

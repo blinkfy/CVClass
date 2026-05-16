@@ -1,15 +1,20 @@
+import os
 from io import BytesIO
 import base64
 import json
 from time import perf_counter
-
+from waitress import serve
 from flask import Flask, jsonify, render_template, request
 from PIL import Image, UnidentifiedImageError
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.image_utils import convolve_gray_image, make_histogram, process_image
 
 app = Flask(__name__)
+CVCLASS_PREFIX = os.environ.get("CVCLASS_PREFIX", "/cvclass")
+app.config["APPLICATION_ROOT"] = CVCLASS_PREFIX
+app.config["SESSION_COOKIE_PATH"] = CVCLASS_PREFIX
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "gif"}
 ALLOWED_OPERATIONS = {
@@ -265,4 +270,13 @@ def file_too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False,)
+
+    # port = int(os.environ.get("CVCLASS_PORT", "5001"))
+    # # Mount the app under the prefix
+    # application = DispatcherMiddleware(
+    #     Flask("dummy"),  # dummy root app
+    #     {CVCLASS_PREFIX: app}
+    # )
+    # print(f"Starting CVClass service on port {port} with prefix {CVCLASS_PREFIX}")
+    # serve(application, port=port)

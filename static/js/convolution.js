@@ -1598,7 +1598,7 @@ async function applyKernelToImage() {
 
     convEls.imageConvMessage.textContent = "后端 NumPy 卷积处理中...";
     try {
-        const response = await fetch("/convolve-image", {
+        const response = await fetch(cvclassUrl("/convolve-image"), {
             method: "POST",
             body: formData
         });

@@ -292,7 +292,7 @@
         setMessage("正在识别...");
         try {
             const preprocessed = preprocessCanvas();
-            const response = await fetch("/api/digit-recognize", {
+            const response = await fetch(cvclassUrl("/api/digit-recognize"), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

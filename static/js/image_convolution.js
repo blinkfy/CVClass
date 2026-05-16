@@ -250,7 +250,7 @@ async function applyImageConvolution() {
     imageConvEls.apply.disabled = true;
 
     try {
-        const response = await fetch("/convolve-image", {
+        const response = await fetch(cvclassUrl("/convolve-image"), {
             method: "POST",
             body: formData
         });

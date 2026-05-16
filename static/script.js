@@ -442,7 +442,7 @@ async function processImage() {
     showMessage(`正在执行${operationNames[currentOperation]}...`);
 
     try {
-        const response = await fetch("/process", {
+        const response = await fetch(cvclassUrl("/process"), {
             method: "POST",
             body: formData
         });
