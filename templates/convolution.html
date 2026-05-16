@@ -21,8 +21,9 @@
 
             <nav class="conv-subtabs" aria-label="卷积实验模块">
                 <button class="conv-subtab is-active" type="button" data-conv-tab="convBasicPanel">卷积可视化</button>
+                <a class="conv-subtab conv-subtab-link" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
                 <button class="conv-subtab" type="button" data-conv-tab="convAdvancedPanel">卷积结构调研</button>
-                <a class="conv-subtab conv-subtab-link" href="{{ url_for('digit_recognition_page') }}">卷积的模型应用</a>
+                <a class="conv-subtab conv-subtab-link" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
             </nav>
 
             <section id="convBasicPanel" class="conv-tab-panel is-active">
@@ -127,24 +128,51 @@
                     <button id="regenInputBtn" class="download-button" type="button">重新生成输入矩阵</button>
                     <button id="regenKernelBtn" class="download-button" type="button">重新生成卷积核</button>
                     <button id="animStepBtn" class="download-button" type="button">动画单步</button>
+
+                    <article class="conv-panel conv-explain conv-explain-compact">
+                        <span class="section-label">Notes</span>
+                        <h3>卷积类型说明</h3>
+                        <div id="convExplanation"></div>
+                        <div id="snakePathBox" class="snake-path-box"></div>
+                    </article>
                 </aside>
 
-                <section class="conv-stage">
-                    <article class="conv-panel conv-main-panel">
-                        <div class="conv-main-grid">
-                            <section class="conv-subpanel">
-                                <div class="conv-section-title">
+                <section class="conv-workspace">
+                    <article class="conv-panel conv-overview-panel">
+                        <div class="conv-section-title">
+                            <div>
+                                <span class="section-label">Overview</span>
+                                <h3>卷积整体对应关系</h3>
+                                <p class="conv-panel-note">输入高亮 Patch 被抽取到中间，卷积核覆盖其上并逐元素相乘，结果写入右侧蓝色输出位置。</p>
+                            </div>
+                            <strong id="convStepStatus">Step 1</strong>
+                        </div>
+
+                        <div id="convOverviewFlow" class="conv-overview-flow">
+                            <svg id="overviewFlowSvg" class="overview-flow-svg" aria-hidden="true"></svg>
+                            <section class="conv-subpanel conv-overview-input">
+                                <div class="conv-section-title compact">
                                     <div>
                                         <span class="section-label">Input</span>
                                         <h3>输入矩阵 / 多通道输入</h3>
                                     </div>
-                                    <strong id="convStepStatus">Step 1</strong>
                                 </div>
-                                <div id="inputMatrices" class="matrix-gallery"></div>
+                                <div id="inputMatrices" class="matrix-gallery overview-input-stack"></div>
                             </section>
 
-                            <section class="conv-subpanel">
-                                <div class="conv-section-title">
+                            <section class="conv-subpanel conv-overview-relation">
+                                <div class="conv-section-title compact">
+                                    <div>
+                                        <span class="section-label">Patch × Kernel</span>
+                                        <h3>对应元素相乘 结果相加</h3>
+                                    </div>
+                                    <strong id="activeKernelLabel">Kernel 1</strong>
+                                </div>
+                                <div id="convOverlayRelation" class="conv-overlay-relation"></div>
+                            </section>
+
+                            <section class="conv-subpanel conv-overview-output">
+                                <div class="conv-section-title compact">
                                     <div>
                                         <span class="section-label">Feature Maps</span>
                                         <h3>输出特征图</h3>
@@ -158,99 +186,70 @@
                         </div>
                     </article>
 
-                    <article class="conv-panel conv-canvas-panel">
-                        <div class="conv-section-title">
-                            <div>
-                                <span class="section-label">Canvas</span>
-                                <h3>当前卷积计算画布</h3>
+                    <section class="conv-detail-row">
+                        <article class="conv-panel conv-canvas-panel">
+                            <div class="conv-section-title">
+                                <div>
+                                    <span class="section-label">Canvas</span>
+                                    <h3>当前卷积计算画布</h3>
+                                    <p class="conv-panel-note">上方展示整体位置关系，下方展示该 Patch 与 Kernel 的逐元素乘加细节。</p>
+                                </div>
                             </div>
+                            <div id="calcChannelTabs" class="calc-channel-tabs"></div>
+                            <div id="calcCanvas" class="calc-canvas"></div>
+                            <div class="conv-canvas-controls">
+                                <label>连线显示模式
+                                    <select id="convLinkMode">
+                                        <option value="dynamic" selected>单步动态连线</option>
+                                        <option value="all">显示全部对应连线</option>
+                                        <option value="none">不显示连线</option>
+                                    </select>
+                                </label>
+
+                                <label id="demoModeControl">演示模式
+                                    <select id="convDemoMode">
+                                        <option value="static">静态展示</option>
+                                        <option value="step">分步动画</option>
+                                        <option value="auto" selected>自动演示</option>
+                                    </select>
+                                </label>
+
+                                <label id="guideLinesControl" class="conv-switch">
+                                    <input id="showGuideLines" type="checkbox" checked>
+                                    <span>显示引导线</span>
+                                </label>
+
+                                <label id="moveAnimationControl" class="conv-switch">
+                                    <input id="enableMoveAnimation" type="checkbox" checked>
+                                    <span>元素靠近动画</span>
+                                </label>
+                            </div>
+                        </article>
+
+                        <div class="conv-side-stack">
+                            <article class="conv-panel conv-process-panel">
+                                <div class="conv-section-title">
+                                    <div>
+                                        <span class="section-label">Process</span>
+                                        <h3>当前乘加过程</h3>
+                                    </div>
+                                </div>
+                                <div id="calculationDetail" class="calculation-detail"></div>
+                            </article>
+
+                            <article class="conv-panel conv-formula-panel">
+                                <div class="conv-section-title">
+                                    <div>
+                                        <span class="section-label">Formula</span>
+                                        <h3>输出尺寸计算</h3>
+                                    </div>
+                                </div>
+                                <div id="outputFormula" class="formula-box"></div>
+                            </article>
                         </div>
-                        <div class="conv-canvas-controls">
-                            <label>连线显示模式
-                                <select id="convLinkMode">
-                                    <option value="dynamic" selected>单步动态连线</option>
-                                    <option value="all">显示全部对应连线</option>
-                                    <option value="none">不显示连线</option>
-                                </select>
-                            </label>
-
-                            <label id="demoModeControl">演示模式
-                                <select id="convDemoMode">
-                                    <option value="static">静态展示</option>
-                                    <option value="step">分步动画</option>
-                                    <option value="auto" selected>自动演示</option>
-                                </select>
-                            </label>
-
-                            <label id="guideLinesControl" class="conv-switch">
-                                <input id="showGuideLines" type="checkbox" checked>
-                                <span>显示引导线</span>
-                            </label>
-
-                            <label id="moveAnimationControl" class="conv-switch">
-                                <input id="enableMoveAnimation" type="checkbox" checked>
-                                <span>元素靠近动画</span>
-                            </label>
-                        </div>
-                        <div id="calcChannelTabs" class="calc-channel-tabs"></div>
-                        <div id="calcCanvas" class="calc-canvas"></div>
-                    </article>
+                    </section>
 
                 </section>
-
-                <aside class="conv-side">
-                    <article class="conv-panel">
-                        <div class="conv-section-title">
-                            <div>
-                                <span class="section-label">Kernels</span>
-                                <h3>卷积核可视化</h3>
-                            </div>
-                            <strong id="activeKernelLabel">Kernel 1</strong>
-                        </div>
-                        <div id="kernelGallery" class="kernel-gallery"></div>
-                    </article>
-
-                    <article class="conv-panel">
-                        <div class="conv-section-title">
-                            <div>
-                                <span class="section-label">Process</span>
-                                <h3>当前乘加过程</h3>
-                            </div>
-                        </div>
-                        <div id="calculationDetail" class="calculation-detail"></div>
-                    </article>
-
-                    <article class="conv-panel">
-                        <div class="conv-section-title">
-                            <div>
-                                <span class="section-label">Formula</span>
-                                <h3>输出尺寸计算</h3>
-                            </div>
-                        </div>
-                        <div id="outputFormula" class="formula-box"></div>
-                    </article>
-                </aside>
-            </section>
-
-            <section class="conv-results-row">
-                <article class="conv-panel conv-image-panel">
-                    <span class="section-label">Image Conv</span>
-                    <h3>将当前卷积核应用于实际图像</h3>
-                    <div class="conv-image-controls">
-                        <input id="convImageInput" type="file" accept="image/*">
-                        <button id="applyImageConvBtn" class="download-button" type="button">应用当前卷积核</button>
-                        <span id="imageConvMessage">使用当前 Kernel 1 / Channel 1 切片进行后端 NumPy 卷积</span>
-                    </div>
-                    <div class="conv-image-preview">
-                        <img id="convImageResult" alt="图像卷积结果">
-                    </div>
-                </article>
-                <article class="conv-panel conv-explain">
-                    <span class="section-label">Notes</span>
-                    <h3>卷积类型说明</h3>
-                    <div id="convExplanation"></div>
-                    <div id="snakePathBox" class="snake-path-box"></div>
-                </article>
             </section>
             </section>
 
@@ -416,3 +415,4 @@
 <script src="{{ url_for('static', filename='js/convolution.js') }}"></script>
 <script src="{{ url_for('static', filename='js/advanced_convolution.js') }}"></script>
 {% endblock %}
+

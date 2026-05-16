@@ -1,3 +1,60 @@
+﻿.digit-hero-status {
+    min-width: 280px;
+    max-width: 360px;
+}
+
+.digit-page .conv-subtabs {
+    margin-bottom: 0px;
+}
+
+.digit-page .digit-page-hero {
+    margin-bottom: 0px;
+    padding: 18px;
+}
+
+.digit-page .digit-page-hero h2 {
+    margin: 0 0 8px;
+    font-size: 30px;
+}
+
+.digit-page .digit-page-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: #64748b;
+}
+
+.digit-page .digit-page-hero .conv-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.digit-page .digit-page-hero .model-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 380px;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #eff6ff;
+}
+
+.digit-page .digit-page-hero .model-status strong {
+    max-width: 320px;
+}
+
+.digit-page .digit-page-hero .model-status span {
+    flex: 0 0 auto;
+}
+
+.digit-page .digit-page-hero .model-status strong {
+    display: inline-block;
+    max-width: 260px;
+    line-height: 1.35;
+}
+
 .digit-page {
     display: grid;
     gap: 18px;
@@ -19,18 +76,6 @@
     padding: 24px;
 }
 
-.digit-hero h1 {
-    margin: 6px 0 10px;
-    font-size: clamp(28px, 4vw, 42px);
-    line-height: 1.12;
-}
-
-.digit-hero p {
-    max-width: 860px;
-    margin: 0;
-    color: #64748b;
-    line-height: 1.75;
-}
 
 .model-status {
     display: grid;
@@ -292,9 +337,16 @@
         grid-template-columns: 1fr;
     }
 
-    .digit-hero {
+    .digit-hero,
+    .digit-page-hero {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .digit-hero-status {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
     }
 
     .model-flow-head {

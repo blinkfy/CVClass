@@ -57,7 +57,12 @@ def grayscale_page():
 
 @app.route("/convolution", methods=["GET"])
 def convolution_page():
-    return render_template("convolution.html", active_page="convolution")
+    return render_template("convolution.html", active_page="convolution", active_sub_page="visual")
+
+
+@app.route("/image-convolution", methods=["GET"])
+def image_convolution_page():
+    return render_template("image_convolution.html", active_page="convolution", active_sub_page="image")
 
 
 @app.route("/digit-recognition", methods=["GET"])
@@ -65,7 +70,8 @@ def digit_recognition_page():
     model_ready, model_message = get_model_status()
     return render_template(
         "digit_recognition.html",
-        active_page="digit",
+        active_page="convolution",
+        active_sub_page="digit",
         model_ready=model_ready,
         model_message=model_message,
     )
@@ -176,12 +182,29 @@ def convolve_image():
 
     try:
         kernel = json.loads(request.form.get("kernel", "[]"))
+        padding_value = request.form.get("padding")
+        padding = int(padding_value) if padding_value is not None else None
+        stride = int(request.form.get("stride", 1))
+        display_mode = request.form.get("display_mode", "auto")
+        if padding is not None and (padding < 0 or padding > 4):
+            raise ValueError("padding must be between 0 and 4")
+        if stride not in (1, 2):
+            raise ValueError("stride must be 1 or 2")
+        if display_mode not in {"auto", "clip", "normalize"}:
+            raise ValueError("display_mode must be auto, clip or normalize")
+
         image_bytes = file.read()
         image = Image.open(BytesIO(image_bytes))
         image.load()
 
         start_time = perf_counter()
-        feature_array, result_image = convolve_gray_image(image, kernel)
+        feature_array, result_image = convolve_gray_image(
+            image,
+            kernel,
+            padding=padding,
+            stride=stride,
+            display_mode=display_mode,
+        )
         elapsed_ms = (perf_counter() - start_time) * 1000
 
         return jsonify(
@@ -192,6 +215,9 @@ def convolve_image():
                 "height": result_image.height,
                 "min": int(feature_array.min()),
                 "max": int(feature_array.max()),
+                "padding": padding if padding is not None else "auto",
+                "stride": stride,
+                "display_mode": display_mode,
             }
         )
     except (json.JSONDecodeError, ValueError) as error:
@@ -206,20 +232,21 @@ def convolve_image():
 @app.route("/api/digit-recognize", methods=["POST"])
 def digit_recognize():
     data = request.get_json(silent=True) or {}
-    image_data = data.get("image", "")
+    canvas_28x28 = data.get("canvas")
+    preview = data.get("preprocessed_image", "")
 
-    if not image_data:
-        return jsonify({"success": False, "message": "请先在画布中书写数字"}), 400
+    if canvas_28x28 is None:
+        return jsonify({"success": False, "message": "请先在画布中完成预处理"}), 400
 
     try:
-        result = predict_digit(image_data)
+        result = predict_digit(canvas_28x28)
         return jsonify(
             {
                 "success": True,
                 "prediction": result["prediction"],
                 "confidence": round(result["confidence"], 4),
                 "probabilities": result["probabilities"],
-                "preprocessed_image": result["preprocessed_image"],
+                "preprocessed_image": preview,
                 "message": "识别成功",
             }
         )

@@ -107,6 +107,27 @@ body.cv-shell {
     background: #f8fafc;
 }
 
+.sidebar-subnav {
+    display: grid;
+    gap: 6px;
+    margin: -2px 0 4px 12px;
+    padding-left: 10px;
+    border-left: 2px solid #e2e8f0;
+}
+
+.sidebar-subnav a {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.sidebar-subnav a.active {
+    color: #1d4ed8;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.36);
+}
+
 .sidebar-overlay {
     position: fixed;
     inset: 0;

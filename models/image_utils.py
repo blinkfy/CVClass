@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from numba import njit, prange
 
 # 图像灰度化
 def image_to_gray(image, method="weighted"):
@@ -164,15 +165,39 @@ def make_histogram(gray_array):
     return histogram.astype(int).tolist()
 
 
-def convolve_gray_image(image, kernel):
+@njit(parallel=True)
+def _convolve_channel_parallel(padded_channel, kernel_array, stride, out_h, out_w):
+    size = kernel_array.shape[0]
+    result = np.zeros((out_h, out_w), dtype=np.float32)
+
+    for out_r in prange(out_h):
+        for out_c in range(out_w):
+            start_r = out_r * stride
+            start_c = out_c * stride
+            acc = 0.0
+
+            for kernel_r in range(size):
+                for kernel_c in range(size):
+                    acc += padded_channel[start_r + kernel_r, start_c + kernel_c] * kernel_array[kernel_r, kernel_c]
+
+            result[out_r, out_c] = acc
+
+    return result
+
+
+def convolve_gray_image(image, kernel, padding=None, stride=1, display_mode="auto"):
     rgba_array = image_to_rgba_array(image)
-    gray_array = rgb_to_gray_array(rgba_array, "weighted").astype(np.float32)
+    rgb_array = rgba_array[:, :, :3].astype(np.float32)
     kernel_array = np.asarray(kernel, dtype=np.float32)
 
     if kernel_array.ndim != 2 or kernel_array.shape[0] != kernel_array.shape[1]:
         raise ValueError("kernel must be a square matrix")
     if kernel_array.shape[0] not in (1, 3, 5):
         raise ValueError("kernel size must be 1, 3 or 5")
+    if stride < 1:
+        raise ValueError("stride must be positive")
+    if display_mode not in {"auto", "clip", "normalize"}:
+        raise ValueError("invalid display mode")
 
     kernel_sum = float(kernel_array.sum())
     has_negative = bool(np.any(kernel_array < 0))
@@ -180,25 +205,48 @@ def convolve_gray_image(image, kernel):
         kernel_array = kernel_array / kernel_sum
 
     size = kernel_array.shape[0]
-    pad = size // 2
-    padded = np.pad(gray_array, ((pad, pad), (pad, pad)), mode="edge")
-    result = np.zeros_like(gray_array, dtype=np.float32)
+    if padding is None:
+        padding = size // 2
+    if padding < 0:
+        raise ValueError("padding must be non-negative")
 
-    for r in range(gray_array.shape[0]):
-        for c in range(gray_array.shape[1]):
-            patch = padded[r:r + size, c:c + size]
-            result[r, c] = np.sum(patch * kernel_array)
+    out_h = (rgb_array.shape[0] + 2 * padding - size) // stride + 1
+    out_w = (rgb_array.shape[1] + 2 * padding - size) // stride + 1
+    if out_h <= 0 or out_w <= 0:
+        raise ValueError("kernel is larger than the padded image")
 
-    if has_negative:
-        min_value = result.min()
-        max_value = result.max()
+    result_channels = []
+    for channel_index in range(3):
+        channel = rgb_array[:, :, channel_index]
+        padded = np.pad(channel, ((padding, padding), (padding, padding)), mode="edge")
+        result_channels.append(_convolve_channel_parallel(padded, kernel_array, stride, out_h, out_w))
+
+    result_stack = np.stack(result_channels, axis=-1)
+
+    if display_mode == "auto":
+        display_mode = "clip" if has_negative else "normalize"
+
+    if display_mode == "clip":
+        display = np.clip(result_stack, 0, 255)
+    elif display_mode == "normalize":
+        min_value = result_stack.min()
+        max_value = result_stack.max()
         if max_value > min_value:
-            display = (result - min_value) / (max_value - min_value) * 255
+            display = (result_stack - min_value) / (max_value - min_value) * 255
         else:
-            display = np.zeros_like(result)
+            display = np.zeros_like(result_stack)
     else:
-        display = np.clip(result, 0, 255)
+        raise ValueError("invalid display mode")
 
     display = np.clip(display, 0, 255).astype(np.uint8)
-    output = gray_array_to_rgba(display, rgba_array[:, :, 3])
+    if display.shape[:2] == rgba_array[:, :, 3].shape:
+        alpha = rgba_array[:, :, 3]
+    else:
+        alpha_image = Image.fromarray(rgba_array[:, :, 3], mode="L").resize(
+            (display.shape[1], display.shape[0]),
+            Image.Resampling.BILINEAR,
+        )
+        alpha = np.asarray(alpha_image, dtype=np.uint8)
+
+    output = np.dstack([display, alpha]).astype(np.uint8)
     return display, rgba_array_to_image(output)

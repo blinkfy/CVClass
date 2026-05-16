@@ -1,21 +1,32 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}卷积的模型应用{% endblock %}
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/advanced.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/digit_recognition.css') }}">
 {% endblock %}
 {% block content %}
 <section class="digit-page">
-    <article class="digit-hero">
+    <section class="conv-hero digit-page-hero">
         <div>
-            <span class="section-label">Model Application</span>
-            <h1>卷积的模型应用：在线手写数字识别</h1>
-            <p>使用已训练好的 NumPy CNN 参数文件，完成 canvas 手写输入、图像预处理、模型推理和概率分布展示。</p>
+            <span class="section-label">Lesson 02 · Model Application</span>
+            <h2>卷积的模型应用：在线手写数字识别</h2>
+            <p> canvas 手写输入、图像预处理、模型推理和概率分布展示</p>
         </div>
-        <div class="model-status {{ 'ready' if model_ready else 'missing' }}">
-            <span>模型状态</span>
-            <strong>{{ model_message }}</strong>
+        <div class="conv-actions">
+            <div class="model-status digit-hero-status {{ 'ready' if model_ready else 'missing' }}">
+                <span>模型状态</span>
+                <strong>{{ model_message }}</strong>
+            </div>
         </div>
-    </article>
+    </section>
+
+    <nav class="conv-subtabs" aria-label="卷积实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积可视化</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
+        <span class="conv-subtab is-active">卷积模型应用</span>
+    </nav>
 
     <section class="digit-layout">
         <article class="digit-card draw-card">

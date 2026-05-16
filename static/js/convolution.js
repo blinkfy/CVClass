@@ -1,4 +1,4 @@
-const convEls = {
+﻿const convEls = {
     tabs: document.querySelectorAll(".lesson-accordion-header"),
     accordions: document.querySelectorAll(".lesson-accordion"),
     panels: document.querySelectorAll(".lesson-panel"),
@@ -31,6 +31,9 @@ const convEls = {
     inputMatrices: document.getElementById("inputMatrices"),
     kernelGallery: document.getElementById("kernelGallery"),
     outputMaps: document.getElementById("outputMaps"),
+    overviewFlow: document.getElementById("convOverviewFlow"),
+    overviewFlowSvg: document.getElementById("overviewFlowSvg"),
+    overlayRelation: document.getElementById("convOverlayRelation"),
     convImageInput: document.getElementById("convImageInput"),
     applyImageConv: document.getElementById("applyImageConvBtn"),
     imageConvMessage: document.getElementById("imageConvMessage"),
@@ -45,7 +48,7 @@ const convEls = {
     explanation: document.getElementById("convExplanation"),
     snakePathBox: document.getElementById("snakePathBox"),
     controlsPanel: document.querySelector(".conv-controls"),
-    sidePanel: document.querySelector(".conv-side")
+    sidePanel: document.querySelector(".conv-workspace")
 };
 
 const convState = {
@@ -391,14 +394,18 @@ function measureGridCellSize(container, cols, options = {}) {
         container
     ].filter(Boolean);
 
-    let host = 0;
-    for (const el of hostCandidates) {
-        const rect = el.getBoundingClientRect?.();
-        const width = rect?.width || el.clientWidth || 0;
-        if (width > host) host = width;
-    }
+    const fitScopeWidth = options.fitScope?.getBoundingClientRect?.().width || options.fitScope?.clientWidth || 0;
+    let host = fitScopeWidth > 0 ? fitScopeWidth : 0;
 
     if (host <= 0) {
+        for (const el of hostCandidates) {
+            const rect = el.getBoundingClientRect?.();
+            const width = rect?.width || el.clientWidth || 0;
+            if (width > host) host = width;
+        }
+    }
+
+    if (!Number.isFinite(host) || host <= 0) {
         return {
             size: minSize,
             font: clamp(Math.round(minSize * fontRatio), minFont, maxFont),
@@ -527,12 +534,15 @@ function renderInputMatrices() {
     paddedInputs.forEach((matrix, channelIndex) => {
         const card = document.createElement("div");
         card.className = "matrix-card";
+        card.dataset.overviewChannel = String(channelIndex);
         card.innerHTML = `<h4>Channel ${channelIndex + 1}</h4>`;
         const holder = document.createElement("div");
         card.appendChild(holder);
         convEls.inputMatrices.appendChild(card);
         renderMatrix(holder, matrix, {
             fitScope: convEls.inputMatrices,
+            minCellSize: p.channels > 1 ? 17 : p.inputSize >= 8 ? 18 : 22,
+            maxCellSize: p.channels > 1 ? 27 : p.inputSize >= 8 ? 30 : 34,
             highlight: sampled,
             sampled,
             skipped: p.dilation > 1 || p.type === "snake" ? skipped : [],
@@ -551,6 +561,9 @@ function renderInputMatrices() {
 function renderKernels() {
     const p = getParams();
     const step = getStepInfo();
+    convEls.activeKernelLabel.textContent = `Kernel ${step.kernelIndex + 1}`;
+    if (!convEls.kernelGallery) return;
+
     const order = getKernelOrder(p.kernelSize, p.type);
     const labels = p.type === "snake"
         ? order.map(([r, c], index) => ({ r, c, label: index + 1 }))
@@ -605,7 +618,6 @@ function renderKernels() {
         });
     });
 
-    convEls.activeKernelLabel.textContent = `Kernel ${step.kernelIndex + 1}`;
 }
 
 function renderOutputs() {
@@ -624,6 +636,8 @@ function renderOutputs() {
         convEls.outputMaps.appendChild(card);
         renderMatrix(holder, output.length ? output : [[0]], {
             fitScope: convEls.outputMaps,
+            minCellSize: p.kernelCount > 1 || p.channels > 1 ? 28 : 30,
+            maxCellSize: p.kernelCount > 1 || p.channels > 1 ? 38 : 40,
             gridClass: "output-grid",
             colorMode: "output",
             outputMin,
@@ -633,6 +647,157 @@ function renderOutputs() {
             active: index === step.kernelIndex ? { r: step.outR, c: step.outC } : null
         });
     });
+}
+
+function renderOverlayRelation() {
+    if (!convEls.overlayRelation) return;
+    const p = getParams();
+    convState.activeCanvasChannel = Math.min(convState.activeCanvasChannel, p.channels - 1);
+    const firstData = buildCalculationData(convState.activeCanvasChannel);
+
+    if (!firstData) {
+        convEls.overlayRelation.innerHTML = "<p>当前参数下没有可展示的重叠关系。</p>";
+        return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "overview-channel-relations";
+
+    for (let channelIndex = 0; channelIndex < p.channels; channelIndex += 1) {
+        const data = buildCalculationData(channelIndex);
+        if (!data) continue;
+
+        const orderIndex = new Map(data.order.map(([r, c], index) => [keyOf(r, c), index]));
+        const kernelMatrix = data.kernel.map((row, kr) =>
+            row.map((value, kc) => ({
+                value,
+                sampled: orderIndex.has(keyOf(kr, kc)),
+                kr,
+                kc
+            }))
+        );
+
+        const block = document.createElement("section");
+        block.className = "overview-relation-block";
+        block.dataset.overviewChannel = String(channelIndex);
+        block.classList.toggle("is-active-channel", channelIndex === convState.activeCanvasChannel);
+
+        const stage = document.createElement("div");
+        stage.className = "overview-overlap-stage";
+        const cellSize = p.kernelSize === 5 ? 25 : p.kernelSize === 1 ? 48 : 34;
+        stage.style.setProperty("--overview-cell-size", `${cellSize}px`);
+        stage.style.setProperty("--overview-patch-left", `${Math.max(8, Math.round(cellSize * 0.25))}px`);
+        stage.style.setProperty("--overview-patch-bottom", `${Math.max(50, Math.round(cellSize * 0.34))}px`);
+        stage.style.setProperty("--overview-kernel-right", `${Math.max(8, Math.round(cellSize * 0.18))}px`);
+        stage.style.setProperty("--overview-kernel-top", `${Math.max(8, Math.round(cellSize * 0.22))}px`);
+        stage.style.setProperty("--overview-kernel-shift-x", `${Math.max(34, Math.round(cellSize * 3.1))}px`);
+        stage.style.setProperty("--overview-kernel-shift-y", `${Math.max(8, Math.round(cellSize * 1.15))}px`);
+
+        const patchLayer = document.createElement("div");
+        patchLayer.className = "overview-overlap-layer overview-patch-layer";
+        patchLayer.innerHTML = `<span>Ch ${channelIndex + 1} Patch</span>`;
+        patchLayer.appendChild(renderCalcMiniGrid(data.patch, {
+            className: "overview-patch-grid",
+            autoFit: false,
+            cellSize,
+            fontSize: p.kernelSize === 5 ? 10 : p.kernelSize === 1 ? 16 : 12,
+            orderIndex,
+            activeTerm: data.activeTerm
+        }));
+
+        const kernelLayer = document.createElement("div");
+        kernelLayer.className = "overview-overlap-layer overview-kernel-layer";
+        kernelLayer.innerHTML = `<span>Kernel Slice</span>`;
+        kernelLayer.appendChild(renderCalcMiniGrid(kernelMatrix, {
+            className: "overview-kernel-grid",
+            autoFit: false,
+            cellSize,
+            fontSize: p.kernelSize === 5 ? 10 : p.kernelSize === 1 ? 16 : 12,
+            orderIndex,
+            activeTerm: data.activeTerm
+        }));
+
+        const summary = document.createElement("div");
+        summary.className = "overview-relation-summary";
+        summary.innerHTML = `
+            <strong>Channel ${channelIndex + 1}</strong>
+            <span>Kernel${data.step.kernelIndex + 1} · Channel ${channelIndex + 1} 当前Patch</span>
+        `;
+
+        stage.appendChild(patchLayer);
+        stage.appendChild(kernelLayer);
+        block.appendChild(stage);
+        block.appendChild(summary);
+        list.appendChild(block);
+    }
+
+    const summary = document.createElement("div");
+    summary.className = "overview-relation-total";
+    summary.innerHTML = `
+        <strong>当前 Kernel：Kernel ${firstData.step.kernelIndex + 1}</strong>
+        <span>${p.channels}个通道的partial sum相加后，写入输出位置(${firstData.step.outR},${firstData.step.outC})</span>
+    `;
+
+    convEls.overlayRelation.innerHTML = "";
+    convEls.overlayRelation.appendChild(list);
+    convEls.overlayRelation.appendChild(summary);
+}
+
+function drawOverviewConnections() {
+    const svg = convEls.overviewFlowSvg;
+    const flow = convEls.overviewFlow;
+    if (!svg || !flow) return;
+
+    const flowRect = flow.getBoundingClientRect();
+    if (!flowRect.width || !flowRect.height) return;
+
+    svg.setAttribute("viewBox", `0 0 ${flowRect.width} ${flowRect.height}`);
+    svg.innerHTML = `
+        <defs>
+            <marker id="overviewCurveArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+                <path d="M 0 0 L 9 4.5 L 0 9 z" fill="#2563eb"></path>
+            </marker>
+        </defs>
+    `;
+
+    const point = (node, side = "center") => {
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        const x = side === "right" ? rect.right : side === "left" ? rect.left : rect.left + rect.width / 2;
+        return {
+            x: x - flowRect.left,
+            y: rect.top - flowRect.top + rect.height / 2
+        };
+    };
+    const windowPoint = (channelIndex) => {
+        const matrixCard = convEls.inputMatrices?.querySelector(`[data-overview-channel="${channelIndex}"]`);
+        if (!matrixCard) return point(convEls.inputMatrices, "right");
+        const windowCell = matrixCard.querySelector(".matrix-cell.window-cell") || matrixCard.querySelector(".matrix-cell.sample-cell");
+        return point(windowCell || matrixCard, windowCell ? "center" : "right");
+    };
+    const curve = (from, to, className = "") => {
+        if (!from || !to) return "";
+        const distance = Math.max(46, Math.abs(to.x - from.x) * 0.46);
+        const c1x = from.x + distance;
+        const c2x = to.x - distance;
+        return `<path class="overview-curve ${className}" marker-end="url(#overviewCurveArrow)" d="M ${from.x} ${from.y} C ${c1x} ${from.y}, ${c2x} ${to.y}, ${to.x} ${to.y}" />`;
+    };
+
+    const step = getStepInfo();
+    const activeOutput = convEls.outputMaps?.querySelector(".matrix-cell.active-output");
+    const outputTarget = point(activeOutput || convEls.outputMaps, "left");
+    const paths = [];
+
+    for (let channelIndex = 0; channelIndex < convState.inputs.length; channelIndex += 1) {
+        const relationBlock = convEls.overlayRelation?.querySelector(`[data-overview-channel="${channelIndex}"]`);
+        const patchLayer = relationBlock?.querySelector(".overview-patch-layer");
+        const kernelLayer = relationBlock?.querySelector(".overview-kernel-layer");
+        const isActive = channelIndex === convState.activeCanvasChannel;
+        paths.push(curve(windowPoint(channelIndex), point(patchLayer || relationBlock, "left"), isActive ? "is-active" : ""));
+        paths.push(curve(point(kernelLayer || relationBlock, "right"), outputTarget, isActive || step.kernelIndex >= 0 ? "to-output" : ""));
+    }
+
+    svg.insertAdjacentHTML("beforeend", paths.join(""));
 }
 
 function getCurrentTermIndex(order) {
@@ -708,7 +873,9 @@ function renderCalcTabs(channelCount) {
         button.classList.toggle("is-active", i === convState.activeCanvasChannel);
         button.addEventListener("click", () => {
             convState.activeCanvasChannel = i;
+            renderOverlayRelation();
             renderCalculationCanvas();
+            requestAnimationFrame(drawOverviewConnections);
         });
         convEls.calcChannelTabs.appendChild(button);
     }
@@ -1019,7 +1186,7 @@ function renderAnimatedGrid(matrix, options = {}) {
 function revealAnimatedTerm(board, data, termIndex) {
     const [kr, kc] = data.order[termIndex];
     const productValue = data.product[kr][kc].value;
-    board.querySelector("#animStagePhase").textContent = `逐元素乘法：第 ${termIndex + 1} 项`;
+    board.querySelector("#animStagePhase").textContent = `逐元素乘法：第${termIndex + 1}项`;
     board.querySelectorAll(".anim-cell.is-active").forEach((cell) => cell.classList.remove("is-active"));
     const patch = board.querySelector(`[data-node="anim-patch-${termIndex}"]`);
     const kernel = board.querySelector(`[data-node="anim-kernel-${termIndex}"]`);
@@ -1316,14 +1483,17 @@ function renderAll() {
         "is-single-channel",
         p.channels === 1 && p.kernelCount === 1
     );
+    document.getElementById("convolutionLesson")?.classList.toggle("is-multi-channel", p.channels > 1);
     renderInputMatrices();
     renderKernels();
     renderOutputs();
+    renderOverlayRelation();
     renderCalculationCanvas();
     renderFormula();
     renderCalculationDetail();
     renderExplanation();
     convEls.stepStatus.textContent = `Step ${convState.currentStep + 1} / ${step.total}`;
+    requestAnimationFrame(drawOverviewConnections);
     requestAnimationFrame(syncControlPanelHeight);
     requestAnimationFrame(() => window.renderAdvancedConvolution?.());
 }
@@ -1405,7 +1575,9 @@ function nextAnimationTerm() {
     if (convEls.linkMode?.value === "dynamic" && convEls.demoMode?.value === "static") {
         convEls.demoMode.value = "step";
     }
+    renderOverlayRelation();
     renderCalculationCanvas();
+    requestAnimationFrame(drawOverviewConnections);
 }
 
 function getActiveKernelSlice() {

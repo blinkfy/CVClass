@@ -446,5 +446,8 @@ d=3 -> effectiveK=7</code>
     initSubTabs();
     initDsCases();
     initActions();
+    if (window.location.hash === "#convAdvancedPanel") {
+        activateTab("convAdvancedPanel");
+    }
     renderAdvancedConvolution();
 }());

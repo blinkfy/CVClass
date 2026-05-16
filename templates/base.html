@@ -19,7 +19,12 @@
             <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">实验首页</a>
             <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">第一节：图像灰度化实验</a>
             <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">第二节：卷积可视化实验</a>
-            <a class="{{ 'active' if active_page == 'digit' else '' }}" href="{{ url_for('digit_recognition_page') }}">卷积的模型应用</a>
+            <div class="sidebar-subnav" aria-label="第二节子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'visual' else '' }}" href="{{ url_for('convolution_page') }}">卷积可视化</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'image' else '' }}" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
+                <a href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'digit' else '' }}" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
+            </div>
             <span class="disabled">第三节：</span>
             <span class="disabled">第四节：</span>
             <span class="disabled">第五节：</span>
