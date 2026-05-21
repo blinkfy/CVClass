@@ -82,6 +82,11 @@ def digit_recognition_page():
     )
 
 
+@app.route("/cnn-visualization", methods=["GET"])
+def cnn_visualization_page():
+    return render_template("cnn_visualization.html", active_page="cnn")
+
+
 def parse_threshold(value):
     try:
         threshold = int(value)

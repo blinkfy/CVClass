@@ -12,14 +12,17 @@
         confidenceText: document.getElementById("confidenceText"),
         probabilityBars: document.getElementById("probabilityBars"),
         preprocessedImage: document.getElementById("preprocessedImage"),
-        message: document.getElementById("digitMessage")
+        message: document.getElementById("digitMessage"),
+        inferenceModeBadge: document.getElementById("inferenceModeBadge"),
+        inferenceModeInputs: Array.from(document.querySelectorAll('input[name="digitInferenceMode"]'))
     };
 
     const state = {
         drawing: false,
         hasInk: false,
         timer: null,
-        sampleIndex: 0
+        sampleIndex: 0,
+        inferenceMode: "server"
     };
 
     const samples = [
@@ -283,6 +286,43 @@
         });
     }
 
+    function updateModeBadge() {
+        if (!els.inferenceModeBadge) return;
+        els.inferenceModeBadge.textContent = state.inferenceMode === "client"
+            ? "当前模式：浏览器本地推理"
+            : "当前模式：Flask 后端推理";
+    }
+
+    async function recognizeWithClient(preprocessed) {
+        if (!window.loadClientDigitModel || !window.clientDigitModel) {
+            throw new Error("前端模型脚本未加载");
+        }
+
+        await window.loadClientDigitModel();
+        const result = window.clientDigitModel.predict(preprocessed.canvas);
+        return {
+            success: true,
+            prediction: result.prediction,
+            confidence: result.confidence,
+            probabilities: result.probabilities,
+            elapsed_ms: result.elapsed_ms,
+            preprocessed_image: preprocessed.preview,
+            message: `前端推理完成：${result.elapsed_ms.toFixed(2)} ms`
+        };
+    }
+
+    async function recognizeWithServer(preprocessed) {
+        const response = await fetch(cvclassUrl("/api/digit-recognize"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                canvas: preprocessed.canvas,
+                preprocessed_image: preprocessed.preview
+            })
+        });
+        return response.json();
+    }
+
     async function recognizeDigit() {
         if (!state.hasInk) {
             setMessage("请先在画布中书写数字", true);
@@ -292,15 +332,9 @@
         setMessage("正在识别...");
         try {
             const preprocessed = preprocessCanvas();
-            const response = await fetch(cvclassUrl("/api/digit-recognize"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    canvas: preprocessed.canvas,
-                    preprocessed_image: preprocessed.preview
-                })
-            });
-            const data = await response.json();
+            const data = state.inferenceMode === "client"
+                ? await recognizeWithClient(preprocessed)
+                : await recognizeWithServer(preprocessed);
             if (!data.success) {
                 setMessage(data.message || "识别失败", true);
                 return;
@@ -309,6 +343,13 @@
             updateResult(data);
             setMessage(data.message || "识别成功");
         } catch (error) {
+            if (state.inferenceMode === "client") {
+                const message = error.message && error.message.includes("mnist_cnn_weights.json")
+                    ? "前端模型权重加载失败，请检查 static/models/mnist_cnn_weights.json"
+                    : error.message || "前端推理失败";
+                setMessage(message, true);
+                return;
+            }
             setMessage(error.message || "请求失败，请检查 Flask 服务是否正常运行", true);
         }
     }
@@ -347,7 +388,15 @@
     els.recognizeBtn.addEventListener("click", recognizeDigit);
     els.clearBtn.addEventListener("click", clearAll);
     els.loadExampleBtn.addEventListener("click", drawSample);
+    els.inferenceModeInputs.forEach((input) => {
+        input.addEventListener("change", () => {
+            if (!input.checked) return;
+            state.inferenceMode = input.value;
+            updateModeBadge();
+        });
+    });
 
     resetCanvas();
     initBars();
+    updateModeBadge();
 }());

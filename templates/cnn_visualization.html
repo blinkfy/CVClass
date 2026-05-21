@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}第三节 CNN 前向与反向传播可视化{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='cnn_visualization.css') }}">
+{% endblock %}
+{% block content %}
+<section id="cnnVizPage" class="cnn-viz-page" data-digit-url="{{ url_for('digit_recognition_page') }}">
+    <header class="cnn-viz-header">
+        <div>
+            <span class="section-label">Lesson 03 · CNN Training</span>
+            <h1>第三节 CNN 前向传播与反向传播可视化</h1>
+            <p>固定小 CNN：6×6 → 4×4 → 4×4 → 2×2 → 4 → 3，逐步观察前向计算、梯度回传和参数更新。</p>
+        </div>
+        <strong id="cnnStepStatus">模型总览</strong>
+    </header>
+
+    <nav class="cnn-tabs" aria-label="第三节实验模块">
+        <button class="is-active" type="button" data-tab="overview">模型总览</button>
+        <button type="button" data-tab="forward">前向传播</button>
+        <button type="button" data-tab="backward">反向传播</button>
+        <button type="button" data-tab="application">模型应用</button>
+    </nav>
+
+    <main class="cnn-main">
+        <aside class="cnn-control-panel">
+            <div class="cnn-control-group">
+                <button id="cnnPrevStep" class="ghost-button" type="button">上一步</button>
+                <button id="cnnNextStep" class="primary-button" type="button">下一步</button>
+                <button id="cnnAutoPlay" class="ghost-button" type="button">自动播放</button>
+                <button id="cnnPause" class="ghost-button" type="button">暂停</button>
+            </div>
+            <div class="cnn-control-group">
+                <button id="cnnRunForward" class="primary-button" type="button">执行完整前向</button>
+                <button id="cnnRunBackward" class="primary-button orange" type="button">执行完整反向</button>
+                <button id="cnnUpdateParams" class="primary-button green" type="button">更新参数</button>
+                <button id="cnnReset" class="download-button" type="button">重置</button>
+            </div>
+            <label class="cnn-field">
+                <span>学习率 lr</span>
+                <input id="cnnLearningRate" type="number" value="0.1" min="0.001" max="1" step="0.01">
+            </label>
+            <label class="cnn-field">
+                <span>真实标签 label</span>
+                <select id="cnnLabel">
+                    <option value="0">类别 0</option>
+                    <option value="1" selected>类别 1</option>
+                    <option value="2">类别 2</option>
+                </select>
+            </label>
+            <p id="cnnMessage" class="cnn-message">点击层卡片或使用步骤按钮开始演示。</p>
+        </aside>
+
+        <section class="cnn-stage-panel">
+            <div id="cnnFlowBar" class="cnn-flow-bar"></div>
+            <section class="cnn-scene-card">
+                <div class="cnn-scene-toolbar" aria-label="3D 视角控制">
+                    <span>3D CNN Stage</span>
+                    <button type="button" data-view="overview">总览视角</button>
+                    <button type="button" data-view="front">正视图</button>
+                    <button type="button" data-view="side">侧视图</button>
+                    <button type="button" data-view="focus">聚焦当前层</button>
+                </div>
+                <div id="cnnSceneMount" class="cnn-scene-mount">
+                    <div class="cnn-scene-fallback">正在加载 3D CNN 可视化舞台...</div>
+                </div>
+            </section>
+            <div id="cnnVisualization" class="cnn-visualization"></div>
+        </section>
+
+        <aside class="cnn-formula-panel">
+            <span class="section-label">Formula</span>
+            <h2 id="cnnFormulaTitle">模型结构</h2>
+            <div id="cnnFormulaBody" class="cnn-formula-body"></div>
+        </aside>
+    </main>
+
+    <section class="cnn-detail-panel">
+        <div>
+            <span class="section-label">Calculation Details</span>
+            <h2 id="cnnDetailTitle">关键数值</h2>
+        </div>
+        <div id="cnnDetailBody" class="cnn-detail-body"></div>
+    </section>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<script src="{{ url_for('static', filename='js/cnn_scene.js') }}"></script>
+<script src="{{ url_for('static', filename='cnn_visualization.js') }}"></script>
+{% endblock %}

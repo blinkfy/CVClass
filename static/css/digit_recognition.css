@@ -191,6 +191,45 @@
     background: #ffffff;
 }
 
+.inference-mode-panel {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.inference-mode-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.inference-mode-options label,
+.inference-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.inference-mode-options label {
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    background: #ffffff;
+}
+
+.inference-mode-badge {
+    width: fit-content;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
 .prediction-box {
     display: grid;
     place-items: center;

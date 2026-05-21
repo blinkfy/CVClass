@@ -28,7 +28,7 @@
                 <a href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'digit' else '' }}" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
             </div>
-            <span class="disabled">第三节：</span>
+            <a class="{{ 'active' if active_page == 'cnn' else '' }}" href="{{ url_for('cnn_visualization_page') }}">第三节：CNN 前向与反向传播可视化</a>
             <span class="disabled">第四节：</span>
             <span class="disabled">第五节：</span>
             <span class="disabled">第六节：</span>

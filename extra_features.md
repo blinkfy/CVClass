@@ -85,3 +85,9 @@ equalized = mapping[gray_array]
 - `renderSnakePath(...)`：渲染蛇形卷积弯曲路径采样顺序，非路径点不参与计算。
 
 卷积可视化模块完全在前端使用原生 JavaScript 完成，没有引入 React、Vue 等大型框架。矩阵使用 HTML grid 渲染，便于显示每个具体数值和高亮每一步计算过程。单通道矩阵按灰度显示数值强度，三通道输入按 R/G/B 通道颜色显示；dilation 控件只在空洞卷积中显示和启用。
+
+## 第三节：CNN 前向与反向传播可视化扩展
+
+第三节新增固定小 CNN 教学页面，访问地址为 `/cnn-visualization`。该页面使用原生 JavaScript 在前端完成 6×6 输入、3×3 卷积、ReLU、MaxPool、Flatten、FC、Softmax、Cross Entropy Loss、反向传播和参数更新的数值演示。
+
+与第二节不同，第三节不追求多通道或大规模真实训练，而是把每一步梯度计算拆开显示：`dlogits = probs - y`、`dWfc = flat × dlogits`、MaxPool 梯度路由、ReLU mask、卷积核梯度 `dK` 逐步累加以及 `K_new = K_old - lr × dK` 参数更新。该页面用于课程录屏中解释 CNN 为什么能训练，以及梯度如何从 Loss 回传到卷积核。

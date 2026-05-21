@@ -1,9 +1,10 @@
 # 计算机视觉课程实验系统
 
-这是一个用于计算机视觉课程实验展示的 Web 系统。项目包含两个清晰分页：
+这是一个用于计算机视觉课程实验展示的 Web 系统。项目包含多个清晰分页：
 
 - 第一节：图像灰度化与基础图像处理实验
 - 第二节：卷积计算过程可视化实验
+- 第三节：CNN 前向传播与反向传播可视化实验
 
 前端使用原生 HTML、CSS、JavaScript，后端使用 Python Flask。图像处理部分使用 NumPy 手动计算，不使用 OpenCV/cv2；卷积可视化部分在前端使用 JavaScript 完成矩阵卷积计算和逐步演示。
 
@@ -21,6 +22,7 @@
 - 在当前页面记录每次成功处理的文件名、尺寸、算法、耗时和处理时间
 - 扩展基础图像处理功能：RGB 通道分离、二值化、颜色反转、翻转、90 度旋转、灰度直方图均衡化
 - 新增卷积可视化实验：随机输入矩阵、卷积核、多通道、多卷积核、padding、stride、dilation、1×1 卷积、空洞卷积、蛇形卷积
+- 新增 CNN 前向与反向传播可视化实验：固定 6×6 小 CNN，前端逐步演示 Conv、ReLU、MaxPool、Flatten、FC、Softmax、Loss、梯度回传和参数更新
 - 基本异常处理：未选择文件、非图片文件、文件过大、非法灰度化方法、后端处理失败
 
 ## 项目结构
@@ -152,3 +154,49 @@ Input 1×28×28 -> Conv -> ReLU -> Pool -> Conv -> ReLU -> Pool -> FC -> Softmax
 ```
 
 如果参数文件不存在，接口会返回 `success=false` 和友好提示，不会导致 Flask 服务崩溃。
+
+## 第三节 CNN 前向与反向传播可视化实验
+
+访问地址：
+
+```text
+http://127.0.0.1:5000/cnn-visualization
+```
+
+第三节用于解释 CNN 训练时的一次完整前向传播、反向传播和参数更新。该页面优先在前端完成教学计算，不新增复杂后端 API，避免影响第一节、第二节和手写数字识别模块。
+
+教学 CNN 结构固定为：
+
+```text
+Input 6×6
+→ Conv 3×3, stride=1, padding=0, 1 个卷积核
+→ ReLU
+→ MaxPool 2×2, stride=2
+→ Flatten 4维向量
+→ FC 4→3
+→ Softmax
+→ Cross Entropy Loss
+```
+
+尺寸变化：
+
+```text
+6×6 → 4×4 → 4×4 → 2×2 → 4 → 3
+```
+
+页面包含四个 Tab：
+
+- 模型总览：展示 Input、Conv、ReLU、MaxPool、Flatten、FC、Softmax、Loss 的层级关系、输入输出尺寸、作用和主要公式。
+- 前向传播：逐步展示输入初始化、卷积滑窗、ReLU 截断、MaxPool 取最大值、Flatten、FC、Softmax 和 Cross Entropy Loss。
+- 反向传播：逐步展示 `dlogits = probs - y`、FC 梯度、Flatten reshape、MaxPool 梯度路由、ReLU mask、卷积核梯度 `dK` 累加、bias 梯度和参数更新。
+- 模型应用：提供进入 `/digit-recognition` 手写数字识别模块的入口，说明小 CNN 负责解释计算细节，真实手写识别模块展示 CNN 在实际分类任务中的应用。
+
+参数更新展示公式：
+
+```text
+K_new = K_old - lr × dK
+Wfc_new = Wfc_old - lr × dWfc
+b_new = b_old - lr × db
+```
+
+第三节页面采用接近单屏的布局：左侧控制区、中间矩阵/流程可视化区、右侧公式区和底部计算详情区。学习率和真实标签可以在左侧修改，并影响后续 loss、梯度和参数更新计算。

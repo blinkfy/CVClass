@@ -630,6 +630,8 @@ function renderOutputs() {
         const outputMax = values.length ? Math.max(...values) : 1;
         const card = document.createElement("div");
         card.className = "feature-card";
+        card.dataset.outputKernel = String(index);
+        card.classList.toggle("is-active-output-map", index === step.kernelIndex);
         card.innerHTML = `<h4>Feature Map ${index + 1}</h4>`;
         const holder = document.createElement("div");
         card.appendChild(holder);
@@ -647,6 +649,35 @@ function renderOutputs() {
             active: index === step.kernelIndex ? { r: step.outR, c: step.outC } : null
         });
     });
+
+    if (p.kernelCount > 1) {
+        const selector = document.createElement("div");
+        selector.className = "output-kernel-selector";
+        selector.setAttribute("aria-label", "选择输出特征图对应的卷积核");
+        selector.innerHTML = convState.outputs.map((_, index) => `
+            <button class="${index === step.kernelIndex ? "is-active" : ""}" type="button" data-output-kernel="${index}">
+                Kernel ${index + 1}
+            </button>
+        `).join("");
+        selector.querySelectorAll("button").forEach((button) => {
+            button.addEventListener("click", () => {
+                stopAutoPlay();
+                setActiveOutputKernel(Number(button.dataset.outputKernel));
+            });
+        });
+        convEls.outputMaps.appendChild(selector);
+    }
+}
+
+function setActiveOutputKernel(kernelIndex) {
+    const p = getParams();
+    const { outH, outW } = getOutputSize(p.inputSize, p.kernelSize, p.stride, p.padding, p.dilation);
+    const perKernel = Math.max(1, outH * outW);
+    const localStep = convState.currentStep % perKernel;
+    const safeKernelIndex = Math.max(0, Math.min(p.kernelCount - 1, kernelIndex));
+    convState.currentStep = safeKernelIndex * perKernel + localStep;
+    convState.animationTermStep = 0;
+    renderAll();
 }
 
 function renderOverlayRelation() {
@@ -682,16 +713,13 @@ function renderOverlayRelation() {
         block.dataset.overviewChannel = String(channelIndex);
         block.classList.toggle("is-active-channel", channelIndex === convState.activeCanvasChannel);
 
+        const cellSize = p.kernelSize === 5 ? 25 : p.kernelSize === 1 ? 48 : 34;
+        const layout = getOverviewOverlapLayout(p.kernelSize, cellSize);
         const stage = document.createElement("div");
         stage.className = "overview-overlap-stage";
-        const cellSize = p.kernelSize === 5 ? 25 : p.kernelSize === 1 ? 48 : 34;
-        stage.style.setProperty("--overview-cell-size", `${cellSize}px`);
-        stage.style.setProperty("--overview-patch-left", `${Math.max(8, Math.round(cellSize * 0.25))}px`);
-        stage.style.setProperty("--overview-patch-bottom", `${Math.max(50, Math.round(cellSize * 0.34))}px`);
-        stage.style.setProperty("--overview-kernel-right", `${Math.max(8, Math.round(cellSize * 0.18))}px`);
-        stage.style.setProperty("--overview-kernel-top", `${Math.max(8, Math.round(cellSize * 0.22))}px`);
-        stage.style.setProperty("--overview-kernel-shift-x", `${Math.max(34, Math.round(cellSize * 3.1))}px`);
-        stage.style.setProperty("--overview-kernel-shift-y", `${Math.max(8, Math.round(cellSize * 1.15))}px`);
+        Object.entries(layout).forEach(([name, value]) => {
+            stage.style.setProperty(name, `${value}px`);
+        });
 
         const patchLayer = document.createElement("div");
         patchLayer.className = "overview-overlap-layer overview-patch-layer";
@@ -741,6 +769,35 @@ function renderOverlayRelation() {
     convEls.overlayRelation.innerHTML = "";
     convEls.overlayRelation.appendChild(list);
     convEls.overlayRelation.appendChild(summary);
+}
+
+function getOverviewOverlapLayout(kernelSize, cellSize) {
+    const gap = 3;
+    const gridPadding = 14;
+    const labelSpace = 28;
+    const gridSize = kernelSize * cellSize + (kernelSize - 1) * gap + gridPadding;
+    const layerSize = gridSize + labelSpace;
+    const stageWidth = Math.round(Math.max(layerSize + gridSize * 0.68 + 20, gridSize + 100));
+    const stageHeight = Math.round(Math.max(layerSize + gridSize * 0.42 + 18, gridSize + 92));
+    const patchLeft = Math.round(Math.max(8, Math.min(18, cellSize * 0.35)));
+    const verticalLift = Math.round(Math.max(10, cellSize * 0.45) + (kernelSize === 5 ? cellSize * 1.65 : 0));
+    const patchTop = Math.round(Math.max(8, stageHeight - layerSize - 16 - verticalLift));
+
+    const overlay = {
+        1: { x: 0.62, y: -0.48 },
+        3: { x: 0.48, y: 0.24 },
+        5: { x: 0.12, y: 0.46 }
+    }[kernelSize] || { x: 0.42, y: 0.28 };
+
+    return {
+        "--overview-cell-size": cellSize,
+        "--overview-stage-width": stageWidth,
+        "--overview-stage-height": stageHeight,
+        "--overview-patch-left": patchLeft,
+        "--overview-patch-top": patchTop,
+        "--overview-kernel-left": Math.round(patchLeft + gridSize * overlay.x),
+        "--overview-kernel-top": Math.round(Math.max(6, patchTop + gridSize * overlay.y))
+    };
 }
 
 function drawOverviewConnections() {
