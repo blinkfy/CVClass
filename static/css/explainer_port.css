@@ -1860,6 +1860,9 @@
     stroke: #e5e7eb;
     stroke-width: 0.75px;
     opacity: 0.82;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
 .ce-edge.is-grad {

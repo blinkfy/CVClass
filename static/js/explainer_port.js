@@ -103,8 +103,11 @@
             sequence: [],
             stepIndex: -1,
             timer: null,
+            frameId: null,
             version: 0,
             updateActive: false,
+            revealLayerIndex: -1,
+            revealProgress: 1,
             maxScalar: 1
         },
         renderToken: 0
@@ -135,6 +138,7 @@
 
     const gradConfig = {
         stepDuration: 720,
+        layerPause: 90,
         minDuration: 600,
         maxDuration: 900
     };
@@ -145,6 +149,10 @@
             window.clearTimeout(replay.timer);
             replay.timer = null;
         }
+        if (replay.frameId) {
+            window.cancelAnimationFrame(replay.frameId);
+            replay.frameId = null;
+        }
         replay.active = false;
         replay.updateActive = false;
         replay.targetLabel = null;
@@ -153,6 +161,8 @@
         replay.activeLayers.clear();
         replay.sequence = [];
         replay.stepIndex = -1;
+        replay.revealLayerIndex = -1;
+        replay.revealProgress = 1;
         replay.maxScalar = 1;
         if (!silent && els.interactionText) {
             els.interactionText.textContent = "梯度热力已清除，可点击 Softmax 类别重新回放。";
@@ -165,23 +175,12 @@
     }
 
     function gradientSequence() {
-        const order = ["output", "fc", "flatten", "pool", "relu", "conv", "input"];
         const indices = [];
-        order.forEach((type) => {
-            let index = -1;
-            for (let i = layerDefs.length - 1; i >= 0; i -= 1) {
-                if (layerDefs[i].type === type) {
-                    index = i;
-                    break;
-                }
+        for (let i = layerDefs.length - 1; i >= 0; i -= 1) {
+            if (!indices.includes(i)) {
+                indices.push(i);
             }
-            if (type === "input") {
-                index = 0;
-            }
-            if (index >= 0 && !indices.includes(index)) {
-                indices.push(index);
-            }
-        });
+        }
         return indices.map((layerIndex) => ({ layerIndex, type: layerDefs[layerIndex]?.type || "" }));
     }
 
@@ -276,58 +275,63 @@
             setNodeGrad(node, { scalar: absGrad[index] || 0 });
         });
 
-        const lastOfType = (type) => {
-            for (let i = layerDefs.length - 1; i >= 0; i -= 1) {
-                if (layerDefs[i].type === type) return i;
+        for (let layerIdx = state.cnn.length - 2; layerIdx >= 0; layerIdx -= 1) {
+            const layerDef = layerDefs[layerIdx];
+            if (!layerDef) continue;
+            const layer = state.cnn[layerIdx] || [];
+            const type = layerDef.type;
+
+            if (type === "fc") {
+                const isLastFc = layerIdx === state.cnn.length - 2;
+                if (isLastFc) {
+                    layer.forEach((node, index) => {
+                        const scalar = absGrad[index % absGrad.length] || meanGrad;
+                        setNodeGrad(node, { scalar });
+                    });
+                } else {
+                    const nextReluLayerIdx = layerIdx + 1;
+                    const nextReluLayer = state.cnn[nextReluLayerIdx] || [];
+                    const reluMaskScalars = nextReluLayer.map((n) => {
+                        const val = averageOutput(n.output);
+                        return val > 0 ? 1 : 0;
+                    });
+                    layer.forEach((node, index) => {
+                        const mask = reluMaskScalars[index % reluMaskScalars.length] || 0.5;
+                        const scalar = (absGrad[index % absGrad.length] || meanGrad) * mask * 0.75;
+                        setNodeGrad(node, { scalar });
+                    });
+                }
+            } else if (type === "flatten") {
+                layer.forEach((node) => {
+                    const scale = meanGrad * (0.35 + 0.65 * Math.min(1, Math.abs(averageOutput(node.output))));
+                    setNodeGrad(node, { scalar: scale });
+                });
+            } else if (type === "pool") {
+                layer.forEach((node) => {
+                    const scale = meanGrad * 0.85;
+                    const matrix = gradMatrixFromActivation(node.output, scale, { pool: true });
+                    setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+                });
+            } else if (type === "relu") {
+                layer.forEach((node) => {
+                    const scale = meanGrad * 0.95;
+                    const matrix = gradMatrixFromActivation(node.output, scale, { reluMask: true });
+                    setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+                });
+            } else if (type === "conv") {
+                layer.forEach((node) => {
+                    const scale = meanGrad;
+                    const matrix = gradMatrixFromActivation(node.output, scale);
+                    setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+                });
+            } else if (type === "input") {
+                layer.forEach((node) => {
+                    const scale = meanGrad * 0.8;
+                    const matrix = gradMatrixFromActivation(node.output, scale);
+                    setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+                });
             }
-            return -1;
-        };
-
-        const fcIndex = lastOfType("fc");
-        const flattenIndex = lastOfType("flatten");
-        const poolIndex = lastOfType("pool");
-        const reluIndex = lastOfType("relu");
-        const convIndex = lastOfType("conv");
-
-        const fcLayer = state.cnn[fcIndex] || [];
-        fcLayer.forEach((node, index) => {
-            const scalar = absGrad[index % absGrad.length] || meanGrad;
-            setNodeGrad(node, { scalar });
-        });
-
-        const flattenLayer = state.cnn[flattenIndex] || [];
-        flattenLayer.forEach((node) => {
-            const scale = meanGrad * (0.35 + 0.65 * Math.min(1, Math.abs(averageOutput(node.output))));
-            setNodeGrad(node, { scalar: scale });
-        });
-
-        const poolLayer = state.cnn[poolIndex] || [];
-        poolLayer.forEach((node) => {
-            const scale = meanGrad * 0.85;
-            const matrix = gradMatrixFromActivation(node.output, scale, { pool: true });
-            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
-        });
-
-        const reluLayer = state.cnn[reluIndex] || [];
-        reluLayer.forEach((node) => {
-            const scale = meanGrad * 0.95;
-            const matrix = gradMatrixFromActivation(node.output, scale, { reluMask: true });
-            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
-        });
-
-        const convLayer = state.cnn[convIndex] || [];
-        convLayer.forEach((node) => {
-            const scale = meanGrad;
-            const matrix = gradMatrixFromActivation(node.output, scale);
-            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
-        });
-
-        const inputLayer = state.cnn[0] || [];
-        inputLayer.forEach((node) => {
-            const scale = meanGrad * 0.8;
-            const matrix = gradMatrixFromActivation(node.output, scale);
-            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
-        });
+        }
 
         let maxScalar = 0.001;
         state.gradReplay.nodeGrad.forEach((entry) => {
@@ -337,7 +341,7 @@
     }
 
     function startGradientReplay(targetLabel) {
-        if (state.modelMode !== "digit") {
+        if (!state.cnn.length) {
             return;
         }
         clearGradientReplay({ silent: true, render: false });
@@ -355,18 +359,53 @@
         advanceGradientReplay();
     }
 
+    function easeOutCubic(t) {
+        const clamped = Math.max(0, Math.min(1, t));
+        return 1 - Math.pow(1 - clamped, 3);
+    }
+
+    function animateLayerReveal(layerIndex, onComplete) {
+        const replay = state.gradReplay;
+        const duration = Math.max(220, Math.min(gradConfig.maxDuration, gradConfig.stepDuration));
+        const start = performance.now();
+        replay.revealLayerIndex = layerIndex;
+        replay.revealProgress = 0;
+
+        const tick = (now) => {
+            if (state.gradReplay.revealLayerIndex !== layerIndex) {
+                return;
+            }
+            const progress = easeOutCubic((now - start) / duration);
+            replay.revealProgress = progress;
+            state.nodeImageCache.clear();
+            renderNetwork();
+            updateSidePanel();
+            if (progress < 1) {
+                replay.frameId = window.requestAnimationFrame(tick);
+                return;
+            }
+            replay.frameId = null;
+            replay.timer = window.setTimeout(onComplete, gradConfig.layerPause);
+        };
+
+        replay.frameId = window.requestAnimationFrame(tick);
+    }
+
     function advanceGradientReplay() {
         const replay = state.gradReplay;
+        if (replay.timer) {
+            window.clearTimeout(replay.timer);
+            replay.timer = null;
+        }
         replay.stepIndex += 1;
         if (replay.stepIndex < replay.sequence.length) {
             const layerIndex = replay.sequence[replay.stepIndex].layerIndex;
             replay.activeLayers.add(layerIndex);
-            state.nodeImageCache.clear();
-            renderNetwork();
-            updateSidePanel();
-            replay.timer = window.setTimeout(advanceGradientReplay, gradConfig.stepDuration);
+            animateLayerReveal(layerIndex, advanceGradientReplay);
             return;
         }
+        replay.revealLayerIndex = -1;
+        replay.revealProgress = 1;
         replay.updateActive = true;
         state.nodeImageCache.clear();
         renderNetwork();
@@ -1469,20 +1508,38 @@
         if (!state.gradReplay.active) {
             return null;
         }
-        const active = state.gradReplay.activeLayers.has(link.source.layerIndex) || state.gradReplay.activeLayers.has(link.target.layerIndex);
-        if (!active) {
+        const replay = state.gradReplay;
+        const targetLayer = link.target.layerIndex;
+        const sourceLayer = link.source.layerIndex;
+        const currentLayer = replay.revealLayerIndex;
+        const isFullyActive = replay.activeLayers.has(targetLayer) && currentLayer !== targetLayer;
+        const isCurrentLayer = currentLayer === targetLayer;
+        if (!isFullyActive && !isCurrentLayer) {
             return null;
         }
         const scalar = gradientScalar(link.target) || gradientScalar(link.source);
         if (!scalar) {
             return null;
         }
-        const norm = Math.min(1, scalar / Math.max(1e-6, state.gradReplay.maxScalar));
-        const color = gradientColor(scalar, state.gradReplay.maxScalar);
+        const norm = Math.min(1, scalar / Math.max(1e-6, replay.maxScalar));
+        const color = gradientColor(scalar, replay.maxScalar);
+        let opacity = 0.45 + norm * 0.5;
+        let strokeWidth = 0.8 + norm * 3.2;
+        if (isCurrentLayer) {
+            const layoutSpan = Math.max(1, width - leftPad - rightPad);
+            const revealThreshold = 1 - Math.max(0, Math.min(1, (link.source.cx - leftPad) / layoutSpan));
+            const localProgress = Math.max(0, Math.min(1, (replay.revealProgress - revealThreshold) / Math.max(0.12, 1 - revealThreshold)));
+            if (localProgress <= 0) {
+                return null;
+            }
+            const eased = easeOutCubic(localProgress);
+            opacity *= 0.15 + 0.85 * eased;
+            strokeWidth *= 0.55 + 0.45 * eased;
+        }
         return {
             color,
-            width: 0.8 + norm * 3.2,
-            opacity: 0.45 + norm * 0.5
+            width: strokeWidth,
+            opacity
         };
     }
 
