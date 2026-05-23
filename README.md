@@ -38,10 +38,9 @@ CVClass/
 ├─ templates/
 │  └─ index.html
 └─ static/
-   ├─ convolution.css
-   ├─ convolution.js
-   ├─ style.css
-   └─ script.js
+   ├─ css/
+   ├─ js/
+   └─ assets/
 ```
 
 ## 运行方式

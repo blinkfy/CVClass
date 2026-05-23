@@ -7,7 +7,7 @@ import numpy as np
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 SOURCE_PATH = ROOT_DIR / "models" / "numpy_mnist_cnn.npz"
-TARGET_PATH = ROOT_DIR / "static" / "models" / "mnist_cnn_weights.json"
+TARGET_PATH = ROOT_DIR / "static" / "assets" / "data" / "mnist_cnn_weights.json"
 PARAM_KEYS = (
     "layer0_weights",
     "layer0_bias",

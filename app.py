@@ -49,26 +49,21 @@ def format_file_size(size):
         return f"{size / 1024:.2f} KB"
     return f"{size / (1024 * 1024):.2f} MB"
 
-
 @app.route("/")
 def home():
     return render_template("home.html", active_page="home")
-
 
 @app.route("/grayscale", methods=["GET"])
 def grayscale_page():
     return render_template("grayscale.html", active_page="grayscale")
 
-
 @app.route("/convolution", methods=["GET"])
 def convolution_page():
     return render_template("convolution.html", active_page="convolution", active_sub_page="visual")
 
-
 @app.route("/image-convolution", methods=["GET"])
 def image_convolution_page():
     return render_template("image_convolution.html", active_page="convolution", active_sub_page="image")
-
 
 @app.route("/digit-recognition", methods=["GET"])
 def digit_recognition_page():
@@ -81,10 +76,13 @@ def digit_recognition_page():
         model_message=model_message,
     )
 
-
 @app.route("/cnn-visualization", methods=["GET"])
 def cnn_visualization_page():
-    return render_template("cnn_visualization.html", active_page="cnn")
+    return render_template("cnn_visualization.html", active_page="cnn", active_sub_page="cnn_train")
+
+@app.route("/cnn-explainer", methods=["GET"])
+def cnn_explainer_page():
+    return render_template("cnn_explainer.html", active_page="cnn", active_sub_page="cnn_explainer")
 
 
 def parse_threshold(value):

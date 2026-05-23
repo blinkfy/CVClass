@@ -345,7 +345,7 @@
         } catch (error) {
             if (state.inferenceMode === "client") {
                 const message = error.message && error.message.includes("mnist_cnn_weights.json")
-                    ? "前端模型权重加载失败，请检查 static/models/mnist_cnn_weights.json"
+                    ? "前端模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json"
                     : error.message || "前端推理失败";
                 setMessage(message, true);
                 return;

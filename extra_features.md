@@ -71,7 +71,7 @@ equalized = mapping[gray_array]
 
 第二节新增“卷积计算过程可视化系统”，用于展示卷积神经网络中局部感受野、卷积核滑动、padding、stride、dilation、多通道融合和多卷积核输出的关系。
 
-核心实现位于 `static/convolution.js`，主要包含：
+核心实现位于 `static/js/convolution.js`，主要包含：
 
 - `generateMatrix(rows, cols, min, max)`：生成随机输入矩阵，卷积实验中默认范围为 0-255。
 - `generateKernel(size, min, max)`：生成随机卷积核。

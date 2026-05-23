@@ -1,5 +1,5 @@
 (function () {
-    const MODEL_URL = "/static/models/mnist_cnn_weights.json";
+    const MODEL_URL = "/static/assets/data/mnist_cnn_weights.json";
     const state = {
         loaded: false,
         loadingPromise: null,
@@ -56,7 +56,7 @@
         state.loadingPromise = fetch(modelUrl(), { cache: "force-cache" })
             .then((response) => {
                 if (!response.ok) {
-                    throw new Error("前端模型权重加载失败，请检查 static/models/mnist_cnn_weights.json");
+                    throw new Error("前端模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json");
                 }
                 return response.json();
             })
@@ -217,9 +217,45 @@
         return result;
     }
 
+    function predictDetailed(canvas28x28) {
+        if (!state.loaded || !state.weights) {
+            throw new Error("前端模型尚未加载");
+        }
+
+        const start = performance.now();
+        const weights = state.weights;
+        const input = normalizeInput(canvas28x28);
+        const conv0Raw = conv2d(input, 1, 28, 28, weights.layer0_weights, weights.layer0_bias, 32);
+        const conv0 = reluInPlace(new Float32Array(conv0Raw));
+        const pool0 = maxPool2x2(conv0, 32, 28, 28);
+        const conv1Raw = conv2d(pool0, 32, 14, 14, weights.layer3_weights, weights.layer3_bias, 64);
+        const conv1 = reluInPlace(new Float32Array(conv1Raw));
+        const pool1 = maxPool2x2(conv1, 64, 14, 14);
+        const fc0Raw = dense(pool1, weights.layer6_weights, weights.layer6_bias, 128);
+        const fc0 = reluInPlace(new Float32Array(fc0Raw));
+        const logits = dense(fc0, weights.layer8_weights, weights.layer8_bias, 10);
+        const result = softmax(logits);
+        result.elapsed_ms = Math.round((performance.now() - start) * 100) / 100;
+        result.logits = Array.from(logits);
+        result.activations = {
+            input: Array.from(input),
+            conv0_raw: conv0Raw,
+            conv0,
+            pool0,
+            conv1_raw: conv1Raw,
+            conv1,
+            pool1,
+            fc0_raw: fc0Raw,
+            fc0,
+            logits
+        };
+        return result;
+    }
+
     window.loadClientDigitModel = loadClientDigitModel;
     window.clientDigitModel = {
         loadClientDigitModel,
-        predict
+        predict,
+        predictDetailed
     };
 }());
