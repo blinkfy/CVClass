@@ -962,3 +962,93 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Learning-rate comparison controls inside Loss Landscape panel */
+.cnn-lr-compare-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 10px 0 12px;
+    padding: 12px 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.cnn-lr-compare-bar strong {
+    display: block;
+    margin-top: 3px;
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.cnn-lr-compare-bar p {
+    margin: 3px 0 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.cnn-lr-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cnn-lr-actions button,
+.cnn-lr-buttons button {
+    min-height: 32px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0 12px;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 900;
+    background: #eff6ff;
+    cursor: pointer;
+}
+
+.cnn-lr-actions button.is-active,
+.cnn-lr-buttons button.is-active {
+    color: #ffffff;
+    border-color: #2563eb;
+    background: #2563eb;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.20);
+}
+
+.cnn-lr-buttons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cnn-lr-buttons[hidden] {
+    display: none;
+}
+
+.cnn-lr-buttons button.is-diverged {
+    border-color: #fecaca;
+    color: #b91c1c;
+    background: #fff1f2;
+}
+
+.cnn-lr-buttons button.is-diverged.is-active {
+    color: #ffffff;
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+@media (max-width: 900px) {
+    .cnn-lr-compare-bar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cnn-lr-actions {
+        justify-content: flex-start;
+    }
+}

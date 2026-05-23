@@ -2,7 +2,7 @@
 {% block title %}第三节 CNN 正反向传播 3D 可视化{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cnn_visualization.css') }}?v=landscape-1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cnn_visualization.css') }}?v=landscape-lr-compare-1">
 {% endblock %}
 {% block content %}
 <section id="cnnVizPage" class="cnn-viz-page" data-digit-url="{{ url_for('digit_recognition_page') }}">
@@ -129,6 +129,17 @@
                 </div>
             </header>
             <div id="cnnLandscapeStatus" class="cnn-landscape-status">正在准备训练轨迹数据...</div>
+            <section class="cnn-lr-compare-bar" aria-label="学习率对比控制">
+                <div>
+                    <span class="section-label">Learning Rate Compare</span>
+                    <strong>学习率对比</strong>
+                    <p>共享 FC2 PCA 坐标下比较不同学习率的下降速度与稳定性。</p>
+                </div>
+                <div class="cnn-lr-actions">
+                    <button id="cnnLrCompareToggle" type="button" aria-pressed="false">开启对比</button>
+                    <div id="cnnLrCompareButtons" class="cnn-lr-buttons" hidden></div>
+                </div>
+            </section>
             <section class="cnn-landscape-stats" aria-label="当前训练快照">
                 <article><span>Step</span><strong id="cnnLsStep">-</strong></article>
                 <article><span>Loss</span><strong id="cnnLsLoss">-</strong></article>
@@ -163,6 +174,6 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="{{ url_for('static', filename='js/client_digit_model.js') }}"></script>
-<script src="{{ url_for('static', filename='js/cnn_scene.js') }}?v=landscape-3"></script>
-<script src="{{ url_for('static', filename='js/cnn_visualization.js') }}?v=landscape-1"></script>
+<script src="{{ url_for('static', filename='js/cnn_scene.js') }}?v=landscape-lr-compare-1"></script>
+<script src="{{ url_for('static', filename='js/cnn_visualization.js') }}?v=landscape-lr-compare-1"></script>
 {% endblock %}

@@ -16,6 +16,8 @@
         landscapeClose: document.getElementById("cnnLandscapeClose"),
         landscapeRefresh: document.getElementById("cnnLandscapeRefresh"),
         landscapeStatus: document.getElementById("cnnLandscapeStatus"),
+        lrCompareToggle: document.getElementById("cnnLrCompareToggle"),
+        lrCompareButtons: document.getElementById("cnnLrCompareButtons"),
         lsStep: document.getElementById("cnnLsStep"),
         lsLoss: document.getElementById("cnnLsLoss"),
         lsAcc: document.getElementById("cnnLsAcc"),
@@ -183,6 +185,9 @@
             source: "",
             trace: null,
             surface: null,
+            lrCompare: null,
+            compareEnabled: false,
+            selectedLr: null,
             currentIndex: 0
         }
     };
@@ -1046,6 +1051,108 @@
         };
     }
 
+    function normalizeLrComparison(raw) {
+        if (!raw || !Array.isArray(raw.series)) return null;
+        const series = raw.series.map((item) => {
+            const points = Array.isArray(item.points) ? item.points.map((row) => ({
+                step: Number(row.step ?? 0),
+                epoch: Number(row.epoch ?? 0),
+                batch: Number(row.batch ?? 0),
+                pc1: Number(row.pc1 ?? 0),
+                pc2: Number(row.pc2 ?? 0),
+                loss: Number(row.loss ?? row.val_loss ?? row.train_loss ?? 0),
+                train_loss: Number(row.train_loss ?? row.loss ?? 0),
+                val_loss: Number(row.val_loss ?? row.loss ?? row.train_loss ?? 0),
+                train_acc: Number(row.train_acc ?? 0),
+                val_acc: Number(row.val_acc ?? row.train_acc ?? 0),
+                lr: Number(row.lr ?? item.lr ?? 0),
+                grad_norm_total: Number(row.grad_norm_total ?? 0),
+                update_norm_total: Number(row.update_norm_total ?? 0)
+            })).filter((row) => Number.isFinite(row.loss)) : [];
+            return {
+                lr: Number(item.lr),
+                label: item.label || `lr=${item.lr}`,
+                type: item.type || "compare",
+                status: item.status || "ok",
+                stop_reason: item.stop_reason || "",
+                points
+            };
+        }).filter((item) => Number.isFinite(item.lr) && item.points.length);
+        if (!series.length) return null;
+        return {
+            success: raw.success !== false,
+            description: raw.description || "Learning-rate comparison trajectories use a shared PCA coordinate system.",
+            primary_lr: Number(raw.primary_lr ?? series[0].lr),
+            learning_rates: raw.learning_rates || series.map((item) => item.lr),
+            series
+        };
+    }
+
+    function syntheticLrComparison(baseTrace) {
+        const lrs = [0.001, 0.01, 0.05, 0.1];
+        const series = lrs.map((lr, idx) => {
+            const factor = lr === 0.001 ? 0.38 : lr === 0.01 ? 1 : lr === 0.05 ? 1.25 : 1.6;
+            const status = lr === 0.1 ? "demo_fast" : "demo";
+            const points = baseTrace.map((row, i) => {
+                const t = baseTrace.length <= 1 ? 1 : i / (baseTrace.length - 1);
+                const slowLoss = baseTrace[0].loss - (baseTrace[0].loss - baseTrace[baseTrace.length - 1].loss) * Math.min(1, t * factor);
+                const oscillation = lr === 0.1 ? Math.sin(i * 0.72) * 0.18 * (1 - t * 0.35) : 0;
+                return {
+                    ...row,
+                    lr,
+                    pc1: row.pc1 * factor + idx * 0.14,
+                    pc2: row.pc2 * factor - idx * 0.08,
+                    loss: Math.max(0.08, slowLoss + oscillation),
+                    train_loss: Math.max(0.08, slowLoss + oscillation * 0.8),
+                    val_loss: Math.max(0.1, slowLoss + oscillation),
+                    update_norm_total: Number(row.update_norm_total || 0) * factor
+                };
+            });
+            return { lr, label: `lr=${lr}`, type: lr === 0.001 ? "slow" : lr === 0.01 ? "primary" : "fast", status, stop_reason: "", points };
+        });
+        return { success: true, primary_lr: 0.01, learning_rates: lrs, series, description: "Synthetic learning-rate comparison for preview." };
+    }
+
+    function currentIndexForTrace(trace) {
+        if (!trace?.length) return 0;
+        const steps = stepsForMode();
+        const ratio = steps.length <= 1 ? 1 : state.stepIndex / (steps.length - 1);
+        return Math.max(0, Math.min(trace.length - 1, Math.round(ratio * (trace.length - 1))));
+    }
+
+    function selectedLrSeries() {
+        const cmp = state.landscape.lrCompare;
+        if (!cmp?.series?.length) return null;
+        const selected = state.landscape.selectedLr;
+        return cmp.series.find((item) => Math.abs(item.lr - selected) < 1e-12) || cmp.series[0];
+    }
+
+    function renderLrCompareControls() {
+        if (!els.lrCompareToggle || !els.lrCompareButtons) return;
+        const cmp = state.landscape.lrCompare;
+        const enabled = !!(state.landscape.compareEnabled && cmp?.series?.length);
+        els.lrCompareToggle.classList.toggle("is-active", enabled);
+        els.lrCompareToggle.setAttribute("aria-pressed", String(enabled));
+        els.lrCompareToggle.textContent = enabled ? "关闭对比" : "开启对比";
+        els.lrCompareButtons.hidden = !enabled;
+        if (!cmp?.series?.length) {
+            els.lrCompareButtons.innerHTML = "";
+            return;
+        }
+        els.lrCompareButtons.innerHTML = cmp.series.map((item) => {
+            const active = Math.abs(item.lr - state.landscape.selectedLr) < 1e-12;
+            const diverged = item.status && item.status !== "ok" && !item.status.startsWith("demo");
+            return `<button type="button" class="${active ? "is-active" : ""} ${diverged ? "is-diverged" : ""}" data-lr="${item.lr}" title="${item.status || "ok"}${item.stop_reason ? `: ${item.stop_reason}` : ""}">${item.label}${diverged ? " · diverged" : ""}</button>`;
+        }).join("");
+        els.lrCompareButtons.querySelectorAll("[data-lr]").forEach((button) => {
+            button.addEventListener("click", () => {
+                state.landscape.selectedLr = Number(button.dataset.lr);
+                renderLrCompareControls();
+                plotLandscapeCharts();
+            });
+        });
+    }
+
     async function loadLandscapeData(force = false) {
         if (state.landscape.loaded && !force) return;
         state.landscape.loading = true;
@@ -1054,27 +1161,43 @@
             els.landscapeStatus.textContent = "正在加载训练轨迹数据...";
         }
         try {
-            const traceResult = await fetchJsonCandidates([
-                "/static/assets/data/training_pca_trace.json"
-            ]);
+            const traceResult = await fetchJsonCandidates(["/static/assets/data/training_pca_trace.json"]);
             const trace = normalizeTraceData(traceResult.data);
             if (!trace.length) throw new Error("训练轨迹为空");
+
             let surface;
             let surfacePath = "";
             try {
-                const surfaceResult = await fetchJsonCandidates([
-                    "/static/assets/data/fc2_loss_surface.json"
-                ]);
+                const surfaceResult = await fetchJsonCandidates(["/static/assets/data/fc2_loss_surface.json"]);
                 surface = normalizeSurface(surfaceResult.data, trace);
                 surfacePath = surfaceResult.path;
             } catch (_) {
                 surface = syntheticSurface(trace);
                 surfacePath = "示例 FC2 loss surface";
             }
+
+            let lrCompare = null;
+            let lrPath = "";
+            try {
+                const lrResult = await fetchJsonCandidates([
+                    "/static/assets/data/lr_comparison_trace.json"
+                ]);
+                lrCompare = normalizeLrComparison(lrResult.data);
+                lrPath = lrResult.path;
+            } catch (_) {
+                lrCompare = null;
+                lrPath = "未加载学习率对比数据";
+            }
+
             state.landscape.trace = trace;
             state.landscape.surface = surface;
-            state.landscape.source = `${traceResult.path}；${surfacePath}`;
+            state.landscape.lrCompare = lrCompare;
+            if (lrCompare?.series?.length && state.landscape.selectedLr === null) {
+                state.landscape.selectedLr = lrCompare.primary_lr ?? lrCompare.series[0].lr;
+            }
+            state.landscape.source = `${traceResult.path}；${surfacePath}${lrCompare ? `；${lrPath}` : ""}`;
             state.landscape.loaded = true;
+            renderLrCompareControls();
             if (els.landscapeStatus) {
                 els.landscapeStatus.className = "cnn-landscape-status";
                 els.landscapeStatus.textContent = `已加载训练轨迹：${state.landscape.source}`;
@@ -1083,8 +1206,11 @@
             const trace = syntheticTrace();
             state.landscape.trace = trace;
             state.landscape.surface = syntheticSurface(trace);
+            state.landscape.lrCompare = syntheticLrComparison(trace);
+            state.landscape.selectedLr = state.landscape.lrCompare.primary_lr;
             state.landscape.source = "内置演示数据";
             state.landscape.loaded = true;
+            renderLrCompareControls();
             if (els.landscapeStatus) {
                 els.landscapeStatus.className = "cnn-landscape-status is-demo";
                 els.landscapeStatus.textContent = `未找到训练轨迹文件，当前显示内置演示数据。原因：${error.message || error}`;
@@ -1114,8 +1240,8 @@
         els.lsLoss && (els.lsLoss.textContent = fmt(current.loss ?? current.val_loss, 3));
         els.lsAcc && (els.lsAcc.textContent = `${fmt(current.val_acc ?? current.train_acc, 1)}%`);
         els.lsLr && (els.lsLr.textContent = fmt(current.lr, 3));
-        els.lsGrad && (els.lsGrad.textContent = fmt(current.grad_norm, 3));
-        els.lsUpdate && (els.lsUpdate.textContent = fmt(current.update_norm, 3));
+        els.lsGrad && (els.lsGrad.textContent = fmt(current.grad_norm_total ?? current.grad_norm, 3));
+        els.lsUpdate && (els.lsUpdate.textContent = fmt(current.update_norm_total ?? current.update_norm, 3));
     }
 
     function plotlyLayout(title, scene = false) {
@@ -1148,37 +1274,104 @@
             }
             return;
         }
+        renderLrCompareControls();
         const trace = state.landscape.trace;
         const surface = state.landscape.surface || syntheticSurface(trace);
-        const currentIndex = currentLandscapeIndex();
+        const compareEnabled = !!(state.landscape.compareEnabled && state.landscape.lrCompare?.series?.length);
+        const selectedSeries = compareEnabled ? selectedLrSeries() : null;
+        const displayTrace = selectedSeries?.points || trace;
+        const currentIndex = currentIndexForTrace(displayTrace);
         state.landscape.currentIndex = currentIndex;
-        const current = trace[currentIndex];
-        const next = trace[Math.min(trace.length - 1, currentIndex + 1)];
+        const current = displayTrace[currentIndex];
+        const next = displayTrace[Math.min(displayTrace.length - 1, currentIndex + 1)];
         updateLandscapeStats(current);
 
         const plotConfig = { responsive: true, displayModeBar: false };
+        const palette = ["#2563eb", "#16a34a", "#f97316", "#dc2626", "#8b5cf6", "#0891b2"];
+
         if (els.lossCurve) {
-            window.Plotly.react(els.lossCurve, [
-                { x: trace.map((d) => d.step), y: trace.map((d) => d.train_loss), type: "scatter", mode: "lines", name: "train loss", line: { width: 3, color: "#2563eb" } },
-                { x: trace.map((d) => d.step), y: trace.map((d) => d.val_loss), type: "scatter", mode: "lines", name: "val loss", line: { width: 3, color: "#f97316" } },
-                { x: [current.step], y: [current.loss ?? current.val_loss], type: "scatter", mode: "markers", name: "current", marker: { size: 12, color: "#16a34a", line: { color: "#ffffff", width: 2 } } }
-            ], { ...plotlyLayout("Loss 随训练 step 下降"), xaxis: { title: "step" }, yaxis: { title: "loss" } }, plotConfig);
+            let lossTraces;
+            if (compareEnabled) {
+                lossTraces = state.landscape.lrCompare.series.flatMap((series, index) => {
+                    const active = selectedSeries && Math.abs(series.lr - selectedSeries.lr) < 1e-12;
+                    const color = palette[index % palette.length];
+                    const width = active ? 4 : 2;
+                    const opacity = active ? 1 : 0.32;
+                    return [{
+                        x: series.points.map((d) => d.step),
+                        y: series.points.map((d) => d.val_loss ?? d.loss),
+                        type: "scatter",
+                        mode: "lines",
+                        name: `${series.label}${series.status === "diverged" ? " (diverged)" : ""}`,
+                        opacity,
+                        line: { width, color, dash: series.status === "diverged" ? "dash" : "solid" },
+                        text: series.points.map((d) => `lr ${series.lr}<br>step ${d.step}<br>loss ${fmt(d.loss, 3)}`)
+                    }];
+                });
+                lossTraces.push({
+                    x: [current.step],
+                    y: [current.loss ?? current.val_loss],
+                    type: "scatter",
+                    mode: "markers",
+                    name: "selected current",
+                    marker: { size: 10, color: "#0f172a", line: { color: "#ffffff", width: 2 } }
+                });
+            } else {
+                lossTraces = [
+                    { x: trace.map((d) => d.step), y: trace.map((d) => d.train_loss), type: "scatter", mode: "lines", name: "train loss", line: { width: 3, color: "#2563eb" } },
+                    { x: trace.map((d) => d.step), y: trace.map((d) => d.val_loss), type: "scatter", mode: "lines", name: "val loss", line: { width: 3, color: "#f97316" } },
+                    { x: [current.step], y: [current.loss ?? current.val_loss], type: "scatter", mode: "markers", name: "current", marker: { size: 10, color: "#16a34a", line: { color: "#ffffff", width: 2 } } }
+                ];
+            }
+            window.Plotly.react(els.lossCurve, lossTraces, { ...plotlyLayout(compareEnabled ? "不同学习率的 Loss 对比" : "Loss 随训练 step 下降"), xaxis: { title: "step" }, yaxis: { title: "loss" } }, plotConfig);
         }
 
         if (els.pcaTrajectory) {
-            window.Plotly.react(els.pcaTrajectory, [
-                { x: trace.map((d) => d.pc1), y: trace.map((d) => d.pc2), z: trace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "PCA trajectory", marker: { size: 3, color: trace.map((d) => d.loss), colorscale: "Viridis", opacity: 0.86 }, line: { width: 5, color: "#2563eb" }, text: trace.map((d) => `step ${d.step}<br>loss ${fmt(d.loss, 3)}`) },
-                { x: [current.pc1], y: [current.pc2], z: [current.loss], type: "scatter3d", mode: "markers", name: "current", marker: { size: 8, color: "#f97316", symbol: "circle" } },
-                { x: [current.pc1, next.pc1], y: [current.pc2, next.pc2], z: [current.loss, next.loss], type: "scatter3d", mode: "lines", name: "update direction", line: { width: 8, color: "#16a34a" } }
-            ], plotlyLayout("参数快照 PCA 轨迹", true), plotConfig);
+            let pcaTraces;
+            if (compareEnabled) {
+                pcaTraces = state.landscape.lrCompare.series.map((series, index) => {
+                    const active = selectedSeries && Math.abs(series.lr - selectedSeries.lr) < 1e-12;
+                    const color = palette[index % palette.length];
+                    return {
+                        x: series.points.map((d) => d.pc1),
+                        y: series.points.map((d) => d.pc2),
+                        z: series.points.map((d) => d.loss),
+                        type: "scatter3d",
+                        mode: "lines+markers",
+                        name: `${series.label}${series.status === "diverged" ? " (diverged)" : ""}`,
+                        marker: { size: active ? 3.8 : 2.4, color, opacity: active ? 0.95 : 0.30 },
+                        line: { width: active ? 7 : 3, color },
+                        opacity: active ? 1 : 0.34,
+                        text: series.points.map((d) => `lr ${series.lr}<br>step ${d.step}<br>loss ${fmt(d.loss, 3)}`)
+                    };
+                });
+                pcaTraces.push({
+                    x: [current.pc1],
+                    y: [current.pc2],
+                    z: [current.loss],
+                    type: "scatter3d",
+                    mode: "markers",
+                    name: "selected current",
+                    marker: { size: 6, color: "#0f172a", symbol: "circle" }
+                });
+            } else {
+                pcaTraces = [
+                    { x: trace.map((d) => d.pc1), y: trace.map((d) => d.pc2), z: trace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "PCA trajectory", marker: { size: 3, color: trace.map((d) => d.loss), colorscale: "Viridis", opacity: 0.86 }, line: { width: 5, color: "#2563eb" }, text: trace.map((d) => `step ${d.step}<br>loss ${fmt(d.loss, 3)}`) },
+                    { x: [current.pc1], y: [current.pc2], z: [current.loss], type: "scatter3d", mode: "markers", name: "current", marker: { size: 6, color: "#f97316", symbol: "circle" } },
+                    { x: [current.pc1, next.pc1], y: [current.pc2, next.pc2], z: [current.loss, next.loss], type: "scatter3d", mode: "lines", name: "update direction", line: { width: 8, color: "#16a34a" } }
+                ];
+            }
+            window.Plotly.react(els.pcaTrajectory, pcaTraces, plotlyLayout(compareEnabled ? "共享 PCA 坐标下的学习率轨迹" : "参数快照 PCA 轨迹", true), plotConfig);
         }
 
         if (els.fc2Surface) {
+            const mainIndex = currentLandscapeIndex();
+            const mainCurrent = trace[mainIndex] || current;
             const surfTrace = surface.trajectory_on_surface?.length ? surface.trajectory_on_surface : trace.map((d) => ({ alpha: d.pc1, beta: d.pc2, loss: d.loss, step: d.step }));
-            const currentSurf = surfTrace[Math.min(surfTrace.length - 1, currentIndex)] || { alpha: current.pc1, beta: current.pc2, loss: current.loss };
+            const currentSurf = surfTrace[Math.min(surfTrace.length - 1, mainIndex)] || { alpha: mainCurrent.pc1, beta: mainCurrent.pc2, loss: mainCurrent.loss };
             window.Plotly.react(els.fc2Surface, [
                 { x: surface.alpha_values, y: surface.beta_values, z: surface.loss_grid, type: "surface", name: "FC2 surface", opacity: 0.82, showscale: false, colorscale: "YlGnBu" },
-                { x: surfTrace.map((d) => d.alpha), y: surfTrace.map((d) => d.beta), z: surfTrace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "trajectory", marker: { size: 3, color: "#f97316" }, line: { width: 6, color: "#f97316" } },
+                { x: surfTrace.map((d) => d.alpha), y: surfTrace.map((d) => d.beta), z: surfTrace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "primary trajectory", marker: { size: 3, color: "#f97316" }, line: { width: 6, color: "#f97316" } },
                 { x: [currentSurf.alpha], y: [currentSurf.beta], z: [currentSurf.loss], type: "scatter3d", mode: "markers", name: "current", marker: { size: 7, color: "#16a34a" } }
             ], plotlyLayout("FC2 最后一层二维损失切片", true), plotConfig);
         }
@@ -1244,6 +1437,18 @@
         els.landscapeRefresh?.addEventListener("click", () => {
             state.landscape.loaded = false;
             loadLandscapeData(true).then(() => plotLandscapeCharts());
+        });
+        els.lrCompareToggle?.addEventListener("click", () => {
+            state.landscape.compareEnabled = !state.landscape.compareEnabled;
+            if (!state.landscape.lrCompare && state.landscape.loaded) {
+                loadLandscapeData(true).then(() => {
+                    renderLrCompareControls();
+                    plotLandscapeCharts();
+                });
+                return;
+            }
+            renderLrCompareControls();
+            plotLandscapeCharts();
         });
         window.addEventListener("resize", () => {
             if (!state.landscape.open || !window.Plotly) return;
