@@ -11,6 +11,20 @@
         resetView: document.getElementById("cnnResetView"),
         playPause: document.getElementById("cnnPlayPause"),
         speed: document.getElementById("cnnSpeed"),
+        landscapeToggle: document.getElementById("cnnLandscapeToggle"),
+        landscapeModal: document.getElementById("cnnLandscapeModal"),
+        landscapeClose: document.getElementById("cnnLandscapeClose"),
+        landscapeRefresh: document.getElementById("cnnLandscapeRefresh"),
+        landscapeStatus: document.getElementById("cnnLandscapeStatus"),
+        lsStep: document.getElementById("cnnLsStep"),
+        lsLoss: document.getElementById("cnnLsLoss"),
+        lsAcc: document.getElementById("cnnLsAcc"),
+        lsLr: document.getElementById("cnnLsLr"),
+        lsGrad: document.getElementById("cnnLsGrad"),
+        lsUpdate: document.getElementById("cnnLsUpdate"),
+        lossCurve: document.getElementById("cnnLossCurve"),
+        pcaTrajectory: document.getElementById("cnnPcaTrajectory"),
+        fc2Surface: document.getElementById("cnnFc2Surface"),
         stageCard: root.querySelector(".cnn-stage-card"),
         sceneMount: document.getElementById("cnnSceneMount"),
         controlToggle: document.getElementById("cnnControlToggle"),
@@ -161,7 +175,16 @@
         drawing: false,
         hasInk: false,
         digitTimer: null,
-        scene: null
+        scene: null,
+        landscape: {
+            open: false,
+            loading: false,
+            loaded: false,
+            source: "",
+            trace: null,
+            surface: null,
+            currentIndex: 0
+        }
     };
 
     function stepsForMode() {
@@ -842,6 +865,7 @@
             showProbe(step.layer);
         }
         updateScene();
+        renderLandscapePanel();
     }
 
     function setMode(mode) {
@@ -924,6 +948,265 @@
         }, delay);
     }
 
+
+    function cvUrl(path) {
+        if (typeof window.cvclassUrl === "function") return window.cvclassUrl(path);
+        const basePath = window.CVCLASS_BASE_PATH || "";
+        return `${basePath}${path}`;
+    }
+
+    async function fetchJsonCandidates(paths) {
+        let lastError = null;
+        for (const path of paths) {
+            try {
+                const response = await fetch(cvUrl(path), { cache: "no-store" });
+                if (!response.ok) throw new Error(`${path} ${response.status}`);
+                const data = await response.json();
+                if (data && data.success === false) throw new Error(data.message || `${path} 返回 success=false`);
+                return { data, path };
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError || new Error("训练轨迹数据不存在");
+    }
+
+    function normalizeTraceData(raw) {
+        const rows = Array.isArray(raw) ? raw : raw?.trace || raw?.points || raw?.data || [];
+        return rows.map((row, index) => ({
+            step: Number(row.step ?? index),
+            epoch: Number(row.epoch ?? Math.floor(index / 8)),
+            train_loss: Number(row.train_loss ?? row.loss ?? 0),
+            val_loss: Number(row.val_loss ?? row.train_loss ?? row.loss ?? 0),
+            train_acc: Number(row.train_acc ?? row.acc ?? row.accuracy ?? 0),
+            val_acc: Number(row.val_acc ?? row.train_acc ?? row.acc ?? row.accuracy ?? 0),
+            lr: Number(row.lr ?? 0.1),
+            grad_norm: Number(row.grad_norm ?? row.grad_norm_total ?? 0),
+            update_norm: Number(row.update_norm ?? row.update_norm_total ?? 0),
+            pc1: Number(row.pc1 ?? row.x ?? 0),
+            pc2: Number(row.pc2 ?? row.y ?? 0),
+            loss: Number(row.loss ?? row.val_loss ?? row.train_loss ?? 0)
+        })).filter((row) => Number.isFinite(row.loss));
+    }
+
+    function syntheticTrace() {
+        const rows = [];
+        for (let i = 0; i < 44; i += 1) {
+            const t = i / 43;
+            const trainLoss = 2.15 * Math.exp(-3.2 * t) + 0.13 + 0.04 * Math.sin(i * 0.65);
+            const valLoss = 2.0 * Math.exp(-2.85 * t) + 0.18 + 0.05 * Math.cos(i * 0.52);
+            rows.push({
+                step: i * 25,
+                epoch: Math.floor(i / 11) + 1,
+                train_loss: Math.max(0.08, trainLoss),
+                val_loss: Math.max(0.1, valLoss),
+                train_acc: Math.min(99.2, 38 + t * 61 + 2.2 * Math.sin(i * 0.42)),
+                val_acc: Math.min(98.5, 34 + t * 59 + 2.0 * Math.cos(i * 0.35)),
+                lr: i < 26 ? 0.1 : 0.05,
+                grad_norm: 2.4 * Math.exp(-1.6 * t) + 0.18,
+                update_norm: 0.24 * Math.exp(-1.7 * t) + 0.015,
+                pc1: -2.8 + 5.2 * t + 0.18 * Math.sin(i * 0.3),
+                pc2: 1.6 * Math.cos(t * Math.PI * 1.15) - 0.45 * t,
+                loss: Math.max(0.1, valLoss)
+            });
+        }
+        return rows;
+    }
+
+    function syntheticSurface(trace) {
+        const alpha = Array.from({ length: 45 }, (_, i) => -3 + i * (6 / 44));
+        const beta = Array.from({ length: 45 }, (_, i) => -2.6 + i * (5.2 / 44));
+        const z = beta.map((b) => alpha.map((a) => {
+            const bowl = 0.13 + 0.19 * Math.pow(a - 1.55, 2) + 0.24 * Math.pow(b + 0.75, 2);
+            const ripple = 0.04 * Math.sin(a * 2.1) * Math.cos(b * 1.7);
+            return Math.max(0.08, bowl + ripple);
+        }));
+        return {
+            alpha_values: alpha,
+            beta_values: beta,
+            loss_grid: z,
+            final_point: { alpha: 1.55, beta: -0.75, loss: 0.13 },
+            trajectory_on_surface: trace.map((row) => ({
+                alpha: row.pc1,
+                beta: row.pc2,
+                loss: row.loss,
+                step: row.step
+            }))
+        };
+    }
+
+    function normalizeSurface(raw, trace) {
+        if (!raw || !Array.isArray(raw.loss_grid)) return syntheticSurface(trace);
+        return {
+            alpha_values: raw.alpha_values || raw.x || [],
+            beta_values: raw.beta_values || raw.y || [],
+            loss_grid: raw.loss_grid || raw.z || [],
+            final_point: raw.final_point || null,
+            trajectory_on_surface: raw.trajectory_on_surface || raw.trajectory || []
+        };
+    }
+
+    async function loadLandscapeData(force = false) {
+        if (state.landscape.loaded && !force) return;
+        state.landscape.loading = true;
+        if (els.landscapeStatus) {
+            els.landscapeStatus.className = "cnn-landscape-status";
+            els.landscapeStatus.textContent = "正在加载训练轨迹数据...";
+        }
+        try {
+            const traceResult = await fetchJsonCandidates([
+                "/static/assets/data/training_pca_trace.json"
+            ]);
+            const trace = normalizeTraceData(traceResult.data);
+            if (!trace.length) throw new Error("训练轨迹为空");
+            let surface;
+            let surfacePath = "";
+            try {
+                const surfaceResult = await fetchJsonCandidates([
+                    "/static/assets/data/fc2_loss_surface.json"
+                ]);
+                surface = normalizeSurface(surfaceResult.data, trace);
+                surfacePath = surfaceResult.path;
+            } catch (_) {
+                surface = syntheticSurface(trace);
+                surfacePath = "示例 FC2 loss surface";
+            }
+            state.landscape.trace = trace;
+            state.landscape.surface = surface;
+            state.landscape.source = `${traceResult.path}；${surfacePath}`;
+            state.landscape.loaded = true;
+            if (els.landscapeStatus) {
+                els.landscapeStatus.className = "cnn-landscape-status";
+                els.landscapeStatus.textContent = `已加载训练轨迹：${state.landscape.source}`;
+            }
+        } catch (error) {
+            const trace = syntheticTrace();
+            state.landscape.trace = trace;
+            state.landscape.surface = syntheticSurface(trace);
+            state.landscape.source = "内置演示数据";
+            state.landscape.loaded = true;
+            if (els.landscapeStatus) {
+                els.landscapeStatus.className = "cnn-landscape-status is-demo";
+                els.landscapeStatus.textContent = `未找到训练轨迹文件，当前显示内置演示数据。原因：${error.message || error}`;
+            }
+        } finally {
+            state.landscape.loading = false;
+        }
+    }
+
+    function currentLandscapeIndex() {
+        const trace = state.landscape.trace || [];
+        if (!trace.length) return 0;
+        const steps = stepsForMode();
+        const ratio = steps.length <= 1 ? 1 : state.stepIndex / (steps.length - 1);
+        return Math.max(0, Math.min(trace.length - 1, Math.round(ratio * (trace.length - 1))));
+    }
+
+    function fmt(value, digits = 3) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return "-";
+        return n.toFixed(digits);
+    }
+
+    function updateLandscapeStats(current) {
+        if (!current) return;
+        els.lsStep && (els.lsStep.textContent = `${current.step}`);
+        els.lsLoss && (els.lsLoss.textContent = fmt(current.loss ?? current.val_loss, 3));
+        els.lsAcc && (els.lsAcc.textContent = `${fmt(current.val_acc ?? current.train_acc, 1)}%`);
+        els.lsLr && (els.lsLr.textContent = fmt(current.lr, 3));
+        els.lsGrad && (els.lsGrad.textContent = fmt(current.grad_norm, 3));
+        els.lsUpdate && (els.lsUpdate.textContent = fmt(current.update_norm, 3));
+    }
+
+    function plotlyLayout(title, scene = false) {
+        const layout = {
+            title: { text: title, font: { size: 13, color: "#0f172a" } },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "#f8fbff",
+            margin: { l: 40, r: 18, t: 34, b: 38 },
+            font: { family: "Segoe UI, Arial", color: "#334155", size: 11 },
+            legend: { orientation: "h", y: -0.16 },
+            hovermode: "closest"
+        };
+        if (scene) {
+            layout.margin = { l: 0, r: 0, t: 34, b: 0 };
+            layout.scene = {
+                xaxis: { title: "PC1", backgroundcolor: "#f8fbff", gridcolor: "#dbeafe" },
+                yaxis: { title: "PC2", backgroundcolor: "#f8fbff", gridcolor: "#dbeafe" },
+                zaxis: { title: "Loss", backgroundcolor: "#f8fbff", gridcolor: "#dbeafe" },
+                camera: { eye: { x: 1.45, y: -1.45, z: 0.95 } }
+            };
+        }
+        return layout;
+    }
+
+    function plotLandscapeCharts() {
+        if (!state.landscape.open || !window.Plotly || !state.landscape.trace) {
+            if (state.landscape.open && !window.Plotly && els.landscapeStatus) {
+                els.landscapeStatus.className = "cnn-landscape-status is-error";
+                els.landscapeStatus.textContent = "Plotly.js 未加载，无法绘制训练轨迹图。";
+            }
+            return;
+        }
+        const trace = state.landscape.trace;
+        const surface = state.landscape.surface || syntheticSurface(trace);
+        const currentIndex = currentLandscapeIndex();
+        state.landscape.currentIndex = currentIndex;
+        const current = trace[currentIndex];
+        const next = trace[Math.min(trace.length - 1, currentIndex + 1)];
+        updateLandscapeStats(current);
+
+        const plotConfig = { responsive: true, displayModeBar: false };
+        if (els.lossCurve) {
+            window.Plotly.react(els.lossCurve, [
+                { x: trace.map((d) => d.step), y: trace.map((d) => d.train_loss), type: "scatter", mode: "lines", name: "train loss", line: { width: 3, color: "#2563eb" } },
+                { x: trace.map((d) => d.step), y: trace.map((d) => d.val_loss), type: "scatter", mode: "lines", name: "val loss", line: { width: 3, color: "#f97316" } },
+                { x: [current.step], y: [current.loss ?? current.val_loss], type: "scatter", mode: "markers", name: "current", marker: { size: 12, color: "#16a34a", line: { color: "#ffffff", width: 2 } } }
+            ], { ...plotlyLayout("Loss 随训练 step 下降"), xaxis: { title: "step" }, yaxis: { title: "loss" } }, plotConfig);
+        }
+
+        if (els.pcaTrajectory) {
+            window.Plotly.react(els.pcaTrajectory, [
+                { x: trace.map((d) => d.pc1), y: trace.map((d) => d.pc2), z: trace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "PCA trajectory", marker: { size: 3, color: trace.map((d) => d.loss), colorscale: "Viridis", opacity: 0.86 }, line: { width: 5, color: "#2563eb" }, text: trace.map((d) => `step ${d.step}<br>loss ${fmt(d.loss, 3)}`) },
+                { x: [current.pc1], y: [current.pc2], z: [current.loss], type: "scatter3d", mode: "markers", name: "current", marker: { size: 8, color: "#f97316", symbol: "circle" } },
+                { x: [current.pc1, next.pc1], y: [current.pc2, next.pc2], z: [current.loss, next.loss], type: "scatter3d", mode: "lines", name: "update direction", line: { width: 8, color: "#16a34a" } }
+            ], plotlyLayout("参数快照 PCA 轨迹", true), plotConfig);
+        }
+
+        if (els.fc2Surface) {
+            const surfTrace = surface.trajectory_on_surface?.length ? surface.trajectory_on_surface : trace.map((d) => ({ alpha: d.pc1, beta: d.pc2, loss: d.loss, step: d.step }));
+            const currentSurf = surfTrace[Math.min(surfTrace.length - 1, currentIndex)] || { alpha: current.pc1, beta: current.pc2, loss: current.loss };
+            window.Plotly.react(els.fc2Surface, [
+                { x: surface.alpha_values, y: surface.beta_values, z: surface.loss_grid, type: "surface", name: "FC2 surface", opacity: 0.82, showscale: false, colorscale: "YlGnBu" },
+                { x: surfTrace.map((d) => d.alpha), y: surfTrace.map((d) => d.beta), z: surfTrace.map((d) => d.loss), type: "scatter3d", mode: "lines+markers", name: "trajectory", marker: { size: 3, color: "#f97316" }, line: { width: 6, color: "#f97316" } },
+                { x: [currentSurf.alpha], y: [currentSurf.beta], z: [currentSurf.loss], type: "scatter3d", mode: "markers", name: "current", marker: { size: 7, color: "#16a34a" } }
+            ], plotlyLayout("FC2 最后一层二维损失切片", true), plotConfig);
+        }
+    }
+
+    function renderLandscapePanel() {
+        if (!state.landscape.open) return;
+        if (!state.landscape.loaded) {
+            loadLandscapeData().then(() => plotLandscapeCharts());
+            return;
+        }
+        plotLandscapeCharts();
+    }
+
+    function openLandscapePanel() {
+        if (!els.landscapeModal) return;
+        state.landscape.open = true;
+        els.landscapeModal.hidden = false;
+        loadLandscapeData().then(() => {
+            window.requestAnimationFrame(() => plotLandscapeCharts());
+        });
+    }
+
+    function closeLandscapePanel() {
+        state.landscape.open = false;
+        if (els.landscapeModal) els.landscapeModal.hidden = true;
+    }
+
     function bindEvents() {
         els.modeButtons.forEach((button) => {
             button.addEventListener("click", () => {
@@ -952,6 +1235,19 @@
             const nextHidden = !els.sceneControls.hidden;
             els.sceneControls.hidden = nextHidden;
             els.controlToggle.setAttribute("aria-expanded", String(!nextHidden));
+        });
+        els.landscapeToggle?.addEventListener("click", openLandscapePanel);
+        els.landscapeClose?.addEventListener("click", closeLandscapePanel);
+        els.landscapeModal?.addEventListener("click", (event) => {
+            if (event.target === els.landscapeModal) closeLandscapePanel();
+        });
+        els.landscapeRefresh?.addEventListener("click", () => {
+            state.landscape.loaded = false;
+            loadLandscapeData(true).then(() => plotLandscapeCharts());
+        });
+        window.addEventListener("resize", () => {
+            if (!state.landscape.open || !window.Plotly) return;
+            [els.lossCurve, els.pcaTrajectory, els.fc2Surface].forEach((node) => node && window.Plotly.Plots.resize(node));
         });
         els.sceneOptions.forEach((input) => {
             input.addEventListener("change", () => {

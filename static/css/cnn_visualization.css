@@ -736,3 +736,229 @@
         flex-direction: column;
     }
 }
+
+/* Loss landscape / training trajectory panel */
+.cnn-landscape-toggle {
+    white-space: nowrap;
+}
+
+.cnn-landscape-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgba(15, 23, 42, 0.34);
+    backdrop-filter: blur(10px);
+}
+
+.cnn-landscape-modal[hidden] {
+    display: none;
+}
+
+.cnn-landscape-dialog {
+    width: min(1480px, 94vw);
+    max-height: min(900px, 92vh);
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid rgba(191, 219, 254, 0.92);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 78% 0%, rgba(219, 234, 254, 0.82), transparent 42%),
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,251,255,0.98));
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.22);
+    overflow: hidden;
+}
+
+.cnn-landscape-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.cnn-landscape-header h2 {
+    margin: 4px 0 5px;
+    color: #0f172a;
+    font-size: clamp(22px, 2vw, 30px);
+    line-height: 1.15;
+}
+
+.cnn-landscape-header p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.cnn-landscape-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.cnn-landscape-actions button {
+    min-height: 34px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0 13px;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 900;
+    background: #eff6ff;
+    cursor: pointer;
+}
+
+#cnnLandscapeClose {
+    width: 34px;
+    padding: 0;
+    color: #475569;
+    background: #ffffff;
+}
+
+.cnn-landscape-status {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid rgba(219, 234, 254, 0.9);
+    border-radius: 14px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 850;
+    background: rgba(239, 246, 255, 0.74);
+}
+
+.cnn-landscape-status.is-demo {
+    color: #92400e;
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+.cnn-landscape-status.is-error {
+    color: #991b1b;
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.cnn-landscape-stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.cnn-landscape-stats article {
+    padding: 10px 12px;
+    border: 1px solid rgba(219, 234, 254, 0.95);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.cnn-landscape-stats span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.cnn-landscape-stats strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 19px;
+    line-height: 1;
+}
+
+.cnn-landscape-grid {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(280px, 0.75fr) minmax(380px, 1fr) minmax(380px, 1fr);
+    gap: 12px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.cnn-landscape-chart-card {
+    min-height: 360px;
+    display: grid;
+    grid-template-rows: auto minmax(300px, 1fr);
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(219, 234, 254, 0.95);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.cnn-chart-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.cnn-chart-title strong {
+    color: #0f172a;
+    font-size: 15px;
+}
+
+.cnn-chart-title span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.cnn-landscape-chart {
+    min-width: 0;
+    min-height: 300px;
+    border-radius: 14px;
+    background: #f8fbff;
+    overflow: hidden;
+}
+
+.cnn-landscape-chart .plotly-notifier {
+    display: none;
+}
+
+.cnn-landscape-note {
+    margin: 0;
+    padding: 9px 12px;
+    border-left: 4px solid #2563eb;
+    border-radius: 12px;
+    color: #475569;
+    line-height: 1.45;
+    background: #eff6ff;
+}
+
+@media (max-width: 1320px) {
+    .cnn-landscape-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cnn-landscape-chart-card.loss-chart {
+        grid-column: 1 / -1;
+        min-height: 280px;
+        grid-template-rows: auto minmax(220px, 1fr);
+    }
+}
+
+@media (max-width: 860px) {
+    .cnn-landscape-dialog {
+        width: 96vw;
+        max-height: 94vh;
+    }
+
+    .cnn-landscape-stats {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+
+    .cnn-landscape-grid {
+        grid-template-columns: 1fr;
+    }
+}

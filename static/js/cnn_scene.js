@@ -862,9 +862,11 @@
             layer.maps.forEach((bar, index) => {
                 const prob = probabilities[index] || 0;
                 const h = 0.18 + prob * 1.9;
+                const color = index === best ? 0xe11d48 : 0x38bdf8;
                 bar.scale.y = h;
                 bar.position.y = -0.95 + h / 2;
-                bar.material.color.setHex(index === best ? 0xe11d48 : 0x38bdf8);
+                bar.material.color.setHex(color);
+                bar.userData.baseColor = color;
                 bar.material.emissive?.setHex(index === best ? 0x7f1d1d : 0x000000);
                 if (bar.material.emissiveIntensity !== undefined) bar.material.emissiveIntensity = index === best ? 0.2 : 0;
             });

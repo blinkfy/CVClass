@@ -133,6 +133,10 @@ class ConvLayer:
         
         self.x=None
         self.output_shape=None
+        # 最近一次反向传播产生的梯度，用于训练轨迹与可视化导出
+        self.last_dw=None
+        self.last_db=None
+        self.last_dx=None
 
     def forward(self,x):
         """x: 形状为 [N, C, H, W] 的输入，其中: N - 批量大小 C - 通道数 H - 高度 W - 宽度"""
@@ -207,6 +211,12 @@ class ConvLayer:
             dx=dx_padded[:,:,self.padding:-self.padding,self.padding:-self.padding]
         else:
             dx=dx_padded
+
+        # 保存梯度副本，供训练轨迹、PCA、梯度范数和前端可视化使用
+        self.last_dw=dw.copy()
+        self.last_db=db.copy()
+        self.last_dx=dx.copy()
+
         self.weights-=learning_rate*dw
         self.bias-=learning_rate*db
         return dx
@@ -222,8 +232,9 @@ class ReLU:
         return out
     
     def backward(self,dout,learning_rate=None):
-        dout[self.mask]=0
-        dx=dout
+        dx=dout.copy()
+        dx[self.mask]=0
+        self.last_dx=dx
         return dx
     
 @njit(parallel=True)
@@ -344,6 +355,10 @@ class FullyConnected:
         self.bias=np.zeros(output_size)
         self.x=None
         self.original_shape=None
+        # 最近一次反向传播产生的梯度，用于训练轨迹与可视化导出
+        self.last_dw=None
+        self.last_db=None
+        self.last_dx=None
     
     def forward(self,x):
         """ x: 输入数据 [N, C, H, W] 或 [N, D]
@@ -365,6 +380,12 @@ class FullyConnected:
         dx=np.dot(dout,self.weights.T)
         dw=np.dot(self.x.T,dout)
         db=np.sum(dout,axis=0)
+
+        # 保存梯度副本，供训练轨迹、PCA、梯度范数和前端可视化使用
+        self.last_dw=dw.copy()
+        self.last_db=db.copy()
+        self.last_dx=dx.copy()
+
         self.weights-=learning_rate*dw
         self.bias-=learning_rate*db
         if len(self.original_shape) > 2:
@@ -401,6 +422,7 @@ class SoftmaxWithCrossEntropy:
         """计算softmax交叉熵的梯度"""
         N = self.y_pred.shape[0]
         dx = (self.y_pred - self.y_true)/N
+        self.last_dx=dx.copy()
         return dx
 
 class MyCNN:
@@ -426,13 +448,81 @@ class MyCNN:
             return loss,x
         return x
     
-    def backward(self,learning_rate=0.01):
+    def backward(self,learning_rate=0.01,return_stats=False):
         dout=self.loss_fn.backward()
         for lay in reversed(self.layers):
             if lay.__class__==ConvLayer or lay.__class__==FullyConnected:
                 dout=lay.backward(dout,learning_rate)
             else:
                 dout=lay.backward(dout)
+        if return_stats:
+            return self.gradient_stats(learning_rate)
+        return None
+
+    def trainable_layers(self):
+        """返回所有含可学习参数的层，格式为 [(layer_index, name, layer), ...]。"""
+        names={0:'conv1',3:'conv2',6:'fc1',8:'fc2'}
+        result=[]
+        for idx,layer in enumerate(self.layers):
+            if isinstance(layer,(ConvLayer,FullyConnected)):
+                result.append((idx,names.get(idx,f'layer{idx}'),layer))
+        return result
+
+    def parameter_vector(self,scope='all'):
+        """将指定范围的参数展平成一维向量。scope 可取 all/conv1/conv2/fc1/fc2。"""
+        parts=[]
+        for idx,name,layer in self.trainable_layers():
+            if scope!='all' and scope!=name and scope!=f'layer{idx}':
+                continue
+            parts.append(layer.weights.ravel())
+            parts.append(layer.bias.ravel())
+        if not parts:
+            return np.array([],dtype=np.float32)
+        return np.concatenate(parts).astype(np.float32)
+
+    def gradient_vector(self,scope='all'):
+        """将最近一次反向传播得到的参数梯度展平成一维向量。"""
+        parts=[]
+        for idx,name,layer in self.trainable_layers():
+            if scope!='all' and scope!=name and scope!=f'layer{idx}':
+                continue
+            if layer.last_dw is None or layer.last_db is None:
+                continue
+            parts.append(layer.last_dw.ravel())
+            parts.append(layer.last_db.ravel())
+        if not parts:
+            return np.array([],dtype=np.float32)
+        return np.concatenate(parts).astype(np.float32)
+
+    def gradient_stats(self,learning_rate=0.01):
+        """统计最近一次反向传播的梯度范数和参数更新范数。"""
+        grad_norms={}
+        update_norms={}
+        total_sq=0.0
+        update_sq=0.0
+        for idx,name,layer in self.trainable_layers():
+            if layer.last_dw is None or layer.last_db is None:
+                grad_norm=0.0
+            else:
+                grad_norm=float(np.sqrt(np.sum(layer.last_dw**2)+np.sum(layer.last_db**2)))
+            grad_norms[name]=grad_norm
+            update_norms[name]=float(abs(learning_rate)*grad_norm)
+            total_sq+=grad_norm**2
+            update_sq+=(learning_rate*grad_norm)**2
+        return {
+            'grad_norm_total':float(np.sqrt(total_sq)),
+            'update_norm_total':float(np.sqrt(update_sq)),
+            'layer_grad_norms':grad_norms,
+            'layer_update_norms':update_norms,
+            'conv1_grad_norm':grad_norms.get('conv1',0.0),
+            'conv2_grad_norm':grad_norms.get('conv2',0.0),
+            'fc1_grad_norm':grad_norms.get('fc1',0.0),
+            'fc2_grad_norm':grad_norms.get('fc2',0.0),
+            'conv1_update_norm':update_norms.get('conv1',0.0),
+            'conv2_update_norm':update_norms.get('conv2',0.0),
+            'fc1_update_norm':update_norms.get('fc1',0.0),
+            'fc2_update_norm':update_norms.get('fc2',0.0)
+        }
     
     def predict_proba(self, x):
         out=self.forward(x)
@@ -443,7 +533,7 @@ class MyCNN:
     def predict(self,x):
         return np.argmax(self.predict_proba(x),axis=1)
     
-    def train(self,X_train,y_train,X_val,y_val,batch_size=128,epochs=10,learning_rate=0.01):
+    def train(self,X_train,y_train,X_val,y_val,batch_size=128,epochs=10,learning_rate=0.01,trace_config=None):
         num_samples=X_train.shape[0]
         num_batches=num_samples//batch_size
         history = {
@@ -452,7 +542,62 @@ class MyCNN:
             'train_acc': [],
             'val_acc': []
         }
-        
+
+        trace_config=trace_config or {}
+        trace_enabled=bool(trace_config.get('enabled',False))
+        trace_every=max(1,int(trace_config.get('sample_every',25)))
+        val_sample_size=int(trace_config.get('val_sample_size',512))
+        snapshot_scope=str(trace_config.get('snapshot_scope','fc2')).lower()
+        trace_rows=[]
+        theta_snapshots=[]
+        fc2_snapshots=[]
+
+        def eval_subset(X,y,size):
+            if size and size>0 and X.shape[0]>size:
+                X_eval=X[:size]
+                y_eval=y[:size]
+            else:
+                X_eval=X
+                y_eval=y
+            return self.evaluate(X_eval,y_eval,batch_size=batch_size)
+
+        def record_trace(global_step,epoch,batch,train_loss,train_acc,stats=None):
+            if not trace_enabled:
+                return
+            stats=stats or self.gradient_stats(learning_rate)
+            val_loss,val_acc=eval_subset(X_val,y_val,val_sample_size)
+            row={
+                'step':int(global_step),
+                'epoch':int(epoch),
+                'batch':int(batch),
+                'train_loss':float(train_loss),
+                'val_loss':float(val_loss),
+                'loss':float(val_loss),
+                'train_acc':float(train_acc*100.0),
+                'val_acc':float(val_acc*100.0),
+                'lr':float(learning_rate),
+                'grad_norm_total':float(stats.get('grad_norm_total',0.0)),
+                'update_norm_total':float(stats.get('update_norm_total',0.0)),
+                'conv1_grad_norm':float(stats.get('conv1_grad_norm',0.0)),
+                'conv2_grad_norm':float(stats.get('conv2_grad_norm',0.0)),
+                'fc1_grad_norm':float(stats.get('fc1_grad_norm',0.0)),
+                'fc2_grad_norm':float(stats.get('fc2_grad_norm',0.0))
+            }
+            trace_rows.append(row)
+            if snapshot_scope in ('all','both'):
+                theta_snapshots.append(self.parameter_vector('all'))
+            if snapshot_scope in ('fc2','both','all'):
+                fc2_snapshots.append(self.parameter_vector('fc2'))
+
+        if trace_enabled:
+            init_loss,init_acc=eval_subset(X_val,y_val,val_sample_size)
+            record_trace(0,0,0,init_loss,init_acc,{
+                'grad_norm_total':0.0,'update_norm_total':0.0,
+                'conv1_grad_norm':0.0,'conv2_grad_norm':0.0,
+                'fc1_grad_norm':0.0,'fc2_grad_norm':0.0
+            })
+
+        global_step=0
         for epoch in range(epochs):
             indices=np.random.permutation(num_samples)
             X_train_shuffled=X_train[indices]
@@ -462,16 +607,20 @@ class MyCNN:
             correct_preds=0
             
             for batch in range(num_batches):
+                global_step+=1
                 start_idx=batch*batch_size
                 end_idx=start_idx+batch_size
                 X_batch=X_train_shuffled[start_idx:end_idx]
                 y_batch=y_train_shuffled[start_idx:end_idx]
                 loss,outputs=self.forward(X_batch,y_batch)
                 predicted_classes=np.argmax(outputs,axis=1)
+                batch_acc=float(np.mean(predicted_classes==y_batch.argmax(axis=1)))
                 correct_preds+=np.sum(predicted_classes==y_batch.argmax(axis=1))
 
-                self.backward(learning_rate)
+                stats=self.backward(learning_rate,return_stats=True)
                 epoch_loss+=loss
+                if trace_enabled and (global_step % trace_every == 0):
+                    record_trace(global_step,epoch+1,batch+1,loss,batch_acc,stats)
                 print(f"Epoch {epoch+1}/{epochs}, Batch {batch}/{num_batches}, Loss: {loss:.4f}",end='\r')  
             
             # 训练损失和准确率
@@ -483,7 +632,19 @@ class MyCNN:
             history['val_loss'].append(val_loss)
             history['train_acc'].append(train_acc)
             history['val_acc'].append(val_acc)
+            if trace_enabled:
+                record_trace(global_step,epoch+1,num_batches,train_loss,train_acc,self.gradient_stats(learning_rate))
             print(f"Epoch {epoch+1}/{epochs}: train_loss={train_loss:.4f}, train_acc={train_acc:.4f}, val_loss={val_loss:.4f}, val_acc={val_acc:.4f}")
+
+        if trace_enabled:
+            history['trace_rows']=trace_rows
+            history['theta_snapshots']=np.vstack(theta_snapshots) if theta_snapshots else np.empty((0,0),dtype=np.float32)
+            history['fc2_snapshots']=np.vstack(fc2_snapshots) if fc2_snapshots else np.empty((0,0),dtype=np.float32)
+            history['trace_config']={
+                'sample_every':trace_every,
+                'val_sample_size':val_sample_size,
+                'snapshot_scope':snapshot_scope
+            }
         return history
     
     def evaluate(self,X,y,batch_size=64):

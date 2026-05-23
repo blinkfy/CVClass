@@ -2,7 +2,7 @@
 {% block title %}第三节 CNN 正反向传播 3D 可视化{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cnn_visualization.css') }}?v=3d-calc-22">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cnn_visualization.css') }}?v=landscape-1">
 {% endblock %}
 {% block content %}
 <section id="cnnVizPage" class="cnn-viz-page" data-digit-url="{{ url_for('digit_recognition_page') }}">
@@ -28,6 +28,7 @@
                 <span>速度</span>
                 <input id="cnnSpeed" type="range" min="0.25" max="2" step="0.25" value="0.5">
             </label>
+            <button id="cnnLandscapeToggle" class="ghost-button cnn-landscape-toggle" type="button">训练轨迹</button>
             <a class="cnn-structure-link" href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
         </div>
     </section>
@@ -113,13 +114,55 @@
 
         </section>
     </main>
+
+    <section id="cnnLandscapeModal" class="cnn-landscape-modal" hidden aria-modal="true" role="dialog" aria-labelledby="cnnLandscapeTitle">
+        <div class="cnn-landscape-dialog">
+            <header class="cnn-landscape-header">
+                <div>
+                    <span class="section-label">Loss Landscape</span>
+                    <h2 id="cnnLandscapeTitle">梯度下降训练轨迹可视化</h2>
+                    <p>展示反向传播计算梯度后，参数如何沿低维 PCA 轨迹和 FC2 损失切片逐步下降。</p>
+                </div>
+                <div class="cnn-landscape-actions">
+                    <button id="cnnLandscapeRefresh" type="button">刷新数据</button>
+                    <button id="cnnLandscapeClose" type="button" aria-label="关闭训练轨迹面板">×</button>
+                </div>
+            </header>
+            <div id="cnnLandscapeStatus" class="cnn-landscape-status">正在准备训练轨迹数据...</div>
+            <section class="cnn-landscape-stats" aria-label="当前训练快照">
+                <article><span>Step</span><strong id="cnnLsStep">-</strong></article>
+                <article><span>Loss</span><strong id="cnnLsLoss">-</strong></article>
+                <article><span>Accuracy</span><strong id="cnnLsAcc">-</strong></article>
+                <article><span>Learning rate</span><strong id="cnnLsLr">-</strong></article>
+                <article><span>Grad norm</span><strong id="cnnLsGrad">-</strong></article>
+                <article><span>Update norm</span><strong id="cnnLsUpdate">-</strong></article>
+            </section>
+            <section class="cnn-landscape-grid">
+                <article class="cnn-landscape-chart-card loss-chart">
+                    <div class="cnn-chart-title"><strong>Loss 曲线</strong><span>train / val</span></div>
+                    <div id="cnnLossCurve" class="cnn-landscape-chart"></div>
+                </article>
+                <article class="cnn-landscape-chart-card pca-chart">
+                    <div class="cnn-chart-title"><strong>PCA 参数轨迹</strong><span>PC1 / PC2 / loss</span></div>
+                    <div id="cnnPcaTrajectory" class="cnn-landscape-chart"></div>
+                </article>
+                <article class="cnn-landscape-chart-card surface-chart">
+                    <div class="cnn-chart-title"><strong>FC2 loss surface</strong><span>二维真实切片</span></div>
+                    <div id="cnnFc2Surface" class="cnn-landscape-chart"></div>
+                </article>
+            </section>
+            <p class="cnn-landscape-note">说明：PCA 轨迹表示训练快照在二维参数子空间中的投影；FC2 曲面仅表示最后一层参数空间的二维切片，不等同于完整 CNN 的全局损失曲面。</p>
+        </div>
+    </section>
+
 </section>
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="{{ url_for('static', filename='js/client_digit_model.js') }}"></script>
-<script src="{{ url_for('static', filename='js/cnn_scene.js') }}?v=3d-calc-22"></script>
-<script src="{{ url_for('static', filename='js/cnn_visualization.js') }}?v=3d-calc-22"></script>
+<script src="{{ url_for('static', filename='js/cnn_scene.js') }}?v=landscape-3"></script>
+<script src="{{ url_for('static', filename='js/cnn_visualization.js') }}?v=landscape-1"></script>
 {% endblock %}

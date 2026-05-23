@@ -86,7 +86,7 @@ equalized = mapping[gray_array]
 
 卷积可视化模块完全在前端使用原生 JavaScript 完成，没有引入 React、Vue 等大型框架。矩阵使用 HTML grid 渲染，便于显示每个具体数值和高亮每一步计算过程。单通道矩阵按灰度显示数值强度，三通道输入按 R/G/B 通道颜色显示；dilation 控件只在空洞卷积中显示和启用。
 
-## 第三节：CNN 前向与反向传播可视化扩展
+## 第三节：CNN 前向与反向传播可视化
 
 第三节新增固定小 CNN 教学页面，访问地址为 `/cnn-visualization`。该页面使用原生 JavaScript 在前端完成 6×6 输入、3×3 卷积、ReLU、MaxPool、Flatten、FC、Softmax、Cross Entropy Loss、反向传播和参数更新的数值演示。
 

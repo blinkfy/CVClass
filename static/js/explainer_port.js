@@ -2005,7 +2005,6 @@
                 ${backwardCalc(node)}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放反向梯度动画</button>
-                    <span class="ce-principle-badge is-backward">橙色表示梯度</span>
                 </div>
             </div>
         `;
@@ -2018,7 +2017,6 @@
                 ${updateCalc(node)}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放参数更新动画</button>
-                    <span class="ce-principle-badge is-update">绿色表示更新</span>
                 </div>
             </div>
         `;

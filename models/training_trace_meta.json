@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "trace_points": 67,
+  "snapshot_scope": "fc2",
+  "fc2_snapshot_shape": [
+    67,
+    1290
+  ],
+  "theta_snapshot_shape": [
+    0,
+    0
+  ],
+  "generated_at": "2026-05-23T20:22:53"
+}
