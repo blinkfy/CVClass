@@ -356,8 +356,10 @@
 
 .ce-main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 270px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    height: 640px;
     min-height: 640px;
+    overflow: hidden;
 }
 
 .ce-network-panel {
@@ -379,8 +381,12 @@
 .ce-side-panel {
     display: grid;
     align-content: start;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     gap: 14px;
-    padding: 22px 20px;
+    max-height: 640px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 22px 18px;
     background: #ffffff;
 }
 
@@ -394,6 +400,37 @@
 .ce-side-panel h2 {
     margin: 0;
     font-size: 24px;
+}
+
+.ce-side-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.ce-side-tabs button {
+    min-height: 30px;
+    border: 0;
+    border-radius: 9px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    background: transparent;
+}
+
+.ce-side-tabs button.active {
+    color: #1d4ed8;
+    background: #dbeafe;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
+}
+
+.ce-side-tab-panel[hidden] {
+    display: none;
 }
 
 .ce-layer-meta {
@@ -471,10 +508,14 @@
 
 .ce-mini-view {
     min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px;
     border: 1px solid var(--ce-line);
     border-radius: 12px;
     background: #fbfdff;
+    overscroll-behavior: contain;
 }
 
 .ce-detail-overlay {
@@ -1400,6 +1441,174 @@
 .ce-principle-card .ce-principle-formula {
     max-width: 100%;
     font-size: 13px;
+}
+
+.ce-param-inspector {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ce-param-tabs-title {
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 1000;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ce-param-inspector.is-backward .ce-param-tabs-title {
+    color: #ea580c;
+}
+
+.ce-param-inspector.is-update .ce-param-tabs-title {
+    color: #16a34a;
+}
+
+.ce-param-section {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fbfdff, #ffffff);
+}
+
+.ce-param-inspector.is-backward .ce-param-section {
+    border-color: #fed7aa;
+    background: linear-gradient(180deg, #fff7ed, #ffffff);
+}
+
+.ce-param-inspector.is-update .ce-param-section {
+    border-color: #bbf7d0;
+    background: linear-gradient(180deg, #f0fdf4, #ffffff);
+}
+
+.ce-param-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.ce-param-heading strong {
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.ce-param-heading span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.ce-param-kernel-bank {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+    gap: 8px;
+}
+
+.ce-param-kernel-tile {
+    padding: 5px;
+    border: 1px solid #dbeafe;
+    border-radius: 9px;
+    cursor: pointer;
+    background: #ffffff;
+}
+
+.ce-param-kernel-tile.is-active {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.ce-param-kernel-tile .ce-detail-label {
+    margin-bottom: 3px;
+    font-size: 10px;
+    justify-content: center;
+}
+
+.ce-param-kernel-tile .ce-mini-matrix {
+    gap: 2px;
+    margin-top: 3px !important;
+}
+
+.ce-param-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.ce-param-card {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.ce-param-card.is-wide {
+    grid-column: span 1;
+}
+
+.ce-param-card p {
+    margin: 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.ce-param-inspector .ce-calc-detail {
+    min-width: 0;
+}
+
+.ce-param-inspector .ce-calc-chain {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.ce-side-panel .ce-param-grid {
+    grid-template-columns: 1fr;
+}
+
+.ce-side-panel .ce-param-kernel-bank {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.ce-side-panel .ce-param-inspector .ce-calc-section {
+    padding: 8px;
+}
+
+.ce-side-panel .ce-param-inspector {
+    gap: 8px;
+}
+
+.ce-side-panel .ce-param-section {
+    gap: 8px;
+    padding: 10px;
+}
+
+.ce-side-panel .ce-param-kernel-tile {
+    padding: 4px;
+}
+
+.ce-side-panel .ce-param-card {
+    padding: 8px;
+}
+
+.ce-side-panel .ce-calc-detail {
+    gap: 8px;
+}
+
+.ce-side-panel .ce-calc-section h4 {
+    font-size: 16px;
+}
+
+.ce-side-panel .ce-calc-section p,
+.ce-side-panel .ce-calc-note {
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .ce-vector-strip {

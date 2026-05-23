@@ -73,6 +73,7 @@
         digitTimer: null,
         selectedScale: "local",
         calcMode: "forward",
+        sideTab: "info",
         detailed: false,
         selected: null,
         hovered: null,
@@ -137,6 +138,8 @@
         overlay: root.querySelector("#ceDetailOverlay"),
         principlePanel: root.querySelector("#cePrinciplePanel"),
         principleContent: root.querySelector("#cePrincipleContent"),
+        sideTabs: root.querySelector("#ceSideTabs"),
+        layerInfo: root.querySelector("#ceLayerInfo"),
         layerTitle: root.querySelector("#ceLayerTitle"),
         layerInput: root.querySelector("#ceLayerInput"),
         layerOutput: root.querySelector("#ceLayerOutput"),
@@ -1384,6 +1387,7 @@
         state.selected = node;
         state.intermediate = node;
         state.detailed = false;
+        state.sideTab = defaultSideTabForMode();
         els.detailToggle.classList.remove("active");
         els.detailToggle.textContent = "显示细节";
         els.overlay.hidden = true;
@@ -1995,14 +1999,18 @@
     }
 
     function renderForwardChain(node) {
-        return principleHtml(node);
+        const html = principleHtml(node);
+        if (!learnableLayer(node)) {
+            return html;
+        }
+        return html.replace(/<\/div>\s*$/, `${parameterInspectorHtml(node, "params")}</div>`);
     }
 
     function renderBackwardChain(node) {
         return `
             <div class="ce-principle-shell is-mode-backward">
                 ${principleHeader(node, "反向梯度模式：展示该层局部梯度如何由上游梯度计算并继续回传。")}
-                ${backwardCalc(node)}
+                ${learnableLayer(node) ? parameterInspectorHtml(node, "backward") : backwardCalc(node)}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放反向梯度动画</button>
                 </div>
@@ -2014,7 +2022,7 @@
         return `
             <div class="ce-principle-shell is-mode-update">
                 ${principleHeader(node, "参数更新模式：只对 Conv / FC 的权重和 bias 展示更新。")}
-                ${updateCalc(node)}
+                ${learnableLayer(node) ? parameterInspectorHtml(node, "update") : updateCalc(node)}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放参数更新动画</button>
                 </div>
@@ -2096,6 +2104,153 @@
                     <p>${subtitle}</p>
                 </div>
                 <button class="ce-principle-close" type="button" data-principle-close aria-label="关闭">×</button>
+            </div>
+        `;
+    }
+
+    function defaultSideTabForMode() {
+        if (state.calcMode === "backward" || state.calcMode === "update") {
+            return "grads";
+        }
+        return "info";
+    }
+
+    function syncSideTabs() {
+        if (!els.sideTabs) {
+            return;
+        }
+        els.sideTabs.querySelectorAll("[data-ce-side-tab]").forEach((button) => {
+            button.classList.toggle("active", button.dataset.ceSideTab === state.sideTab);
+        });
+        if (els.layerInfo) {
+            els.layerInfo.hidden = state.sideTab !== "info";
+        }
+    }
+
+    function parameterSpec(node) {
+        const name = String(node?.layerName || "");
+        if (node?.type === "conv") {
+            if (name.includes("digit_conv_1")) {
+                return { kind: "conv", title: "Conv1 kernels", shape: "32 × 1 × 3 × 3", outChannels: 32, inChannels: 1, outputIndex: 5, inputIndex: 0 };
+            }
+            if (name.includes("digit_conv_2")) {
+                return { kind: "conv", title: "Conv2 kernels", shape: "64 × 32 × 3 × 3", outChannels: 64, inChannels: 32, outputIndex: 5, inputIndex: 7 };
+            }
+            const inputChannels = Math.max(1, state.coords[Math.max(0, node.layerIndex - 1)]?.length || 3);
+            const outputChannels = Math.max(1, state.coords[node.layerIndex]?.length || 10);
+            return { kind: "conv", title: `${displayLayerName(node.layerName)} kernels`, shape: `${outputChannels} × ${inputChannels} × 3 × 3`, outChannels: outputChannels, inChannels: inputChannels, outputIndex: Math.min(5, outputChannels - 1), inputIndex: Math.min(1, inputChannels - 1) };
+        }
+        if (node?.type === "fc") {
+            if (name.includes("digit_fc_1")) {
+                return { kind: "fc", title: "FC1 weight", shape: "3136 × 128", inputDim: 3136, outputDim: 128, inputIndex: 48, outputIndex: 5 };
+            }
+            if (name.includes("digit_fc_2") || name.includes("logits")) {
+                return { kind: "fc", title: "FC2 weight", shape: "128 × 10", inputDim: 128, outputDim: 10, inputIndex: 12, outputIndex: 3 };
+            }
+            return { kind: "fc", title: `${displayLayerName(node.layerName)} weight`, shape: "sampled W[i,j]", inputDim: 1690, outputDim: 10, inputIndex: 24, outputIndex: Math.min(5, node.index || 0) };
+        }
+        return { kind: "none", title: "无可学习参数", shape: "-", inputDim: 0, outputDim: 0 };
+    }
+
+    function representativeKernel(node, index = 0) {
+        return makeKernel(hashText(`${node.id || node.layerName}-kernel-${index}`));
+    }
+
+    function representativeWeightPatch(node, rows = 8, cols = 14) {
+        const rand = randomFrom(hashText(`${node.id || node.layerName}-weight-patch`));
+        return Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => {
+            const band = Math.sin((r + 1) * 0.7) * Math.cos((c + 1) * 0.35);
+            return (band * 0.18) + (rand() - 0.5) * 0.32;
+        }));
+    }
+
+    function convKernelBankHtml(node, spec) {
+        const count = Math.min(10, spec.outChannels || 10);
+        const active = Math.min(count - 1, Math.max(0, node.index || spec.outputIndex || 0));
+        const tiles = Array.from({ length: count }, (_, index) => {
+            const kernel = representativeKernel(node, index);
+            return `
+                <button class="ce-param-kernel-tile ${index === active ? "is-active" : ""}" type="button" data-kernel-index="${index}">
+                    ${plainMatrix(kernel, `K${index + 1}`, 3, { role: "conv-kernel", fixedScale: true, compact: true })}
+                </button>
+            `;
+        }).join("");
+        const slice = representativeKernel(node, active);
+        return `
+            <div class="ce-param-section">
+                <div class="ce-param-heading">
+                    <strong>${spec.title}</strong>
+                    <span>${spec.shape}</span>
+                </div>
+                <div class="ce-param-kernel-bank">${tiles}</div>
+            </div>
+        `;
+    }
+
+    function fcWeightInspectorHtml(node, spec) {
+        const patch = representativeWeightPatch(node);
+        const weightValue = patch[2][4];
+        return `
+            <div class="ce-param-section">
+                <div class="ce-param-heading">
+                    <strong>${spec.title}</strong>
+                    <span>${spec.shape}</span>
+                </div>
+                <div class="ce-param-grid">
+                    <div class="ce-param-card is-wide">
+                        ${plainMatrix(patch, "W 局部 heatmap", 8, { role: "conv-product", compact: true, markWindow: { row: 2, col: 4, size: 1 } })}
+                        <p class="ce-matrix-note">高亮代表性连接 W[${spec.inputIndex}, ${spec.outputIndex}] = ${num(weightValue)}。</p>
+                    </div>
+                    <div class="ce-param-card">
+                        ${fcLinksSvg(Math.min(12, spec.inputDim), Math.min(6, spec.outputDim))}
+                        <p>网络图中同步高亮 input node i、output node j 与对应连接线。</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function parameterInspectorHtml(node, mode = state.calcMode) {
+        const spec = parameterSpec(node);
+        if (spec.kind === "conv") {
+            if (mode === "params") {
+                return `
+                    <div class="ce-param-inspector is-forward">
+                        <div class="ce-param-tabs-title">Parameter Inspector</div>
+                        ${convKernelBankHtml(node, spec)}
+                    </div>
+                `;
+            }
+            const calc = mode === "backward" ? backwardCalc(node) : mode === "update" ? updateCalc(node) : forwardCalc(node);
+            return `
+                <div class="ce-param-inspector is-${mode}">
+                    <div class="ce-param-tabs-title">Parameter Inspector</div>
+                    ${convKernelBankHtml(node, spec)}
+                    ${calc}
+                </div>
+            `;
+        }
+        if (spec.kind === "fc") {
+            if (mode === "params") {
+                return `
+                    <div class="ce-param-inspector is-forward">
+                        <div class="ce-param-tabs-title">Parameter Inspector</div>
+                        ${fcWeightInspectorHtml(node, spec)}
+                    </div>
+                `;
+            }
+            const calc = mode === "backward" ? backwardCalc(node) : mode === "update" ? updateCalc(node) : forwardCalc(node);
+            return `
+                <div class="ce-param-inspector is-${mode}">
+                    <div class="ce-param-tabs-title">Parameter Inspector</div>
+                    ${fcWeightInspectorHtml(node, spec)}
+                    ${calc}
+                </div>
+            `;
+        }
+        return `
+            <div class="ce-param-inspector is-${mode}">
+                <div class="ce-principle-empty">该层无可学习参数，不参与参数更新。</div>
             </div>
         `;
     }
@@ -2391,6 +2546,7 @@
         }
         const node = state.selected || state.cnn[0][0];
         const layer = layerDefFor(node);
+        syncSideTabs();
         els.layerTitle.textContent = displayLayerName(node.layerName);
         els.layerInput.textContent = layer.input;
         els.layerOutput.textContent = layer.output;
@@ -2401,6 +2557,16 @@
 
     function renderMiniView(node) {
         if (!node) {
+            return;
+        }
+        if (state.sideTab === "params") {
+            els.miniView.innerHTML = parameterInspectorHtml(node, "params");
+            renderLatexInElement(els.miniView);
+            return;
+        }
+        if (state.sideTab === "grads") {
+            els.miniView.innerHTML = state.calcMode === "update" ? updateCalc(node) : backwardCalc(node);
+            renderLatexInElement(els.miniView);
             return;
         }
         if (node.type === "input") {
@@ -3509,13 +3675,24 @@
                 item.classList.toggle("active", item === button);
             });
             root.dataset.calcMode = state.calcMode;
+            state.sideTab = defaultSideTabForMode();
             if (state.selected && els.principlePanel && !els.principlePanel.hidden) {
                 showPrinciplePanel(state.selected);
             }
             if (state.detailed && state.selected) {
                 showDetailOverlay(state.selected);
             }
+            updateSidePanel();
             updateInteraction(state.selected || state.cnn[0]?.[0], false);
+        });
+
+        els.sideTabs?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-ce-side-tab]");
+            if (!button) {
+                return;
+            }
+            state.sideTab = button.dataset.ceSideTab || "info";
+            updateSidePanel();
         });
 
         if (els.digitCanvas) {

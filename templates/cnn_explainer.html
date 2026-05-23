@@ -72,22 +72,28 @@
         </section>
 
         <aside class="ce-side-panel" aria-label="当前选中层说明">
-            <span class="ce-eyebrow">当前选中层</span>
             <h2 id="ceLayerTitle">Input</h2>
-            <dl class="ce-layer-meta">
-                <div>
-                    <dt>输入尺寸</dt>
-                    <dd id="ceLayerInput">64 × 64 × 3</dd>
+            <div class="ce-side-tabs" id="ceSideTabs" aria-label="Layer inspector tabs">
+                <button class="active" type="button" data-ce-side-tab="info">层说明</button>
+                <button type="button" data-ce-side-tab="params">参数</button>
+                <button type="button" data-ce-side-tab="grads">梯度/更新</button>
+            </div>
+            <div id="ceLayerInfo" class="ce-side-tab-panel">
+                <dl class="ce-layer-meta">
+                    <div>
+                        <dt>输入尺寸</dt>
+                        <dd id="ceLayerInput">64 × 64 × 3</dd>
+                    </div>
+                    <div>
+                        <dt>输出尺寸</dt>
+                        <dd id="ceLayerOutput">64 × 64 × 3</dd>
+                    </div>
+                </dl>
+                <p id="ceLayerDesc"></p>
+                <div class="ce-formula-box">
+                    <span>核心公式</span>
+                    <div id="ceLayerFormula" class="ce-latex-block"></div>
                 </div>
-                <div>
-                    <dt>输出尺寸</dt>
-                    <dd id="ceLayerOutput">64 × 64 × 3</dd>
-                </div>
-            </dl>
-            <p id="ceLayerDesc"></p>
-            <div class="ce-formula-box">
-                <span>核心公式</span>
-                <div id="ceLayerFormula" class="ce-latex-block"></div>
             </div>
             <div class="ce-mini-view" id="ceMiniView"></div>
         </aside>
