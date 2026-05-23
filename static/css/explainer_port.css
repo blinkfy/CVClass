@@ -163,6 +163,24 @@
     background: #f0fdf4;
 }
 
+.ce-gradient-clear {
+    min-height: 32px;
+    padding: 0 14px;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #c2410c;
+    font-size: 12px;
+    font-weight: 900;
+    background: #fff7ed;
+    cursor: pointer;
+    transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.ce-gradient-clear:hover {
+    border-color: #fdba74;
+    background: #ffedd5;
+}
+
 .ce-image-option {
     width: 42px;
     height: 42px;
@@ -933,8 +951,24 @@
     grid-template-columns: 92px 1fr 46px;
     align-items: center;
     gap: 10px;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    text-align: left;
     font-size: 12px;
     font-weight: 800;
+    background: transparent;
+    cursor: pointer;
+}
+
+.ce-softmax-row:hover,
+.ce-softmax-row.is-target {
+    color: #c2410c;
+}
+
+.ce-softmax-row.is-target .ce-softmax-track {
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
 }
 
 .ce-softmax-track {
@@ -1047,6 +1081,12 @@
 .ce-softmax-calc-row.top {
     color: #9a3412;
     font-weight: 900;
+}
+
+.ce-softmax-calc-row.is-target {
+    color: #c2410c;
+    background: #fff7ed;
+    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.22);
 }
 
 .ce-softmax-calc-row.is-animating {
@@ -1804,6 +1844,12 @@
     stroke-width: 2.5px;
 }
 
+.ce-node.is-update .ce-node-border {
+    stroke: #16a34a;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.4));
+}
+
 .ce-node.selected image,
 .ce-node.hovered image {
     filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.2));
@@ -1814,6 +1860,10 @@
     stroke: #e5e7eb;
     stroke-width: 0.75px;
     opacity: 0.82;
+}
+
+.ce-edge.is-grad {
+    opacity: 0.8;
 }
 
 .ce-edge.active {
@@ -1871,8 +1921,19 @@
     opacity: 0.58;
 }
 
+.ce-output-name.is-target,
+.ce-output-name.is-grad-active {
+    fill: #c2410c;
+    opacity: 0.95;
+    font-weight: 900;
+}
+
 .ce-output-track {
     fill: #e5e7eb;
+}
+
+.ce-output-bar.is-grad {
+    filter: drop-shadow(0 2px 6px rgba(234, 88, 12, 0.28));
 }
 
 .ce-output-name.active {
@@ -1890,6 +1951,11 @@
 .ce-logit-node {
     stroke: #9a3412;
     stroke-width: 1.1;
+}
+
+.ce-node.is-update .ce-logit-node {
+    stroke: #16a34a;
+    stroke-width: 2.2px;
 }
 
 .ce-logit-label {
@@ -1989,6 +2055,22 @@
     gap: 8px;
     font-size: 12px;
     font-weight: 800;
+}
+
+button.ce-mini-bar,
+.ce-output-target-button {
+    width: 100%;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+    background: transparent;
+    cursor: pointer;
+}
+
+.ce-output-target-button:hover,
+.ce-output-target-button.is-target {
+    color: #c2410c;
 }
 
 .ce-mini-bar-track {

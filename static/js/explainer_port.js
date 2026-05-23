@@ -94,6 +94,19 @@
             module: [],
             global: []
         },
+        gradReplay: {
+            active: false,
+            targetLabel: null,
+            dlogits: [],
+            nodeGrad: new Map(),
+            activeLayers: new Set(),
+            sequence: [],
+            stepIndex: -1,
+            timer: null,
+            version: 0,
+            updateActive: false,
+            maxScalar: 1
+        },
         renderToken: 0
     };
 
@@ -120,6 +133,249 @@
         root.dataset.calcMode = state.calcMode;
     }
 
+    const gradConfig = {
+        stepDuration: 720,
+        minDuration: 600,
+        maxDuration: 900
+    };
+
+    function clearGradientReplay({ silent = false, render = true } = {}) {
+        const replay = state.gradReplay;
+        if (replay.timer) {
+            window.clearTimeout(replay.timer);
+            replay.timer = null;
+        }
+        replay.active = false;
+        replay.updateActive = false;
+        replay.targetLabel = null;
+        replay.dlogits = [];
+        replay.nodeGrad.clear();
+        replay.activeLayers.clear();
+        replay.sequence = [];
+        replay.stepIndex = -1;
+        replay.maxScalar = 1;
+        if (!silent && els.interactionText) {
+            els.interactionText.textContent = "梯度热力已清除，可点击 Softmax 类别重新回放。";
+        }
+        state.nodeImageCache.clear();
+        if (render) {
+            renderNetwork();
+            updateSidePanel();
+        }
+    }
+
+    function gradientSequence() {
+        const order = ["output", "fc", "flatten", "pool", "relu", "conv", "input"];
+        const indices = [];
+        order.forEach((type) => {
+            let index = -1;
+            for (let i = layerDefs.length - 1; i >= 0; i -= 1) {
+                if (layerDefs[i].type === type) {
+                    index = i;
+                    break;
+                }
+            }
+            if (type === "input") {
+                index = 0;
+            }
+            if (index >= 0 && !indices.includes(index)) {
+                indices.push(index);
+            }
+        });
+        return indices.map((layerIndex) => ({ layerIndex, type: layerDefs[layerIndex]?.type || "" }));
+    }
+
+    function gradientColor(value, maxValue) {
+        const magnitude = Math.abs(value || 0);
+        if (!maxValue || maxValue <= 1e-6 || magnitude <= 1e-4) {
+            return "#cbd5e1";
+        }
+        const norm = Math.min(1, magnitude / maxValue);
+        const t = value < 0 ? 0.6 + 0.4 * norm : 0.25 + 0.65 * norm;
+        return d3.interpolateOranges(t);
+    }
+
+    function meanAbsMatrix(matrix) {
+        if (!Array.isArray(matrix)) {
+            return Math.abs(matrix || 0);
+        }
+        const flat = Array.isArray(matrix[0]) ? matrix.flat() : matrix;
+        if (!flat.length) return 0;
+        const sum = flat.reduce((acc, value) => acc + Math.abs(value || 0), 0);
+        return sum / flat.length;
+    }
+
+    function setNodeGrad(node, payload) {
+        if (!node || !payload) return;
+        const entry = {
+            scalar: payload.scalar || 0,
+            matrix: payload.matrix || null,
+            max: payload.max || 0
+        };
+        if (entry.matrix && !entry.max) {
+            entry.max = Math.max(1e-6, Math.max(...entry.matrix.flat().map((v) => Math.abs(v || 0))));
+        }
+        state.gradReplay.nodeGrad.set(node.id, entry);
+    }
+
+    function gradMatrixFromActivation(matrix, scale, options = {}) {
+        if (!Array.isArray(matrix)) {
+            return [[scale || 0]];
+        }
+        const rows = Array.isArray(matrix[0]) ? matrix : [matrix];
+        const absValues = rows.map((row) => row.map((value) => Math.abs(value || 0)));
+        const maxVal = Math.max(1e-6, Math.max(...absValues.flat()));
+        const norm = absValues.map((row, r) => row.map((value, c) => {
+            const base = (value / maxVal) * (scale || 0);
+            if (options.reluMask && rows[r][c] <= 0) {
+                return 0;
+            }
+            return base;
+        }));
+        if (!options.pool) {
+            return norm;
+        }
+        const pooled = norm.map((row) => row.map(() => 0));
+        const windowSize = 2;
+        for (let r = 0; r < norm.length; r += windowSize) {
+            for (let c = 0; c < norm[0].length; c += windowSize) {
+                let max = -Infinity;
+                let maxPos = { r, c };
+                for (let i = 0; i < windowSize; i += 1) {
+                    for (let j = 0; j < windowSize; j += 1) {
+                        const rr = r + i;
+                        const cc = c + j;
+                        if (rr >= norm.length || cc >= norm[0].length) continue;
+                        if (norm[rr][cc] > max) {
+                            max = norm[rr][cc];
+                            maxPos = { r: rr, c: cc };
+                        }
+                    }
+                }
+                if (max > -Infinity) {
+                    pooled[maxPos.r][maxPos.c] = max;
+                }
+            }
+        }
+        return pooled;
+    }
+
+    function buildGradients(targetLabel) {
+        const outputs = state.cnn[state.cnn.length - 1] || [];
+        const probs = outputs.map((item) => Math.max(0, Number(item.output) || 0));
+        const safeLabel = Math.max(0, Math.min(probs.length - 1, Number(targetLabel)));
+        const dlogits = probs.map((p, i) => p - (i === safeLabel ? 1 : 0));
+        state.gradReplay.dlogits = dlogits;
+        state.gradReplay.targetLabel = safeLabel;
+
+        state.gradReplay.nodeGrad.clear();
+        const absGrad = dlogits.map((v) => Math.abs(v || 0));
+        const meanGrad = absGrad.reduce((a, b) => a + b, 0) / Math.max(1, absGrad.length);
+
+        outputs.forEach((node, index) => {
+            setNodeGrad(node, { scalar: absGrad[index] || 0 });
+        });
+
+        const lastOfType = (type) => {
+            for (let i = layerDefs.length - 1; i >= 0; i -= 1) {
+                if (layerDefs[i].type === type) return i;
+            }
+            return -1;
+        };
+
+        const fcIndex = lastOfType("fc");
+        const flattenIndex = lastOfType("flatten");
+        const poolIndex = lastOfType("pool");
+        const reluIndex = lastOfType("relu");
+        const convIndex = lastOfType("conv");
+
+        const fcLayer = state.cnn[fcIndex] || [];
+        fcLayer.forEach((node, index) => {
+            const scalar = absGrad[index % absGrad.length] || meanGrad;
+            setNodeGrad(node, { scalar });
+        });
+
+        const flattenLayer = state.cnn[flattenIndex] || [];
+        flattenLayer.forEach((node) => {
+            const scale = meanGrad * (0.35 + 0.65 * Math.min(1, Math.abs(averageOutput(node.output))));
+            setNodeGrad(node, { scalar: scale });
+        });
+
+        const poolLayer = state.cnn[poolIndex] || [];
+        poolLayer.forEach((node) => {
+            const scale = meanGrad * 0.85;
+            const matrix = gradMatrixFromActivation(node.output, scale, { pool: true });
+            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+        });
+
+        const reluLayer = state.cnn[reluIndex] || [];
+        reluLayer.forEach((node) => {
+            const scale = meanGrad * 0.95;
+            const matrix = gradMatrixFromActivation(node.output, scale, { reluMask: true });
+            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+        });
+
+        const convLayer = state.cnn[convIndex] || [];
+        convLayer.forEach((node) => {
+            const scale = meanGrad;
+            const matrix = gradMatrixFromActivation(node.output, scale);
+            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+        });
+
+        const inputLayer = state.cnn[0] || [];
+        inputLayer.forEach((node) => {
+            const scale = meanGrad * 0.8;
+            const matrix = gradMatrixFromActivation(node.output, scale);
+            setNodeGrad(node, { matrix, scalar: meanAbsMatrix(matrix) });
+        });
+
+        let maxScalar = 0.001;
+        state.gradReplay.nodeGrad.forEach((entry) => {
+            maxScalar = Math.max(maxScalar, entry.scalar || 0);
+        });
+        state.gradReplay.maxScalar = maxScalar;
+    }
+
+    function startGradientReplay(targetLabel) {
+        if (state.modelMode !== "digit") {
+            return;
+        }
+        clearGradientReplay({ silent: true, render: false });
+        buildGradients(targetLabel);
+        const replay = state.gradReplay;
+        replay.active = true;
+        replay.updateActive = false;
+        replay.activeLayers.clear();
+        replay.sequence = gradientSequence();
+        replay.stepIndex = -1;
+        replay.version += 1;
+        if (els.interactionText) {
+            els.interactionText.textContent = `已将类别 ${replay.targetLabel} 设为正确标签，开始回放从 Softmax 到输入端的反向传播梯度。`;
+        }
+        advanceGradientReplay();
+    }
+
+    function advanceGradientReplay() {
+        const replay = state.gradReplay;
+        replay.stepIndex += 1;
+        if (replay.stepIndex < replay.sequence.length) {
+            const layerIndex = replay.sequence[replay.stepIndex].layerIndex;
+            replay.activeLayers.add(layerIndex);
+            state.nodeImageCache.clear();
+            renderNetwork();
+            updateSidePanel();
+            replay.timer = window.setTimeout(advanceGradientReplay, gradConfig.stepDuration);
+            return;
+        }
+        replay.updateActive = true;
+        state.nodeImageCache.clear();
+        renderNetwork();
+        updateSidePanel();
+        if (els.interactionText) {
+            els.interactionText.textContent = "梯度回放完成，已保留最后热力分布与绿色参数更新标记。";
+        }
+    }
+
     let resizeTimer = null;
 
     const els = {
@@ -131,6 +387,7 @@
         clearDigit: root.querySelector("#ceClearDigit"),
         digitStatus: root.querySelector("#ceDigitStatus"),
         modeSwitch: root.querySelector("#ceModeSwitch"),
+        clearGrad: root.querySelector("#ceClearGrad"),
         hoverPill: root.querySelector("#ceHoverPill"),
         detailToggle: root.querySelector("#ceDetailToggle"),
         scaleSelect: root.querySelector("#ceScaleSelect"),
@@ -1000,6 +1257,7 @@
     async function selectDigitFromCanvas() {
         const token = state.renderToken + 1;
         state.renderToken = token;
+        clearGradientReplay({ silent: true, render: false });
         state.hovered = null;
         state.intermediate = null;
         state.selected = null;
@@ -1158,6 +1416,11 @@
     }
 
     function colorFor(node, value, row, col) {
+        const gradEntry = gradientEntry(node);
+        if (gradEntry && gradEntry.matrix) {
+            const gradValue = gradEntry.matrix[row]?.[col] ?? 0;
+            return gradientColor(gradValue, gradEntry.max);
+        }
         if (node.type === "kernel") {
             const [min, max] = node.extent || matrixExtent(node.output);
             const normalized = max === min ? 0.5 : (value - min) / (max - min);
@@ -1187,21 +1450,70 @@
         return scale(Math.max(0, Math.min(1, normalized + checker)));
     }
 
+    function gradientEntry(node) {
+        if (!node || !state.gradReplay.active) {
+            return null;
+        }
+        if (!state.gradReplay.activeLayers.has(node.layerIndex)) {
+            return null;
+        }
+        return state.gradReplay.nodeGrad.get(node.id) || null;
+    }
+
+    function gradientScalar(node) {
+        const entry = gradientEntry(node);
+        return entry ? entry.scalar || 0 : 0;
+    }
+
+    function edgeGradient(link) {
+        if (!state.gradReplay.active) {
+            return null;
+        }
+        const active = state.gradReplay.activeLayers.has(link.source.layerIndex) || state.gradReplay.activeLayers.has(link.target.layerIndex);
+        if (!active) {
+            return null;
+        }
+        const scalar = gradientScalar(link.target) || gradientScalar(link.source);
+        if (!scalar) {
+            return null;
+        }
+        const norm = Math.min(1, scalar / Math.max(1e-6, state.gradReplay.maxScalar));
+        const color = gradientColor(scalar, state.gradReplay.maxScalar);
+        return {
+            color,
+            width: 0.8 + norm * 3.2,
+            opacity: 0.45 + norm * 0.5
+        };
+    }
+
+    function gradFillColor(node, fallbackColor) {
+        const scalar = gradientScalar(node);
+        if (!state.gradReplay.active || !scalar) {
+            return fallbackColor;
+        }
+        return gradientColor(scalar, state.gradReplay.maxScalar);
+    }
+
     function matrixToDataUrl(node) {
-        const cacheKey = `${state.modelMode}|${state.selectedImage}|${state.selectedScale}|${node.id}`;
+        const cacheKey = `${state.modelMode}|${state.selectedImage}|${state.selectedScale}|${state.gradReplay.version}|${node.id}`;
         const cached = state.nodeImageCache.get(cacheKey);
         if (cached) {
             return cached;
         }
         const canvas = document.createElement("canvas");
-        const matrix = Array.isArray(node.output) ? node.output : [[node.output]];
+        const gradEntry = gradientEntry(node);
+        const matrix = gradEntry && gradEntry.matrix ? gradEntry.matrix : (Array.isArray(node.output) ? node.output : [[node.output]]);
         const size = matrix.length;
         const scale = Math.max(1, Math.ceil(64 / size));
         canvas.width = size * scale;
         canvas.height = size * scale;
         const ctx = canvas.getContext("2d");
         matrix.forEach((row, r) => row.forEach((value, c) => {
-            ctx.fillStyle = colorFor(node, value, r, c);
+            if (gradEntry && gradEntry.matrix) {
+                ctx.fillStyle = gradientColor(value, gradEntry.max);
+            } else {
+                ctx.fillStyle = colorFor(node, value, r, c);
+            }
             ctx.fillRect(c * scale, r * scale, scale, scale);
         }));
         const dataUrl = canvas.toDataURL("image/png");
@@ -1426,7 +1738,7 @@
             .attr("stdDeviation", 5)
             .attr("flood-opacity", 0.22);
 
-        main.append("g")
+        const edgeSelection = main.append("g")
             .attr("class", "ce-edge-group")
             .selectAll("path")
             .data(state.links)
@@ -1434,6 +1746,23 @@
             .append("path")
             .attr("class", (d) => `ce-edge ce-edge-target-${d.targetLayerIndex}-${d.targetNodeIndex}`)
             .attr("d", linkPath);
+
+        if (state.gradReplay.active) {
+            edgeSelection
+                .classed("is-grad", (d) => edgeGradient(d) !== null)
+                .style("stroke", (d) => {
+                    const grad = edgeGradient(d);
+                    return grad ? grad.color : null;
+                })
+                .style("stroke-width", (d) => {
+                    const grad = edgeGradient(d);
+                    return grad ? grad.width : null;
+                })
+                .style("opacity", (d) => {
+                    const grad = edgeGradient(d);
+                    return grad ? grad.opacity : null;
+                });
+        }
 
         const layerGroups = main.selectAll("g.ce-layer")
             .data(state.coords)
@@ -1464,6 +1793,7 @@
                 .attr("y", 45)
                 .text(layerDef.output);
 
+            const isUpdateLayer = state.gradReplay.active && state.gradReplay.updateActive && ["conv", "fc"].includes(layerDef.type);
             const nodeGroups = layerGroup.selectAll("g.ce-node")
                 .data(layer)
                 .enter()
@@ -1471,7 +1801,7 @@
                 .attr("class", (d) => {
                     const selected = state.selected && d.id === state.selected.id;
                     const hovered = state.hovered && d.id === state.hovered.id;
-                    return `ce-node ${selected ? "selected" : ""} ${hovered ? "hovered" : ""}`;
+                    return `ce-node ${selected ? "selected" : ""} ${hovered ? "hovered" : ""} ${isUpdateLayer ? "is-update" : ""}`;
                 })
                 .style("cursor", "pointer")
                 .on("mouseenter", function (event, d) {
@@ -1498,7 +1828,7 @@
                     .attr("y", (d) => d.y)
                     .attr("width", 12)
                     .attr("height", nodeLength)
-                    .style("fill", (d) => colorFor(d, d.output, 0, 0));
+                    .style("fill", (d) => gradFillColor(d, colorFor(d, d.output, 0, 0)));
                 nodeGroups.append("title")
                     .text((d) => `flatten[${d.range ? d.range.join("-") : d.index}]`);
             } else if (layerDef.type === "fc" || layerDef.name === "digit_fc_relu") {
@@ -1507,9 +1837,12 @@
                     .attr("cx", (d) => d.x + 16)
                     .attr("cy", (d) => d.cy)
                     .attr("r", 10)
-                    .style("fill", (d) => layerDef.name === "digit_fc_relu"
-                        ? colorFor(d, d.output, 0, 0)
-                        : colorScales.output(0.25 + 0.7 * d.output));
+                    .style("fill", (d) => {
+                        const base = layerDef.name === "digit_fc_relu"
+                            ? colorFor(d, d.output, 0, 0)
+                            : colorScales.output(0.25 + 0.7 * d.output);
+                        return gradFillColor(d, base);
+                    });
                 nodeGroups.append("title")
                     .text((d) => `${d.label || `logit ${d.index}`}：${Number.isFinite(d.logit) ? d.logit.toFixed(4) : d.output.toFixed(4)}`);
             } else if (state.modelMode === "digit" && layerDef.type === "input") {
@@ -1543,11 +1876,22 @@
                     .attr("height", nodeLength);
             } else {
                 const maxOutput = Math.max(...layer.map((d) => d.output));
+                const dlogits = state.gradReplay.active ? state.gradReplay.dlogits || [] : [];
+                const showGrad = state.gradReplay.active && state.gradReplay.activeLayers.has(layerIndex);
+                const targetLabel = state.gradReplay.targetLabel;
                 nodeGroups.append("text")
-                    .attr("class", (d) => `ce-output-name ${d.output === maxOutput ? "active" : ""}`)
+                    .attr("class", (d) => {
+                        const isTarget = showGrad && Number.isFinite(targetLabel) && d.index === targetLabel;
+                        const gradActive = showGrad ? "is-grad-active" : "";
+                        return `ce-output-name ${d.output === maxOutput ? "active" : ""} ${isTarget ? "is-target" : ""} ${gradActive}`;
+                    })
                     .attr("x", (d) => d.x)
                     .attr("y", (d) => d.y + nodeLength / 2 - 3)
-                    .text((d) => d.label);
+                    .text((d) => d.label)
+                    .on("click", (event, d) => {
+                        event.stopPropagation();
+                        startGradientReplay(d.index);
+                    });
 
                 nodeGroups.append("rect")
                     .attr("class", "ce-output-track")
@@ -1564,7 +1908,18 @@
                     .attr("height", 10)
                     .attr("width", 0)
                     .attr("rx", 5)
-                    .style("fill", (d) => colorScales.output(0.45 + 0.5 * d.output))
+                    .classed("is-grad", showGrad)
+                    .style("fill", (d) => {
+                        if (showGrad) {
+                            const gradValue = dlogits[d.index] || 0;
+                            return gradientColor(gradValue, Math.max(1e-6, state.gradReplay.maxScalar));
+                        }
+                        return colorScales.output(0.45 + 0.5 * d.output);
+                    })
+                    .on("click", (event, d) => {
+                        event.stopPropagation();
+                        startGradientReplay(d.index);
+                    })
                     .transition()
                     .duration(680)
                     .attr("width", (d) => 110 * d.output);
@@ -1967,6 +2322,12 @@
         if (modeProbeButton) {
             modeProbeButton.addEventListener("click", () => playProbeByMode(node));
         }
+        els.principleContent.querySelectorAll("[data-grad-target]").forEach((target) => {
+            target.addEventListener("click", (event) => {
+                event.stopPropagation();
+                startGradientReplay(Number(target.dataset.gradTarget));
+            });
+        });
         els.hoverPill.textContent = `${displayLayerName(node.layerName)}`;
         window.setTimeout(() => {
             if (!els.principlePanel || els.principlePanel.hidden) {
@@ -2414,6 +2775,8 @@
         const exps = logits.map((logit) => Math.exp(logit - maxLogit));
         const denom = exps.reduce((sum, value) => sum + value, 0);
         const topIndex = outputs.findIndex((item) => item.id === top.id);
+        const targetLabel = Number.isFinite(state.gradReplay.targetLabel) ? state.gradReplay.targetLabel : null;
+        const dlogits = targetLabel === null ? [] : outputs.map((item, index) => item.output - (index === targetLabel ? 1 : 0));
         return `
             <div class="ce-principle-shell">
                 ${principleHeader({ layerName: "output" }, "Softmax 将 logits 归一化为概率")}
@@ -2436,24 +2799,25 @@
                             </div>
                         </div>
                         <div class="ce-softmax-table">
-                            <div class="ce-softmax-table-head"><span>类别</span><span>logit z</span><span>exp(z-max)</span><span>概率</span></div>
-                            ${outputs.map((item, index) => `<div class="ce-softmax-calc-row ${item.id === top.id ? "top" : ""}" data-softmax-calc-row="${index}">
+                            <div class="ce-softmax-table-head"><span>类别</span><span>logit z</span><span>exp(z-max)</span><span>${targetLabel === null ? "概率" : "dlogits"}</span></div>
+                            ${outputs.map((item, index) => `<div class="ce-softmax-calc-row ${item.id === top.id ? "top" : ""} ${targetLabel === index ? "is-target" : ""}" data-softmax-calc-row="${index}" data-grad-target="${index}">
                                 <span>${item.label}</span>
                                 <span>${logits[index].toFixed(3)}</span>
                                 <span>${exps[index].toFixed(4)}</span>
-                                <span>${(item.output * 100).toFixed(1)}%</span>
+                                <span>${targetLabel === null ? `${(item.output * 100).toFixed(1)}%` : dlogits[index].toFixed(3)}</span>
                             </div>`).join("")}
                         </div>
                     </div>
                     <div class="ce-principle-card">
                         <h4>概率分布</h4>
                         <div class="ce-softmax-detail">
-                            ${outputs.map((item, index) => `<div class="ce-softmax-row ${item.id === top.id ? "top" : ""}" data-softmax-row="${index}">
+                            ${outputs.map((item, index) => `<button class="ce-softmax-row ${item.id === top.id ? "top" : ""} ${targetLabel === index ? "is-target" : ""}" type="button" data-softmax-row="${index}" data-grad-target="${index}" title="设为正确标签并回放梯度">
                                 <span>${item.label}</span>
                                 <span class="ce-softmax-track"><span class="ce-softmax-fill" style="--prob:${Math.round(item.output * 100)}%"></span></span>
-                                <span>${(item.output * 100).toFixed(1)}%</span>
-                            </div>`).join("")}
+                                <span>${targetLabel === null ? `${(item.output * 100).toFixed(1)}%` : dlogits[index].toFixed(2)}</span>
+                            </button>`).join("")}
                         </div>
+                        ${targetLabel === null ? `<p class="ce-matrix-note">点击任意类别条目，将其设为 targetLabel 并从 Softmax 向输入端回放梯度。</p>` : `<p class="ce-matrix-note">targetLabel=${targetLabel}，dlogits = probs - onehot(${targetLabel})。</p>`}
                         <button class="ce-softmax-play" type="button" data-softmax-play>播放 Softmax 动画</button>
                     </div>
                 </div>
@@ -2595,13 +2959,18 @@
         }
         if (node.type === "output") {
             const outputs = state.cnn[state.cnn.length - 1];
+            const targetLabel = Number.isFinite(state.gradReplay.targetLabel) ? state.gradReplay.targetLabel : null;
+            const dlogits = state.gradReplay.dlogits || [];
             els.miniView.innerHTML = `<div class="ce-mini-bars">${outputs.map((item) => `
-                <div class="ce-mini-bar">
+                <button class="ce-mini-bar ce-output-target-button ${targetLabel === item.index ? "is-target" : ""}" type="button" data-grad-target="${item.index}">
                     <span>${item.label}</span>
                     <span class="ce-mini-bar-track"><span class="ce-mini-bar-fill" style="--bar-width:${Math.round(item.output * 100)}%"></span></span>
-                    <span>${(item.output * 100).toFixed(1)}%</span>
-                </div>
+                    <span>${targetLabel === null ? `${(item.output * 100).toFixed(1)}%` : dlogits[item.index]?.toFixed(2)}</span>
+                </button>
             `).join("")}</div>`;
+            els.miniView.querySelectorAll("[data-grad-target]").forEach((target) => {
+                target.addEventListener("click", () => startGradientReplay(Number(target.dataset.gradTarget)));
+            });
             return;
         }
         if (node.type === "fc") {
@@ -2812,10 +3181,17 @@
 
     function backwardCalc(node) {
         if (node.type === "output") {
-            const label = state.usingRealModel && state.digitPrediction !== null ? Number(state.digitPrediction) : 3;
-            const probs = [0.02, 0.01, 0.05, 0.82, 0.02, 0.03, 0.01, 0.01, 0.02, 0.01];
+            const label = Number.isFinite(state.gradReplay.targetLabel)
+                ? Number(state.gradReplay.targetLabel)
+                : state.usingRealModel && state.digitPrediction !== null ? Number(state.digitPrediction) : 3;
+            const outputNodes = state.cnn[state.cnn.length - 1] || [];
+            const probs = outputNodes.length
+                ? outputNodes.map((item) => Number(item.output || 0))
+                : [0.02, 0.01, 0.05, 0.82, 0.02, 0.03, 0.01, 0.01, 0.02, 0.01];
             const safeLabel = Math.max(0, Math.min(probs.length - 1, Number.isFinite(label) ? label : 3));
-            const grad = probs.map((p, i) => p - (i === safeLabel ? 1 : 0));
+            const grad = state.gradReplay.dlogits.length === probs.length
+                ? state.gradReplay.dlogits
+                : probs.map((p, i) => p - (i === safeLabel ? 1 : 0));
             return calcShell({
                 kind: "is-backward",
                 title: "Softmax + CE 反向",
@@ -3010,6 +3386,12 @@
         if (softmaxButton) {
             softmaxButton.addEventListener("click", playSoftmaxAnimation);
         }
+        els.overlay.querySelectorAll("[data-grad-target]").forEach((target) => {
+            target.addEventListener("click", (event) => {
+                event.stopPropagation();
+                startGradientReplay(Number(target.dataset.gradTarget));
+            });
+        });
     }
 
     function playSoftmaxAnimation() {
@@ -3648,6 +4030,7 @@
 
     function bindEvents() {
         els.modelSelect?.addEventListener("change", async () => {
+            clearGradientReplay({ silent: true, render: false });
             applyModelMode(els.modelSelect.value);
             state.cnn = [];
             state.selected = null;
@@ -3655,14 +4038,18 @@
             state.intermediate = null;
             state.nodeImageCache.clear();
             state.globalExtentCache.clear();
-        if (state.modelMode === "digit") {
-            if (!state.digitHasInk) {
-                drawDigitSample();
-            }
-            await selectDigitFromCanvas();
+            if (state.modelMode === "digit") {
+                if (!state.digitHasInk) {
+                    drawDigitSample();
+                }
+                await selectDigitFromCanvas();
             } else {
                 await selectImage(state.selectedImage);
             }
+        });
+
+        els.clearGrad?.addEventListener("click", () => {
+            clearGradientReplay();
         });
 
         els.modeSwitch?.addEventListener("click", (event) => {
@@ -3816,6 +4203,7 @@
     async function selectImage(file) {
         const token = state.renderToken + 1;
         state.renderToken = token;
+        clearGradientReplay({ silent: true, render: false });
         state.selectedImage = file;
         state.hovered = null;
         state.intermediate = null;
