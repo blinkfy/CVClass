@@ -30,11 +30,8 @@
 ```text
 CVClass/
 ├─ app.py
-├─ image_utils.py
-├─ requirements.txt
 ├─ README.md
 ├─ extra_features.md
-├─ key_tech.txt
 ├─ templates/
 │  └─ index.html
 └─ static/

@@ -113,6 +113,37 @@
         renderToken: 0
     };
 
+    const probeAnimation = {
+        token: 0,
+        timers: []
+    };
+
+    function clearProbeTimers() {
+        probeAnimation.timers.forEach((timerId) => window.clearTimeout(timerId));
+        probeAnimation.timers = [];
+    }
+
+    function nextProbeToken(container, options = {}) {
+        clearProbeTimers();
+        probeAnimation.token += 1;
+        if (options.clear !== false) {
+            clearDemoHighlights(container || els.principleContent);
+        }
+        return probeAnimation.token;
+    }
+
+    function scheduleProbe(callback, delay, token = probeAnimation.token) {
+        const timerId = window.setTimeout(() => {
+            probeAnimation.timers = probeAnimation.timers.filter((item) => item !== timerId);
+            if (token !== probeAnimation.token) {
+                return;
+            }
+            callback();
+        }, delay);
+        probeAnimation.timers.push(timerId);
+        return timerId;
+    }
+
     function resolveImageSrc(file) {
         return file && (file.startsWith("blob:") || file.startsWith("data:") || file.startsWith("http"))
             ? file
@@ -137,8 +168,8 @@
     }
 
     const gradConfig = {
-        stepDuration: 720,
-        layerPause: 90,
+        stepDuration: 420,
+        layerPause: 60,
         minDuration: 600,
         maxDuration: 900
     };
@@ -1493,6 +1524,9 @@
         if (!node || !state.gradReplay.active) {
             return null;
         }
+        if (node.type === "input") {
+            return null;
+        }
         if (!state.gradReplay.activeLayers.has(node.layerIndex)) {
             return null;
         }
@@ -2350,6 +2384,7 @@
         els.principlePanel.dataset.calcMode = state.calcMode;
         els.principleContent.innerHTML = renderExplainChain(node);
         renderLatexInElement(els.principleContent);
+        const openToken = nextProbeToken(els.principleContent);
         const closeButton = els.principleContent.querySelector("[data-principle-close]");
         if (closeButton) {
             closeButton.addEventListener("click", closePrinciplePanel);
@@ -2386,12 +2421,12 @@
             });
         });
         els.hoverPill.textContent = `${displayLayerName(node.layerName)}`;
-        window.setTimeout(() => {
+        scheduleProbe(() => {
             if (!els.principlePanel || els.principlePanel.hidden) {
                 return;
             }
             playProbeByMode(node);
-        }, 260);
+        }, 260, openToken);
     }
 
     function handleExplainerUnitClick(layerName, unitInfo = {}) {
@@ -2428,7 +2463,8 @@
         return `
             <div class="ce-principle-shell is-mode-backward">
                 ${principleHeader(node, "反向梯度模式：展示该层局部梯度如何由上游梯度计算并继续回传。")}
-                ${learnableLayer(node) ? parameterInspectorHtml(node, "backward") : backwardCalc(node)}
+                ${backwardCalc(node)}
+                ${learnableLayer(node) ? parameterInspectorHtml(node, "params") : ""}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放反向梯度动画</button>
                 </div>
@@ -2440,7 +2476,8 @@
         return `
             <div class="ce-principle-shell is-mode-update">
                 ${principleHeader(node, "参数更新模式：只对 Conv / FC 的权重和 bias 展示更新。")}
-                ${learnableLayer(node) ? parameterInspectorHtml(node, "update") : updateCalc(node)}
+                ${updateCalc(node)}
+                ${learnableLayer(node) ? parameterInspectorHtml(node, "params") : ""}
                 <div class="ce-principle-actions">
                     <button class="ce-softmax-play" type="button" data-mode-probe-play>播放参数更新动画</button>
                 </div>
@@ -2476,6 +2513,7 @@
 
     function closePrinciplePanel() {
         state.intermediate = null;
+        nextProbeToken(els.principleContent);
         if (els.principlePanel) {
             els.principlePanel.classList.remove("is-visible");
             els.principlePanel.hidden = true;
@@ -3453,13 +3491,14 @@
 
     function playSoftmaxAnimation() {
         const container = els.overlay && !els.overlay.hidden ? els.overlay : els.principleContent;
+        const token = nextProbeToken(container);
         const rows = Array.from(container.querySelectorAll("[data-softmax-row]"));
         const calcRows = Array.from(container.querySelectorAll("[data-softmax-calc-row]"));
         const mainText = container.querySelector("[data-softmax-main]");
         rows.forEach((row) => row.classList.remove("is-animating"));
         calcRows.forEach((row) => row.classList.remove("is-animating"));
         rows.forEach((row, index) => {
-            window.setTimeout(() => {
+            scheduleProbe(() => {
                 rows.forEach((item) => item.classList.remove("is-animating"));
                 calcRows.forEach((item) => item.classList.remove("is-animating"));
                 row.classList.add("is-animating");
@@ -3468,12 +3507,12 @@
                     const cells = calcRows[index].querySelectorAll("span");
                     mainText.textContent = `${cells[0].textContent}: exp(${cells[1].textContent} - max) / Σexp = ${cells[3].textContent}`;
                 }
-            }, index * 180);
+            }, index * 180, token);
         });
-        window.setTimeout(() => {
+        scheduleProbe(() => {
             rows.forEach((row) => row.classList.remove("is-animating"));
             calcRows.forEach((row) => row.classList.remove("is-animating"));
-        }, rows.length * 180 + 700);
+        }, rows.length * 180 + 700, token);
     }
 
     function clearDemoHighlights(container) {
@@ -3482,6 +3521,15 @@
         }
         container.querySelectorAll(".is-demo-hot, .is-demo-kernel, .is-demo-output, .is-demo-off, .is-grad-hot, .is-grad-off, .is-update-old, .is-update-grad, .is-update-new").forEach((cell) => {
             cell.classList.remove("is-demo-hot", "is-demo-kernel", "is-demo-output", "is-demo-off", "is-grad-hot", "is-grad-off", "is-update-old", "is-update-grad", "is-update-new");
+        });
+    }
+
+    function clearMovingHighlights(container) {
+        if (!container) {
+            return;
+        }
+        container.querySelectorAll(".is-demo-hot, .is-demo-kernel, .is-grad-hot, .is-grad-off").forEach((cell) => {
+            cell.classList.remove("is-demo-hot", "is-demo-kernel", "is-grad-hot", "is-grad-off");
         });
     }
 
@@ -3545,34 +3593,34 @@
         const productMatrix = els.principleContent.querySelector('[data-matrix-role="conv-product"]');
         const outputMatrix = els.principleContent.querySelector('[data-matrix-role="conv-output"]');
         const positions = allWindowPositions(inputMatrix, 3);
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         positions.forEach(([top, left], index) => {
-            window.setTimeout(() => {
-                clearDemoHighlights(els.principleContent);
+            scheduleProbe(() => {
+                clearMovingHighlights(els.principleContent);
                 highlightWindow(inputMatrix, top, left, 3, "is-demo-hot");
                 kernelMatrices.forEach((matrixEl) => highlightWindow(matrixEl, 0, 0, 3, "is-demo-kernel"));
                 const patch = matrixWindow(inputForKernel.output, top, left, 3);
                 const product = multiplyMatrices(patch, kernel);
                 updateMatrixElement(productMatrix, product, { type: "conv", output: product }, { role: "conv-product", node });
                 highlightCell(outputMatrix, Math.min(top, matrixRowCount(outputMatrix) - 1), Math.min(left, matrixColCount(outputMatrix) - 1), "is-demo-output");
-            }, index * 70);
+            }, index * 70, token);
         });
-        window.setTimeout(() => clearDemoHighlights(els.principleContent), positions.length * 70 + 700);
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), positions.length * 70 + 700, token);
     }
 
     function playPoolWindowAnimation() {
         const inputMatrix = els.principleContent.querySelector('[data-matrix-role="pool-input"]');
         const outputMatrix = els.principleContent.querySelector('[data-matrix-role="pool-output"]');
         const positions = poolingWindowPositions(inputMatrix, 2);
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         positions.forEach(([top, left], index) => {
-            window.setTimeout(() => {
-                clearDemoHighlights(els.principleContent);
+            scheduleProbe(() => {
+                clearMovingHighlights(els.principleContent);
                 highlightWindow(inputMatrix, top, left, 2, "is-demo-hot");
                 highlightCell(outputMatrix, Math.min(Math.floor(top / 2), matrixRowCount(outputMatrix) - 1), Math.min(Math.floor(left / 2), matrixColCount(outputMatrix) - 1), "is-demo-output");
-            }, index * 90);
+            }, index * 90, token);
         });
-        window.setTimeout(() => clearDemoHighlights(els.principleContent), positions.length * 90 + 700);
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), positions.length * 90 + 700, token);
     }
 
     function poolingWindowPositions(matrixEl, windowSize) {
@@ -3590,77 +3638,89 @@
     function playReluMaskAnimation() {
         const inputMatrix = els.principleContent.querySelector('[data-matrix-role="relu-input"]');
         const outputMatrix = els.principleContent.querySelector('[data-matrix-role="relu-output"]');
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         cellsForMatrix(inputMatrix).forEach((cell, index) => {
-            window.setTimeout(() => {
+            scheduleProbe(() => {
                 const numeric = Number(cell.dataset.cellValue);
                 cell.classList.add(numeric <= 0 ? "is-demo-off" : "is-demo-hot");
                 const outCell = outputMatrix && outputMatrix.querySelector(`[data-cell-row="${cell.dataset.cellRow}"][data-cell-col="${cell.dataset.cellCol}"]`);
                 if (outCell) {
                     outCell.classList.add(numeric <= 0 ? "is-demo-off" : "is-demo-output");
                 }
-            }, index * 45);
+            }, index * 45, token);
         });
-        window.setTimeout(() => clearDemoHighlights(els.principleContent), cellsForMatrix(inputMatrix).length * 45 + 1400);
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), cellsForMatrix(inputMatrix).length * 45 + 1400, token);
     }
 
     function playCalcFlowAnimation(className = "is-grad-hot") {
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         const parts = Array.from(els.principleContent.querySelectorAll(".ce-calc-result, .ce-calc-branch, .ce-vector-chip, .ce-grad-token, .ce-mini-cell, .ce-fc-links line, .ce-softmax-row, .ce-softmax-calc-row"));
         parts.forEach((part, index) => {
-            window.setTimeout(() => {
+            scheduleProbe(() => {
                 part.classList.add(className);
-            }, index * 80);
+            }, index * 80, token);
         });
-        window.setTimeout(() => clearDemoHighlights(els.principleContent), parts.length * 80 + 900);
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), parts.length * 80 + 900, token);
     }
 
     function playBackwardProbe(node) {
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         if (node.type === "relu") {
             const cells = Array.from(els.principleContent.querySelectorAll(".ce-mini-cell"));
             cells.forEach((cell, index) => {
-                window.setTimeout(() => {
+                scheduleProbe(() => {
                     const value = Number(cell.dataset.cellValue);
                     cell.classList.add(cell.classList.contains("ce-relu-off") || value <= 0 ? "is-grad-off" : "is-grad-hot");
-                }, index * 55);
+                }, index * 55, token);
             });
-            window.setTimeout(() => clearDemoHighlights(els.principleContent), cells.length * 55 + 1000);
+            scheduleProbe(() => clearMovingHighlights(els.principleContent), cells.length * 55 + 1000, token);
             return;
         }
         if (node.type === "pool") {
             const cells = Array.from(els.principleContent.querySelectorAll(".ce-mini-cell"));
             cells.forEach((cell, index) => {
-                window.setTimeout(() => {
+                scheduleProbe(() => {
                     cell.classList.add(cell.classList.contains("ce-pool-mark") ? "is-grad-hot" : "is-grad-off");
-                }, index * 70);
+                }, index * 70, token);
             });
-            window.setTimeout(() => clearDemoHighlights(els.principleContent), cells.length * 70 + 1000);
+            scheduleProbe(() => clearMovingHighlights(els.principleContent), cells.length * 70 + 1000, token);
             return;
         }
         if (node.type === "conv") {
             const chips = Array.from(els.principleContent.querySelectorAll(".ce-calc-branch, .ce-calc-chip, .ce-calc-result"));
             chips.forEach((chip, index) => {
-                window.setTimeout(() => {
+                scheduleProbe(() => {
                     chip.classList.add("is-grad-hot");
                     chip.querySelectorAll(".ce-mini-cell").forEach((cell) => cell.classList.add("is-grad-hot"));
-                }, index * 180);
+                }, index * 180, token);
             });
-            window.setTimeout(() => clearDemoHighlights(els.principleContent), chips.length * 180 + 1000);
+            scheduleProbe(() => clearMovingHighlights(els.principleContent), chips.length * 180 + 1000, token);
             return;
         }
-        playCalcFlowAnimation("is-grad-hot");
+        const parts = Array.from(els.principleContent.querySelectorAll(".ce-calc-result, .ce-calc-branch, .ce-vector-chip, .ce-grad-token, .ce-mini-cell, .ce-fc-links line, .ce-softmax-row, .ce-softmax-calc-row"));
+        parts.forEach((part, index) => {
+            scheduleProbe(() => {
+                part.classList.add("is-grad-hot");
+            }, index * 80, token);
+        });
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), parts.length * 80 + 900, token);
     }
 
     function playUpdateProbe(node) {
-        clearDemoHighlights(els.principleContent);
+        const token = nextProbeToken(els.principleContent);
         if (!learnableLayer(node)) {
-            playCalcFlowAnimation("is-grad-off");
+            const parts = Array.from(els.principleContent.querySelectorAll(".ce-calc-result, .ce-calc-branch, .ce-vector-chip, .ce-grad-token, .ce-mini-cell, .ce-fc-links line, .ce-softmax-row, .ce-softmax-calc-row"));
+            parts.forEach((part, index) => {
+                scheduleProbe(() => {
+                    part.classList.add("is-grad-off");
+                }, index * 80, token);
+            });
+            scheduleProbe(() => clearMovingHighlights(els.principleContent), parts.length * 80 + 900, token);
             return;
         }
         const results = Array.from(els.principleContent.querySelectorAll(".ce-calc-chip, .ce-calc-result"));
         results.forEach((item, index) => {
-            window.setTimeout(() => {
+            scheduleProbe(() => {
                 if (index % 3 === 0) {
                     item.classList.add("is-update-old");
                 } else if (index % 3 === 1) {
@@ -3668,9 +3728,9 @@
                 } else {
                     item.classList.add("is-update-new");
                 }
-            }, index * 180);
+            }, index * 180, token);
         });
-        window.setTimeout(() => clearDemoHighlights(els.principleContent), results.length * 180 + 1200);
+        scheduleProbe(() => clearMovingHighlights(els.principleContent), results.length * 180 + 1200, token);
     }
 
     function inputDetail(node) {
@@ -4201,6 +4261,7 @@
             els.detailToggle.textContent = state.detailed ? "隐藏细节" : "显示细节";
             if (state.detailed) {
                 state.intermediate = null;
+                nextProbeToken(els.principleContent);
                 if (els.principlePanel) {
                     els.principlePanel.classList.remove("is-visible");
                     els.principlePanel.hidden = true;

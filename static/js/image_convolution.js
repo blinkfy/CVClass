@@ -68,9 +68,11 @@ const imageKernelTemplates = {
 
 let currentKernel = imageKernelTemplates.box_blur.matrix.map((row) => row.slice());
 let currentFile = null;
+let currentImageData = null;
 let originalUrl = null;
 let currentKernelLabel = imageKernelTemplates.box_blur.label;
 let currentViewMode = "side";
+let currentLoadToken = 0;
 
 function cloneMatrix(matrix) {
     return matrix.map((row) => row.slice());
@@ -93,6 +95,245 @@ function makeRandomKernel(size) {
     return Array.from({ length: size }, () =>
         Array.from({ length: size }, () => Math.floor(Math.random() * 3))
     );
+}
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function sumKernel(kernel) {
+    return kernel.reduce((total, row) => total + row.reduce((rowTotal, value) => rowTotal + value, 0), 0);
+}
+
+function loadImageDataFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const imageUrl = URL.createObjectURL(file);
+        const image = new Image();
+
+        image.onload = () => {
+            try {
+                const width = image.naturalWidth || image.width;
+                const height = image.naturalHeight || image.height;
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const context = canvas.getContext("2d", { willReadFrequently: true });
+                if (!context) {
+                    throw new Error("浏览器不支持 Canvas 2D 上下文");
+                }
+
+                context.drawImage(image, 0, 0, width, height);
+                const imageData = context.getImageData(0, 0, width, height);
+                URL.revokeObjectURL(imageUrl);
+                resolve({ imageData, width, height });
+            } catch (error) {
+                URL.revokeObjectURL(imageUrl);
+                reject(error);
+            }
+        };
+
+        image.onerror = () => {
+            URL.revokeObjectURL(imageUrl);
+            reject(new Error("图片加载失败，请重试"));
+        };
+
+        image.src = imageUrl;
+    });
+}
+
+function extractAlphaChannel(imageData) {
+    const { data } = imageData;
+    const alpha = new Uint8ClampedArray(imageData.width * imageData.height);
+
+    for (let index = 0, pixel = 0; index < data.length; index += 4, pixel += 1) {
+        alpha[pixel] = data[index + 3];
+    }
+
+    return alpha;
+}
+
+function scaleAlphaChannel(alphaChannel, sourceWidth, sourceHeight, targetWidth, targetHeight) {
+    if (sourceWidth === targetWidth && sourceHeight === targetHeight) {
+        return alphaChannel;
+    }
+
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = sourceWidth;
+    sourceCanvas.height = sourceHeight;
+    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+    if (!sourceContext) {
+        throw new Error("浏览器不支持 Canvas 2D 上下文");
+    }
+
+    const sourceImageData = sourceContext.createImageData(sourceWidth, sourceHeight);
+    for (let index = 0, pixel = 0; pixel < alphaChannel.length; index += 4, pixel += 1) {
+        const value = alphaChannel[pixel];
+        sourceImageData.data[index] = value;
+        sourceImageData.data[index + 1] = value;
+        sourceImageData.data[index + 2] = value;
+        sourceImageData.data[index + 3] = 255;
+    }
+    sourceContext.putImageData(sourceImageData, 0, 0);
+
+    const targetCanvas = document.createElement("canvas");
+    targetCanvas.width = targetWidth;
+    targetCanvas.height = targetHeight;
+    const targetContext = targetCanvas.getContext("2d", { willReadFrequently: true });
+    if (!targetContext) {
+        throw new Error("浏览器不支持 Canvas 2D 上下文");
+    }
+
+    targetContext.imageSmoothingEnabled = true;
+    targetContext.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
+    const resized = targetContext.getImageData(0, 0, targetWidth, targetHeight).data;
+    const alpha = new Uint8ClampedArray(targetWidth * targetHeight);
+
+    for (let index = 0, pixel = 0; pixel < alpha.length; index += 4, pixel += 1) {
+        alpha[pixel] = resized[index];
+    }
+
+    return alpha;
+}
+
+function convolveImageData(imageData, kernel, padding, stride, displayMode) {
+    const sourceWidth = imageData.width;
+    const sourceHeight = imageData.height;
+    const source = imageData.data;
+    const kernelSize = kernel.length;
+    const normalizedKernel = kernel.map((row) => row.map((value) => Number(value)));
+
+    if (!normalizedKernel.every((row) => Array.isArray(row) && row.length === kernelSize)) {
+        throw new Error("卷积核必须是方阵");
+    }
+    if (![1, 3, 5].includes(kernelSize)) {
+        throw new Error("卷积核大小必须是 1、3 或 5");
+    }
+
+    const hasNegative = normalizedKernel.some((row) => row.some((value) => value < 0));
+    const kernelSum = sumKernel(normalizedKernel);
+    const effectiveKernel = normalizedKernel.map((row) => row.slice());
+
+    if (kernelSum > 1 && !hasNegative) {
+        for (let r = 0; r < kernelSize; r += 1) {
+            for (let c = 0; c < kernelSize; c += 1) {
+                effectiveKernel[r][c] /= kernelSum;
+            }
+        }
+    }
+
+    const safePadding = padding === null || padding === undefined ? Math.floor(kernelSize / 2) : Number(padding);
+    const safeStride = Number(stride);
+
+    if (!Number.isInteger(safePadding) || safePadding < 0) {
+        throw new Error("padding 必须是非负整数");
+    }
+    if (!Number.isInteger(safeStride) || safeStride < 1) {
+        throw new Error("stride 必须是正整数");
+    }
+
+    const outputWidth = Math.floor((sourceWidth + safePadding * 2 - kernelSize) / safeStride) + 1;
+    const outputHeight = Math.floor((sourceHeight + safePadding * 2 - kernelSize) / safeStride) + 1;
+    if (outputWidth <= 0 || outputHeight <= 0) {
+        throw new Error("卷积核大于填充后的图片");
+    }
+
+    const resultStack = new Float32Array(outputWidth * outputHeight * 3);
+    let minValue = Number.POSITIVE_INFINITY;
+    let maxValue = Number.NEGATIVE_INFINITY;
+
+    for (let outY = 0; outY < outputHeight; outY += 1) {
+        const baseY = outY * safeStride - safePadding;
+        for (let outX = 0; outX < outputWidth; outX += 1) {
+            const baseX = outX * safeStride - safePadding;
+            let red = 0;
+            let green = 0;
+            let blue = 0;
+
+            for (let kernelY = 0; kernelY < kernelSize; kernelY += 1) {
+                const sourceY = clamp(baseY + kernelY, 0, sourceHeight - 1);
+                for (let kernelX = 0; kernelX < kernelSize; kernelX += 1) {
+                    const sourceX = clamp(baseX + kernelX, 0, sourceWidth - 1);
+                    const sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
+                    const weight = effectiveKernel[kernelY][kernelX];
+                    red += source[sourceIndex] * weight;
+                    green += source[sourceIndex + 1] * weight;
+                    blue += source[sourceIndex + 2] * weight;
+                }
+            }
+
+            const resultIndex = (outY * outputWidth + outX) * 3;
+            resultStack[resultIndex] = red;
+            resultStack[resultIndex + 1] = green;
+            resultStack[resultIndex + 2] = blue;
+
+            minValue = Math.min(minValue, red, green, blue);
+            maxValue = Math.max(maxValue, red, green, blue);
+        }
+    }
+
+    const effectiveDisplayMode = displayMode === "auto" ? (hasNegative ? "clip" : "normalize") : displayMode;
+    const alphaChannel = scaleAlphaChannel(
+        extractAlphaChannel(imageData),
+        sourceWidth,
+        sourceHeight,
+        outputWidth,
+        outputHeight
+    );
+    const outputData = new Uint8ClampedArray(outputWidth * outputHeight * 4);
+
+    for (let pixel = 0; pixel < outputWidth * outputHeight; pixel += 1) {
+        const sourceIndex = pixel * 3;
+        const targetIndex = pixel * 4;
+        let red = resultStack[sourceIndex];
+        let green = resultStack[sourceIndex + 1];
+        let blue = resultStack[sourceIndex + 2];
+
+        if (effectiveDisplayMode === "clip") {
+            red = clamp(red, 0, 255);
+            green = clamp(green, 0, 255);
+            blue = clamp(blue, 0, 255);
+        } else if (effectiveDisplayMode === "normalize") {
+            if (maxValue > minValue) {
+                const scale = 255 / (maxValue - minValue);
+                red = (red - minValue) * scale;
+                green = (green - minValue) * scale;
+                blue = (blue - minValue) * scale;
+            } else {
+                red = 0;
+                green = 0;
+                blue = 0;
+            }
+        } else {
+            throw new Error("无效的显示方式");
+        }
+
+        outputData[targetIndex] = clamp(Math.round(red), 0, 255);
+        outputData[targetIndex + 1] = clamp(Math.round(green), 0, 255);
+        outputData[targetIndex + 2] = clamp(Math.round(blue), 0, 255);
+        outputData[targetIndex + 3] = alphaChannel[pixel];
+    }
+
+    return {
+        imageData: new ImageData(outputData, outputWidth, outputHeight),
+        width: outputWidth,
+        height: outputHeight,
+        min: minValue,
+        max: maxValue,
+        displayMode: effectiveDisplayMode
+    };
+}
+
+function imageDataToUrl(imageData) {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+        throw new Error("浏览器不支持 Canvas 2D 上下文");
+    }
+
+    context.putImageData(imageData, 0, 0);
+    return canvas.toDataURL("image/png");
 }
 
 function syncSizeAndPadding(size) {
@@ -179,6 +420,8 @@ function refreshKernelMeta() {
 
 function updateOriginalPreview(file) {
     currentFile = file;
+    currentImageData = null;
+    const loadToken = ++currentLoadToken;
     if (originalUrl) {
         URL.revokeObjectURL(originalUrl);
     }
@@ -187,6 +430,22 @@ function updateOriginalPreview(file) {
     imageConvEls.original.classList.add("is-visible");
     syncSliderSources();
     imageConvEls.message.textContent = `已选择：${file.name}`;
+
+    loadImageDataFromFile(file)
+        .then((loaded) => {
+            if (loadToken !== currentLoadToken) {
+                return;
+            }
+            currentImageData = loaded.imageData;
+            imageConvEls.message.textContent = `图片已载入：${file.name}`;
+        })
+        .catch((error) => {
+            if (loadToken !== currentLoadToken) {
+                return;
+            }
+            currentImageData = null;
+            imageConvEls.message.textContent = error.message;
+        });
 }
 
 function setMeta(items) {
@@ -239,30 +498,24 @@ async function applyImageConvolution() {
         return;
     }
 
-    const formData = new FormData();
-    formData.append("image", currentFile);
-    formData.append("kernel", JSON.stringify(currentKernel));
-    formData.append("padding", imageConvEls.padding.value);
-    formData.append("stride", imageConvEls.stride.value);
-    formData.append("display_mode", imageConvEls.displayMode?.value || "auto");
+    if (!currentImageData) {
+        imageConvEls.message.textContent = "图片仍在加载中，请稍后再试。";
+        return;
+    }
 
-    imageConvEls.message.textContent = "后端正在使用 NumPy 执行卷积...";
+    imageConvEls.message.textContent = "前端正在使用 Canvas 执行卷积...";
     imageConvEls.apply.disabled = true;
 
     try {
-        const response = await fetch(cvclassUrl("/convolve-image"), {
-            method: "POST",
-            body: formData
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || "卷积处理失败");
-        }
+        const padding = Number(imageConvEls.padding.value);
+        const stride = Number(imageConvEls.stride.value);
+        const displayMode = imageConvEls.displayMode?.value || "auto";
+        const result = convolveImageData(currentImageData, currentKernel, padding, stride, displayMode);
 
-        imageConvEls.result.src = data.image;
+        imageConvEls.result.src = imageDataToUrl(result.imageData);
         imageConvEls.result.classList.add("is-visible");
         syncSliderSources();
-        imageConvEls.size.textContent = `${data.width} × ${data.height}`;
+        imageConvEls.size.textContent = `${result.width} × ${result.height}`;
         imageConvEls.message.textContent = "卷积完成。";
         if (currentViewMode === "slider" && imageConvEls.sliderRange) {
             imageConvEls.sliderRange.value = "50";
@@ -271,11 +524,11 @@ async function applyImageConvolution() {
         setMeta([
             `当前卷积核：${currentKernelLabel}`,
             `kernel size：${currentKernel.length} × ${currentKernel.length}`,
-            `padding：${data.padding}`,
-            `stride：${data.stride}`,
-            `显示方式：${data.display_mode || imageConvEls.displayMode?.value || "auto"}`,
-            `输出范围：${data.min} ~ ${data.max}`,
-            `处理耗时：${data.elapsed_ms} ms`
+            `padding：${padding}`,
+            `stride：${stride}`,
+            `显示方式：${result.displayMode}`,
+            `输出范围：${Math.round(result.min)} ~ ${Math.round(result.max)}`,
+            "处理耗时：None"
         ]);
     } catch (error) {
         imageConvEls.message.textContent = error.message;

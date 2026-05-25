@@ -84,6 +84,13 @@ def cnn_visualization_page():
 def cnn_explainer_page():
     return render_template("cnn_explainer.html", active_page="cnn", active_sub_page="cnn_explainer")
 
+@app.route("/conv-gradient-lab", methods=["GET"])
+def conv_gradient_lab_page():
+    return render_template(
+        "conv_gradient_lab.html",
+        active_page="cnn",
+        active_sub_page="conv_gradient_lab"
+    )
 
 def parse_threshold(value):
     try:

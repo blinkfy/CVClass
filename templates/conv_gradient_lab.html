@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}卷积梯度显微镜 - 计算机视觉实验平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/conv_gradient_lab.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="conv-gradient-page">
+  <main class="lab-shell">
+    <header class="cnn-viz-header">
+      <div>
+        <span class="section-label">Lesson 03 · CNN Gradient Lab</span>
+        <h1>卷积梯度显微镜：从一个 dZ 看清 dK、db、dX</h1>
+        <p>只保留一个单通道卷积层，用 4×4 输入、3×3 卷积核和 2×2 输出，逐步演示 forward、backward 与参数更新。</p>
+      </div>
+      <strong id="cnnStepStatus">Microscope · 梯度流观测中</strong>
+    </header>
+
+    <nav class="cnn-third-tabs" aria-label="第三节实验模块">
+      <div class="cnn-mode-group">
+        <a href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
+        <a href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
+        <a class="is-active" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+      </div>
+      <div class="header-legend">
+        <span><i class="dot dot-forward"></i>Forward</span>
+        <span><i class="dot dot-backward"></i>Gradient</span>
+        <span><i class="dot dot-update"></i>Update</span>
+      </div>
+    </nav>
+
+    <section class="toolbar-card">
+      <div class="mode-tabs" role="group" aria-label="演示模式">
+        <button class="mode-btn active" data-mode="forward" type="button">Forward 演示</button>
+        <button class="mode-btn" data-mode="backward" type="button">Backward 演示</button>
+        <button class="mode-btn" data-mode="update" type="button">Update 演示</button>
+      </div>
+      <div class="play-controls" role="group" aria-label="播放控制">
+        <button id="stepBtn" class="primary-btn" type="button">单步</button>
+        <button id="autoBtn" type="button">自动播放</button>
+        <button id="pauseBtn" type="button">暂停</button>
+        <button id="resetBtn" type="button">重置</button>
+        <label class="speed-control">
+          速度
+          <select id="speedSelect">
+            <option value="0.6">0.6x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+            <option value="5">5x</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="stage-card" id="stageCard">
+      <svg id="arrowLayer" class="arrow-layer" aria-hidden="true">
+        <defs>
+          <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 Z" fill="currentColor"></path>
+          </marker>
+        </defs>
+      </svg>
+      <div id="animLayer" class="animation-layer" aria-hidden="true"></div>
+
+      <div class="stage-grid">
+        <section class="matrix-panel panel-x">
+          <div class="panel-title">
+            <span>X 输入矩阵</span>
+            <em>4×4</em>
+          </div>
+          <div id="xMatrix" class="matrix-grid matrix-4" data-matrix="x"></div>
+        </section>
+
+        <section class="matrix-panel panel-k">
+          <div class="panel-title">
+            <span>K 卷积核</span>
+            <em>3×3</em>
+          </div>
+          <div id="kMatrix" class="matrix-grid matrix-3" data-matrix="k"></div>
+          <div id="biasBox" class="scalar-box" data-cell="bias">
+            <span>b</span><strong>0.05</strong>
+          </div>
+        </section>
+
+        <section class="matrix-panel panel-product">
+          <div class="panel-title">
+            <span>Product Matrix</span>
+            <em>逐元素乘积</em>
+          </div>
+          <div id="productMatrix" class="matrix-grid matrix-3 product-grid" data-matrix="product"></div>
+          <div id="sumBox" class="sum-box" data-cell="sum">
+            <span>Σ 求和器</span>
+            <strong>0.00</strong>
+          </div>
+        </section>
+
+        <section class="matrix-panel panel-z">
+          <div class="panel-title">
+            <span>Z 输出矩阵</span>
+            <em>2×2</em>
+          </div>
+          <div id="zMatrix" class="matrix-grid matrix-2" data-matrix="z"></div>
+        </section>
+
+        <section class="matrix-panel panel-dz">
+          <div class="panel-title">
+            <span>dZ 上游梯度</span>
+            <em>2×2</em>
+          </div>
+          <div id="dzMatrix" class="matrix-grid matrix-2" data-matrix="dz"></div>
+        </section>
+
+        <section class="matrix-panel panel-dk">
+          <div class="panel-title">
+            <span>dK 累加器</span>
+            <em>3×3</em>
+          </div>
+          <div id="dkMatrix" class="matrix-grid matrix-3" data-matrix="dk"></div>
+        </section>
+
+        <section class="matrix-panel panel-dx">
+          <div class="panel-title">
+            <span>dX 累加器</span>
+            <em>4×4</em>
+          </div>
+          <div id="dxMatrix" class="matrix-grid matrix-4" data-matrix="dx"></div>
+        </section>
+
+        <section class="matrix-panel panel-db">
+          <div class="panel-title">
+            <span>db 累加器</span>
+            <em>scalar</em>
+          </div>
+          <div id="dbBox" class="scalar-box scalar-large" data-cell="db">
+            <span>db</span><strong>0.00</strong>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="step-card">
+        <div class="step-card-head">
+          <div>
+            <p class="eyebrow">Current Step</p>
+            <h2 id="stepTitle">准备开始</h2>
+          </div>
+          <div id="stepCounter" class="step-counter">0 / 0</div>
+        </div>
+        <div class="formula-block">
+          <span>核心公式</span>
+          <div id="formulaText" class="conv-latex-block">请选择演示模式，然后点击“单步”或“自动播放”。</div>
+        </div>
+        <div class="substitution-block">
+          <span>数值代入</span>
+          <p id="substitutionText">Forward 会展示 X 与 K 的逐格乘法；Backward 会展示 dK、db、dX 的逐格累加；Update 会展示 K 和 b 的参数更新。</p>
+        </div>
+        <div class="conclusion-block">
+          <span>本步结论</span>
+          <p id="conclusionText">每一步运算都使用飞行数值块、乘法节点和累加气泡展示。</p>
+        </div>
+      </article>
+
+      <article class="concept-card">
+        <p class="eyebrow">What to observe</p>
+        <h2>观察重点</h2>
+        <ol>
+          <li><strong>Forward：</strong>一个输出值来自一个输入 patch 与卷积核的逐元素乘加。</li>
+          <li><strong>dK：</strong>输入 patch 中每个位置与同一个 dZ 相乘，累加到卷积核同位置。</li>
+          <li><strong>dX：</strong>卷积核每个权重与 dZ 相乘，scatter-add 回输入区域。</li>
+          <li><strong>重叠累加：</strong>多个 dZ 会把梯度贡献累加到同一个 dX 位置。</li>
+          <li><strong>Update：</strong>K 和 b 是可学习参数；dX 只继续向上一层传播，不参与更新。</li>
+        </ol>
+      </article>
+    </section>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="{{ url_for('static', filename='js/conv_gradient_lab.js') }}"></script>
+{% endblock %}

@@ -22,7 +22,7 @@
         hasInk: false,
         timer: null,
         sampleIndex: 0,
-        inferenceMode: "server"
+        inferenceMode: "client" // "client" 或 "server"
     };
 
     const samples = [
