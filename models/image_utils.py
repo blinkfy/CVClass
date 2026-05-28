@@ -31,10 +31,25 @@ def image_to_gray(image, method="weighted"):
 def image_to_rgba_array(image):
     return np.asarray(image.convert("RGBA"), dtype=np.uint8)
 
-def rgba_array_to_image(rgba_array):
-    rgba_array = np.ascontiguousarray(np.clip(rgba_array, 0, 255).astype(np.uint8))
-    return Image.fromarray(rgba_array, mode="RGBA")
-
+def rgba_array_to_image(arr):
+    arr = np.asarray(arr)
+    if arr.ndim == 2:
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+        arr = np.dstack([
+            arr,
+            arr,
+            arr,
+            np.full_like(arr, 255)
+        ])
+    elif arr.ndim == 3 and arr.shape[2] == 3:
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+        alpha = np.full(arr.shape[:2], 255, dtype=np.uint8)
+        arr = np.dstack([arr, alpha])
+    elif arr.ndim == 3 and arr.shape[2] == 4:
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+    else:
+        raise ValueError(f"Unsupported image array shape: {arr.shape}")
+    return Image.fromarray(arr, mode="RGBA")
 
 def rgb_to_gray_array(rgba_array, method="weighted"):
     rgb_array = rgba_array[:, :, :3].astype(np.float32)
@@ -165,12 +180,12 @@ def make_histogram(gray_array):
     return histogram.astype(int).tolist()
 
 
-@njit(parallel=True)
+@njit
 def _convolve_channel_parallel(padded_channel, kernel_array, stride, out_h, out_w):
     size = kernel_array.shape[0]
     result = np.zeros((out_h, out_w), dtype=np.float32)
 
-    for out_r in prange(out_h):
+    for out_r in range(out_h):
         for out_c in range(out_w):
             start_r = out_r * stride
             start_c = out_c * stride
@@ -250,3 +265,173 @@ def convolve_gray_image(image, kernel, padding=None, stride=1, display_mode="aut
 
     output = np.dstack([display, alpha]).astype(np.uint8)
     return display, rgba_array_to_image(output)
+
+@njit
+def convolve(padded,kernel,stride,out_h,out_w):
+    size=kernel.shape[0]
+    result=np.zeros((out_h,out_w),dtype=np.float32)
+    for out_r in range(out_h):
+        for out_c in range(out_w):
+            start_r=out_r*stride
+            start_c=out_c*stride
+            s=0.0
+            for kr in range(size):
+                for kc in range(size):
+                    s+=padded[start_r+kr,start_c+kc]*kernel[kr,kc]
+            result[out_r,out_c]=s
+    return result
+
+# 边缘检测
+def _edge_detect(img,method="sobel_x"):
+    if method=="sobel_x":
+        kernel=[[-1,0,1],[-2,0,2],[-1,0,1]]
+    elif method=="sobel_y":
+        kernel=[[-1,-2,-1],[0,0,0],[1,2,1]]
+    elif method=="prewitt_x":
+        kernel=[[-1,0,1],[-1,0,1],[-1,0,1]]
+    elif method=="prewitt_y":
+        kernel=[[-1,-1,-1],[0,0,0],[1,1,1]]
+    elif method=="laplacian":
+        kernel=[[0,1,0],[1,-4,1],[0,1,0]]
+    elif method=="laplacian_8":
+        kernel=[[1,1,1],[1,-8,1],[1,1,1]]
+    elif method=="roberts_x":
+        kernel=[[1,0],[0,-1]]
+    elif method=="roberts_y":
+        kernel=[[0,1],[-1,0]]
+    elif method=="scharr_x":
+        kernel=[[-3,0,3],[-10,0,10],[-3,0,3]]
+    elif method=="scharr_y":
+        kernel=[[-3,-10,-3],[0,0,0],[3,10,3]]
+    elif method == "kirsch_n":
+        kernel = [[-3,-3,5],[-3,0,5],[-3,-3,5]]
+    elif method == "kirsch_ne":
+        kernel = [[-3,-3,-3],[-3,0,5],[-3,5,5]]
+    elif method == "kirsch_e":
+        kernel = [[-3,-3,-3],[-3,0,-3],[5,5,5]]
+    elif method == "kirsch_se":
+        kernel = [[-3,-3,-3],[5,0,-3],[5,5,-3]]
+    elif method == "kirsch_s":
+        kernel = [[ 5,-3,-3],[5,0,-3],[5,-3,-3]]
+    elif method == "kirsch_sw":
+        kernel = [[5,5,-3],[5,0,-3],[-3,-3,-3]]
+    elif method == "kirsch_w":
+        kernel = [[5,5,5],[-3,0,-3],[-3,-3,-3]]
+    elif method == "kirsch_nw":
+        kernel = [[-3,5,5],[-3,0,5],[-3,-3,-3]]
+    elif method=="LoG":
+        kernel=[[0,0,-1,0,0],[0,-1,-2,-1,0],[-1,-2,16,-2,-1],[0,-1,-2,-1,0],[0,0,-1,0,0]]
+    else:
+        kernel=[[0,0,0],[0,1,0],[0,0,0]]
+    kernel=np.asarray(kernel,dtype=np.float32)
+    pad=kernel.shape[0]//2
+    if method in ["roberts_x", "roberts_y"]:
+        padded=np.pad(img,((pad,pad),(pad,pad)),mode="edge")
+    else:
+        padded=np.pad(img,((pad,pad),(0,0)),mode="edge")
+    grad=convolve(padded,kernel,1,img.shape[0],img.shape[1])
+    return grad
+
+def edge_detect(image, method="sobel"):
+    img=image_to_gray(image)[0]
+    if method in ["sobel","prewitt","roberts","scharr"]:
+        grad_x=_edge_detect(img,method+"_x")
+        grad_y=_edge_detect(img,method+"_y")
+        grad=np.hypot(grad_x,grad_y)
+        grad=np.clip(grad,0,255).astype(np.uint8)
+    elif method=="kirsch":
+        grads=[]
+        for direction in ["n","ne","e","se","s","sw","w","nw"]:
+            grads.append(_edge_detect(img,f"kirsch_{direction}"))
+        grad=np.max(np.stack(grads,axis=-1),axis=-1)
+        grad=np.clip(grad,0,255).astype(np.uint8)
+    else:
+        grad=_edge_detect(img,method)
+        grad=np.abs(grad)
+        grad=np.clip(grad,0,255).astype(np.uint8)
+    rgb_result=np.stack([grad]*3,axis=-1)
+    return grad,rgba_array_to_image(rgb_result)
+
+@njit
+def interp(grad,r,c):
+    r0,c0=int(np.floor(r)),int(np.floor(c))
+    r1,c1=r0+1,c0+1
+    dr,dc=r-r0,c-c0
+    h,w=grad.shape
+    r0=max(0,min(r0,h-1))
+    r1=max(0,min(r1,h-1))
+    c0=max(0,min(c0,w-1))
+    c1=max(0,min(c1,w-1))
+    val=(1-dr)*(1-dc)*grad[r0,c0] + dr*(1-dc)*grad[r1,c0] + (1-dr)*dc*grad[r0,c1] + dr*dc*grad[r1,c1]
+    return val
+
+@njit
+def nms(grad,angle,precise=False):
+    if precise:
+        nms=np.zeros_like(grad,dtype=np.float32)
+        for r in range(1,grad.shape[0]-1):
+            for c in range(1,grad.shape[1]-1):
+                g=grad[r,c]
+                angle_rad=angle[r,c]*np.pi/180
+                dx=np.cos(angle_rad)
+                dy=np.sin(angle_rad)
+                g1=interp(grad,r+dy,c+dx)
+                g2=interp(grad,r-dy,c-dx)
+                if g>=g1 and g>=g2:
+                    nms[r,c]=g
+                # if 0<=pos1_r<grad.shape[0] and 0<=pos1_c<grad.shape[1] and 0<=pos2_r<grad.shape[0] and 0<=pos2_c<grad.shape[1]:
+                #     nms[r,c]=grad[r,c] if grad[r,c]>=grad[pos1_r,pos1_c] and grad[r,c]>=grad[pos2_r,pos2_c] else 0
+    else:
+        nms=np.zeros_like(grad,dtype=np.float32)
+        for r in range(1,grad.shape[0]-1):
+            for c in range(1,grad.shape[1]-1):
+                if angle[r,c]>=22.5 and angle[r,c]<67.5:
+                    nms[r,c]=grad[r,c] if grad[r,c]>=grad[r-1,c+1] and grad[r,c]>=grad[r+1,c-1] else 0
+                elif angle[r,c]>=67.5 and angle[r,c]<112.5:
+                    nms[r,c]=grad[r,c] if grad[r,c]>=grad[r-1,c] and grad[r,c]>=grad[r+1,c] else 0
+                elif angle[r,c]>=112.5 and angle[r,c]<157.5:
+                    nms[r,c]=grad[r,c] if grad[r,c]>=grad[r-1,c-1] and grad[r,c]>=grad[r+1,c+1] else 0
+                else:
+                    nms[r,c]=grad[r,c] if grad[r,c]>=grad[r,c+1] and grad[r,c]>=grad[r,c-1] else 0
+    return nms
+
+def canny(image,threshold1=50,threshold2=150,apertureSize=5,L2gradient=False,precise=False):
+    img=image_to_gray(image)[0]
+    #高斯
+    sigma=0.3*((apertureSize-1)*0.5-1)+0.8
+    ax=np.arange(-apertureSize//2+1,apertureSize//2+1)
+    xx,yy=np.meshgrid(ax,ax)#坐标网格
+    k_gas=np.exp(-(xx**2+yy**2)/(2*sigma**2))
+    k_gas/=np.sum(k_gas)
+    pad=apertureSize//2
+    padded=np.pad(img,((pad,pad),(pad,pad)),mode="edge")
+    blurred=convolve(padded,k_gas,1,img.shape[0],img.shape[1])
+    #Sobel
+    grad_x=_edge_detect(blurred,"sobel_x")
+    grad_y=_edge_detect(blurred,"sobel_y")
+    if L2gradient:
+        grad=np.hypot(grad_x,grad_y)
+    else:
+        grad=np.abs(grad_x)+np.abs(grad_y)
+    angle=np.arctan2(grad_y,grad_x)*(180/np.pi)%180
+    #nms
+    nmsret=nms(grad,angle,precise)
+    #dfs
+    if threshold1>threshold2:
+        threshold1,threshold2=threshold2,threshold1
+    h,w=nmsret.shape
+    edges=nmsret>=threshold2
+    strong=np.argwhere(edges)
+    directions=[(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
+    stack=list(map(tuple,strong))
+    while stack:
+        r,c=stack.pop()
+        for dr,dc in directions:
+            nr,nc=r+dr,c+dc
+            if 0<=nr<h and 0<=nc<w:
+                if nmsret[nr,nc]>=threshold1 and not edges[nr,nc]:
+                    edges[nr,nc]=True
+                    stack.append((nr,nc))
+    edges=edges.astype(np.uint8)*255
+    rgb_result=np.stack([edges]*3,axis=-1)
+    return img,blurred,(grad,angle),nmsret,edges,rgba_array_to_image(rgb_result)
