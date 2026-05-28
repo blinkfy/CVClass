@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}第四节 图像边缘检测过程可视化{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/edge_detection.css') }}">
+{% endblock %}
+
+{% block content %}
+<section
+    id="edgeDetectionPage"
+    class="edge-page"
+    data-assets-base="{{ url_for('static', filename='assets/img/') }}"
+    data-edge-mode="{{ edge_mode|default('compare') }}"
+>
+    <header class="edge-hero">
+        <div>
+            <span class="section-label">Lesson 04 · Edge Detection</span>
+            {% if edge_mode == 'kernel' %}
+            <h1>卷积核算子边缘检测过程</h1>
+            <p>聚焦 Sobel、Prewitt、Roberts、Laplacian、Scharr、Kirsch、LoG 的卷积响应、幅值计算和阈值化过程。</p>
+            {% elif edge_mode == 'canny' %}
+            <h1>Canny 多阶段边缘检测流水线</h1>
+            <p>按步骤观察灰度化、高斯平滑、梯度、方向、非极大值抑制、双阈值和滞后连接。</p>
+            {% else %}
+            <h1>图像边缘检测过程可视化系统</h1>
+            <p>集中比较一阶导数、二阶导数和 Canny 的边缘结果、适用场景和输出差异。</p>
+            {% endif %}
+        </div>
+        <strong>LESSON 04 · EDGE DETECTION</strong>
+    </header>
+
+    <nav class="edge-tabs" aria-label="边缘检测实验模块">
+        <a class="{{ 'is-active' if edge_mode == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
+        <a class="{{ 'is-active' if edge_mode == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
+        <a class="{{ 'is-active' if edge_mode == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
+    </nav>
+
+    <section class="edge-layout">
+        <aside class="edge-panel edge-controls" aria-label="边缘检测参数面板">
+            <div>
+                <span class="section-label">Input & Params</span>
+                {% if edge_mode == 'kernel' %}
+                <h2>算子参数</h2>
+                {% elif edge_mode == 'canny' %}
+                <h2>Canny 参数</h2>
+                {% else %}
+                <h2>参数面板</h2>
+                {% endif %}
+            </div>
+
+            <label class="edge-upload">
+                <input id="edgeImageInput" type="file" accept="image/*">
+                <span>上传图片</span>
+                <small id="edgeImageName">当前使用示例图</small>
+            </label>
+
+            <div class="edge-samples" id="edgeSamples" aria-label="示例图"></div>
+
+            <div class="edge-control-group" data-panel="compare" {% if edge_mode != 'compare' %}hidden{% endif %}>
+                <button id="edgeCompareBtn" class="edge-primary" type="button">一键生成对比</button>
+                <label>滑块左侧方法
+                    <select id="edgeCompareA">
+                        <option value="original">Original</option>
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="LoG">LoG / Marr</option>
+                        <option value="canny">Canny</option>
+                    </select>
+                </label>
+                <label>滑块右侧方法
+                    <select id="edgeCompareB">
+                        <option value="canny">Canny</option>
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="LoG">LoG / Marr</option>
+                    </select>
+                </label>
+                <div class="edge-compare-params">
+                    <div class="edge-compare-param-card">
+                        <strong>一阶 / 二阶导数阈值</strong>
+                        <label>threshold <strong id="edgeCompareThresholdValue">96</strong>
+                            <input id="edgeCompareThreshold" type="range" min="0" max="255" value="96">
+                        </label>
+                    </div>
+                    <div class="edge-compare-param-card">
+                        <strong>Canny 参数</strong>
+                        <label>apertureSize
+                            <select id="edgeCompareAperture">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="7">7</option>
+                            </select>
+                        </label>
+                        <label>threshold1 <strong id="edgeCompareT1Value">50</strong>
+                            <input id="edgeCompareThreshold1" type="range" min="0" max="255" value="50">
+                        </label>
+                        <label>threshold2 <strong id="edgeCompareT2Value">150</strong>
+                            <input id="edgeCompareThreshold2" type="range" min="0" max="255" value="150">
+                        </label>
+                        <label class="edge-check">
+                            <input id="edgeCompareL2" type="checkbox">
+                            <span>L2gradient</span>
+                        </label>
+                        <label class="edge-check">
+                            <input id="edgeComparePrecise" type="checkbox">
+                            <span>precise NMS</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edge-control-group" data-panel="kernel" {% if edge_mode != 'kernel' %}hidden{% endif %}>
+                <label>卷积核算法
+                    <select id="edgeKernelMethod">
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="scharr">Scharr</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="LoG">LoG / Marr</option>
+                    </select>
+                </label>
+                <div id="edgeKernelCategoryNote" class="edge-kernel-category-note">
+                    <span>类别：-</span>
+                    <span>核心：-</span>
+                    <span>输出：响应图、幅值图、阈值边缘图</span>
+                </div>
+                <label>显示模式
+                    <select id="edgeKernelDisplay">
+                        <option value="steps">步骤缩略图</option>
+                        <option value="slider">原图/结果滑块</option>
+                    </select>
+                </label>
+                <label>阈值 <strong id="edgeThresholdValue">96</strong>
+                    <input id="edgeThreshold" type="range" min="0" max="255" value="96">
+                </label>
+                <button id="edgeKernelBtn" class="edge-primary" type="button">运行卷积核算子</button>
+            </div>
+
+            <div class="edge-control-group" data-panel="canny" {% if edge_mode != 'canny' %}hidden{% endif %}>
+                <label>apertureSize
+                    <select id="edgeAperture">
+                        <option value="3">3</option>
+                        <option value="5" selected>5</option>
+                        <option value="7">7</option>
+                    </select>
+                </label>
+                <label>threshold1 <strong id="edgeT1Value">50</strong>
+                    <input id="edgeThreshold1" type="range" min="0" max="255" value="50">
+                </label>
+                <label>threshold2 <strong id="edgeT2Value">150</strong>
+                    <input id="edgeThreshold2" type="range" min="0" max="255" value="150">
+                </label>
+                <label class="edge-check">
+                    <input id="edgeL2" type="checkbox">
+                    <span>L2gradient</span>
+                </label>
+                <label class="edge-check">
+                    <input id="edgePrecise" type="checkbox">
+                    <span>precise NMS</span>
+                </label>
+                <button id="edgeCannyBtn" class="edge-primary" type="button">运行 Canny 流水线</button>
+            </div>
+        </aside>
+
+        <main class="edge-stage-wrap">
+            <section class="edge-panel edge-stage-card">
+                <div class="edge-stage-head">
+                    <div>
+                        {% if edge_mode == 'kernel' %}
+                        <span class="section-label" id="edgeStageEyebrow">Kernel Operator</span>
+                        <h2 id="edgeStageTitle">卷积核响应过程</h2>
+                        {% elif edge_mode == 'canny' %}
+                        <span class="section-label" id="edgeStageEyebrow">Canny Pipeline</span>
+                        <h2 id="edgeStageTitle">Canny 流水线</h2>
+                        {% else %}
+                        <span class="section-label" id="edgeStageEyebrow">Compare</span>
+                        <h2 id="edgeStageTitle">算法对比</h2>
+                        {% endif %}
+                    </div>
+                    <div class="edge-play-controls" aria-label="流程控制" {% if edge_mode == 'compare' %}hidden{% endif %}>
+                        <button type="button" data-edge-action="prev">Prev</button>
+                        <button type="button" data-edge-action="play">Play</button>
+                        <button type="button" data-edge-action="next">Next</button>
+                        <button type="button" data-edge-action="reset">Reset</button>
+                    </div>
+                </div>
+
+                <div id="edgeStatus" class="edge-status">正在加载示例图...</div>
+
+                <section id="edgeCompareView" class="edge-compare-view" {% if edge_mode != 'compare' %}hidden{% endif %}>
+                    <div class="edge-slider" id="edgeCompareSlider">
+                        <img id="edgeSliderLeft" alt="左侧对比图">
+                        <div class="edge-slider-right" id="edgeSliderClip">
+                            <img id="edgeSliderRight" alt="右侧对比图">
+                        </div>
+                        <input id="edgeSliderRange" type="range" min="0" max="100" value="50" aria-label="对比滑块">
+                        <span class="edge-slider-handle" id="edgeSliderHandle"></span>
+                        <div class="edge-slider-labels">
+                            <span id="edgeSliderLeftLabel">Original</span>
+                            <span id="edgeSliderRightLabel">Canny</span>
+                        </div>
+                    </div>
+                    <div class="edge-compare-strip-head">
+                        <strong>结果速览</strong>
+                        <span>点击任一方法可作为滑块右侧结果</span>
+                    </div>
+                    <div id="edgeCompareWall" class="edge-compare-wall"></div>
+                    <section id="edgeCompareInsightsCard" class="edge-compare-insights-card">
+                        <div class="edge-compare-insights-head">
+                            <strong>算子特点对比</strong>
+                            <span>对比当前左/右方法</span>
+                        </div>
+                        <div id="edgeCompareInsights" class="edge-compare-insights"></div>
+                    </section>
+                </section>
+
+                <section id="edgePipelineView" class="edge-pipeline-view" {% if edge_mode == 'compare' %}hidden{% endif %}>
+                    <div class="edge-main-stage-grid">
+                        <button id="edgeMainImageButton" class="edge-main-image" type="button" aria-label="点击图像查看局部计算探针">
+                            <img id="edgeMainBaseImage" class="edge-main-base-image" alt="上一步边缘检测步骤图">
+                            <img id="edgeMainImage" alt="当前边缘检测步骤图">
+                            <canvas id="edgeVectorCanvas" class="edge-vector-canvas" aria-label="梯度方向向量场"></canvas>
+                        </button>
+                    </div>
+                    <div id="edgeKernelFlowTitle" class="edge-kernel-flow-title" {% if edge_mode == 'compare' %}hidden{% endif %}>
+                        <strong>KERNEL FLOW:</strong>
+                        <span>Image → Gray → Gx → Gy → Magnitude → Threshold → Final</span>
+                    </div>
+                    <div id="edgeStepThumbs" class="edge-step-thumbs"></div>
+                    <section id="edgeKernelTeaching" class="edge-kernel-teaching" {% if edge_mode != 'kernel' %}hidden{% endif %}>
+                        <div class="edge-kernel-teaching-head">
+                            <div>
+                                <span class="section-label">Local Convolution Probe</span>
+                                <h3>Patch × Kernel → Product → Sum → Response → Threshold</h3>
+                            </div>
+                            <span id="edgeKernelProbeBadge">点击图像像素开始</span>
+                        </div>
+                        <div id="edgeKernelProcessCards" class="edge-kernel-process-cards">
+                            <article class="edge-process-card is-empty">
+                                <span>提示</span>
+                                <p>点击主图中的任意像素，前端会取该位置邻域 Patch，乘以当前 Kernel，展示乘积矩阵、求和响应和阈值判断。</p>
+                            </article>
+                        </div>
+                    </section>
+                </section>
+            </section>
+
+            <section class="edge-panel edge-timeline-card" hidden>
+                <div id="edgeTimeline" class="edge-timeline"></div>
+            </section>
+        </main>
+
+        <aside class="edge-panel edge-info" aria-label="当前过程说明">
+            <div>
+                <span class="section-label">Process Notes</span>
+                <h2 id="edgeInfoTitle">当前选中算法说明</h2>
+            </div>
+            <p id="edgeInfoText">选择 Tab 后查看对应算法说明。</p>
+            <div class="edge-formula-card" {% if edge_mode == 'compare' %}hidden{% endif %}>
+                <strong>公式说明</strong>
+                <pre id="edgeFormula">G = sqrt(Gx² + Gy²)</pre>
+            </div>
+            <div class="edge-kernel-card" {% if edge_mode != 'kernel' %}hidden{% endif %}>
+                <strong>当前卷积核</strong>
+                <div id="edgeKernelBox" class="edge-kernel-box">-</div>
+            </div>
+            <div class="edge-stat-grid" id="edgeStats">
+                <span>耗时：-</span>
+                <span>边缘像素占比：-</span>
+                <span>输出尺寸：-</span>
+            </div>
+            <article class="edge-boundary-card">
+                <strong>核心代码边界</strong>
+                <p>边缘检测核心计算来自项目中的手写 NumPy / Numba 函数，不调用 OpenCV 或 skimage 的边缘检测封装函数。</p>
+            </article>
+            <article class="edge-probe-card" {% if edge_mode != 'kernel' %}hidden{% endif %}>
+                <div>
+                    <strong>局部计算探针</strong>
+                    <span id="edgeProbeHint">点击主舞台图像中的某个像素。</span>
+                </div>
+                <div id="edgeProbeBox" class="edge-probe-box">
+                    当前未选择像素。Canny 流水线展示阶段性说明，卷积核算子支持 Patch / Kernel / Product 探针。
+                </div>
+            </article>
+        </aside>
+    </section>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/edge_detection.js') }}"></script>
+{% endblock %}

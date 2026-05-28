@@ -4,11 +4,12 @@ import base64
 import json
 from time import perf_counter
 from waitress import serve
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from PIL import Image, UnidentifiedImageError
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from models.digit_infer_numpy import get_model_status, predict_digit
+from models.edge_visualization import build_edge_response
 from models.image_utils import convolve_gray_image, make_histogram, process_image
 
 app = Flask(__name__)
@@ -41,6 +42,7 @@ def image_to_base64(gray_image):
     gray_image.save(output, format="PNG")
     encoded = base64.b64encode(output.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{encoded}"
+
 
 def format_file_size(size):
     if size < 1024:
@@ -91,6 +93,16 @@ def conv_gradient_lab_page():
         active_page="cnn",
         active_sub_page="conv_gradient_lab"
     )
+
+@app.route("/edge-detection", methods=["GET"])
+def edge_detection_page():
+    return redirect(url_for("edge_detection_mode_page", mode="compare"))
+
+@app.route("/edge-detection/<mode>", methods=["GET"])
+def edge_detection_mode_page(mode):
+    if mode not in {"compare", "kernel", "canny"}:
+        return redirect(url_for("edge_detection_mode_page", mode="compare"))
+    return render_template("edge_detection.html", active_page="edge", edge_mode=mode)
 
 def parse_threshold(value):
     try:
@@ -244,6 +256,16 @@ def convolve_image():
         return jsonify({"error": "后端卷积处理失败，请检查图片和卷积核"}), 500
 
 
+@app.route("/api/edge-detect", methods=["POST"])
+def edge_detect_api():
+    try:
+        return jsonify(build_edge_response(request.form, request.files, app.static_folder, allowed_file))
+    except (UnidentifiedImageError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        app.logger.exception("edge detection failed")
+        return jsonify({"error": "边缘检测处理失败，请检查图片和参数后重试"}), 500
+
 @app.route("/api/digit-recognize", methods=["POST"])
 def digit_recognize():
     data = request.get_json(silent=True) or {}
@@ -280,7 +302,7 @@ def file_too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run(debug=False,)
+    app.run(debug=True)
 
     # port = int(os.environ.get("CVCLASS_PORT", "5001"))
     # # Mount the app under the prefix

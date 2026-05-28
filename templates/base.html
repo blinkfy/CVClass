@@ -34,7 +34,7 @@
                 <a class="{{ 'active' if active_sub_page|default('') == 'cnn_explainer' else '' }}" href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'conv_gradient_lab' else '' }}" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
             </div>
-            <span class="disabled">第四节：</span>
+            <a class="{{ 'active' if active_page == 'edge' else '' }}" href="{{ url_for('edge_detection_page') }}">第四节：图像边缘检测</a>
             <span class="disabled">第五节：</span>
             <span class="disabled">第六节：</span>
         </nav>
