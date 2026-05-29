@@ -85,53 +85,69 @@
                     </div>
                     <div class="edge-teed-network" aria-label="TEED 网络流程示意">
                         <div class="edge-teed-graph" aria-hidden="false">
+                            <svg class="edge-teed-graph-lines" viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+                                <defs>
+                                    <marker id="edgeTeedArrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(37, 99, 235, 0.62)"></path>
+                                    </marker>
+                                    <marker id="edgeTeedArrowOrange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(251, 146, 60, 0.56)"></path>
+                                    </marker>
+                                    <marker id="edgeTeedArrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(16, 185, 129, 0.58)"></path>
+                                    </marker>
+                                </defs>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-1" x1="104" y1="70" x2="205" y2="70"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-2" x1="300" y1="70" x2="425" y2="70"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-3" x1="520" y1="70" x2="645" y2="70"></line>
+
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-1" d="M250 103 C240 126 232 142 225 156"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-2" d="M470 103 C460 126 452 142 445 156"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-3" d="M690 103 C680 126 672 142 665 156"></path>
+
+                                <line class="edge-teed-graph-line edge-teed-graph-line-side" data-flow-line="side-1" x1="292" y1="182" x2="425" y2="182"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-side" data-flow-line="side-2" x1="512" y1="182" x2="645" y2="182"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="side-3" x1="730" y1="182" x2="795" y2="182"></line>
+
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-1" d="M730 91 C752 104 772 116 800 126"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-2" d="M730 132 C752 132 772 132 800 132"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-3" d="M730 184 C752 166 772 150 800 140"></path>
+                            </svg>
                             <article class="edge-teed-node edge-teed-node-original" data-flow-key="original">
                                 <div class="edge-teed-node-thumb"><img id="edgeTeedNetworkOriginal" alt="TEED 网络输入图像"></div>
                                 <strong>Original</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-1" data-flow-line="main-1"></i>
                             <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-1" data-flow-key="stage1_feature">
                                 <span class="edge-teed-cube"><b></b></span>
                                 <strong>Stage1<br>Feature</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-2" data-flow-line="main-2"></i>
                             <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-2" data-flow-key="stage2_feature">
                                 <span class="edge-teed-cube"><b></b></span>
                                 <strong>Stage2<br>Feature</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-3" data-flow-line="main-3"></i>
                             <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-3" data-flow-key="stage3_feature">
                                 <span class="edge-teed-cube"><b></b></span>
                                 <strong>Stage3<br>Feature</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-1" data-flow-line="branch-1"></i>
                             <article class="edge-teed-node edge-teed-node-side edge-teed-side-1" data-flow-key="side1">
                                 <span class="edge-teed-side-icon"><b></b></span>
                                 <strong>Side1</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-2" data-flow-line="branch-2"></i>
                             <article class="edge-teed-node edge-teed-node-side edge-teed-side-2" data-flow-key="side2">
                                 <span class="edge-teed-side-icon"><b></b></span>
                                 <strong>Side2</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-3" data-flow-line="branch-3"></i>
                             <article class="edge-teed-node edge-teed-node-side edge-teed-side-3" data-flow-key="side3">
                                 <span class="edge-teed-side-icon"><b></b></span>
                                 <strong>Side3</strong>
                             </article>
 
-                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-1" data-flow-line="side-1"></i>
-                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-2" data-flow-line="side-2"></i>
-                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-3" data-flow-line="side-3"></i>
-                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-1" data-flow-line="fusion-1"></i>
-                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-2" data-flow-line="fusion-2"></i>
-                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-3" data-flow-line="fusion-3"></i>
                             <article class="edge-teed-node edge-teed-node-fusion" data-flow-key="fuse">
                                 <span class="edge-teed-fusion-icon"><b></b><b></b><b></b></span>
                                 <strong>Fusion<br>/ Final Edge</strong>

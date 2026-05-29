@@ -93,6 +93,8 @@
         edgePoints: [],
         playing: false,
         raf: 0,
+        processRaf: 0,
+        processAnimStart: performance.now(),
         phase: 0,
         modeData: null,
         selectedContour: -1
@@ -158,11 +160,279 @@
         }[mode];
         const active = Math.max(0, Math.min(steps.length - 1, state.phase - 2));
         els.processSteps.innerHTML = steps.map((step, index) => `
-            <div class="${index < active ? "is-done" : ""} ${index === active ? "is-active" : ""}">
-                <span>${index + 1}</span>
-                <b>${escapeHtml(step)}</b>
+            <div class="${index < active ? "is-done" : ""} ${index === active ? "is-active" : ""}" data-process-step="${index}">
+                <canvas width="132" height="58" aria-hidden="true"></canvas>
+                <b><span>${index + 1}</span>${escapeHtml(step)}</b>
             </div>
         `).join("");
+        els.processSteps.querySelectorAll("canvas").forEach((canvas, index) => {
+            drawProcessMini(canvas, mode, index, index === active);
+        });
+    }
+
+    function drawProcessMini(canvas, mode, index, active) {
+        const context = canvas.getContext("2d");
+        const width = canvas.width;
+        const height = canvas.height;
+        context.clearRect(0, 0, width, height);
+        context.fillStyle = active ? "#eff6ff" : "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.strokeStyle = active ? "#2563eb" : "#bfdbfe";
+        context.lineWidth = 1.5;
+        context.strokeRect(0.5, 0.5, width - 1, height - 1);
+        if (mode === "line") drawLineProcessMini(context, width, height, index, active);
+        else if (mode === "circle") drawCircleProcessMini(context, width, height, index, active);
+        else drawContourProcessMini(context, width, height, index, active);
+    }
+
+    function processAnimPhase(index) {
+        const elapsed = performance.now() - state.processAnimStart;
+        return ((elapsed / 900) + index * 0.18) % 1;
+    }
+
+    function startProcessMiniAnimation() {
+        cancelAnimationFrame(state.processRaf);
+        state.processAnimStart = performance.now();
+        const tick = () => {
+            if (els.mode.value === "contour") renderProcessSteps();
+            state.processRaf = requestAnimationFrame(tick);
+        };
+        state.processRaf = requestAnimationFrame(tick);
+    }
+
+    function drawContourProcessMini(context, width, height, index, active) {
+        const blue = active ? "#2563eb" : "#60a5fa";
+        const green = "#16a34a";
+        const orange = "#f97316";
+        const gray = "#94a3b8";
+        const points = [[18, 17], [34, 15], [51, 19], [25, 34], [42, 35], [62, 31], [86, 18], [96, 34], [108, 25]];
+        const phase = active ? processAnimPhase(index) : 0.65;
+        if (index === 0) {
+            points.forEach(([x, y], i) => {
+                const pulseIndex = Math.floor(phase * points.length);
+                const isPulse = active && i === pulseIndex;
+                context.fillStyle = i < 6 ? blue : "#bfdbfe";
+                context.beginPath();
+                context.arc(x, y, isPulse ? 5.2 : 3, 0, Math.PI * 2);
+                context.fill();
+                if (isPulse) {
+                    context.strokeStyle = "rgba(37,99,235,0.35)";
+                    context.lineWidth = 2;
+                    context.beginPath();
+                    context.arc(x, y, 8, 0, Math.PI * 2);
+                    context.stroke();
+                }
+            });
+            context.fillStyle = orange;
+            context.beginPath();
+            context.arc(62, 31, 4.5, 0, Math.PI * 2);
+            context.fill();
+        } else if (index === 1) {
+            const connected = points.slice(0, Math.max(1, Math.ceil(phase * 6)));
+            context.strokeStyle = "rgba(249,115,22,0.35)";
+            context.lineWidth = 8;
+            context.beginPath();
+            context.moveTo(18, 18);
+            context.lineTo(33, 14);
+            context.lineTo(50, 20);
+            context.lineTo(63, 31);
+            context.lineTo(42, 36);
+            context.lineTo(25, 34);
+            context.closePath();
+            context.stroke();
+            connected.forEach(([x, y], i) => {
+                context.fillStyle = i === connected.length - 1 && active ? orange : blue;
+                context.beginPath();
+                context.arc(x, y, i === connected.length - 1 && active ? 5 : 3.2, 0, Math.PI * 2);
+                context.fill();
+            });
+        } else if (index === 2) {
+            points.slice(0, 6).forEach(([x, y]) => {
+                context.fillStyle = blue;
+                context.fillRect(x - 2, y - 2, 4, 4);
+            });
+            points.slice(6).forEach(([x, y]) => {
+                const alpha = active ? Math.max(0.18, 1 - phase) : 0.38;
+                context.fillStyle = `rgba(100,116,139,${alpha})`;
+                context.beginPath();
+                context.arc(x, y, 4 - alpha, 0, Math.PI * 2);
+                context.fill();
+            });
+        } else if (index === 3) {
+            context.fillStyle = blue;
+            points.slice(0, 6).forEach(([x, y]) => context.fillRect(x - 2, y - 2, 4, 4));
+            context.strokeStyle = green;
+            context.lineWidth = 2;
+            const x = 15;
+            const y = 12;
+            const w = 55;
+            const h = 30;
+            const perimeter = (w + h) * 2;
+            let remaining = active ? phase * perimeter : perimeter;
+            context.beginPath();
+            context.moveTo(x, y);
+            const drawSegment = (x1, y1, x2, y2, length) => {
+                if (remaining <= 0) return;
+                const portion = Math.min(1, remaining / length);
+                context.lineTo(x1 + (x2 - x1) * portion, y1 + (y2 - y1) * portion);
+                remaining -= length;
+            };
+            drawSegment(x + w, y, x + w, y, w);
+            drawSegment(x + w, y + h, x + w, y + h, h);
+            drawSegment(x, y + h, x, y + h, w);
+            drawSegment(x, y, x, y, h);
+            context.stroke();
+        } else {
+            context.fillStyle = "rgba(37,99,235,0.12)";
+            context.fillRect(12, 10, 68, 36);
+            context.strokeStyle = blue;
+            context.lineWidth = 1.6;
+            context.beginPath();
+            context.moveTo(18, 18);
+            context.lineTo(33, 14);
+            context.lineTo(50, 20);
+            context.lineTo(63, 31);
+            context.lineTo(42, 36);
+            context.lineTo(25, 34);
+            context.closePath();
+            context.stroke();
+            context.strokeStyle = green;
+            context.lineWidth = 2;
+            context.strokeRect(15, 12, 55, 30);
+            context.strokeStyle = orange;
+            context.beginPath();
+            const sweep = active ? phase : 1;
+            context.moveTo(88, 38);
+            context.lineTo(88 + (112 - 88) * sweep, 38 + (18 - 38) * sweep);
+            context.stroke();
+        }
+    }
+
+    function drawLineProcessMini(context, width, height, index, active) {
+        const blue = active ? "#2563eb" : "#60a5fa";
+        const orange = "#f97316";
+        const green = "#16a34a";
+        if (index === 0) {
+            for (let i = 0; i < 22; i += 1) {
+                context.fillStyle = i === 10 ? orange : blue;
+                context.beginPath();
+                context.arc(14 + (i % 8) * 12, 14 + Math.floor(i / 8) * 13, i === 10 ? 4 : 2.6, 0, Math.PI * 2);
+                context.fill();
+            }
+        } else if (index === 1) {
+            context.strokeStyle = "#94a3b8";
+            context.setLineDash([5, 4]);
+            context.beginPath();
+            context.arc(62, 30, 22, 0, Math.PI * 2);
+            context.stroke();
+            context.setLineDash([]);
+            context.strokeStyle = blue;
+            context.lineWidth = 2;
+            context.beginPath();
+            context.moveTo(62, 30);
+            context.lineTo(94, 18);
+            context.stroke();
+            context.fillStyle = blue;
+            context.fillText("theta", 82, 41);
+        } else if (index === 2) {
+            context.strokeStyle = "#64748b";
+            context.beginPath();
+            context.moveTo(14, 46);
+            context.lineTo(118, 46);
+            context.moveTo(18, 10);
+            context.lineTo(18, 50);
+            context.stroke();
+            context.strokeStyle = orange;
+            context.lineWidth = 2;
+            context.beginPath();
+            for (let x = 0; x <= 96; x += 4) {
+                const y = 31 - Math.sin(x / 14) * 15;
+                if (x === 0) context.moveTo(22 + x, y);
+                else context.lineTo(22 + x, y);
+            }
+            context.stroke();
+        } else if (index === 3) {
+            const gradient = context.createRadialGradient(66, 29, 3, 66, 29, 34);
+            gradient.addColorStop(0, "#ef4444");
+            gradient.addColorStop(0.45, "#facc15");
+            gradient.addColorStop(1, "#1d4ed8");
+            context.fillStyle = gradient;
+            context.fillRect(22, 8, 88, 42);
+            context.strokeStyle = "#ffffff";
+            context.lineWidth = 2;
+            context.beginPath();
+            context.arc(66, 29, 9, 0, Math.PI * 2);
+            context.stroke();
+        } else {
+            context.strokeStyle = green;
+            context.lineWidth = 2;
+            context.beginPath();
+            context.moveTo(8, 47);
+            context.lineTo(124, 15);
+            context.moveTo(8, 34);
+            context.lineTo(124, 46);
+            context.stroke();
+            context.strokeStyle = orange;
+            context.beginPath();
+            context.moveTo(24, 52);
+            context.lineTo(110, 12);
+            context.stroke();
+        }
+    }
+
+    function drawCircleProcessMini(context, width, height, index, active) {
+        const blue = active ? "#2563eb" : "#60a5fa";
+        const orange = "#f97316";
+        const green = "#16a34a";
+        if (index === 0) {
+            context.fillStyle = blue;
+            [[22, 18], [40, 35], [76, 18], [96, 36], [112, 26]].forEach(([x, y], i) => {
+                context.beginPath();
+                context.arc(x, y, i === 2 ? 4 : 3, 0, Math.PI * 2);
+                context.fill();
+            });
+            context.fillStyle = orange;
+            context.beginPath();
+            context.arc(76, 18, 5, 0, Math.PI * 2);
+            context.fill();
+        } else if (index === 1) {
+            context.strokeStyle = orange;
+            context.lineWidth = 2;
+            [12, 20, 28].forEach((radius) => {
+                context.beginPath();
+                context.arc(66, 29, radius, 0, Math.PI * 2);
+                context.stroke();
+            });
+        } else if (index === 2) {
+            context.strokeStyle = "rgba(249,115,22,0.85)";
+            context.lineWidth = 1.5;
+            [[36, 28], [66, 20], [88, 36]].forEach(([x, y]) => {
+                context.beginPath();
+                context.arc(x, y, 18, 0, Math.PI * 2);
+                context.stroke();
+            });
+            context.fillStyle = blue;
+            context.fillRect(64, 27, 5, 5);
+        } else if (index === 3) {
+            const gradient = context.createRadialGradient(66, 29, 2, 66, 29, 32);
+            gradient.addColorStop(0, "#ef4444");
+            gradient.addColorStop(0.5, "#facc15");
+            gradient.addColorStop(1, "#0ea5e9");
+            context.fillStyle = gradient;
+            context.fillRect(23, 8, 86, 42);
+            context.strokeStyle = "#ffffff";
+            context.beginPath();
+            context.arc(66, 29, 8, 0, Math.PI * 2);
+            context.stroke();
+        } else {
+            context.strokeStyle = green;
+            context.lineWidth = 2.4;
+            context.beginPath();
+            context.arc(66, 29, 22, 0, Math.PI * 2);
+            context.stroke();
+            context.fillStyle = blue;
+            context.fillRect(64, 27, 4, 4);
+        }
     }
 
     function updatePanelVisibility() {
@@ -758,6 +1028,7 @@
         els.mode.addEventListener("change", () => {
             updatePanelVisibility();
             resetModeData();
+            startProcessMiniAnimation();
         });
         els.source.addEventListener("change", () => {
             state.edge = sobelEdge(state.gray, state.width, state.height, edgeThresholdForSource());
@@ -842,5 +1113,6 @@
     renderSamples();
     renderTimeline();
     bindEvents();
+    startProcessMiniAnimation();
     setImageSource(`${assetsBase}${state.sample}`, "当前使用示例图像");
 })();

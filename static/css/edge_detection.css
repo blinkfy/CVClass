@@ -6124,11 +6124,11 @@
     place-items: center;
     border-radius: 10px;
     background:
-        radial-gradient(circle at 50% 54%, rgba(219, 234, 254, 0.98), rgba(96, 165, 250, 0.80) 44%, rgba(37, 99, 235, 0.92) 100%);
-    border: 2px solid #93c5fd;
+        radial-gradient(circle at 50% 54%, rgba(239, 246, 255, 0.96), rgba(147, 197, 253, 0.52) 46%, rgba(96, 165, 250, 0.68) 100%);
+    border: 2px solid rgba(147, 197, 253, 0.72);
     box-shadow:
-        0 0 0 3px rgba(147, 197, 253, 0.20),
-        0 10px 22px rgba(37, 99, 235, 0.22),
+        0 0 0 3px rgba(147, 197, 253, 0.12),
+        0 10px 22px rgba(37, 99, 235, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.72);
     transform: perspective(120px) rotateX(10deg) rotateY(-16deg);
 }
@@ -6149,7 +6149,7 @@
     inset: -7px -6px auto auto;
     width: 46px;
     height: 11px;
-    background: rgba(147, 197, 253, 0.35);
+    background: rgba(147, 197, 253, 0.20);
     transform: skewX(-32deg);
 }
 
@@ -6157,8 +6157,8 @@
     width: 22px;
     height: 22px;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(191, 219, 254, 0.25) 70%);
-    box-shadow: 0 0 18px rgba(255, 255, 255, 0.9);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.92), rgba(219, 234, 254, 0.22) 70%);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.72);
 }
 
 .edge-teed-node-side {
@@ -6178,9 +6178,9 @@
     height: 38px;
     place-items: center;
     border-radius: 9px;
-    border: 1.5px solid #fb923c;
-    background: linear-gradient(145deg, #fff7ed, #fed7aa);
-    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.14), 0 10px 18px rgba(249, 115, 22, 0.12);
+    border: 1.5px solid rgba(251, 146, 60, 0.58);
+    background: linear-gradient(145deg, rgba(255, 247, 237, 0.92), rgba(254, 215, 170, 0.48));
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.08), 0 10px 18px rgba(249, 115, 22, 0.07);
 }
 
 .edge-teed-side-icon::before,
@@ -6188,7 +6188,7 @@
     content: "";
     position: absolute;
     inset: 8px;
-    border: 1px solid rgba(249, 115, 22, 0.55);
+    border: 1px solid rgba(249, 115, 22, 0.36);
     border-radius: 6px;
     transform: rotate(14deg);
 }
@@ -6201,8 +6201,8 @@
     width: 14px;
     height: 14px;
     border-radius: 999px;
-    background: #fdba74;
-    box-shadow: 0 0 12px rgba(249, 115, 22, 0.45);
+    background: rgba(253, 186, 116, 0.62);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.22);
 }
 
 .edge-teed-node-fusion {
@@ -6214,11 +6214,11 @@
     border-radius: 16px;
     color: #ffffff;
     background:
-        radial-gradient(circle at 50% 43%, rgba(59, 130, 246, 0.72), rgba(37, 99, 235, 0.94) 62%, #1d4ed8 100%);
-    border: 2px solid rgba(191, 219, 254, 0.92);
+        radial-gradient(circle at 50% 43%, rgba(147, 197, 253, 0.56), rgba(96, 165, 250, 0.72) 62%, rgba(37, 99, 235, 0.78) 100%);
+    border: 2px solid rgba(191, 219, 254, 0.74);
     box-shadow:
-        0 0 0 5px rgba(147, 197, 253, 0.34),
-        0 0 30px rgba(37, 99, 235, 0.54),
+        0 0 0 5px rgba(147, 197, 253, 0.20),
+        0 0 26px rgba(37, 99, 235, 0.26),
         inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
@@ -6234,8 +6234,8 @@
     position: absolute;
     inset: 7px;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.98), rgba(147, 197, 253, 0.22) 68%);
-    box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.90), rgba(219, 234, 254, 0.22) 68%);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.62);
 }
 
 .edge-teed-fusion-icon b {
@@ -6245,7 +6245,7 @@
     width: 2px;
     height: 34px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.58);
     transform-origin: center;
 }
 
@@ -6418,6 +6418,275 @@
     .edge-teed-node-fusion {
         width: 86px;
         min-height: 98px;
+    }
+}
+
+/* TEED graph alignment fix: anchor all nodes/lines to the same coordinate system. */
+.edge-teed-page .edge-teed-network {
+    padding: 16px 18px;
+}
+
+.edge-teed-graph {
+    --x-original: 7%;
+    --x-stage1: 27%;
+    --x-stage2: 48%;
+    --x-stage3: 69%;
+    --x-fusion: 91%;
+    --y-main: 58px;
+    --y-side: 166px;
+    --node-w: 86px;
+    --original-w: 72px;
+    --fusion-w: 104px;
+    min-height: 224px;
+}
+
+.edge-teed-node {
+    transform: translateX(-50%);
+}
+
+.edge-teed-network [data-flow-key].is-active {
+    transform: translateX(-50%) translateY(-2px) scale(1.03);
+}
+
+.edge-teed-node-original {
+    left: var(--x-original);
+    top: 24px;
+    width: var(--original-w);
+}
+
+.edge-teed-node-stage {
+    top: 10px;
+    width: var(--node-w);
+}
+
+.edge-teed-stage-1 { left: var(--x-stage1); }
+.edge-teed-stage-2 { left: var(--x-stage2); }
+.edge-teed-stage-3 { left: var(--x-stage3); }
+
+.edge-teed-node-side {
+    top: 135px;
+    width: var(--node-w);
+}
+
+.edge-teed-side-1 { left: var(--x-stage1); }
+.edge-teed-side-2 { left: var(--x-stage2); }
+.edge-teed-side-3 { left: var(--x-stage3); }
+
+.edge-teed-node-fusion {
+    left: var(--x-fusion);
+    right: auto;
+    top: 57px;
+    width: var(--fusion-w);
+    min-height: 108px;
+}
+
+.edge-teed-line {
+    height: 4px;
+    transform-origin: left center;
+}
+
+.edge-teed-line-main {
+    top: var(--y-main);
+}
+
+.edge-teed-line-main-1 {
+    left: calc(var(--x-original) + var(--original-w) / 2 + 10px);
+    width: calc(var(--x-stage1) - var(--x-original) - (var(--original-w) + var(--node-w)) / 2 - 20px);
+}
+
+.edge-teed-line-main-2 {
+    left: calc(var(--x-stage1) + var(--node-w) / 2 + 12px);
+    width: calc(var(--x-stage2) - var(--x-stage1) - var(--node-w) - 24px);
+}
+
+.edge-teed-line-main-3 {
+    left: calc(var(--x-stage2) + var(--node-w) / 2 + 12px);
+    width: calc(var(--x-stage3) - var(--x-stage2) - var(--node-w) - 24px);
+}
+
+.edge-teed-line-branch {
+    width: 82px;
+    transform: translateX(-50%) rotate(102deg);
+}
+
+.edge-teed-line-branch-1,
+.edge-teed-line-branch-2,
+.edge-teed-line-branch-3 {
+    top: 87px;
+}
+
+.edge-teed-line-branch-1 { left: var(--x-stage1); }
+.edge-teed-line-branch-2 { left: var(--x-stage2); }
+.edge-teed-line-branch-3 { left: var(--x-stage3); }
+
+.edge-teed-line-side {
+    top: var(--y-side);
+}
+
+.edge-teed-line-side-1 {
+    left: calc(var(--x-stage1) + var(--node-w) / 2 + 12px);
+    width: calc(var(--x-stage2) - var(--x-stage1) - var(--node-w) - 24px);
+}
+
+.edge-teed-line-side-2 {
+    left: calc(var(--x-stage2) + var(--node-w) / 2 + 12px);
+    width: calc(var(--x-stage3) - var(--x-stage2) - var(--node-w) - 24px);
+}
+
+.edge-teed-line-side-3 {
+    left: calc(var(--x-stage3) + var(--node-w) / 2 + 12px);
+    width: calc(var(--x-fusion) - var(--x-stage3) - (var(--node-w) + var(--fusion-w)) / 2 - 24px);
+}
+
+.edge-teed-line-fusion-1,
+.edge-teed-line-fusion-2,
+.edge-teed-line-fusion-3 {
+    left: calc(var(--x-stage3) + var(--node-w) / 2 + 16px);
+    width: calc(var(--x-fusion) - var(--x-stage3) - (var(--node-w) + var(--fusion-w)) / 2 - 30px);
+}
+
+.edge-teed-line-fusion-1 {
+    top: 80px;
+    transform: rotate(18deg);
+}
+
+.edge-teed-line-fusion-2 {
+    top: 112px;
+    transform: rotate(0deg);
+}
+
+.edge-teed-line-fusion-3 {
+    top: 144px;
+    transform: rotate(-18deg);
+}
+
+@media (max-width: 1280px) {
+    .edge-teed-graph {
+        --x-original: 7%;
+        --x-stage1: 27%;
+        --x-stage2: 48%;
+        --x-stage3: 69%;
+        --x-fusion: 91%;
+        --node-w: 76px;
+        --fusion-w: 92px;
+    }
+}
+
+/* Final TEED graph alignment: SVG owns all connector geometry. */
+.edge-teed-graph {
+    --x-original: 7%;
+    --x-stage1: 25%;
+    --x-stage2: 47%;
+    --x-stage3: 69%;
+    --x-fusion: 86.5%;
+    --node-w: 92px;
+    --fusion-w: 96px;
+    min-height: 224px;
+}
+
+.edge-teed-graph-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.edge-teed-graph-line {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.72;
+    vector-effect: non-scaling-stroke;
+    transition: opacity 180ms ease, filter 180ms ease, stroke-width 180ms ease;
+}
+
+.edge-teed-graph-line-main {
+    stroke: rgba(37, 99, 235, 0.62);
+    marker-end: url(#edgeTeedArrowBlue);
+    filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.12));
+}
+
+.edge-teed-graph-line-branch,
+.edge-teed-graph-line-side {
+    stroke: rgba(251, 146, 60, 0.56);
+    marker-end: url(#edgeTeedArrowOrange);
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.09));
+}
+
+.edge-teed-graph-line-fusion {
+    stroke: rgba(16, 185, 129, 0.58);
+    marker-end: url(#edgeTeedArrowGreen);
+    filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.12));
+}
+
+.edge-teed-graph-line.is-done,
+.edge-teed-graph-line.is-active {
+    opacity: 1;
+}
+
+.edge-teed-graph-line.is-active {
+    stroke-width: 4;
+    stroke-dasharray: 14 9;
+    animation: edgeTeedSvgLineFlow 1.05s linear infinite;
+}
+
+.edge-teed-network[data-step="fuse"] .edge-teed-graph-line-fusion {
+    opacity: 1;
+    stroke-width: 4;
+    stroke-dasharray: 14 9;
+    animation: edgeTeedSvgLineFlow 0.95s linear infinite;
+}
+
+.edge-teed-node-original {
+    left: var(--x-original);
+    top: 28px;
+}
+
+.edge-teed-node-stage {
+    top: 12px;
+}
+
+.edge-teed-stage-1 { left: var(--x-stage1); }
+.edge-teed-stage-2 { left: var(--x-stage2); }
+.edge-teed-stage-3 { left: var(--x-stage3); }
+
+.edge-teed-node-side {
+    top: 136px;
+}
+
+.edge-teed-side-1 { left: var(--x-stage1); }
+.edge-teed-side-2 { left: var(--x-stage2); }
+.edge-teed-side-3 { left: var(--x-stage3); }
+
+.edge-teed-node-fusion {
+    left: var(--x-fusion);
+    right: auto;
+    top: 58px;
+}
+
+/* Hide legacy i-based connector rules after switching to SVG. */
+.edge-teed-graph > .edge-teed-line {
+    display: none !important;
+}
+
+@keyframes edgeTeedSvgLineFlow {
+    from { stroke-dashoffset: 28; }
+    to { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 1280px) {
+    .edge-teed-graph {
+        --x-original: 7%;
+        --x-stage1: 25%;
+        --x-stage2: 47%;
+        --x-stage3: 69%;
+        --x-fusion: 86.5%;
+        --node-w: 82px;
+        --fusion-w: 88px;
     }
 }
 
@@ -6698,6 +6967,27 @@
     padding: 10px;
 }
 
+.edge-app-page .edge-app-controls .edge-app-control-section:nth-of-type(2) {
+    padding: 12px;
+}
+
+.edge-app-page .edge-app-controls .edge-app-control-section:nth-of-type(2) .edge-upload {
+    min-height: 78px;
+    margin-top: 7px;
+    margin-bottom: 9px;
+    padding: 14px 12px;
+}
+
+.edge-app-page .edge-app-controls .edge-app-control-section:nth-of-type(2) .edge-samples {
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.edge-app-page .edge-app-controls .edge-app-control-section:nth-of-type(2) .edge-sample-btn {
+    width: 46px;
+    height: 38px;
+}
+
 .edge-app-page .edge-app-controls .edge-upload span {
     font-size: 13px;
 }
@@ -6779,9 +7069,9 @@
     position: relative;
     display: grid;
     place-items: center;
-    gap: 7px;
-    min-height: 72px;
-    padding: 9px;
+    gap: 6px;
+    min-height: 92px;
+    padding: 7px;
     border: 1px solid #dbeafe;
     border-radius: 12px;
     color: #475569;
@@ -6801,10 +7091,11 @@
 }
 
 .edge-app-process-steps span {
-    display: grid;
+    display: inline-grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
     border-radius: 999px;
     color: #2563eb;
     font-size: 11px;
@@ -6813,7 +7104,19 @@
 }
 
 .edge-app-process-steps b {
-    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e3a5f;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.edge-app-process-steps canvas {
+    width: 100%;
+    max-width: 132px;
+    height: 58px;
+    border-radius: 8px;
 }
 
 .edge-app-process-steps div.is-active {
