@@ -143,6 +143,8 @@ def edge_detection_page():
 def edge_detection_mode_page(mode):
     if mode == "teed":
         return render_template("edge_teed.html", active_page="edge", edge_mode=mode)
+    if mode == "applications":
+        return render_template("edge_applications.html", active_page="edge", edge_mode=mode)
     if mode not in {"compare", "kernel", "canny"}:
         return redirect(url_for("edge_detection_mode_page", mode="compare"))
     return render_template("edge_detection.html", active_page="edge", edge_mode=mode)

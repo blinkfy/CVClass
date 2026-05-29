@@ -75,6 +75,9 @@
         samples: document.getElementById("edgeTeedSamples"),
         status: document.getElementById("edgeTeedStatus"),
         original: document.getElementById("edgeTeedOriginal"),
+        networkOriginal: document.getElementById("edgeTeedNetworkOriginal"),
+        topPreview: document.getElementById("edgeTeedTopPreview"),
+        topPreviewLabel: document.getElementById("edgeTeedTopPreviewLabel"),
         results: document.getElementById("edgeTeedResults"),
         timeline: document.getElementById("edgeTeedTimeline"),
         infoTitle: document.getElementById("edgeTeedInfoTitle"),
@@ -209,6 +212,47 @@
                     target.appendChild(canvas);
                 }
             });
+        }
+        renderTopPreview();
+    }
+
+    function copyCanvas(source, target) {
+        target.width = source.width;
+        target.height = source.height;
+        target.getContext("2d").drawImage(source, 0, 0);
+    }
+
+    function renderTopPreview() {
+        if (!els.topPreview) return;
+        const activeKey = flowKeys[state.activeIndex];
+        const previewKey = state.outputs?.[activeKey] && activeKey !== "original"
+            ? activeKey
+            : (state.outputs?.fuse ? "fuse" : "");
+        if (previewKey && state.outputs?.[previewKey]) {
+            const item = resultItems.find((entry) => entry.key === previewKey);
+            if (els.topPreviewLabel) {
+                els.topPreviewLabel.textContent = item?.title || "Result Preview";
+            }
+            let canvas = els.topPreview.querySelector("canvas");
+            if (!canvas || canvas.dataset.previewKey !== previewKey) {
+                els.topPreview.innerHTML = "";
+                canvas = document.createElement("canvas");
+                canvas.dataset.previewKey = previewKey;
+                els.topPreview.appendChild(canvas);
+            }
+            copyCanvas(state.outputs[previewKey], canvas);
+            return;
+        }
+        if (els.topPreviewLabel) {
+            els.topPreviewLabel.textContent = "Result Preview";
+        }
+        els.topPreview.innerHTML = "";
+        const image = document.createElement("img");
+        image.src = state.imageSrc;
+        image.alt = "TEED 输出结果预览";
+        els.topPreview.appendChild(image);
+        if (els.networkOriginal) {
+            els.networkOriginal.src = state.imageSrc;
         }
     }
 
@@ -512,10 +556,11 @@
     }
 
     function generateRefineTiles(width, height, size = inputSize, stride = refineStride) {
+        const step = Math.max(1, Math.min(stride, size));
         const positions = (length) => {
             if (length <= size) return [0];
             const values = [];
-            for (let value = 0; value <= length - size; value += stride) values.push(value);
+            for (let value = 0; value <= length - size; value += step) values.push(value);
             const last = length - size;
             if (values[values.length - 1] !== last) values.push(last);
             return values;
@@ -818,6 +863,7 @@
                     valuesToCanvas(stateItem.current, work.width, work.height, stateItem.canvas, tile);
                 }
             });
+            renderTopPreview();
             await yieldFrame();
         }
 
@@ -825,6 +871,7 @@
             Object.values(progressiveStates).forEach((stateItem) => {
                 valuesToCanvas(stateItem.current, work.width, work.height, stateItem.canvas);
             });
+            renderTopPreview();
             setStatus(`推理完成，滑窗细化 ${tiles.length} / ${tiles.length}`, "ready");
         }
     }
@@ -865,6 +912,9 @@
     function setImageSource(src, name) {
         state.imageSrc = src;
         els.original.src = src;
+        if (els.networkOriginal) {
+            els.networkOriginal.src = src;
+        }
         els.imageName.textContent = name;
         state.outputs = null;
         state.outputFit = null;

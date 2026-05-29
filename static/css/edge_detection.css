@@ -6007,8 +6007,418 @@
     background: #f8fafc;
 }
 
+.edge-teed-page .edge-teed-top-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 220px;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #020617;
+}
+
+.edge-teed-page .edge-teed-top-preview img,
+.edge-teed-page .edge-teed-top-preview canvas {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+}
+
 .edge-teed-page .edge-teed-network {
     min-height: 260px;
+}
+
+/* TEED model-structure graph: Original -> Stage features, Side outputs -> Fusion. */
+.edge-teed-page .edge-teed-network {
+    display: block;
+    min-height: 260px;
+    padding: 18px 22px;
+    overflow: hidden;
+}
+
+.edge-teed-page .edge-teed-network::before {
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.035) 1px, transparent 1px);
+    background-size: 22px 22px;
+    opacity: 1;
+}
+
+.edge-teed-page .edge-teed-network::after {
+    background: radial-gradient(circle at 83% 50%, rgba(37, 99, 235, 0.22), transparent 22%);
+    opacity: 0.9;
+}
+
+.edge-teed-graph {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 222px;
+}
+
+.edge-teed-node {
+    position: absolute;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    margin: 0;
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1.15;
+    text-align: center;
+    transition: filter 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.edge-teed-node strong {
+    display: block;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.edge-teed-node-original {
+    left: 0.5%;
+    top: 25px;
+    width: 72px;
+    color: #111827;
+}
+
+.edge-teed-node-thumb {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    overflow: hidden;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f8fafc;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.10);
+}
+
+.edge-teed-node-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1);
+}
+
+.edge-teed-node-stage {
+    top: 9px;
+    width: 82px;
+}
+
+.edge-teed-stage-1 { left: 22%; }
+.edge-teed-stage-2 { left: 43%; }
+.edge-teed-stage-3 { left: 64%; }
+
+.edge-teed-cube {
+    position: relative;
+    display: grid;
+    width: 54px;
+    height: 54px;
+    place-items: center;
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 50% 54%, rgba(219, 234, 254, 0.98), rgba(96, 165, 250, 0.80) 44%, rgba(37, 99, 235, 0.92) 100%);
+    border: 2px solid #93c5fd;
+    box-shadow:
+        0 0 0 3px rgba(147, 197, 253, 0.20),
+        0 10px 22px rgba(37, 99, 235, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    transform: perspective(120px) rotateX(10deg) rotateY(-16deg);
+}
+
+.edge-teed-cube::before,
+.edge-teed-cube::after {
+    content: "";
+    position: absolute;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.46);
+}
+
+.edge-teed-cube::before {
+    inset: 6px 8px 8px 6px;
+}
+
+.edge-teed-cube::after {
+    inset: -7px -6px auto auto;
+    width: 46px;
+    height: 11px;
+    background: rgba(147, 197, 253, 0.35);
+    transform: skewX(-32deg);
+}
+
+.edge-teed-cube b {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(191, 219, 254, 0.25) 70%);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.9);
+}
+
+.edge-teed-node-side {
+    top: 140px;
+    width: 82px;
+    color: #9a3412;
+}
+
+.edge-teed-side-1 { left: 22%; }
+.edge-teed-side-2 { left: 43%; }
+.edge-teed-side-3 { left: 64%; }
+
+.edge-teed-side-icon {
+    position: relative;
+    display: grid;
+    width: 46px;
+    height: 38px;
+    place-items: center;
+    border-radius: 9px;
+    border: 1.5px solid #fb923c;
+    background: linear-gradient(145deg, #fff7ed, #fed7aa);
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.14), 0 10px 18px rgba(249, 115, 22, 0.12);
+}
+
+.edge-teed-side-icon::before,
+.edge-teed-side-icon::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1px solid rgba(249, 115, 22, 0.55);
+    border-radius: 6px;
+    transform: rotate(14deg);
+}
+
+.edge-teed-side-icon::after {
+    transform: rotate(-12deg) scale(0.75);
+}
+
+.edge-teed-side-icon b {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #fdba74;
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.45);
+}
+
+.edge-teed-node-fusion {
+    right: 0;
+    top: 58px;
+    width: 94px;
+    min-height: 104px;
+    padding: 10px 8px;
+    border-radius: 16px;
+    color: #ffffff;
+    background:
+        radial-gradient(circle at 50% 43%, rgba(59, 130, 246, 0.72), rgba(37, 99, 235, 0.94) 62%, #1d4ed8 100%);
+    border: 2px solid rgba(191, 219, 254, 0.92);
+    box-shadow:
+        0 0 0 5px rgba(147, 197, 253, 0.34),
+        0 0 30px rgba(37, 99, 235, 0.54),
+        inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.edge-teed-fusion-icon {
+    position: relative;
+    display: block;
+    width: 45px;
+    height: 45px;
+}
+
+.edge-teed-fusion-icon::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.98), rgba(147, 197, 253, 0.22) 68%);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.85);
+}
+
+.edge-teed-fusion-icon b {
+    position: absolute;
+    left: 21px;
+    top: 6px;
+    width: 2px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    transform-origin: center;
+}
+
+.edge-teed-fusion-icon b:nth-child(2) { transform: rotate(60deg); }
+.edge-teed-fusion-icon b:nth-child(3) { transform: rotate(-60deg); }
+
+.edge-teed-line {
+    position: absolute;
+    z-index: 3;
+    display: block;
+    height: 4px;
+    border-radius: 999px;
+    pointer-events: none;
+    opacity: 0.74;
+    overflow: visible;
+    transform-origin: left center;
+    transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.edge-teed-line::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 999px;
+    background: inherit;
+    opacity: 0.18;
+    filter: blur(5px);
+}
+
+.edge-teed-line::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -1px;
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 10px solid currentColor;
+    transform: translateY(-50%);
+}
+
+.edge-teed-line-main {
+    top: 46px;
+    color: #2563eb;
+    background: linear-gradient(90deg, rgba(147, 197, 253, 0.12), #2563eb 68%, #60a5fa);
+}
+
+.edge-teed-line-main-1 { left: 11%; width: 12%; }
+.edge-teed-line-main-2 { left: 32%; width: 12%; }
+.edge-teed-line-main-3 { left: 53%; width: 12%; }
+
+.edge-teed-line-branch {
+    width: 74px;
+    color: #fb923c;
+    background: linear-gradient(90deg, rgba(254, 215, 170, 0.12), #fb923c 68%, #fdba74);
+    transform: rotate(102deg);
+    opacity: 0.58;
+}
+
+.edge-teed-line-branch-1 { left: 25.5%; top: 83px; }
+.edge-teed-line-branch-2 { left: 46.5%; top: 83px; }
+.edge-teed-line-branch-3 { left: 67.5%; top: 83px; }
+
+.edge-teed-line-side {
+    top: 158px;
+    width: 12%;
+    color: #fb923c;
+    background: linear-gradient(90deg, rgba(254, 215, 170, 0.12), #fb923c 68%, #fdba74);
+}
+
+.edge-teed-line-side-1 { left: 32%; }
+.edge-teed-line-side-2 { left: 53%; }
+.edge-teed-line-side-3 { left: 74%; width: 8%; color: #10b981; background: linear-gradient(90deg, rgba(167, 243, 208, 0.1), #10b981 74%, #34d399); }
+
+.edge-teed-line-fusion {
+    color: #10b981;
+    background: linear-gradient(90deg, rgba(167, 243, 208, 0.08), #10b981 70%, #34d399);
+    opacity: 0.72;
+}
+
+.edge-teed-line-fusion-1 {
+    left: 76%;
+    top: 47px;
+    width: 10%;
+    transform: rotate(20deg);
+}
+
+.edge-teed-line-fusion-2 {
+    left: 75%;
+    top: 99px;
+    width: 11%;
+    transform: rotate(-8deg);
+}
+
+.edge-teed-line-fusion-3 {
+    left: 76%;
+    top: 153px;
+    width: 10%;
+    transform: rotate(-25deg);
+}
+
+.edge-teed-network [data-flow-key].is-active,
+.edge-teed-network [data-flow-key].is-done {
+    filter: saturate(1.08) brightness(1.04);
+}
+
+.edge-teed-network [data-flow-key].is-active {
+    transform: translateY(-2px) scale(1.03);
+}
+
+.edge-teed-network [data-flow-line].is-active,
+.edge-teed-network [data-flow-line].is-done {
+    opacity: 1;
+}
+
+.edge-teed-network [data-flow-line].is-active {
+    filter: saturate(1.35) brightness(1.16);
+    animation: edgeTeedGraphLineFlow 1.15s linear infinite;
+    background-size: 220% 100%;
+}
+
+.edge-teed-network[data-step="fuse"] .edge-teed-line-fusion,
+.edge-teed-network[data-step="fuse"] .edge-teed-line-side-3 {
+    opacity: 1;
+    animation: edgeTeedGraphLineFlow 0.95s linear infinite;
+    filter: saturate(1.45) brightness(1.14);
+}
+
+.edge-teed-network[data-step="fuse"] .edge-teed-node-fusion {
+    animation: edgeTeedTargetFusionPulse 1.25s ease-in-out infinite;
+}
+
+@keyframes edgeTeedGraphLineFlow {
+    from { background-position: 0% 50%; }
+    to { background-position: 220% 50%; }
+}
+
+@keyframes edgeTeedTargetFusionPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow:
+            0 0 0 5px rgba(147, 197, 253, 0.34),
+            0 0 30px rgba(37, 99, 235, 0.54),
+            inset 0 1px 0 rgba(255, 255, 255, 0.38);
+    }
+    50% {
+        transform: scale(1.035);
+        box-shadow:
+            0 0 0 8px rgba(147, 197, 253, 0.30),
+            0 0 42px rgba(37, 99, 235, 0.70),
+            inset 0 1px 0 rgba(255, 255, 255, 0.44);
+    }
+}
+
+@media (max-width: 1280px) {
+    .edge-teed-graph {
+        min-height: 206px;
+    }
+
+    .edge-teed-node-original {
+        left: 0;
+    }
+
+    .edge-teed-cube {
+        width: 48px;
+        height: 48px;
+    }
+
+    .edge-teed-node-fusion {
+        width: 86px;
+        min-height: 98px;
+    }
 }
 
 @media (max-width: 1280px) {
@@ -6023,5 +6433,511 @@
 
     .edge-teed-page .edge-teed-original-card img {
         max-height: 198px;
+    }
+
+    .edge-teed-page .edge-teed-top-preview {
+        min-height: 198px;
+    }
+
+    .edge-teed-page .edge-teed-top-preview img,
+    .edge-teed-page .edge-teed-top-preview canvas {
+        max-height: 198px;
+    }
+}
+
+/* Edge applications page */
+.edge-app-page {
+    --edge-app-blue: #2563eb;
+    --edge-app-orange: #f97316;
+    --edge-app-green: #16a34a;
+    --edge-app-muted: #64748b;
+}
+
+.edge-app-layout {
+    grid-template-columns: minmax(248px, 290px) minmax(620px, 1fr) minmax(284px, 340px);
+}
+
+.edge-app-controls {
+    gap: 8px;
+    padding: 12px;
+}
+
+.edge-app-param-panel {
+    display: grid;
+    gap: 7px;
+    padding: 9px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.edge-app-play-controls {
+    grid-template-columns: 1fr repeat(3, minmax(58px, auto));
+}
+
+.edge-app-status[data-status="ready"] {
+    color: #166534;
+    background: #ecfdf5;
+}
+
+.edge-app-status[data-status="loading"] {
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.edge-app-status[data-status="warning"] {
+    color: #9a3412;
+    background: #fff7ed;
+}
+
+.edge-app-stage-card {
+    gap: 14px;
+}
+
+.edge-app-progress {
+    max-width: 360px;
+    padding: 7px 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 900;
+    background: #eff6ff;
+}
+
+.edge-app-stage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.edge-app-view-card {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+}
+
+.edge-app-view-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.edge-app-view-card header strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.edge-app-view-card header span {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    background: #eff6ff;
+}
+
+.edge-app-canvas-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 292px;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background:
+        linear-gradient(#eef6ff 1px, transparent 1px),
+        linear-gradient(90deg, #eef6ff 1px, transparent 1px),
+        #f8fbff;
+    background-size: 24px 24px;
+}
+
+.edge-app-canvas-wrap canvas {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 292px;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.edge-app-view-card[data-stage-card="middle"] .edge-app-canvas-wrap {
+    background: #020617;
+}
+
+.edge-app-view-card[data-stage-card="middle"] canvas {
+    background: #020617;
+}
+
+.edge-app-view-card[data-stage-card="overlay"] {
+    border-color: #bfdbfe;
+}
+
+.edge-app-flow-card {
+    padding: 13px 16px;
+    border-radius: 16px;
+}
+
+.edge-app-info {
+    gap: 14px;
+}
+
+.edge-app-note-card {
+    display: grid;
+    gap: 9px;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.edge-app-note-card strong {
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.edge-app-formula {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    color: #1d4ed8;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    font-weight: 950;
+    background: #f8fbff;
+}
+
+.edge-app-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.edge-app-stats div {
+    display: grid;
+    gap: 3px;
+    padding: 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.edge-app-stats dt {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.edge-app-stats dd {
+    margin: 0;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.edge-app-flow-timeline li.is-active span {
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.16), 0 10px 22px rgba(37, 99, 235, 0.16);
+}
+
+.edge-app-flow-timeline li.is-done::before,
+.edge-app-flow-timeline li.is-active::before {
+    background: linear-gradient(90deg, #bfdbfe, #2563eb, #bfdbfe);
+    background-size: 220% 100%;
+    animation: edgeTeedTimelineFlow 1.3s linear infinite;
+}
+
+.edge-app-page .edge-hero {
+    min-height: 124px;
+    padding: 24px 28px;
+}
+
+.edge-app-control-section {
+    padding: 8px 9px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.edge-app-control-section > strong,
+.edge-app-param-panel > strong {
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.edge-app-controls > div:first-child {
+    display: grid;
+    gap: 1px;
+}
+
+.edge-app-controls > div:first-child h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.15;
+}
+
+.edge-app-page .edge-app-controls .edge-upload {
+    min-height: 64px;
+    padding: 10px;
+}
+
+.edge-app-page .edge-app-controls .edge-upload span {
+    font-size: 13px;
+}
+
+.edge-app-page .edge-app-controls .edge-upload small {
+    font-size: 10px;
+}
+
+.edge-app-page .edge-app-controls .edge-samples {
+    gap: 6px;
+}
+
+.edge-app-page .edge-app-controls .edge-sample-btn {
+    width: 42px;
+    height: 34px;
+}
+
+.edge-app-page .edge-app-controls label {
+    gap: 5px;
+    font-size: 11px;
+}
+
+.edge-app-page .edge-app-controls input[type="range"] {
+    height: 4px;
+}
+
+.edge-app-page .edge-app-controls select {
+    min-height: 30px;
+    padding: 5px 8px;
+}
+
+.edge-app-page .edge-app-controls .edge-check {
+    min-height: 26px;
+}
+
+.edge-app-mode-pill {
+    align-self: start;
+    padding: 9px 16px;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    color: #1d4ed8;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 950;
+    background: linear-gradient(180deg, #eff6ff, #dbeafe);
+}
+
+.edge-app-subtitle {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.edge-app-stage-grid .edge-app-view-card header strong {
+    color: #1d4ed8;
+}
+
+.edge-app-process-card {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.edge-app-process-card > strong {
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.edge-app-process-steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.edge-app-process-steps div {
+    position: relative;
+    display: grid;
+    place-items: center;
+    gap: 7px;
+    min-height: 72px;
+    padding: 9px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    color: #475569;
+    text-align: center;
+    background: #ffffff;
+}
+
+.edge-app-process-steps div + div::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -12px;
+    width: 12px;
+    height: 3px;
+    border-radius: 999px;
+    background: #60a5fa;
+}
+
+.edge-app-process-steps span {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 950;
+    background: #eff6ff;
+}
+
+.edge-app-process-steps b {
+    font-size: 12px;
+}
+
+.edge-app-process-steps div.is-active {
+    border-color: #2563eb;
+    color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.edge-app-process-steps div.is-done {
+    border-color: #bbf7d0;
+    color: #166534;
+    background: #f0fdf4;
+}
+
+.edge-app-progress-row {
+    display: grid;
+    grid-template-columns: auto minmax(120px, 1fr) 52px;
+    align-items: center;
+    gap: 12px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.edge-app-progress-row meter {
+    width: 100%;
+    height: 8px;
+}
+
+.edge-app-stage-controls {
+    grid-template-columns: repeat(4, minmax(72px, auto)) minmax(140px, 1fr);
+    align-items: center;
+}
+
+.edge-app-stage-controls label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.edge-app-runtime-badges {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.edge-app-runtime-badges span {
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    color: #1d4ed8;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 900;
+    background: #f8fbff;
+}
+
+.edge-app-flow-shell {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 18px;
+    width: 100%;
+}
+
+.edge-app-flow-shell > div h2 {
+    margin: 2px 0 0;
+    color: #0f172a;
+    font-size: 18px;
+}
+
+.edge-app-flow-shell .edge-flow-timeline {
+    min-height: 86px;
+}
+
+.edge-app-flow-shell .edge-flow-timeline span {
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
+}
+
+.edge-app-flow-shell .edge-flow-timeline b {
+    max-width: 92px;
+    white-space: normal;
+    text-align: center;
+}
+
+@media (max-width: 1320px) {
+    .edge-app-layout {
+        grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+    }
+
+    .edge-app-info {
+        grid-column: 1 / -1;
+    }
+
+    .edge-app-flow-shell {
+        grid-column: auto;
+    }
+
+    .edge-app-process-steps {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 980px) {
+    .edge-app-layout,
+    .edge-app-stage-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .edge-app-process-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .edge-app-stage-controls,
+    .edge-app-progress-row {
+        grid-template-columns: 1fr;
+    }
+
+    .edge-app-canvas-wrap,
+    .edge-app-canvas-wrap canvas {
+        max-height: none;
     }
 }

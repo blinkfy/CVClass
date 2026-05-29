@@ -28,6 +28,7 @@
         <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
         <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
         <a class="is-active" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
     </nav>
 
     <section class="edge-layout edge-teed-layout">
@@ -77,37 +78,64 @@
 
                 <section class="edge-teed-visual-stage">
                     <div class="edge-teed-original-card">
-                        <span class="section-label">Original</span>
-                        <img id="edgeTeedOriginal" alt="TEED 输入图像">
+                        <span class="section-label" id="edgeTeedTopPreviewLabel">Result Preview</span>
+                        <div id="edgeTeedTopPreview" class="edge-teed-top-preview">
+                            <img id="edgeTeedOriginal" alt="TEED 输出结果预览">
+                        </div>
                     </div>
                     <div class="edge-teed-network" aria-label="TEED 网络流程示意">
-                        <div class="edge-teed-network-row" data-flow-row="main">
-                            <span data-flow-key="original">Original</span>
-                            <i data-flow-line="main-1"></i>
-                            <span data-flow-key="stage1_feature">Stage1 Feature</span>
-                            <i data-flow-line="main-2"></i>
-                            <span data-flow-key="stage2_feature">Stage2 Feature</span>
-                            <i data-flow-line="main-3"></i>
-                            <span data-flow-key="stage3_feature">Stage3 Feature</span>
-                        </div>
-                        <div class="edge-teed-network-row edge-teed-side-row" data-flow-row="side">
-                            <span data-flow-key="side1">Side1</span>
-                            <i data-flow-line="side-1"></i>
-                            <span data-flow-key="side2">Side2</span>
-                            <i data-flow-line="side-2"></i>
-                            <span data-flow-key="side3">Side3</span>
-                            <i data-flow-line="side-3"></i>
-                            <span data-flow-key="fuse">Fusion</span>
-                        </div>
-                        <div class="edge-teed-branch-lines" aria-hidden="true">
-                            <i data-flow-line="branch-1"></i>
-                            <i data-flow-line="branch-2"></i>
-                            <i data-flow-line="branch-3"></i>
-                        </div>
-                        <div class="edge-teed-fusion-lines" aria-hidden="true">
-                            <i data-flow-line="fusion-1"></i>
-                            <i data-flow-line="fusion-2"></i>
-                            <i data-flow-line="fusion-3"></i>
+                        <div class="edge-teed-graph" aria-hidden="false">
+                            <article class="edge-teed-node edge-teed-node-original" data-flow-key="original">
+                                <div class="edge-teed-node-thumb"><img id="edgeTeedNetworkOriginal" alt="TEED 网络输入图像"></div>
+                                <strong>Original</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-1" data-flow-line="main-1"></i>
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-1" data-flow-key="stage1_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage1<br>Feature</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-2" data-flow-line="main-2"></i>
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-2" data-flow-key="stage2_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage2<br>Feature</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-main edge-teed-line-main-3" data-flow-line="main-3"></i>
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-3" data-flow-key="stage3_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage3<br>Feature</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-1" data-flow-line="branch-1"></i>
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-1" data-flow-key="side1">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side1</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-2" data-flow-line="branch-2"></i>
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-2" data-flow-key="side2">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side2</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-branch edge-teed-line-branch-3" data-flow-line="branch-3"></i>
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-3" data-flow-key="side3">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side3</strong>
+                            </article>
+
+                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-1" data-flow-line="side-1"></i>
+                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-2" data-flow-line="side-2"></i>
+                            <i class="edge-teed-line edge-teed-line-side edge-teed-line-side-3" data-flow-line="side-3"></i>
+                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-1" data-flow-line="fusion-1"></i>
+                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-2" data-flow-line="fusion-2"></i>
+                            <i class="edge-teed-line edge-teed-line-fusion edge-teed-line-fusion-3" data-flow-line="fusion-3"></i>
+                            <article class="edge-teed-node edge-teed-node-fusion" data-flow-key="fuse">
+                                <span class="edge-teed-fusion-icon"><b></b><b></b><b></b></span>
+                                <strong>Fusion<br>/ Final Edge</strong>
+                            </article>
                         </div>
                     </div>
                 </section>

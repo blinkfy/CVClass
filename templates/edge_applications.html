@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}第四节：边缘检测应用实践{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/edge_detection.css') }}">
+{% endblock %}
+
+{% block content %}
+<section
+    id="edgeApplicationsPage"
+    class="edge-page edge-app-page"
+    data-assets-base="{{ url_for('static', filename='assets/img/') }}"
+>
+    <header class="edge-hero">
+        <div>
+            <span class="section-label">Lesson 04 · Edge Detection</span>
+            <h1>图像边缘检测过程可视化系统</h1>
+            <p>展示边缘图如何继续用于轮廓提取、Hough 直线检测和 Hough 圆检测。</p>
+        </div>
+        <strong>LESSON 04 · EDGE DETECTION</strong>
+    </header>
+
+    <nav class="edge-tabs" aria-label="边缘检测实验模块">
+        <a href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a class="is-active" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
+    </nav>
+
+    <section class="edge-layout edge-app-layout">
+        <aside class="edge-panel edge-controls edge-app-controls" aria-label="应用实践参数">
+            <div>
+                <span class="section-label">Edge Applications</span>
+                <h2>应用参数</h2>
+            </div>
+
+            <div class="edge-app-control-section">
+                <strong>1. 图片输入</strong>
+                <label class="edge-upload">
+                    <input id="edgeAppImageInput" type="file" accept="image/*">
+                    <span>上传图片</span>
+                    <small id="edgeAppImageName">当前使用示例图像</small>
+                </label>
+                <div class="edge-samples" id="edgeAppSamples" aria-label="应用实践示例图片"></div>
+            </div>
+
+            <div class="edge-control-group edge-app-control-section">
+                <strong>2. Edge Source / 边缘来源</strong>
+                <label>
+                    <select id="edgeAppSource">
+                        <option value="sobel">Sobel</option>
+                        <option value="canny">Canny</option>
+                        <option value="teed">TEED</option>
+                        <option value="current">当前前端边缘图</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="edge-control-group edge-app-control-section">
+                <strong>3. Application Mode / 应用模式</strong>
+                <label>
+                    <select id="edgeAppMode">
+                        <option value="contour">轮廓提取</option>
+                        <option value="line">Hough 直线检测</option>
+                        <option value="circle">Hough 圆检测</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="edge-app-param-panel" data-mode-panel="contour">
+                <strong>4. 参数区（Contour）</strong>
+                <label>edge threshold <strong id="edgeAppContourThresholdValue">96</strong>
+                    <input id="edgeAppContourThreshold" type="range" min="20" max="220" value="96">
+                </label>
+                <label>min contour size <strong id="edgeAppMinContourValue">28</strong>
+                    <input id="edgeAppMinContour" type="range" min="4" max="260" value="28">
+                </label>
+                <label>connectivity
+                    <select id="edgeAppConnectivity">
+                        <option value="8">8 邻域</option>
+                        <option value="4">4 邻域</option>
+                    </select>
+                </label>
+                <label class="edge-check"><input id="edgeAppShowBox" type="checkbox" checked><span>show bounding box</span></label>
+                <label class="edge-check"><input id="edgeAppShowId" type="checkbox" checked><span>show contour id</span></label>
+            </div>
+
+            <div class="edge-app-param-panel" data-mode-panel="line" hidden>
+                <strong>4. 参数区（Hough Line）</strong>
+                <label>theta step
+                    <select id="edgeAppThetaStep">
+                        <option value="1">1°</option>
+                        <option value="2" selected>2°</option>
+                        <option value="5">5°</option>
+                    </select>
+                </label>
+                <label>rho resolution
+                    <select id="edgeAppRhoRes">
+                        <option value="1">1 px</option>
+                        <option value="2" selected>2 px</option>
+                        <option value="4">4 px</option>
+                    </select>
+                </label>
+                <label>vote threshold <strong id="edgeAppLineVoteValue">46</strong>
+                    <input id="edgeAppLineVote" type="range" min="8" max="160" value="46">
+                </label>
+                <label>max lines <strong id="edgeAppMaxLinesValue">8</strong>
+                    <input id="edgeAppMaxLines" type="range" min="1" max="24" value="8">
+                </label>
+                <label class="edge-check"><input id="edgeAppShowAccumulator" type="checkbox" checked><span>show accumulator</span></label>
+            </div>
+
+            <div class="edge-app-param-panel" data-mode-panel="circle" hidden>
+                <strong>4. 参数区（Hough Circle）</strong>
+                <label>radius min <strong id="edgeAppRadiusMinValue">18</strong>
+                    <input id="edgeAppRadiusMin" type="range" min="8" max="120" value="18">
+                </label>
+                <label>radius max <strong id="edgeAppRadiusMaxValue">62</strong>
+                    <input id="edgeAppRadiusMax" type="range" min="12" max="180" value="62">
+                </label>
+                <label>radius step
+                    <select id="edgeAppRadiusStep">
+                        <option value="2">2 px</option>
+                        <option value="4" selected>4 px</option>
+                        <option value="8">8 px</option>
+                    </select>
+                </label>
+                <label>vote threshold <strong id="edgeAppCircleVoteValue">18</strong>
+                    <input id="edgeAppCircleVote" type="range" min="4" max="80" value="18">
+                </label>
+                <label>max circles <strong id="edgeAppMaxCirclesValue">6</strong>
+                    <input id="edgeAppMaxCircles" type="range" min="1" max="16" value="6">
+                </label>
+            </div>
+
+            <div class="edge-control-group edge-app-control-section">
+                <strong>5. 性能选项</strong>
+                <label>演示分辨率
+                    <select id="edgeAppResolution">
+                        <option value="256">256</option>
+                        <option value="384" selected>384</option>
+                        <option value="512">512</option>
+                    </select>
+                </label>
+                <label class="edge-check"><input id="edgeAppWorkerHint" type="checkbox" checked><span>使用 Web Worker</span></label>
+                <label>动画播放速度
+                    <select id="edgeAppSpeed">
+                        <option value="slow">慢</option>
+                        <option value="medium" selected>中</option>
+                        <option value="fast">快</option>
+                    </select>
+                </label>
+                <div class="edge-play-controls edge-app-play-controls">
+                    <button id="edgeAppStart" class="edge-primary" type="button">开始演示</button>
+                    <button id="edgeAppPlay" type="button">Play</button>
+                    <button id="edgeAppStep" type="button">Step</button>
+                    <button id="edgeAppReset" type="button">Reset</button>
+                </div>
+            </div>
+
+            <div id="edgeAppStatus" class="edge-status edge-app-status">等待图像载入</div>
+        </aside>
+
+        <main class="edge-stage-wrap">
+            <section class="edge-panel edge-stage-card edge-app-stage-card">
+                <div class="edge-stage-head">
+                    <div>
+                        <span class="section-label">EDGE APPLICATIONS</span>
+                        <h2>边缘检测应用可视化</h2>
+                        <p class="edge-app-subtitle">原图 → 灰度图 → 边缘图 → 轮廓 / Hough 投票 → 几何结构检测 → 结果叠加</p>
+                    </div>
+                    <div class="edge-app-mode-pill" id="edgeAppModePill">当前模式：轮廓提取</div>
+                </div>
+
+                <section class="edge-app-stage-grid" aria-label="应用实践演示舞台">
+                    <article class="edge-app-view-card" data-stage-card="source">
+                        <header><strong id="edgeAppPanelA">Original</strong><span>01</span></header>
+                        <div class="edge-app-canvas-wrap"><canvas id="edgeAppCanvasA"></canvas></div>
+                    </article>
+                    <article class="edge-app-view-card" data-stage-card="middle">
+                        <header><strong id="edgeAppPanelB">Edge Map</strong><span>02</span></header>
+                        <div class="edge-app-canvas-wrap"><canvas id="edgeAppCanvasB"></canvas></div>
+                    </article>
+                    <article class="edge-app-view-card" data-stage-card="overlay">
+                        <header><strong id="edgeAppPanelC">Contour Overlay</strong><span>03</span></header>
+                        <div class="edge-app-canvas-wrap"><canvas id="edgeAppCanvasC"></canvas></div>
+                    </article>
+                </section>
+
+                <section class="edge-app-process-card">
+                    <strong>动画过程</strong>
+                    <div id="edgeAppProcessSteps" class="edge-app-process-steps"></div>
+                    <div class="edge-app-progress-row">
+                        <span id="edgeAppProgress">Image → Gray → Edge Map</span>
+                        <meter id="edgeAppMeter" min="0" max="100" value="0"></meter>
+                        <b id="edgeAppPercent">0%</b>
+                    </div>
+                    <div class="edge-play-controls edge-app-stage-controls">
+                        <button id="edgeAppStagePlay" type="button">Play</button>
+                        <button id="edgeAppStagePause" type="button">Pause</button>
+                        <button id="edgeAppStageStep" type="button">Step</button>
+                        <button id="edgeAppStageReset" type="button">Reset</button>
+                        <label>Speed
+                            <select id="edgeAppStageSpeed">
+                                <option value="slow">0.5x</option>
+                                <option value="medium" selected>1x</option>
+                                <option value="fast">2x</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+            </section>
+
+            <section class="edge-panel edge-app-flow-shell">
+                <div>
+                    <span class="section-label">Application Flow</span>
+                    <h2>应用流程总览</h2>
+                </div>
+                <ol id="edgeAppTimeline" class="edge-flow-timeline edge-app-flow-timeline" aria-label="Application Flow 时间线"></ol>
+            </section>
+        </main>
+
+        <aside class="edge-panel edge-info edge-app-info" aria-label="应用实践过程说明">
+            <div>
+                <span class="section-label">Process Notes</span>
+                <h2 id="edgeAppInfoTitle">当前过程</h2>
+            </div>
+            <p id="edgeAppInfoText">边缘点可以继续组织成轮廓，也可以在 Hough 参数空间中投票形成几何结构。</p>
+
+            <article class="edge-app-note-card">
+                <strong>FORMULA / 公式</strong>
+                <div id="edgeAppFormula" class="edge-app-formula">Connected Components by 8-neighborhood</div>
+            </article>
+
+            <article class="edge-app-note-card">
+                <strong>STATS / 统计</strong>
+                <dl id="edgeAppStats" class="edge-app-stats"></dl>
+            </article>
+
+            <article class="edge-boundary-card">
+                <strong>CODE BOUNDARY / 代码边界</strong>
+                <p>本应用页主要使用前端 Canvas / JavaScript 完成边缘图后处理、轮廓提取和 Hough 投票过程。Sobel / Canny 核心算法仍属于第四节传统边缘检测主线，TEED 为深度学习拓展展示。</p>
+            </article>
+            <div class="edge-app-runtime-badges">
+                <span>Web Worker: ON</span>
+                <span>分辨率：<b id="edgeAppResolutionBadge">384 px</b></span>
+            </div>
+        </aside>
+    </section>
+
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/edge_applications.js') }}"></script>
+{% endblock %}

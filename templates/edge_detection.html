@@ -37,6 +37,7 @@
         <a class="{{ 'is-active' if edge_mode == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
         <a class="{{ 'is-active' if edge_mode == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
         <a class="{{ 'is-active' if edge_mode == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a class="{{ 'is-active' if edge_mode == 'applications' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
     </nav>
 
     <section class="edge-layout">
