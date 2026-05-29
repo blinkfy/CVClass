@@ -1,6 +1,6 @@
 {
-  "grayscale": "backend",
-  "image_convolution": "backend",
-  "edge_detection": "backend",
+  "grayscale": "frontend",
+  "image_convolution": "frontend",
+  "edge_detection": "frontend",
   "digit_recognition": "frontend"
 }

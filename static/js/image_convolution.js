@@ -1,4 +1,4 @@
-const imageConvEls = {
+﻿const imageConvEls = {
     template: document.getElementById("imageKernelTemplate"),
     kernelSize: document.getElementById("imageKernelSize"),
     padding: document.getElementById("imageConvPadding"),
@@ -560,6 +560,9 @@ async function applyImageConvolution() {
         syncSliderSources();
         imageConvEls.size.textContent = `${result.width} × ${result.height}`;
         imageConvEls.message.textContent = "卷积完成。";
+        if (!useBackend && currentViewMode === "side") {
+            setViewMode("result");
+        }
         if (currentViewMode === "slider" && imageConvEls.sliderRange) {
             imageConvEls.sliderRange.value = "50";
             updateSliderMask();

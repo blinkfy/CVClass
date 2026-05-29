@@ -6,6 +6,11 @@
 
     const basePath = window.CVCLASS_BASE_PATH || "";
     const assetsBase = root.dataset.assetsBase || "";
+    const teedModelUrl = root.dataset.teedModelUrl || `${basePath}/static/assets/data/teed_debug_352.onnx`;
+    const ortScriptUrl = root.dataset.ortScriptUrl || `${basePath}/static/vendor/onnxruntime-web/ort.min.js`;
+    const ortWasmBase = root.dataset.ortWasmBase || `${basePath}/static/vendor/onnxruntime-web/`;
+    const teedInputSize = 352;
+    const teedBgrMean = [104.00699, 116.66877, 122.67892];
     const samples = [
         { file: "cameraman.png", label: "Cameraman" },
         { file: "house.png", label: "House" },
@@ -15,7 +20,7 @@
     ];
 
     const compareTimeline = ["算子分类", "一阶导数 / 二阶导数 / Canny", "结果对比"];
-    const compareMethods = ["roberts", "sobel", "prewitt", "kirsch", "laplacian", "LoG", "canny"];
+    const compareMethods = ["roberts", "sobel", "prewitt", "kirsch", "laplacian", "LoG", "canny", "teed"];
     const kernelTimeline = ["Image", "Gray", "Kernel Response", "Magnitude", "Threshold", "Final"];
     const cannyTimeline = ["Image", "Gray", "Gaussian Blur", "Gradient", "Direction", "NMS", "Double Threshold", "Hysteresis"];
 
@@ -28,7 +33,8 @@
         laplacian: "Laplacian",
         LoG: "LoG / Marr",
         scharr: "Scharr",
-        canny: "Canny"
+        canny: "Canny",
+        teed: "TEED"
     };
 
     const processNoteImages = {
@@ -106,6 +112,15 @@
             cons: "参数较多，流程不如单个卷积核直观。",
             best_for: "高质量边缘提取、完整检测流水线演示。"
         }
+    };
+
+    methodInfo.teed = {
+        name: "TEED",
+        category: "深度学习检测",
+        summary: "轻量深度学习边缘检测模型，通过多层特征和融合输出预测边缘。",
+        pros: "能利用语义和多尺度特征，轮廓更整体。",
+        cons: "依赖 ONNX 模型和浏览器运行时，不属于本实验手写算法核心。",
+        best_for: "传统算子与深度学习边缘检测效果对比。"
     };
 
     const edgeKernels = {
@@ -312,6 +327,7 @@
         infoTitle: document.getElementById("edgeInfoTitle"),
         infoText: document.getElementById("edgeInfoText"),
         processNoteImage: document.getElementById("edgeProcessNoteImage"),
+        processNoteImageWrap: root.querySelector(".edge-process-note-image"),
         formula: document.getElementById("edgeFormula"),
         liveLogic: document.getElementById("edgeLiveLogic"),
         kernelBox: document.getElementById("edgeKernelBox"),
@@ -332,6 +348,8 @@
         comparePreview: null,
         compareLoading: false,
         compareLoadingMethods: [],
+        compareRefreshMethods: [],
+        compareRefreshId: 0,
         stepIndex: 0,
         timelineIndex: 0,
         timer: null,
@@ -395,6 +413,10 @@
 
     function updateProcessNoteImage(method) {
         if (!els.processNoteImage) return;
+        if (els.processNoteImageWrap) {
+            els.processNoteImageWrap.hidden = state.tab !== "compare";
+        }
+        if (state.tab !== "compare") return;
         const normalized = method === "original" ? "sobel" : method;
         const file = processNoteImages[normalized] || processNoteImages.sobel;
         const label = methodLabels[normalized] || methodLabels.sobel;
@@ -597,6 +619,66 @@
         }, 180);
     }
 
+    function compareDerivativeMethods() {
+        return compareMethods.filter((method) => method !== "teed" && method !== "canny");
+    }
+
+    function scheduleCompareMethodRefresh(methods) {
+        if (state.tab !== "compare") {
+            scheduleRefresh(state.tab);
+            return;
+        }
+        const nextMethods = new Set(state.compareRefreshMethods || []);
+        methods.forEach((method) => {
+            if (compareMethods.includes(method) && method !== "original" && method !== "teed") {
+                nextMethods.add(method);
+            }
+        });
+        state.compareRefreshMethods = Array.from(nextMethods);
+        if (state.refreshTimer) {
+            window.clearTimeout(state.refreshTimer);
+        }
+        state.refreshTimer = window.setTimeout(() => {
+            const refreshMethods = state.compareRefreshMethods.slice();
+            state.compareRefreshMethods = [];
+            state.refreshTimer = null;
+            requestCompareMethods(refreshMethods);
+        }, 180);
+    }
+
+    function mergeCompareResults(results, fallback = {}) {
+        if (!results.length) return;
+        const sourceData = state.data || {
+            original: state.comparePreview?.original || fallback.original || null,
+            info: fallback.info || {},
+            compare: []
+        };
+        const byMethod = new Map((sourceData.compare || []).map((item) => [item.method, item]));
+        Object.values(state.comparePreview?.results || {}).forEach((item) => {
+            if (item?.method) byMethod.set(item.method, item);
+        });
+        results.forEach((item) => {
+            if (item?.method) byMethod.set(item.method, item);
+        });
+        const compare = compareMethods
+            .filter((method) => method !== "original")
+            .map((method) => byMethod.get(method))
+            .filter(Boolean);
+        state.data = {
+            ...sourceData,
+            original: fallback.original || sourceData.original,
+            info: fallback.info || sourceData.info,
+            compare,
+            gray: compare[0]?.steps?.[0]?.image || sourceData.gray || fallback.original || sourceData.original,
+            final: compare[0]?.final || sourceData.final || fallback.original || sourceData.original,
+            elapsed_ms: fallback.elapsed_ms ?? sourceData.elapsed_ms
+        };
+    }
+
+    function yieldToBrowser() {
+        return new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
     function readFileAsDataUrl(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -695,6 +777,406 @@
         }
         context.putImageData(imageData, 0, 0);
         return canvasToPng(canvas);
+    }
+
+    const edgeTeedRuntime = {
+        session: null,
+        loading: null,
+        scriptLoads: Object.create(null)
+    };
+
+    function loadEdgeTeedScript(src) {
+        if (window.ort) return Promise.resolve();
+        if (edgeTeedRuntime.scriptLoads[src]) return edgeTeedRuntime.scriptLoads[src];
+        edgeTeedRuntime.scriptLoads[src] = new Promise((resolve, reject) => {
+            const existing = Array.from(document.scripts).find((script) => script.src === src);
+            if (existing) {
+                existing.addEventListener("load", () => resolve(), { once: true });
+                existing.addEventListener("error", () => reject(new Error("ONNX Runtime 脚本加载失败")), { once: true });
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("ONNX Runtime 脚本加载失败"));
+            document.head.appendChild(script);
+        });
+        return edgeTeedRuntime.scriptLoads[src];
+    }
+
+    async function loadEdgeTeedModel() {
+        if (edgeTeedRuntime.session) return edgeTeedRuntime.session;
+        if (edgeTeedRuntime.loading) return edgeTeedRuntime.loading;
+        edgeTeedRuntime.loading = (async () => {
+            await loadEdgeTeedScript(ortScriptUrl);
+            if (!window.ort?.InferenceSession || !window.ort?.Tensor) {
+                throw new Error("ONNX Runtime 未就绪，无法运行 TEED");
+            }
+            const wasmEnv = window.ort.env?.wasm;
+            if (wasmEnv) {
+                wasmEnv.wasmPaths = ortWasmBase;
+                wasmEnv.numThreads = 1;
+            }
+            const session = await window.ort.InferenceSession.create(teedModelUrl, {
+                executionProviders: ["wasm"],
+                graphOptimizationLevel: "all"
+            });
+            edgeTeedRuntime.session = session;
+            return session;
+        })();
+        try {
+            return await edgeTeedRuntime.loading;
+        } finally {
+            edgeTeedRuntime.loading = null;
+        }
+    }
+
+    function imageToEdgeTeedTensor(image, size = teedInputSize) {
+        const sourceW = image.naturalWidth || image.width || size;
+        const sourceH = image.naturalHeight || image.height || size;
+        const scale = Math.min(size / sourceW, size / sourceH);
+        const drawWidth = Math.max(1, Math.round(sourceW * scale));
+        const drawHeight = Math.max(1, Math.round(sourceH * scale));
+        const offsetX = Math.floor((size - drawWidth) / 2);
+        const offsetY = Math.floor((size - drawHeight) / 2);
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, size, size);
+        context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+        const rgba = context.getImageData(0, 0, size, size).data;
+        const data = new Float32Array(3 * size * size);
+        const plane = size * size;
+        for (let i = 0; i < plane; i += 1) {
+            data[i] = rgba[i * 4 + 2] - teedBgrMean[0];
+            data[plane + i] = rgba[i * 4 + 1] - teedBgrMean[1];
+            data[plane * 2 + i] = rgba[i * 4] - teedBgrMean[2];
+        }
+        return {
+            tensor: new window.ort.Tensor("float32", data, [1, 3, size, size]),
+            fit: { size, sourceW, sourceH, drawWidth, drawHeight, offsetX, offsetY }
+        };
+    }
+
+    function firstExistingTeedOutput(results, names) {
+        for (const name of names) {
+            if (results?.[name]) return results[name];
+        }
+        return null;
+    }
+
+    function edgeTeedTensorFromCanvas(canvas, size = teedInputSize) {
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        const rgba = context.getImageData(0, 0, size, size).data;
+        const data = new Float32Array(3 * size * size);
+        const plane = size * size;
+        for (let i = 0; i < plane; i += 1) {
+            data[i] = rgba[i * 4 + 2] - teedBgrMean[0];
+            data[plane + i] = rgba[i * 4 + 1] - teedBgrMean[1];
+            data[plane * 2 + i] = rgba[i * 4] - teedBgrMean[2];
+        }
+        return new window.ort.Tensor("float32", data, [1, 3, size, size]);
+    }
+
+    function edgeTeedTensorToProbabilityMap(tensor) {
+        const dims = tensor.dims || [];
+        const data = tensor.data || [];
+        const height = dims[dims.length - 2] || teedInputSize;
+        const width = dims[dims.length - 1] || teedInputSize;
+        const planeSize = width * height;
+        const offset = Math.max(0, data.length - planeSize);
+        const values = new Float32Array(planeSize);
+        for (let i = 0; i < planeSize; i += 1) {
+            values[i] = 1 / (1 + Math.exp(-(Number(data[offset + i]) || 0)));
+        }
+        return { width, height, values };
+    }
+
+    function edgeTeedResizeProbabilityMap(map, sx, sy, sw, sh, targetWidth, targetHeight) {
+        const source = document.createElement("canvas");
+        source.width = map.width;
+        source.height = map.height;
+        const sourceContext = source.getContext("2d");
+        const sourceData = sourceContext.createImageData(map.width, map.height);
+        for (let i = 0; i < map.values.length; i += 1) {
+            const byte = clipByte(map.values[i] * 255);
+            sourceData.data[i * 4] = byte;
+            sourceData.data[i * 4 + 1] = byte;
+            sourceData.data[i * 4 + 2] = byte;
+            sourceData.data[i * 4 + 3] = 255;
+        }
+        sourceContext.putImageData(sourceData, 0, 0);
+        const target = document.createElement("canvas");
+        target.width = targetWidth;
+        target.height = targetHeight;
+        const targetContext = target.getContext("2d", { willReadFrequently: true });
+        targetContext.drawImage(source, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+        const rgba = targetContext.getImageData(0, 0, targetWidth, targetHeight).data;
+        const values = new Float32Array(targetWidth * targetHeight);
+        for (let i = 0; i < values.length; i += 1) values[i] = rgba[i * 4] / 255;
+        return values;
+    }
+
+    function edgeTeedFitProbabilityToSource(map, fit) {
+        const cropX = fit.offsetX / fit.size * map.width;
+        const cropY = fit.offsetY / fit.size * map.height;
+        const cropW = fit.drawWidth / fit.size * map.width;
+        const cropH = fit.drawHeight / fit.size * map.height;
+        return edgeTeedResizeProbabilityMap(map, cropX, cropY, cropW, cropH, fit.sourceW, fit.sourceH);
+    }
+
+    function edgeTeedGenerateTiles(width, height, size = teedInputSize, stride = 176) {
+        const positions = (length) => {
+            if (length <= size) return [0];
+            const items = [];
+            for (let value = 0; value <= length - size; value += stride) items.push(value);
+            const last = length - size;
+            if (items[items.length - 1] !== last) items.push(last);
+            return items;
+        };
+        const tiles = [];
+        positions(height).forEach((y) => {
+            positions(width).forEach((x) => {
+                tiles.push({ x, y, width: Math.min(size, width), height: Math.min(size, height) });
+            });
+        });
+        return tiles;
+    }
+
+    function edgeTeedHannWeights(width, height) {
+        const weights = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+            const wy = height <= 1 ? 1 : 0.5 - 0.5 * Math.cos((2 * Math.PI * y) / (height - 1));
+            for (let x = 0; x < width; x += 1) {
+                const wx = width <= 1 ? 1 : 0.5 - 0.5 * Math.cos((2 * Math.PI * x) / (width - 1));
+                weights[y * width + x] = Math.max(0.04, wx * wy);
+            }
+        }
+        return weights;
+    }
+
+    function edgeTeedTileTensor(image, tile, size = teedInputSize) {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(image, tile.x, tile.y, tile.width, tile.height, 0, 0, size, size);
+        return edgeTeedTensorFromCanvas(canvas, size);
+    }
+
+    function edgeTeedProbabilityCanvas(values, width, height, flashRect = null) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        const imageData = context.createImageData(width, height);
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < values.length; i += 1) {
+            min = Math.min(min, values[i]);
+            max = Math.max(max, values[i]);
+        }
+        for (let i = 0; i < values.length; i += 1) {
+            const normalized = max > min ? (values[i] - min) / (max - min) : values[i];
+            const byte = clipByte(normalized * 255);
+            imageData.data[i * 4] = byte;
+            imageData.data[i * 4 + 1] = byte;
+            imageData.data[i * 4 + 2] = byte;
+            imageData.data[i * 4 + 3] = 255;
+        }
+        context.putImageData(imageData, 0, 0);
+        if (flashRect) {
+            context.save();
+            context.fillStyle = "rgba(59, 130, 246, 0.14)";
+            context.strokeStyle = "rgba(37, 99, 235, 0.95)";
+            context.lineWidth = Math.max(2, Math.round(Math.min(width, height) / 160));
+            context.fillRect(flashRect.x, flashRect.y, flashRect.width, flashRect.height);
+            context.strokeRect(flashRect.x + 0.5, flashRect.y + 0.5, flashRect.width - 1, flashRect.height - 1);
+            context.restore();
+        }
+        return canvas;
+    }
+
+    function edgeTeedPipelineFromValues(values, width, height, elapsedMs, originalImage, progress = "", flashRect = null) {
+        const canvas = edgeTeedProbabilityCanvas(values, width, height, flashRect);
+        const final = canvasToPng(canvas);
+        const byteValues = new Uint8ClampedArray(values.length);
+        for (let i = 0; i < values.length; i += 1) byteValues[i] = clipByte(values[i] * 255);
+        return {
+            method: "teed",
+            info: { method: "teed", progress },
+            steps: [
+                { key: "gray", label: "Input", image: originalImage },
+                { key: "fusion", label: "Fusion", image: final },
+                { key: "final", label: "Final Edge", image: final }
+            ],
+            final,
+            edge_ratio: edgeRatioClient(byteValues),
+            stats: arrayStatsClient(byteValues),
+            elapsed_ms: Number(elapsedMs.toFixed(2))
+        };
+    }
+
+    function teedTensorToCanvas(tensor, fit, targetWidth, targetHeight, options = {}) {
+        const dims = tensor.dims || [];
+        const data = tensor.data || [];
+        const h = dims[dims.length - 2] || fit.size;
+        const w = dims[dims.length - 1] || fit.size;
+        const planeSize = h * w;
+        const offset = Math.max(0, data.length - planeSize);
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < planeSize; i += 1) {
+            const raw = Number(data[offset + i]) || 0;
+            const value = options.normalize ? raw : 1 / (1 + Math.exp(-raw));
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
+
+        const full = document.createElement("canvas");
+        full.width = w;
+        full.height = h;
+        const context = full.getContext("2d");
+        const imageData = context.createImageData(w, h);
+        const pixels = imageData.data;
+        const edgeValues = new Uint8ClampedArray(planeSize);
+        for (let i = 0; i < planeSize; i += 1) {
+            let value = Number(data[offset + i]) || 0;
+            if (options.normalize) {
+                value = max > min ? (value - min) / (max - min) : 0;
+            } else {
+                value = 1 / (1 + Math.exp(-value));
+                value = max > min ? (value - min) / (max - min) : value;
+            }
+            value = clamp(value, 0, 1);
+            if (options.invert) value = 1 - value;
+            const byte = clipByte(value * 255);
+            edgeValues[i] = byte;
+            const pixelOffset = i * 4;
+            pixels[pixelOffset] = byte;
+            pixels[pixelOffset + 1] = byte;
+            pixels[pixelOffset + 2] = byte;
+            pixels[pixelOffset + 3] = 255;
+        }
+        context.putImageData(imageData, 0, 0);
+
+        const output = document.createElement("canvas");
+        output.width = targetWidth;
+        output.height = targetHeight;
+        const outputContext = output.getContext("2d");
+        const cropX = fit.offsetX / fit.size * w;
+        const cropY = fit.offsetY / fit.size * h;
+        const cropW = fit.drawWidth / fit.size * w;
+        const cropH = fit.drawHeight / fit.size * h;
+        outputContext.drawImage(full, cropX, cropY, cropW, cropH, 0, 0, targetWidth, targetHeight);
+        const outputData = outputContext.getImageData(0, 0, targetWidth, targetHeight).data;
+        const values = new Uint8ClampedArray(targetWidth * targetHeight);
+        for (let i = 0; i < values.length; i += 1) {
+            values[i] = outputData[i * 4];
+        }
+        return {
+            canvas: output,
+            values,
+            edge_ratio: edgeRatioClient(values),
+            stats: arrayStatsClient(values)
+        };
+    }
+
+    async function edgeTeedClientPipeline(source, options = {}) {
+        const session = await loadEdgeTeedModel();
+        const image = await loadImageElement(source.original);
+        const startedAt = performance.now();
+        const inputName = session.inputNames?.[0] || "input";
+        const { tensor, fit } = imageToEdgeTeedTensor(image);
+        const results = await session.run({ [inputName]: tensor });
+        const fuse = firstExistingTeedOutput(results, ["fuse", "fusion", "final", "final_edge", "output"]);
+        if (!fuse) {
+            throw new Error("TEED Compare 只展示 fuse/final 输出，但当前模型未返回对应结果");
+        }
+        const globalEdge = edgeTeedFitProbabilityToSource(edgeTeedTensorToProbabilityMap(fuse), fit);
+        const edgeSum = new Float32Array(globalEdge.length);
+        const weightSum = new Float32Array(globalEdge.length);
+        const currentEdge = new Float32Array(globalEdge.length);
+        const globalWeight = 0.2;
+        const tileWeight = 0.8;
+        for (let i = 0; i < globalEdge.length; i += 1) {
+            edgeSum[i] = globalEdge[i] * globalWeight;
+            weightSum[i] = globalWeight;
+            currentEdge[i] = globalEdge[i];
+        }
+        let pipeline = edgeTeedPipelineFromValues(
+            currentEdge,
+            source.width,
+            source.height,
+            performance.now() - startedAt,
+            source.original,
+            "Global Pass"
+        );
+        if (options.onUpdate) {
+            options.onUpdate(pipeline, { phase: "global", done: 0, total: 0 });
+            await yieldToBrowser();
+        }
+        if (options.globalOnly) {
+            return pipeline;
+        }
+
+        const tiles = edgeTeedGenerateTiles(source.width, source.height, teedInputSize, 176);
+        const hannCache = new Map();
+        for (let tileIndex = 0; tileIndex < tiles.length; tileIndex += 1) {
+            const tile = tiles[tileIndex];
+            const tileTensor = edgeTeedTileTensor(image, tile, teedInputSize);
+            const tileResults = await session.run({ [inputName]: tileTensor });
+            const tileFuse = firstExistingTeedOutput(tileResults, ["fuse", "fusion", "final", "final_edge", "output"]);
+            if (!tileFuse) continue;
+            const tileEdge = edgeTeedResizeProbabilityMap(
+                edgeTeedTensorToProbabilityMap(tileFuse),
+                0,
+                0,
+                teedInputSize,
+                teedInputSize,
+                tile.width,
+                tile.height
+            );
+            const cacheKey = `${tile.width}x${tile.height}`;
+            if (!hannCache.has(cacheKey)) hannCache.set(cacheKey, edgeTeedHannWeights(tile.width, tile.height));
+            const weights = hannCache.get(cacheKey);
+            for (let y = 0; y < tile.height; y += 1) {
+                const sourceRow = (tile.y + y) * source.width;
+                const tileRow = y * tile.width;
+                for (let x = 0; x < tile.width; x += 1) {
+                    const sourceIndex = sourceRow + tile.x + x;
+                    const tileIndexInPatch = tileRow + x;
+                    const weighted = tileWeight * weights[tileIndexInPatch];
+                    edgeSum[sourceIndex] += tileEdge[tileIndexInPatch] * weighted;
+                    weightSum[sourceIndex] += weighted;
+                    currentEdge[sourceIndex] = edgeSum[sourceIndex] / weightSum[sourceIndex];
+                }
+            }
+            pipeline = edgeTeedPipelineFromValues(
+                currentEdge,
+                source.width,
+                source.height,
+                performance.now() - startedAt,
+                source.original,
+                `patch ${tileIndex + 1} / ${tiles.length}`,
+                tile
+            );
+            if (options.onUpdate) {
+                options.onUpdate(pipeline, { phase: "tile", done: tileIndex + 1, total: tiles.length, tile });
+                await yieldToBrowser();
+            }
+        }
+        return edgeTeedPipelineFromValues(
+            currentEdge,
+            source.width,
+            source.height,
+            performance.now() - startedAt,
+            source.original,
+            `patch ${tiles.length} / ${tiles.length}`
+        );
     }
 
     function convolveGray(values, width, height, kernel) {
@@ -1024,14 +1506,92 @@
         const source = await loadEdgeClientSource();
         if (requestId !== state.requestId) return;
         if (mode === "compare") {
+            const leftMethod = els.compareA?.value || "original";
+            const rightMethod = els.compareB?.value || "sobel";
+            const selectedMethods = Array.from(new Set([leftMethod, rightMethod].filter((method) => method !== "original")));
+            const quickMethods = selectedMethods;
+            const shouldRunTeedRefine = compareMethods.includes("teed");
+            const resultsByMethod = {};
+            const handleTeedUpdate = (pipeline, progress) => {
+                if (requestId !== state.requestId || state.tab !== "compare") return;
+                resultsByMethod.teed = pipeline;
+                state.comparePreview.results.teed = pipeline;
+                state.compareLoadingMethods = compareMethods.filter((item) => (
+                    item !== "original" && (!resultsByMethod[item] || (item === "teed" && progress))
+                ));
+                render();
+                if (progress?.phase === "tile") {
+                    els.status.textContent = `TEED Progressive Refine: patch ${progress.done} / ${progress.total}`;
+                } else {
+                    els.status.textContent = "TEED Global Pass 已显示，正在逐块细化...";
+                }
+            };
+            const runCompareMethod = async (method, options = {}) => {
+                const methodStart = performance.now();
+                const pipeline = method === "teed"
+                    ? await edgeTeedClientPipeline(
+                        source,
+                        options.globalOnly ? { globalOnly: true } : { onUpdate: handleTeedUpdate }
+                    )
+                    : edgeClientPipeline(source, "compare", method, false);
+                return {
+                    ...pipeline,
+                    elapsed_ms: Number((performance.now() - methodStart).toFixed(2))
+                };
+            };
+
             state.compareLoading = true;
-            state.comparePreview = null;
+            state.comparePreview = { original: source.original, results: {} };
             state.compareLoadingMethods = compareMethods.filter((method) => method !== "original");
             render();
-            const compare = compareMethods.map((method) => ({
-                ...edgeClientPipeline(source, "compare", method, false),
-                elapsed_ms: 0
-            }));
+            await yieldToBrowser();
+            if (requestId !== state.requestId || state.tab !== "compare") return;
+
+            for (const method of quickMethods) {
+                const result = await runCompareMethod(method, { globalOnly: method === "teed" });
+                resultsByMethod[method] = result;
+                state.comparePreview.results[method] = result;
+            }
+            state.compareLoadingMethods = compareMethods.filter((method) => (
+                method !== "original" && (!resultsByMethod[method] || (method === "teed" && shouldRunTeedRefine))
+            ));
+            state.stepIndex = 0;
+            state.timelineIndex = 0;
+            render();
+            setReady(quickMethods.length ? "主对比已更新，正在计算对比列表..." : "正在计算传统/Canny 对比列表...");
+            await yieldToBrowser();
+            if (requestId !== state.requestId || state.tab !== "compare") return;
+
+            for (const method of compareMethods) {
+                if (method === "original" || method === "teed" || resultsByMethod[method]) continue;
+                const result = await runCompareMethod(method);
+                resultsByMethod[method] = result;
+                state.comparePreview.results[method] = result;
+                state.compareLoadingMethods = compareMethods.filter((item) => (
+                    item !== "original" && (!resultsByMethod[item] || (item === "teed" && shouldRunTeedRefine))
+                ));
+                render();
+                await yieldToBrowser();
+                if (requestId !== state.requestId || state.tab !== "compare") return;
+            }
+
+            if (compareMethods.includes("teed")) {
+                setReady("传统/Canny 对比已完成，开始 TEED 滑动窗口...");
+                await yieldToBrowser();
+                if (requestId !== state.requestId || state.tab !== "compare") return;
+                const result = await runCompareMethod("teed");
+                resultsByMethod.teed = result;
+                state.comparePreview.results.teed = result;
+                state.compareLoadingMethods = compareMethods.filter((item) => !resultsByMethod[item] && item !== "original");
+                render();
+                await yieldToBrowser();
+                if (requestId !== state.requestId || state.tab !== "compare") return;
+            }
+
+            const compare = compareMethods
+                .filter((method) => method !== "original")
+                .map((method) => resultsByMethod[method])
+                .filter(Boolean);
             state.data = {
                 original: source.original,
                 info: source.info,
@@ -1046,7 +1606,7 @@
             state.stepIndex = 0;
             state.timelineIndex = 0;
             render();
-            setReady(`处理完成：${source.info.filename}，${source.info.width} × ${source.info.height}，浏览器计算耗时 ${state.data.elapsed_ms} ms`);
+            setReady(`处理完成：${source.info.filename}，${source.info.width} × ${source.info.height}，计算耗时 ${state.data.elapsed_ms} ms`);
             return;
         }
         const pipeline = edgeClientPipeline(source, mode, mode === "canny" ? "canny" : currentMethod(), true);
@@ -1075,7 +1635,83 @@
             state.timelineIndex = 0;
         }
         render();
-        setReady(`处理完成：${data.info.filename}，${data.info.width} × ${data.info.height}，浏览器计算耗时 ${data.elapsed_ms} ms`);
+        setReady(`处理完成：${data.info.filename}，${data.info.width} × ${data.info.height}，计算耗时 ${data.elapsed_ms} ms`);
+    }
+
+    async function requestCompareMethods(methods) {
+        const targetMethods = Array.from(new Set(methods))
+            .filter((method) => compareMethods.includes(method) && method !== "original" && method !== "teed");
+        if (!targetMethods.length) return;
+        if (!state.data && !state.comparePreview) {
+            requestEdge("compare");
+            return;
+        }
+
+        const baseRequestId = state.requestId;
+        const refreshId = ++state.compareRefreshId;
+        state.compareLoading = true;
+        state.compareLoadingMethods = Array.from(new Set([
+            ...(state.compareLoadingMethods || []),
+            ...targetMethods
+        ]));
+        render();
+        setLoading(`正在更新：${targetMethods.map((method) => methodLabels[method] || method).join(" / ")}`);
+
+        try {
+            let results = [];
+            let fallback = {};
+            if (computeMode("edge_detection") === "frontend") {
+                const source = await loadEdgeClientSource();
+                fallback = {
+                    original: source.original,
+                    info: source.info
+                };
+                results = targetMethods.map((method) => {
+                    const methodStart = performance.now();
+                    const pipeline = edgeClientPipeline(source, "compare", method, false);
+                    return {
+                        ...pipeline,
+                        elapsed_ms: Number((performance.now() - methodStart).toFixed(2))
+                    };
+                });
+                fallback.elapsed_ms = results.reduce((sum, item) => sum + (item.elapsed_ms || 0), 0);
+            } else {
+                const formData = buildForm("compare");
+                formData.set("methods", targetMethods.join(","));
+                const response = await fetch(endpoint("/api/edge-detect"), {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || "边缘检测失败");
+                }
+                results = data.compare || [];
+                fallback = {
+                    original: data.original,
+                    info: data.info,
+                    elapsed_ms: data.elapsed_ms
+                };
+            }
+
+            if (baseRequestId !== state.requestId || refreshId !== state.compareRefreshId || state.tab !== "compare") return;
+            mergeCompareResults(results, fallback);
+            state.compareLoadingMethods = (state.compareLoadingMethods || []).filter((method) => !targetMethods.includes(method));
+            state.compareLoading = state.compareLoadingMethods.length > 0;
+            if (!state.compareLoading) {
+                state.comparePreview = null;
+            }
+            state.stepIndex = 0;
+            state.timelineIndex = 0;
+            render();
+            setReady(`已更新：${targetMethods.map((method) => methodLabels[method] || method).join(" / ")}`);
+        } catch (error) {
+            if (baseRequestId !== state.requestId || refreshId !== state.compareRefreshId || state.tab !== "compare") return;
+            state.compareLoadingMethods = (state.compareLoadingMethods || []).filter((method) => !targetMethods.includes(method));
+            state.compareLoading = state.compareLoadingMethods.length > 0;
+            render();
+            setReady(error.message || "局部更新失败");
+        }
     }
 
     async function requestEdge(mode) {
@@ -1094,7 +1730,7 @@
         state.tab = mode;
         const requestId = ++state.requestId;
         setLoading(computeMode("edge_detection") === "frontend"
-            ? "正在使用浏览器计算边缘检测结果..."
+            ? "正在计算边缘检测结果..."
             : "正在调用后端手写 NumPy 边缘检测函数...");
         if (computeMode("edge_detection") === "frontend") {
             try {
@@ -1113,7 +1749,53 @@
         if (mode === "compare") {
             const leftMethod = els.compareA?.value || "original";
             const rightMethod = els.compareB?.value || "sobel";
-            const quickMethods = Array.from(new Set([leftMethod, rightMethod].filter((method) => method !== "original")));
+            const selectedMethods = Array.from(new Set([leftMethod, rightMethod].filter((method) => method !== "original")));
+            const backendQuickMethods = selectedMethods.filter((method) => method !== "teed");
+            const selectedHasTeed = selectedMethods.includes("teed");
+            let clientSourcePromise = null;
+            const getClientSource = () => {
+                if (!clientSourcePromise) clientSourcePromise = loadEdgeClientSource();
+                return clientSourcePromise;
+            };
+            const runTeedCompare = async (options = {}) => {
+                const methodStart = performance.now();
+                const source = await getClientSource();
+                const pipeline = await edgeTeedClientPipeline(
+                    source,
+                    options.globalOnly ? { globalOnly: true } : {
+                        onUpdate: (partial, progress) => {
+                            if (requestId !== state.requestId || state.tab !== "compare") return;
+                            if (!state.comparePreview) {
+                                state.comparePreview = { original: source.original, results: {} };
+                            }
+                            state.comparePreview.original = state.comparePreview.original || source.original;
+                            state.comparePreview.results.teed = {
+                                method: "teed",
+                                original: source.original,
+                                ...partial,
+                                elapsed_ms: Number((performance.now() - methodStart).toFixed(2)),
+                                info: source.info
+                            };
+                            state.compareLoadingMethods = compareMethods.filter((method) => (
+                                method !== "original" && (!state.comparePreview.results[method] || method === "teed")
+                            ));
+                            render();
+                            if (progress?.phase === "tile") {
+                                els.status.textContent = `TEED Progressive Refine: patch ${progress.done} / ${progress.total}`;
+                            } else {
+                                els.status.textContent = "TEED Global Pass 已显示，正在逐块细化...";
+                            }
+                        }
+                    }
+                );
+                return {
+                    method: "teed",
+                    original: source.original,
+                    ...pipeline,
+                    elapsed_ms: Number((performance.now() - methodStart).toFixed(2)),
+                    info: source.info
+                };
+            };
             state.compareLoading = true;
             state.comparePreview = null;
             state.compareLoadingMethods = compareMethods.filter((method) => method !== "original");
@@ -1121,7 +1803,8 @@
             render();
             try {
                 setLoading("正在更新大图中的算法...");
-                const quickResponses = await Promise.all(quickMethods.map(async (method) => {
+                const quickResponses = await Promise.all([
+                    ...backendQuickMethods.map(async (method) => {
                     const response = await fetch(endpoint("/api/edge-detect"), {
                         method: "POST",
                         body: buildCompareSingleForm(method)
@@ -1137,12 +1820,14 @@
                         elapsed_ms: data.elapsed_ms,
                         info: data.info
                     };
-                }));
+                    }),
+                    ...(selectedHasTeed ? [runTeedCompare({ globalOnly: true })] : [])
+                ]);
                 if (requestId !== state.requestId || state.tab !== "compare") {
                     return;
                 }
                 state.comparePreview = comparePreviewFromSingles(quickResponses);
-                state.compareLoadingMethods = compareMethods.filter((method) => !quickMethods.includes(method) && method !== "original");
+                state.compareLoadingMethods = compareMethods.filter((method) => !backendQuickMethods.includes(method) && method !== "original");
                 const previewOriginal = quickResponses.find((item) => item.original)?.original || state.data?.original || null;
                 if (previewOriginal && !state.comparePreview.original) {
                     state.comparePreview.original = previewOriginal;
@@ -1150,12 +1835,12 @@
                 state.stepIndex = 0;
                 state.timelineIndex = 0;
                 render();
-                setReady("大图已更新，正在加载其它算法结果...");
+                setReady(quickResponses.length ? "大图已更新，正在加载其它算法结果..." : "正在加载传统/Canny 对比结果...");
 
                 window.setTimeout(async () => {
                     try {
                         // 优化：排除掉已经在第一阶段计算过的算法，减少后端重复工作
-                        const remainingMethods = compareMethods.filter(m => !quickMethods.includes(m));
+                        const remainingMethods = compareMethods.filter(m => m !== "teed" && !backendQuickMethods.includes(m));
                         const formData = buildForm("compare");
                         formData.set("methods", remainingMethods.join(","));
 
@@ -1170,13 +1855,27 @@
                         if (requestId !== state.requestId || state.tab !== "compare") {
                             return;
                         }
-                        
-                        // 合并第一阶段和第二阶段的结果
                         const priorityResults = quickResponses.map(r => ({
                             ...r,
                             method: r.method // 确保字段名一致
                         }));
-                        const mergedCompare = [...priorityResults, ...(fullData.compare || [])];
+                        const nonTeedCompare = [...priorityResults, ...(fullData.compare || [])];
+                        state.comparePreview = comparePreviewFromSingles(nonTeedCompare);
+                        state.comparePreview.original = fullData.original || state.comparePreview.original || state.data?.original || null;
+                        state.compareLoadingMethods = ["teed"];
+                        render();
+                        setReady("传统/Canny 对比已完成，开始 TEED 滑动窗口...");
+                        const teedRemaining = await runTeedCompare();
+                        if (requestId !== state.requestId || state.tab !== "compare") {
+                            return;
+                        }
+                        
+                        // 合并第一阶段和第二阶段的结果
+                        const mergedCompare = [
+                            ...priorityResults.filter((item) => item.method !== "teed"),
+                            ...(fullData.compare || [])
+                        ];
+                        if (teedRemaining) mergedCompare.push(teedRemaining);
                         
                         state.data = {
                             ...fullData,
@@ -1289,6 +1988,8 @@
         const results = state.data?.compare || [];
         const preview = state.comparePreview?.results || {};
         const loadingMethods = new Set(state.compareLoadingMethods || []);
+        const leftMethod = els.compareA?.value || "original";
+        const rightMethod = els.compareB?.value || "sobel";
         const placeholderImage = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
             <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'>
                 <defs>
@@ -1305,101 +2006,74 @@
             const item = results.find((entry) => entry.method === method);
             const info = infoFor(method);
             const previewItem = preview?.[method] || null;
+            const displayItem = previewItem || item;
             const isLoading = Boolean(loadingMethods.has(method));
-            
+            const isLeft = method === leftMethod;
+            const isRight = method === rightMethod;
             const originalImage = state.comparePreview?.original || state.data?.original || null;
-            const imageSrc = item?.final || previewItem?.final || originalImage || placeholderImage;
-            
-            const elapsedText = item?.elapsed_ms != null ? `${item.elapsed_ms} ms` : (isLoading ? "加载中" : "...");
-            const ratioText = item?.edge_ratio != null ? `${item.edge_ratio}% edge` : (isLoading ? "加载中" : "...");
+            const imageSrc = displayItem?.final || originalImage || placeholderImage;
+            const elapsedText = displayItem?.elapsed_ms != null ? `${displayItem.elapsed_ms} ms` : (isLoading ? "加载中" : "...");
+            const ratioText = displayItem?.edge_ratio != null ? `${displayItem.edge_ratio}% edge` : (isLoading ? "加载中" : "...");
             return `
-            <button class="edge-algo-card ${isLoading ? "is-loading" : ""}" type="button" data-compare-method="${method}">
+            <button class="edge-algo-card ${isLoading ? "is-loading" : ""} ${isLeft ? "is-left-selected" : ""} ${isRight ? "is-right-selected" : ""}" type="button" data-compare-method="${method}">
+                ${isLeft ? `<span class="edge-compare-side-badge edge-compare-side-left">左</span>` : ""}
+                ${isRight ? `<span class="edge-compare-side-badge edge-compare-side-right">右</span>` : ""}
                 <div class="edge-algo-media">
                     <img src="${imageSrc}" alt="${escapeHtml(info.name)} 边缘图">
                     ${isLoading ? `<div class="edge-algo-loading" aria-hidden="true"><span></span><em>加载中</em></div>` : ""}
                 </div>
-                <div>
+                <div class="edge-algo-summary">
                     <h3>${escapeHtml(info.name)}</h3>
                     <span class="edge-tag">${escapeHtml(info.category)}</span>
-                </div>
-                <div class="edge-mini-meta">
-                    <span>${elapsedText}</span>
-                    <span>${ratioText}</span>
+                    <div class="edge-mini-meta">
+                        <span>${elapsedText}</span>
+                        <span>${ratioText}</span>
+                    </div>
                 </div>
             </button>
         `;
         }).join("");
     }
 
+    function compareDetailCardHtml(method, side) {
+        const result = compareResultFor(method) || compareResultFor("original");
+        const info = method === "original"
+            ? { name: "Original", category: "原图", summary: "原始输入图像，用于和边缘检测结果对比。", pros: "-", cons: "-", best_for: "观察各方法提取出的边缘差异。" }
+            : infoFor(method);
+        const imageSrc = compareSourceImageFor(method) || result?.final || state.data?.original || state.comparePreview?.original || "";
+        const elapsed = result?.elapsed_ms != null ? `${result.elapsed_ms} ms` : "-";
+        const ratio = result?.edge_ratio != null ? `${result.edge_ratio}% edge` : "-";
+        const sideLabel = side === "left" ? "左侧方法" : "右侧方法";
+        const sideClass = side === "left" ? "is-left" : "is-right";
+        return `
+            <article class="edge-compare-detail-card ${sideClass}">
+                <span class="edge-compare-detail-side">${sideLabel}</span>
+                <img src="${imageSrc}" alt="${escapeHtml(info.name)} 对比结果">
+                <div class="edge-compare-detail-copy">
+                    <header>
+                        <strong>${escapeHtml(info.name)}</strong>
+                        <span class="edge-tag">${escapeHtml(info.category)}</span>
+                    </header>
+                    <p>${escapeHtml(info.summary)}</p>
+                    <div class="edge-compare-detail-meta">
+                        <span><b>速度</b><strong>${elapsed}</strong></span>
+                        <span><b>边缘占比</b><strong>${ratio}</strong></span>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
     function renderCompareInsights() {
         if (!els.compareInsights) return;
         const leftMethod = els.compareA.value;
         const rightMethod = els.compareB.value;
-        if (leftMethod === "original" || rightMethod === "original") {
-            const order = ["roberts", "sobel", "prewitt", "kirsch", "laplacian", "LoG", "canny"];
-            els.compareInsights.innerHTML = `
-                <div class="edge-compare-overview">
-                    ${order.map((key) => {
-                        const info = infoFor(key);
-                        const result = compareResultFor(key);
-                        return `
-                            <article class="edge-compare-overview-row">
-                                <header>
-                                    <strong>${escapeHtml(info.name)}</strong>
-                                    <span class="edge-tag">${escapeHtml(info.category)}</span>
-                                </header>
-                                <p>${escapeHtml(info.summary)}</p>
-                                <div class="edge-mini-meta">
-                                    <span>${result ? `${result.elapsed_ms} ms` : "-"}</span>
-                                    <span>${result ? `${result.edge_ratio}% edge` : "-"}</span>
-                                </div>
-                            </article>
-                        `;
-                    }).join("")}
-                </div>
-            `;
-            return;
-        }
-        const leftInfo = infoFor(leftMethod);
-        const rightInfo = infoFor(rightMethod);
-        const leftResult = compareResultFor(leftMethod);
-        const rightResult = compareResultFor(rightMethod);
-        const rows = [
-            ["类别", leftInfo.category, rightInfo.category],
-            ["特点", leftInfo.summary, rightInfo.summary],
-            ["优点", leftInfo.pros, rightInfo.pros],
-            ["缺点", leftInfo.cons, rightInfo.cons],
-            ["适用场景", leftInfo.best_for, rightInfo.best_for],
-            ["耗时", leftResult ? `${leftResult.elapsed_ms} ms` : "-", rightResult ? `${rightResult.elapsed_ms} ms` : "-"],
-            ["边缘占比", leftResult ? `${leftResult.edge_ratio}%` : "-", rightResult ? `${rightResult.edge_ratio}%` : "-"]
-        ];
         els.compareInsights.innerHTML = `
-            <div class="edge-compare-insight-grid">
-                <article class="edge-compare-insight-col">
-                    <header>
-                        <strong>${escapeHtml(leftInfo.name)}</strong>
-                        <span class="edge-tag">${escapeHtml(leftInfo.category)}</span>
-                    </header>
-                    ${rows.map(([label, leftValue]) => `
-                        <div class="edge-compare-insight-row">
-                            <span>${escapeHtml(label)}</span>
-                            <p>${escapeHtml(leftValue)}</p>
-                        </div>
-                    `).join("")}
-                </article>
-                <article class="edge-compare-insight-col">
-                    <header>
-                        <strong>${escapeHtml(rightInfo.name)}</strong>
-                        <span class="edge-tag">${escapeHtml(rightInfo.category)}</span>
-                    </header>
-                    ${rows.map(([label, , rightValue]) => `
-                        <div class="edge-compare-insight-row">
-                            <span>${escapeHtml(label)}</span>
-                            <p>${escapeHtml(rightValue)}</p>
-                        </div>
-                    `).join("")}
-                </article>
+            <div class="edge-compare-detail-grid">
+                ${compareDetailCardHtml(leftMethod, "left")}
+                ${compareDetailCardHtml(rightMethod, "right")}
             </div>
+            <p class="edge-compare-hint">提示：点击上方结果卡可将其设为左侧或右侧对比方法，当前选择：左侧为 ${escapeHtml(methodLabels[leftMethod] || leftMethod)}，右侧为 ${escapeHtml(methodLabels[rightMethod] || rightMethod)}。</p>
         `;
     }
 
@@ -1414,6 +2088,12 @@
         renderCompareSlider();
         renderCompareWall();
         renderCompareInsights();
+        const stripHint = root.querySelector(".edge-compare-strip-head span");
+        const insightTitle = root.querySelector(".edge-compare-insights-head strong");
+        const insightHint = root.querySelector(".edge-compare-insights-head span");
+        if (stripHint) stripHint.textContent = "点击卡片左半区设为左侧，右半区设为右侧";
+        if (insightTitle) insightTitle.textContent = "当前对比方法说明";
+        if (insightHint) insightHint.textContent = "跟随滑块两侧方法同步更新";
         updateInfoForCompare();
         if (els.stepPreview) {
             els.stepPreview.hidden = true;
@@ -2959,19 +3639,28 @@
         els.compareBtn.addEventListener("click", () => requestEdge("compare"));
         els.compareA.addEventListener("change", () => {
             renderCompareSlider();
+            renderCompareWall();
             renderCompareInsights();
             updateInfoForCompare();
         });
         els.compareB.addEventListener("change", () => {
             renderCompareSlider();
+            renderCompareWall();
             renderCompareInsights();
             updateInfoForCompare();
         });
         els.compareWall.addEventListener("click", (event) => {
             const button = event.target.closest("[data-compare-method]");
             if (!button) return;
-            els.compareB.value = button.dataset.compareMethod;
+            const rect = button.getBoundingClientRect();
+            const clickedLeftSide = event.clientX < rect.left + rect.width / 2;
+            if (clickedLeftSide && els.compareA) {
+                els.compareA.value = button.dataset.compareMethod;
+            } else {
+                els.compareB.value = button.dataset.compareMethod;
+            }
             renderCompareSlider();
+            renderCompareWall();
             renderCompareInsights();
             updateInfoForCompare();
         });
@@ -2997,19 +3686,19 @@
         on(els.compareThreshold, "input", () => {
             if (els.compareThresholdValue) els.compareThresholdValue.textContent = els.compareThreshold.value;
             if (state.tab === "compare") {
-                scheduleRefresh("compare");
+                scheduleCompareMethodRefresh(compareDerivativeMethods());
             }
         });
         on(els.compareThreshold1, "input", () => {
             if (els.compareThreshold1Value) els.compareThreshold1Value.textContent = els.compareThreshold1.value;
             if (state.tab === "compare") {
-                scheduleRefresh("compare");
+                scheduleCompareMethodRefresh(["canny"]);
             }
         });
         on(els.compareThreshold2, "input", () => {
             if (els.compareThreshold2Value) els.compareThreshold2Value.textContent = els.compareThreshold2.value;
             if (state.tab === "compare") {
-                scheduleRefresh("compare");
+                scheduleCompareMethodRefresh(["canny"]);
             }
         });
         els.kernelBtn.addEventListener("click", () => requestEdge("kernel"));
@@ -3031,13 +3720,13 @@
         });
         on(els.compareAperture, "change", () => {
             if (state.tab === "compare") {
-                scheduleRefresh("compare");
+                scheduleCompareMethodRefresh(["canny"]);
             }
         });
         [els.compareL2, els.comparePrecise].forEach((control) => {
             on(control, "change", () => {
                 if (state.tab === "compare") {
-                    scheduleRefresh("compare");
+                    scheduleCompareMethodRefresh(["canny"]);
                 }
             });
         });

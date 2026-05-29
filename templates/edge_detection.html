@@ -11,6 +11,9 @@
     class="edge-page"
     data-assets-base="{{ url_for('static', filename='assets/img/') }}"
     data-edge-mode="{{ edge_mode|default('compare') }}"
+    data-teed-model-url="{{ url_for('static', filename='assets/data/teed_debug_352.onnx') }}"
+    data-ort-script-url="{{ url_for('static', filename='vendor/onnxruntime-web/ort.min.js') }}"
+    data-ort-wasm-base="{{ url_for('static', filename='vendor/onnxruntime-web/') }}"
 >
     <header class="edge-hero">
         <div>
@@ -69,6 +72,7 @@
                         <option value="laplacian">Laplacian</option>
                         <option value="LoG">LoG / Marr</option>
                         <option value="canny">Canny</option>
+                        <option value="teed">TEED</option>
                     </select>
                 </label>
                 <label>滑块右侧方法
@@ -80,6 +84,7 @@
                         <option value="kirsch">Kirsch</option>
                         <option value="laplacian">Laplacian</option>
                         <option value="LoG">LoG / Marr</option>
+                        <option value="teed">TEED</option>
                     </select>
                 </label>
                 <div class="edge-compare-params">
