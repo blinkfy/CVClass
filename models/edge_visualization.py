@@ -268,8 +268,13 @@ def build_edge_response(form, files, static_folder, allowed_file):
     }
 
     if mode == "compare":
+        # 如果前端指定了方法列表，则只计算指定的，否则计算全部
+        requested_methods = form.get("methods", "").split(",") if form.get("methods") else None
+        all_compare_methods = ["sobel", "prewitt", "roberts", "kirsch", "laplacian", "LoG", "canny"]
+        target_methods = [m for m in requested_methods if m in all_compare_methods] if requested_methods else all_compare_methods
+
         compare_results = []
-        for item in ["sobel", "prewitt", "roberts", "kirsch", "laplacian", "LoG", "canny"]:
+        for item in target_methods:
             item_start = perf_counter()
             pipeline = (
                 canny_pipeline(image, threshold1, threshold2, aperture_size, l2_gradient, precise)
@@ -280,8 +285,10 @@ def build_edge_response(form, files, static_folder, allowed_file):
             payload["elapsed_ms"] = round((perf_counter() - item_start) * 1000, 2)
             compare_results.append(payload)
         response["compare"] = compare_results
-        response["gray"] = compare_results[0]["steps"][0]["image"] if compare_results else response["original"]
-        response["final"] = compare_results[0]["final"] if compare_results else response["original"]
+        # 为了保证结构完整性，如果列表为空，回退到原图
+        first_res = compare_results[0] if compare_results else None
+        response["gray"] = first_res["steps"][0]["image"] if first_res else response["original"]
+        response["final"] = first_res["final"] if first_res else response["original"]
     elif mode == "canny":
         pipeline = canny_pipeline(image, threshold1, threshold2, aperture_size, l2_gradient, precise)
         response["pipeline"] = serialize_pipeline(pipeline, image)

@@ -577,6 +577,60 @@
     background: #ffffff;
 }
 
+.edge-algo-card.is-loading {
+    position: relative;
+    pointer-events: none;
+    border-style: dashed;
+}
+
+.edge-algo-media {
+    position: relative;
+}
+
+.edge-algo-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.45); /* 进一步增加透明度 */
+    backdrop-filter: blur(4px) saturate(1.2); /* 增加模糊和饱和度，看起来更自然 */
+    border: none; /* 去掉突兀的边框 */
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.edge-algo-loading span {
+    width: 32px;
+    height: 32px;
+    border: 4px solid rgba(37, 99, 235, 0.1);
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: edgeSpin 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.1);
+}
+
+.edge-algo-loading em {
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 800;
+    font-style: normal;
+    text-shadow: 0 1px 4px rgba(255, 255, 255, 0.9);
+    letter-spacing: 0.1em;
+}
+
+.edge-algo-card.is-loading img {
+    filter: blur(2px) grayscale(0.2) opacity(0.7); /* 加载时对底层图片做模糊和淡化 */
+}
+
+.edge-algo-card.is-loading .edge-tag,
+.edge-algo-card.is-loading .edge-mini-meta {
+    opacity: 0.5;
+}
+
 .edge-algo-card:hover {
     border-color: #93c5fd;
     background: #f8fbff;
@@ -636,6 +690,11 @@
 
 .edge-table-card h3 {
     margin: 0 0 10px;
+}
+
+@keyframes edgeSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .edge-method-table {
@@ -893,17 +952,42 @@
     line-height: 1.45;
 }
 
-.edge-vector-canvas {
+.edge-vector-canvas,
+.edge-hysteresis-canvas {
     position: absolute;
     inset: 0;
     z-index: 3;
     width: 100%;
     height: 100%;
     display: none;
+    pointer-events: none;
 }
 
 .edge-main-image.is-vector-mode .edge-vector-canvas {
     display: block;
+}
+
+.edge-main-image.is-direction-compare-left .edge-vector-canvas,
+.edge-main-image.is-direction-compare-right .edge-vector-canvas {
+    display: block;
+    z-index: 4;
+}
+
+.edge-main-image.is-direction-compare-left .edge-vector-canvas {
+    clip-path: inset(0 calc(100% - var(--edge-stage-split, 50%)) 0 0);
+}
+
+.edge-main-image.is-direction-compare-right .edge-vector-canvas {
+    clip-path: inset(0 0 0 var(--edge-stage-split, 50%));
+}
+
+.edge-main-image.is-hysteresis-overlay .edge-hysteresis-canvas {
+    display: block;
+    z-index: 4;
+}
+
+.edge-main-image.is-diff-mode.is-hysteresis-overlay .edge-hysteresis-canvas {
+    clip-path: inset(0 0 0 var(--edge-stage-split, 50%));
 }
 
 .edge-main-image.is-vector-mode img {
@@ -1028,11 +1112,11 @@
 }
 
 .edge-kernel-flow-title {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 10px;
+    padding: 8px 10px;
     border: 1px solid #dbeafe;
     border-radius: 14px;
     color: #475569;
@@ -1052,6 +1136,113 @@
 
 .edge-kernel-flow-title strong {
     color: #1d4ed8;
+    white-space: nowrap;
+}
+
+.edge-flow-timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--edge-flow-count, 8), minmax(0, 1fr));
+    gap: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.edge-flow-timeline::before {
+    content: "";
+    position: absolute;
+    left: 11px;
+    right: 11px;
+    top: 11px;
+    height: 2px;
+    border-radius: 999px;
+    background: #bfdbfe;
+}
+
+.edge-flow-timeline li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    color: #64748b;
+}
+
+.edge-flow-timeline li::before {
+    content: "";
+    position: absolute;
+    left: calc(-50% + 11px);
+    right: calc(50% + 11px);
+    top: 11px;
+    height: 2px;
+    background: #2563eb;
+    opacity: 0;
+}
+
+.edge-flow-timeline li.is-done::before,
+.edge-flow-timeline li.is-active::before {
+    opacity: 1;
+}
+
+.edge-flow-timeline li:first-child::before {
+    content: none;
+}
+
+.edge-flow-timeline span {
+    position: relative;
+    flex: 0 0 auto;
+    z-index: 1;
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 2px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    background: #ffffff;
+}
+
+.edge-flow-timeline b {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 2px 4px;
+    border-radius: 7px;
+    color: inherit;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: #f8fbff;
+}
+
+.edge-flow-timeline li.is-done span {
+    border-color: #60a5fa;
+    color: #ffffff;
+    background: #60a5fa;
+}
+
+.edge-flow-timeline li.is-active {
+    color: #1d4ed8;
+}
+
+.edge-flow-timeline li.is-active span {
+    border-color: #2563eb;
+    color: #ffffff;
+    background: #2563eb;
+    box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.14);
+}
+
+.edge-flow-timeline li.is-active b {
+    color: #1d4ed8;
+    background: #eff6ff;
 }
 
 .edge-kernel-teaching {

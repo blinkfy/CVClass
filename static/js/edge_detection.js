@@ -15,6 +15,7 @@
     ];
 
     const compareTimeline = ["算子分类", "一阶导数 / 二阶导数 / Canny", "结果对比"];
+    const compareMethods = ["roberts", "sobel", "prewitt", "kirsch", "laplacian", "LoG", "canny"];
     const kernelTimeline = ["Image", "Gray", "Kernel Response", "Magnitude", "Threshold", "Final"];
     const cannyTimeline = ["Image", "Gray", "Gaussian Blur", "Gradient", "Direction", "NMS", "Double Threshold", "Hysteresis"];
 
@@ -254,6 +255,7 @@
         mainBaseImage: document.getElementById("edgeMainBaseImage"),
         mainImage: document.getElementById("edgeMainImage"),
         vectorCanvas: document.getElementById("edgeVectorCanvas"),
+        hysteresisCanvas: document.getElementById("edgeHysteresisCanvas"),
         stageSliderHandle: document.getElementById("edgeStageSliderHandle"),
         stageSliderLabels: document.getElementById("edgeStageSliderLabels"),
         stageSliderLeftLabel: document.getElementById("edgeStageSliderLeftLabel"),
@@ -316,6 +318,9 @@
         sample: "espresso_1.jpeg",
         file: null,
         data: null,
+        comparePreview: null,
+        compareLoading: false,
+        compareLoadingMethods: [],
         stepIndex: 0,
         timelineIndex: 0,
         timer: null,
@@ -326,7 +331,11 @@
         probeTimer: null,
         probePlaying: false,
         stageSplit: 50,
-        stageSplitDragging: false
+        stageSplitDragging: false,
+        hysteresisFrame: null,
+        hysteresisPlan: null,
+        hysteresisPlanKey: "",
+        requestId: 0
     };
 
     function endpoint(path) {
@@ -478,6 +487,72 @@
         return form;
     }
 
+    function buildCompareSingleForm(method) {
+        const form = new FormData();
+        const isCanny = method === "canny";
+        form.append("mode", isCanny ? "canny" : "kernel");
+        form.append("sample", state.sample);
+        if (state.file) {
+            form.append("image", state.file);
+        }
+        form.append("method", method);
+        form.append("threshold", controlValue(els.compareThreshold, "96"));
+        form.append("threshold1", controlValue(els.compareThreshold1, "50"));
+        form.append("threshold2", controlValue(els.compareThreshold2, "150"));
+        form.append("apertureSize", controlValue(els.compareAperture, "5"));
+        form.append("L2gradient", controlChecked(els.compareL2) ? "true" : "false");
+        form.append("precise", controlChecked(els.comparePrecise) ? "true" : "false");
+        return form;
+    }
+
+    function compareStateFromSingle(data) {
+        const pipeline = data.pipeline || {};
+        const compareItem = {
+            ...pipeline,
+            elapsed_ms: data.elapsed_ms
+        };
+        return {
+            original: data.original,
+            info: data.info,
+            compare: [compareItem],
+            gray: data.gray,
+            final: data.final,
+            elapsed_ms: data.elapsed_ms
+        };
+    }
+
+    function comparePreviewFromSingles(entries) {
+        const preview = { original: null, results: {} };
+        entries.forEach((entry) => {
+            if (!entry) return;
+            if (entry.original && !preview.original) {
+                preview.original = entry.original;
+            }
+            if (entry.method) {
+                preview.results[entry.method] = entry;
+            }
+        });
+        return preview;
+    }
+
+    function compareResultFor(method, source = state.data, preview = state.comparePreview) {
+        if (method === "original") {
+            return {
+                method: "original",
+                info: { name: "Original" },
+                final: preview?.original || source?.original || null
+            };
+        }
+        return preview?.results?.[method] || (source?.compare || []).find((item) => item.method === method) || null;
+    }
+
+    function compareSourceImageFor(method) {
+        if (method === "original") {
+            return state.comparePreview?.original || state.data?.original || null;
+        }
+        return state.comparePreview?.results?.[method]?.final || state.data?.compare?.find((item) => item.method === method)?.final || null;
+    }
+
     function setLoading(message) {
         state.loading = true;
         els.status.textContent = message;
@@ -512,7 +587,110 @@
         const previousStep = state.tab === mode ? state.data?.pipeline?.steps?.[state.stepIndex] : null;
         const previousStepKey = previousStep?.key || null;
         state.tab = mode;
+        const requestId = ++state.requestId;
         setLoading("正在调用后端手写 NumPy 边缘检测函数...");
+        if (mode === "compare") {
+            const leftMethod = els.compareA?.value || "original";
+            const rightMethod = els.compareB?.value || "sobel";
+            const quickMethods = Array.from(new Set([leftMethod, rightMethod].filter((method) => method !== "original")));
+            state.compareLoading = true;
+            state.comparePreview = null;
+            state.compareLoadingMethods = compareMethods.filter((method) => method !== "original");
+            // 不清空 state.data = null，保留旧数据作为加载背景
+            render();
+            try {
+                setLoading("正在更新大图中的算法...");
+                const quickResponses = await Promise.all(quickMethods.map(async (method) => {
+                    const response = await fetch(endpoint("/api/edge-detect"), {
+                        method: "POST",
+                        body: buildCompareSingleForm(method)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || "边缘检测失败");
+                    }
+                    return {
+                        method,
+                        original: data.original,
+                        ...data.pipeline,
+                        elapsed_ms: data.elapsed_ms,
+                        info: data.info
+                    };
+                }));
+                if (requestId !== state.requestId || state.tab !== "compare") {
+                    return;
+                }
+                state.comparePreview = comparePreviewFromSingles(quickResponses);
+                state.compareLoadingMethods = compareMethods.filter((method) => !quickMethods.includes(method) && method !== "original");
+                const previewOriginal = quickResponses.find((item) => item.original)?.original || state.data?.original || null;
+                if (previewOriginal && !state.comparePreview.original) {
+                    state.comparePreview.original = previewOriginal;
+                }
+                state.stepIndex = 0;
+                state.timelineIndex = 0;
+                render();
+                setReady("大图已更新，正在加载其它算法结果...");
+
+                window.setTimeout(async () => {
+                    try {
+                        // 优化：排除掉已经在第一阶段计算过的算法，减少后端重复工作
+                        const remainingMethods = compareMethods.filter(m => !quickMethods.includes(m));
+                        const formData = buildForm("compare");
+                        formData.set("methods", remainingMethods.join(","));
+
+                        const fullResponse = await fetch(endpoint("/api/edge-detect"), {
+                            method: "POST",
+                            body: formData
+                        });
+                        const fullData = await fullResponse.json();
+                        if (!fullResponse.ok) {
+                            throw new Error(fullData.error || "边缘检测失败");
+                        }
+                        if (requestId !== state.requestId || state.tab !== "compare") {
+                            return;
+                        }
+                        
+                        // 合并第一阶段和第二阶段的结果
+                        const priorityResults = quickResponses.map(r => ({
+                            ...r,
+                            method: r.method // 确保字段名一致
+                        }));
+                        const mergedCompare = [...priorityResults, ...(fullData.compare || [])];
+                        
+                        state.data = {
+                            ...fullData,
+                            compare: mergedCompare
+                        };
+                        state.comparePreview = null;
+                        state.compareLoading = false;
+                        state.compareLoadingMethods = [];
+                        state.stepIndex = 0;
+                        state.timelineIndex = 0;
+                        render();
+                        setReady(`处理完成：${fullData.info.filename}，${fullData.info.width} × ${fullData.info.height}，预览图秒回，全列表耗时 ${fullData.elapsed_ms} ms`);
+                    } catch (error) {
+                        if (requestId !== state.requestId || state.tab !== "compare") {
+                            return;
+                        }
+                        state.compareLoading = false;
+                        state.comparePreview = null;
+                        state.compareLoadingMethods = [];
+                        render();
+                        setReady(error.message || "边缘检测失败");
+                    }
+                }, 0);
+            } catch (error) {
+                if (requestId !== state.requestId || state.tab !== "compare") {
+                    return;
+                }
+                state.compareLoading = false;
+                state.comparePreview = null;
+                state.compareLoadingMethods = [];
+                render();
+                setReady(error.message || "边缘检测失败");
+            }
+            return;
+        }
         try {
             const response = await fetch(endpoint("/api/edge-detect"), {
                 method: "POST",
@@ -521,6 +699,9 @@
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.error || "边缘检测失败");
+            }
+            if (requestId !== state.requestId) {
+                return;
             }
             state.data = data;
             if (mode !== "compare" && data.pipeline?.steps?.length) {
@@ -547,11 +728,15 @@
     }
 
     function resultByMethod(method) {
-        if (!state.data) return null;
+        if (!state.data && !state.comparePreview) return null;
         if (method === "original") {
-            return { method: "original", info: { name: "Original" }, final: state.data.original };
+            return {
+                method: "original",
+                info: { name: "Original" },
+                final: state.comparePreview?.original || state.data?.original || null
+            };
         }
-        return (state.data.compare || []).find((item) => item.method === method) || null;
+        return compareResultFor(method) || null;
     }
 
     function updateSlider() {
@@ -563,11 +748,17 @@
     function renderCompareSlider() {
         const leftMethod = els.compareA.value;
         const rightMethod = els.compareB.value;
-        const left = resultByMethod(leftMethod);
-        const right = resultByMethod(rightMethod);
+        const left = compareResultFor(leftMethod) || compareResultFor("original");
+        const right = compareResultFor(rightMethod) || compareResultFor("original");
         if (!left || !right) return;
-        els.sliderLeft.src = left.final;
-        els.sliderRight.src = right.final;
+        const leftImage = compareSourceImageFor(leftMethod) || left.final;
+        const rightImage = compareSourceImageFor(rightMethod) || right.final;
+        if (leftImage) {
+            els.sliderLeft.src = leftImage;
+        }
+        if (rightImage) {
+            els.sliderRight.src = rightImage;
+        }
         els.sliderLeftLabel.textContent = methodLabels[leftMethod] || left.info.name;
         els.sliderRightLabel.textContent = methodLabels[rightMethod] || right.info.name;
         updateSlider();
@@ -575,18 +766,44 @@
 
     function renderCompareWall() {
         const results = state.data?.compare || [];
-        els.compareWall.innerHTML = results.map((item) => {
-            const info = infoFor(item.method);
+        const preview = state.comparePreview?.results || {};
+        const loadingMethods = new Set(state.compareLoadingMethods || []);
+        const placeholderImage = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'>
+                <defs>
+                    <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
+                        <stop offset='0%' stop-color='#f8fbff'/>
+                        <stop offset='100%' stop-color='#eff6ff'/>
+                    </linearGradient>
+                </defs>
+                <rect width='400' height='300' fill='url(#g)'/>
+                <rect x='24' y='24' width='352' height='252' rx='16' fill='none' stroke='#dbeafe' stroke-width='4' stroke-dasharray='12 10'/>
+            </svg>
+        `);
+        els.compareWall.innerHTML = compareMethods.map((method) => {
+            const item = results.find((entry) => entry.method === method);
+            const info = infoFor(method);
+            const previewItem = preview?.[method] || null;
+            const isLoading = Boolean(loadingMethods.has(method));
+            
+            const originalImage = state.comparePreview?.original || state.data?.original || null;
+            const imageSrc = item?.final || previewItem?.final || originalImage || placeholderImage;
+            
+            const elapsedText = item?.elapsed_ms != null ? `${item.elapsed_ms} ms` : (isLoading ? "加载中" : "...");
+            const ratioText = item?.edge_ratio != null ? `${item.edge_ratio}% edge` : (isLoading ? "加载中" : "...");
             return `
-            <button class="edge-algo-card" type="button" data-compare-method="${item.method}">
-                <img src="${item.final}" alt="${escapeHtml(info.name)} 边缘图">
+            <button class="edge-algo-card ${isLoading ? "is-loading" : ""}" type="button" data-compare-method="${method}">
+                <div class="edge-algo-media">
+                    <img src="${imageSrc}" alt="${escapeHtml(info.name)} 边缘图">
+                    ${isLoading ? `<div class="edge-algo-loading" aria-hidden="true"><span></span><em>加载中</em></div>` : ""}
+                </div>
                 <div>
                     <h3>${escapeHtml(info.name)}</h3>
                     <span class="edge-tag">${escapeHtml(info.category)}</span>
                 </div>
                 <div class="edge-mini-meta">
-                    <span>${item.elapsed_ms} ms</span>
-                    <span>${item.edge_ratio}% edge</span>
+                    <span>${elapsedText}</span>
+                    <span>${ratioText}</span>
                 </div>
             </button>
         `;
@@ -603,7 +820,7 @@
                 <div class="edge-compare-overview">
                     ${order.map((key) => {
                         const info = infoFor(key);
-                        const result = resultByMethod(key);
+                        const result = compareResultFor(key);
                         return `
                             <article class="edge-compare-overview-row">
                                 <header>
@@ -624,8 +841,8 @@
         }
         const leftInfo = infoFor(leftMethod);
         const rightInfo = infoFor(rightMethod);
-        const leftResult = resultByMethod(leftMethod);
-        const rightResult = resultByMethod(rightMethod);
+        const leftResult = compareResultFor(leftMethod);
+        const rightResult = compareResultFor(rightMethod);
         const rows = [
             ["类别", leftInfo.category, rightInfo.category],
             ["特点", leftInfo.summary, rightInfo.summary],
@@ -704,11 +921,24 @@
     }
 
     function clearDirectionVectors() {
-        els.mainImageButton.classList.remove("is-vector-mode");
+        els.mainImageButton.classList.remove("is-vector-mode", "is-direction-compare-left", "is-direction-compare-right");
         if (!els.vectorCanvas) return;
         const context = els.vectorCanvas.getContext("2d");
         if (context) {
             context.clearRect(0, 0, els.vectorCanvas.width, els.vectorCanvas.height);
+        }
+    }
+
+    function clearHysteresisOverlay() {
+        if (state.hysteresisFrame) {
+            window.cancelAnimationFrame(state.hysteresisFrame);
+            state.hysteresisFrame = null;
+        }
+        if (!els.hysteresisCanvas) return;
+        els.mainImageButton?.classList.remove("is-hysteresis-overlay");
+        const context = els.hysteresisCanvas.getContext("2d");
+        if (context) {
+            context.clearRect(0, 0, els.hysteresisCanvas.width, els.hysteresisCanvas.height);
         }
     }
 
@@ -726,6 +956,14 @@
     function previousDisplayStep(pipeline, stepIndex) {
         const previous = pipeline.steps[Math.max(0, stepIndex - 1)];
         return previous || pipeline.steps[stepIndex] || pipeline.steps[0];
+    }
+
+    function displayImageForStep(pipeline, stepIndex) {
+        const step = pipeline.steps[stepIndex] || pipeline.steps[0];
+        if (state.tab === "canny" && step?.key === "direction") {
+            return previousDisplayStep(pipeline, stepIndex).image;
+        }
+        return step?.image;
     }
 
     function stageDisplayMode() {
@@ -775,18 +1013,21 @@
     function renderStepImage(pipeline, step) {
         const previousStep = previousDisplayStep(pipeline, state.stepIndex);
         const showDiff = stageDisplayMode() === "diff" && state.stepIndex > 0;
-        const baseImage = showDiff ? previousStep.image : step.image;
+        const baseImage = showDiff ? displayImageForStep(pipeline, state.stepIndex - 1) : displayImageForStep(pipeline, state.stepIndex);
+        const currentImage = displayImageForStep(pipeline, state.stepIndex);
         if (els.mainBaseImage) {
             els.mainBaseImage.src = baseImage;
             els.mainBaseImage.hidden = !showDiff;
         }
-        els.mainImage.src = step.image;
+        els.mainImage.src = currentImage;
         els.mainImageButton.classList.toggle("is-diff-mode", showDiff);
         updateStageSliderLabels(previousStep, step, showDiff);
         updateStageSplit();
     }
 
-    function drawDirectionVectors(step) {
+    function drawDirectionVectors(step, options = {}) {
+        const side = options.side || "full";
+        const showLabel = options.showLabel !== false;
         const field = step?.vector_field;
         const canvas = els.vectorCanvas;
         if (!canvas || !field?.vectors?.length || !field.width || !field.height) {
@@ -874,8 +1115,246 @@
 
         context.fillStyle = "#0f172a";
         context.font = "700 12px Consolas, 'Microsoft YaHei', monospace";
-        context.fillText("angle = atan2(Gy, Gx), arrow length = normalized magnitude", offsetX + 12, offsetY + 22);
-        els.mainImageButton.classList.add("is-vector-mode");
+        if (showLabel) {
+            context.fillText("angle = atan2(Gy, Gx), arrow length = normalized magnitude", offsetX + 12, offsetY + 22);
+        }
+        els.mainImageButton.classList.toggle("is-vector-mode", side === "full");
+        els.mainImageButton.classList.toggle("is-direction-compare-left", side === "left");
+        els.mainImageButton.classList.toggle("is-direction-compare-right", side === "right");
+    }
+
+    function renderDirectionCompareOverlay(pipeline, step) {
+        const showDiff = stageDisplayMode() === "diff" && state.stepIndex > 0;
+        if (!showDiff || state.tab !== "canny") return false;
+        const previousStep = pipeline.steps[state.stepIndex - 1];
+        if (previousStep?.key === "direction") {
+            drawDirectionVectors(previousStep, { side: "left", showLabel: false });
+            return true;
+        }
+        if (step?.key === "direction") {
+            drawDirectionVectors(step, { side: "right", showLabel: false });
+            return true;
+        }
+        return false;
+    }
+
+    async function buildHysteresisPlan(pipeline) {
+        const doubleStep = stepByKey(pipeline, "double");
+        if (!doubleStep?.image) return null;
+        const cacheKey = `${doubleStep.image.slice(0, 80)}:${pipeline.info?.threshold1}:${pipeline.info?.threshold2}`;
+        if (state.hysteresisPlan && state.hysteresisPlanKey === cacheKey) {
+            return state.hysteresisPlan;
+        }
+        const { gray, width, height } = await loadGrayMatrix(doubleStep.image);
+        const stride = 1;
+        const cols = Math.ceil(width / stride);
+        const rows = Math.ceil(height / stride);
+        const status = Array.from({ length: rows }, () => Array(cols).fill(0));
+        const strong = [];
+        const weak = [];
+
+        for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < cols; col += 1) {
+                const y = Math.min(height - 1, row * stride);
+                const x = Math.min(width - 1, col * stride);
+                const value = gray[y]?.[x] || 0;
+                if (value >= 210) {
+                    status[row][col] = 2;
+                    strong.push({ row, col, x, y });
+                } else if (value >= 80) {
+                    status[row][col] = 1;
+                    weak.push({ row, col, x, y });
+                }
+            }
+        }
+
+        const dirs = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => ({ dx, dy }))).filter((item) => item.dx || item.dy);
+        const weakNeighborScore = (node) => dirs.reduce((score, { dx, dy }) => {
+            const nr = node.row + dy;
+            const nc = node.col + dx;
+            return score + (nr >= 0 && nc >= 0 && nr < rows && nc < cols && status[nr][nc] === 1 ? 1 : 0);
+        }, 0);
+        const minSeedDistance = Math.max(10, Math.min(rows, cols) * 0.12);
+        const seeds = strong
+            .map((node) => ({ ...node, score: weakNeighborScore(node) }))
+            .filter((node) => node.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .reduce((selected, node) => {
+                if (selected.length >= 16) return selected;
+                const tooClose = selected.some((item) => Math.hypot(item.row - node.row, item.col - node.col) < minSeedDistance);
+                if (!tooClose) selected.push(node);
+                return selected;
+            }, []);
+        if (!seeds.length && strong.length) {
+            seeds.push(strong[Math.floor(strong.length / 2)]);
+        }
+
+        const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+        const queue = [];
+        const connected = [];
+        seeds.forEach((seed, seedId) => {
+            visited[seed.row][seed.col] = true;
+            queue.push({ ...seed, parent: null, depth: 0, kind: "strong", seedId });
+        });
+
+        let maxDepth = 0;
+        let head = 0;
+        while (head < queue.length && connected.length < 720) {
+            const node = queue[head];
+            head += 1;
+            connected.push(node);
+            maxDepth = Math.max(maxDepth, node.depth);
+            dirs.forEach(({ dx, dy }) => {
+                const nr = node.row + dy;
+                const nc = node.col + dx;
+                if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || visited[nr][nc] || status[nr][nc] !== 1) return;
+                visited[nr][nc] = true;
+                queue.push({
+                    row: nr,
+                    col: nc,
+                    x: Math.min(width - 1, nc * stride),
+                    y: Math.min(height - 1, nr * stride),
+                    parent: { x: node.x, y: node.y },
+                    depth: node.depth + 1,
+                    kind: "weak",
+                    seedId: node.seedId
+                });
+            });
+        }
+
+        const isolated = weak
+            .filter((node) => !visited[node.row][node.col])
+            .filter((_, index) => index % Math.max(1, Math.floor(weak.length / 120)) === 0)
+            .slice(0, 120);
+        const plan = { width, height, strong: seeds, connected, isolated, maxDepth: Math.max(1, maxDepth) };
+        state.hysteresisPlan = plan;
+        state.hysteresisPlanKey = cacheKey;
+        return plan;
+    }
+
+    function imageDrawMetrics(sourceWidth, sourceHeight) {
+        const rect = els.mainImageButton.getBoundingClientRect();
+        const scale = Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
+        const drawW = sourceWidth * scale;
+        const drawH = sourceHeight * scale;
+        return {
+            rect,
+            scale,
+            offsetX: (rect.width - drawW) / 2,
+            offsetY: (rect.height - drawH) / 2
+        };
+    }
+
+    function drawHysteresisPlan(plan, startTime) {
+        const canvas = els.hysteresisCanvas;
+        if (!canvas || !plan) return;
+        const ratio = window.devicePixelRatio || 1;
+        const { rect, scale, offsetX, offsetY } = imageDrawMetrics(plan.width, plan.height);
+        canvas.width = Math.max(1, Math.round(rect.width * ratio));
+        canvas.height = Math.max(1, Math.round(rect.height * ratio));
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.clearRect(0, 0, rect.width, rect.height);
+
+        const elapsed = performance.now() - startTime;
+        const cycle = 3600;
+        const progress = (elapsed % cycle) / cycle;
+        const activeDepth = progress < 0.08 ? 0 : Math.ceil((progress - 0.08) / 0.84 * plan.maxDepth);
+        const visibleNodes = plan.connected.filter((node) => node.depth <= activeDepth);
+        const radius = Math.max(2.4, Math.min(5.2, scale * 2.2));
+        const mapX = (x) => offsetX + x * scale;
+        const mapY = (y) => offsetY + y * scale;
+
+        context.save();
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        visibleNodes.forEach((node) => {
+            const alpha = Math.max(0.18, 1 - (activeDepth - node.depth) / Math.max(3, plan.maxDepth));
+            if (node.parent) {
+                context.strokeStyle = `rgba(37, 99, 235, ${0.22 + alpha * 0.42})`;
+                context.lineWidth = Math.max(1.2, radius * 0.75);
+                context.beginPath();
+                context.moveTo(mapX(node.parent.x), mapY(node.parent.y));
+                context.lineTo(mapX(node.x), mapY(node.y));
+                context.stroke();
+            }
+        });
+
+        visibleNodes.forEach((node) => {
+            const age = Math.max(0, activeDepth - node.depth) / Math.max(1, plan.maxDepth);
+            const isStrong = node.kind === "strong";
+            context.fillStyle = isStrong
+                ? "rgba(14, 165, 233, 0.95)"
+                : `rgba(96, 165, 250, ${0.36 + (1 - Math.min(1, age)) * 0.58})`;
+            context.shadowColor = isStrong ? "rgba(14, 165, 233, 0.75)" : "rgba(37, 99, 235, 0.45)";
+            context.shadowBlur = isStrong ? 14 : 8;
+            context.beginPath();
+            context.arc(mapX(node.x), mapY(node.y), isStrong ? radius * 1.35 : radius, 0, Math.PI * 2);
+            context.fill();
+        });
+
+        const pulse = 0.5 + Math.sin(elapsed / 180) * 0.5;
+        plan.strong.forEach((node, index) => {
+            const phase = (pulse + index * 0.07) % 1;
+            context.strokeStyle = `rgba(14, 165, 233, ${0.2 + phase * 0.45})`;
+            context.lineWidth = 1.5;
+            context.shadowColor = "rgba(14, 165, 233, 0.8)";
+            context.shadowBlur = 12;
+            context.beginPath();
+            context.arc(mapX(node.x), mapY(node.y), radius * (2.0 + phase * 2.4), 0, Math.PI * 2);
+            context.stroke();
+        });
+
+        const fade = Math.max(0.05, 0.46 - progress * 0.42);
+        context.shadowBlur = 0;
+        plan.isolated.forEach((node, index) => {
+            const alpha = Math.max(0.06, fade - (index % 5) * 0.025);
+            context.fillStyle = `rgba(148, 163, 184, ${alpha})`;
+            context.beginPath();
+            context.arc(mapX(node.x), mapY(node.y), radius * 0.82, 0, Math.PI * 2);
+            context.fill();
+        });
+        context.fillStyle = "rgba(15, 23, 42, 0.76)";
+        context.font = "800 12px Consolas, 'Microsoft YaHei', monospace";
+        context.fillText(`BFS depth ${Math.min(activeDepth, plan.maxDepth)} / ${plan.maxDepth}: high-threshold seeds connect weak edges`, offsetX + 12, offsetY + 22);
+        context.restore();
+        state.hysteresisFrame = window.requestAnimationFrame(() => drawHysteresisPlan(plan, startTime));
+    }
+
+    function renderFlowTimeline(pipeline, step) {
+        if (!els.kernelFlowTitle) return;
+        els.kernelFlowTitle.hidden = state.tab === "compare";
+        const labels = state.tab === "canny"
+            ? ["Image", "Gray", "Blur", "Gradient", "Direction", "NMS", "Double", "Hysteresis"]
+            : ["Image", "Gray", "Gx/Gy", "Magnitude", "Threshold", "Final"];
+        const stepIndex = Math.max(0, pipeline.steps.findIndex((item) => item === step || item.key === step?.key));
+        els.kernelFlowTitle.style.setProperty("--edge-flow-count", labels.length);
+        els.kernelFlowTitle.innerHTML = `
+            <strong>${state.tab === "canny" ? "CANNY FLOW" : "KERNEL FLOW"}</strong>
+            <ol class="edge-flow-timeline" aria-label="${state.tab === "canny" ? "Canny 流程时间线" : "卷积核流程时间线"}">
+                ${labels.map((label, index) => `
+                    <li class="${index < stepIndex ? "is-done" : ""} ${index === stepIndex ? "is-active" : ""}">
+                        <span>${index + 1}</span>
+                        <b>${escapeHtml(label)}</b>
+                    </li>
+                `).join("")}
+            </ol>
+        `;
+    }
+
+    async function renderHysteresisOverlay(pipeline, step) {
+        clearHysteresisOverlay();
+        if (state.tab !== "canny" || step?.key !== "hysteresis" || !els.hysteresisCanvas) return;
+        try {
+            const plan = await buildHysteresisPlan(pipeline);
+            const currentStep = state.data?.pipeline?.steps?.[state.stepIndex];
+            if (!plan || state.tab !== "canny" || currentStep?.key !== "hysteresis") return;
+            els.mainImageButton.classList.add("is-hysteresis-overlay");
+            drawHysteresisPlan(plan, performance.now());
+        } catch (_error) {
+            clearHysteresisOverlay();
+        }
     }
 
     function renderPipeline() {
@@ -889,17 +1368,11 @@
         if (els.kernelTeaching) {
             els.kernelTeaching.hidden = state.tab !== "kernel";
         }
-        if (els.kernelFlowTitle) {
-            els.kernelFlowTitle.hidden = state.tab === "compare";
-            els.kernelFlowTitle.querySelector("strong").textContent = state.tab === "canny" ? "CANNY FLOW:" : "KERNEL FLOW:";
-            els.kernelFlowTitle.querySelector("span").textContent = state.tab === "canny"
-                ? "Image → Gray → Gaussian Blur → Gradient → Direction → NMS → Double Threshold → Hysteresis"
-                : "Image → Gray → Gx → Gy → Magnitude → Threshold → Final";
-        }
         if (els.mainStageGrid) {
             els.mainStageGrid.classList.toggle("is-kernel", state.tab === "kernel");
         }
         const step = pipeline.steps[state.stepIndex] || pipeline.steps[0];
+        renderFlowTimeline(pipeline, step);
         const info = infoFor(pipeline.method);
         els.stageEyebrow.textContent = state.tab === "canny" ? "Canny Pipeline" : "Kernel Operator";
         els.stageTitle.textContent = `${info.name} · ${step.label}`;
@@ -917,8 +1390,10 @@
         } else {
             clearDirectionVectors();
             renderStepImage(pipeline, step);
+            renderDirectionCompareOverlay(pipeline, step);
         }
         applyStepAnimation(step.key);
+        renderHysteresisOverlay(pipeline, step);
         els.thumbs.innerHTML = pipeline.steps.map((item, index) => {
             const isCannyThumb = state.tab === "canny";
             const cannyClass = isCannyThumb ? `has-thumb-anim edge-thumb-${item.key}` : "";
@@ -1347,10 +1822,11 @@
     }
 
     function render() {
-        if (!state.data) return;
+        if (!state.data && !state.comparePreview && !state.compareLoading) return;
         if (state.tab === "compare") {
             renderCompare();
         } else {
+            if (!state.data) return; // 对于 canny/kernel 模式，没有 data 无法渲染
             renderPipeline();
         }
     }
