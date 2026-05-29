@@ -22,8 +22,12 @@
         hasInk: false,
         timer: null,
         sampleIndex: 0,
-        inferenceMode: "client" // "client" 或 "server"
+        inferenceMode: computeMode("digit_recognition") === "backend" ? "server" : "client"
     };
+
+    function computeMode(feature) {
+        return window.CVCLASS_COMPUTE_CONFIG?.[feature] || "backend";
+    }
 
     const samples = [
         [[80, 72], [200, 72], [164, 118], [134, 178], [112, 224]],
@@ -307,7 +311,7 @@
             probabilities: result.probabilities,
             elapsed_ms: result.elapsed_ms,
             preprocessed_image: preprocessed.preview,
-            message: `前端推理完成：${result.elapsed_ms.toFixed(2)} ms`
+            message: `推理完成：${result.elapsed_ms.toFixed(2)} ms`
         };
     }
 
@@ -345,8 +349,8 @@
         } catch (error) {
             if (state.inferenceMode === "client") {
                 const message = error.message && error.message.includes("mnist_cnn_weights.json")
-                    ? "前端模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json"
-                    : error.message || "前端推理失败";
+                    ? "模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json"
+                    : error.message || "推理失败";
                 setMessage(message, true);
                 return;
             }
@@ -389,6 +393,7 @@
     els.clearBtn.addEventListener("click", clearAll);
     els.loadExampleBtn.addEventListener("click", drawSample);
     els.inferenceModeInputs.forEach((input) => {
+        input.checked = input.value === state.inferenceMode;
         input.addEventListener("change", () => {
             if (!input.checked) return;
             state.inferenceMode = input.value;

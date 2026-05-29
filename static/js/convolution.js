@@ -1625,6 +1625,10 @@ function applyKernelTemplate() {
     resetDemo();
 }
 
+function computeMode(feature) {
+    return window.CVCLASS_COMPUTE_CONFIG?.[feature] || "backend";
+}
+
 function nextAnimationTerm() {
     const p = getParams();
     const order = getKernelOrder(p.kernelSize, p.type);
@@ -1649,6 +1653,19 @@ async function applyKernelToImage() {
         return;
     }
 
+    if (computeMode("image_convolution") === "frontend") {
+        convEls.imageConvMessage.textContent = "卷积处理中...";
+        try {
+            const data = await convolveImageClient(file, getActiveKernelSlice());
+            convEls.convImageResult.src = data.image;
+            convEls.convImageResult.classList.add("is-visible");
+            convEls.imageConvMessage.textContent = `完成：${data.width}×${data.height}，耗时 ${data.elapsed_ms} ms`;
+        } catch (error) {
+            convEls.imageConvMessage.textContent = error.message || "卷积失败";
+        }
+        return;
+    }
+
     const formData = new FormData();
     formData.append("image", file);
     formData.append("kernel", JSON.stringify(getActiveKernelSlice()));
@@ -1669,6 +1686,93 @@ async function applyKernelToImage() {
     } catch (error) {
         convEls.imageConvMessage.textContent = error.message;
     }
+}
+
+function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error("图片读取失败"));
+            image.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error("图片读取失败"));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function convolveImageClient(file, kernel) {
+    const start = performance.now();
+    const image = await loadImageFromFile(file);
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = image.naturalWidth || image.width;
+    sourceCanvas.height = image.naturalHeight || image.height;
+    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+    sourceContext.drawImage(image, 0, 0, sourceCanvas.width, sourceCanvas.height);
+    const sourceImage = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    const src = sourceImage.data;
+    const width = sourceCanvas.width;
+    const height = sourceCanvas.height;
+    const kernelArray = kernel.map((row) => row.map(Number));
+    const size = kernelArray.length;
+    const pad = Math.floor(size / 2);
+    const sum = kernelArray.flat().reduce((total, value) => total + value, 0);
+    const hasNegative = kernelArray.flat().some((value) => value < 0);
+    if (sum > 1 && !hasNegative) {
+        for (let r = 0; r < size; r += 1) {
+            for (let c = 0; c < size; c += 1) {
+                kernelArray[r][c] /= sum;
+            }
+        }
+    }
+    const raw = new Float32Array(width * height * 3);
+    let min = Infinity;
+    let max = -Infinity;
+    const clampCoord = (value, limit) => Math.max(0, Math.min(limit - 1, value));
+    for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+            for (let ch = 0; ch < 3; ch += 1) {
+                let acc = 0;
+                for (let kr = 0; kr < size; kr += 1) {
+                    for (let kc = 0; kc < size; kc += 1) {
+                        const yy = clampCoord(y + kr - pad, height);
+                        const xx = clampCoord(x + kc - pad, width);
+                        acc += src[(yy * width + xx) * 4 + ch] * kernelArray[kr][kc];
+                    }
+                }
+                const index = (y * width + x) * 3 + ch;
+                raw[index] = acc;
+                min = Math.min(min, acc);
+                max = Math.max(max, acc);
+            }
+        }
+    }
+    const output = new ImageData(width, height);
+    const dst = output.data;
+    const displayMode = hasNegative ? "clip" : "normalize";
+    for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+            const pixel = y * width + x;
+            for (let ch = 0; ch < 3; ch += 1) {
+                const value = raw[pixel * 3 + ch];
+                dst[pixel * 4 + ch] = displayMode === "normalize" && max > min
+                    ? Math.max(0, Math.min(255, (value - min) / (max - min) * 255))
+                    : Math.max(0, Math.min(255, value));
+            }
+            dst[pixel * 4 + 3] = src[pixel * 4 + 3];
+        }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").putImageData(output, 0, 0);
+    return {
+        image: canvas.toDataURL("image/png"),
+        elapsed_ms: Number((performance.now() - start).toFixed(2)),
+        width,
+        height
+    };
 }
 
 function handleParamChange() {

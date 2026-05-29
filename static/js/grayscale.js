@@ -43,6 +43,10 @@ let lastPixel = null;
 let historyCount = 0;
 let currentImageMetrics = null;
 
+function computeMode(feature) {
+    return window.CVCLASS_COMPUTE_CONFIG?.[feature] || "backend";
+}
+
 const methodNames = {
     weighted: "加权平均法",
     average: "平均值法",
@@ -442,6 +446,20 @@ async function processImage() {
     showMessage(`正在执行${operationNames[currentOperation]}...`);
 
     try {
+        if (computeMode("grayscale") === "frontend") {
+            const data = processImageClient({
+                operation: currentOperation,
+                method: currentMethod,
+                channel: currentChannel,
+                threshold: Number(currentThreshold)
+            });
+            if (requestId !== latestRequestId) {
+                return;
+            }
+            applyProcessResult(data, "前端");
+            return;
+        }
+
         const response = await fetch(cvclassUrl("/process"), {
             method: "POST",
             body: formData
@@ -456,25 +474,7 @@ async function processImage() {
             throw new Error(data.error || "后端处理失败");
         }
 
-        beforeImage.src = originalImageUrl;
-        afterImage.src = data.image;
-        compareSlider.classList.remove("empty");
-        compareSlider.style.setProperty("--split", "50%");
-        sliderHandle.setAttribute("aria-valuenow", "50");
-        syncCompareSliderGeometry();
-        downloadButton.href = data.image;
-        downloadButton.download = `processed_${data.info.filename.replace(/\.[^.]+$/, "")}.png`;
-        downloadButton.classList.remove("disabled");
-
-        infoName.textContent = data.info.filename;
-        infoResolution.textContent = `${data.info.width} × ${data.info.height}`;
-        infoSize.textContent = data.info.size;
-        infoTime.textContent = `${data.elapsed_ms} ms`;
-        infoFormat.textContent = `格式：${data.info.format}`;
-        drawHistogram(data.histogram);
-        addHistoryRecord(data);
-        refreshLastPixelFormula();
-        showMessage(`处理完成：${operationNames[data.info.operation]} · ${data.elapsed_ms} ms`, "success");
+        applyProcessResult(data, "后端");
     } catch (error) {
         if (requestId !== latestRequestId) {
             return;
@@ -486,6 +486,163 @@ async function processImage() {
             setProcessingState(false);
         }
     }
+}
+
+function makeHistogramFromGray(gray) {
+    const histogram = new Array(256).fill(0);
+    for (let i = 0; i < gray.length; i += 1) {
+        histogram[gray[i]] += 1;
+    }
+    return histogram;
+}
+
+function processImageClient(params) {
+    const start = performance.now();
+    const width = pixelCanvas.width;
+    const height = pixelCanvas.height;
+    const source = pixelContext.getImageData(0, 0, width, height);
+    const src = source.data;
+    let outWidth = width;
+    let outHeight = height;
+    let output = new ImageData(outWidth, outHeight);
+    const inputGray = new Uint8ClampedArray(width * height);
+    let outputGray = new Uint8ClampedArray(width * height);
+
+    function grayValue(r, g, b) {
+        if (params.method === "average") return clipGray((r + g + b) / 3);
+        if (params.method === "max") return Math.max(r, g, b);
+        if (params.method === "min") return Math.min(r, g, b);
+        return clipGray(0.299 * r + 0.587 * g + 0.114 * b);
+    }
+
+    for (let i = 0; i < width * height; i += 1) {
+        inputGray[i] = grayValue(src[i * 4], src[i * 4 + 1], src[i * 4 + 2]);
+    }
+
+    if (params.operation === "rotate_90") {
+        outWidth = height;
+        outHeight = width;
+        output = new ImageData(outWidth, outHeight);
+    }
+
+    const dst = output.data;
+    const writePixel = (index, r, g, b, a) => {
+        dst[index * 4] = r;
+        dst[index * 4 + 1] = g;
+        dst[index * 4 + 2] = b;
+        dst[index * 4 + 3] = a;
+    };
+
+    if (params.operation === "equalize") {
+        const histogram = makeHistogramFromGray(inputGray);
+        const cdf = [];
+        histogram.reduce((sum, value, index) => {
+            cdf[index] = sum + value;
+            return cdf[index];
+        }, 0);
+        const cdfMin = cdf.find((value) => value > 0) || 0;
+        const denominator = width * height - cdfMin;
+        const mapping = cdf.map((value) => denominator > 0 ? clipGray(Math.round((value - cdfMin) / denominator * 255)) : 0);
+        for (let i = 0; i < width * height; i += 1) {
+            const eq = mapping[inputGray[i]];
+            const factor = eq / 255;
+            writePixel(i, src[i * 4] * factor, src[i * 4 + 1] * factor, src[i * 4 + 2] * factor, src[i * 4 + 3]);
+            outputGray[i] = eq;
+        }
+    } else if (params.operation === "rotate_90") {
+        const rotatedGray = new Uint8ClampedArray(width * height);
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                const srcIndex = y * width + x;
+                const dstX = y;
+                const dstY = width - 1 - x;
+                const dstIndex = dstY * outWidth + dstX;
+                writePixel(dstIndex, src[srcIndex * 4], src[srcIndex * 4 + 1], src[srcIndex * 4 + 2], src[srcIndex * 4 + 3]);
+                rotatedGray[dstIndex] = inputGray[srcIndex];
+            }
+        }
+        outputGray = rotatedGray;
+    } else {
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                const srcIndex = y * width + x;
+                let dstX = x;
+                let dstY = y;
+                if (params.operation === "flip_horizontal") dstX = width - 1 - x;
+                if (params.operation === "flip_vertical") dstY = height - 1 - y;
+                const dstIndex = dstY * width + dstX;
+                const a = src[srcIndex * 4 + 3];
+                if (params.operation === "channel") {
+                    const channelIndex = { red: 0, green: 1, blue: 2 }[params.channel] || 0;
+                    const r = channelIndex === 0 ? src[srcIndex * 4] : 0;
+                    const g = channelIndex === 1 ? src[srcIndex * 4 + 1] : 0;
+                    const b = channelIndex === 2 ? src[srcIndex * 4 + 2] : 0;
+                    writePixel(dstIndex, r, g, b, a);
+                    outputGray[dstIndex] = grayValue(r, g, b);
+                } else if (params.operation === "binary") {
+                    const value = inputGray[srcIndex] >= params.threshold ? 255 : 0;
+                    writePixel(dstIndex, value, value, value, a);
+                    outputGray[dstIndex] = value;
+                } else if (params.operation === "invert") {
+                    const r = 255 - src[srcIndex * 4];
+                    const g = 255 - src[srcIndex * 4 + 1];
+                    const b = 255 - src[srcIndex * 4 + 2];
+                    writePixel(dstIndex, r, g, b, a);
+                    outputGray[dstIndex] = grayValue(r, g, b);
+                } else if (params.operation === "flip_horizontal" || params.operation === "flip_vertical") {
+                    writePixel(dstIndex, src[srcIndex * 4], src[srcIndex * 4 + 1], src[srcIndex * 4 + 2], a);
+                    outputGray[dstIndex] = inputGray[srcIndex];
+                } else {
+                    const value = inputGray[srcIndex];
+                    writePixel(dstIndex, value, value, value, a);
+                    outputGray[dstIndex] = value;
+                }
+            }
+        }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = outWidth;
+    canvas.height = outHeight;
+    canvas.getContext("2d").putImageData(output, 0, 0);
+    return {
+        image: canvas.toDataURL("image/png"),
+        histogram: makeHistogramFromGray(outputGray),
+        elapsed_ms: Number((performance.now() - start).toFixed(2)),
+        info: {
+            filename: selectedFile.name,
+            size: formatFileSize(selectedFile.size),
+            width: outWidth,
+            height: outHeight,
+            format: selectedFile.type || "Unknown",
+            method: params.method,
+            operation: params.operation,
+            channel: params.channel,
+            threshold: params.threshold
+        }
+    };
+}
+
+function applyProcessResult(data, sourceLabel) {
+    beforeImage.src = originalImageUrl;
+    afterImage.src = data.image;
+    compareSlider.classList.remove("empty");
+    compareSlider.style.setProperty("--split", "50%");
+    sliderHandle.setAttribute("aria-valuenow", "50");
+    syncCompareSliderGeometry();
+    downloadButton.href = data.image;
+    downloadButton.download = `processed_${data.info.filename.replace(/\.[^.]+$/, "")}.png`;
+    downloadButton.classList.remove("disabled");
+
+    infoName.textContent = data.info.filename;
+    infoResolution.textContent = `${data.info.width} × ${data.info.height}`;
+    infoSize.textContent = data.info.size;
+    infoTime.textContent = `${data.elapsed_ms} ms`;
+    infoFormat.textContent = `格式：${data.info.format}`;
+    drawHistogram(data.histogram);
+    addHistoryRecord(data);
+    refreshLastPixelFormula();
+    showMessage(`${sourceLabel}处理完成：${operationNames[data.info.operation]} · ${data.elapsed_ms} ms`, "success");
 }
 
 function updateSliderByClientX(clientX) {

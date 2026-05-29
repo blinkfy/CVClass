@@ -1,4 +1,5 @@
 import os
+import mimetypes
 from io import BytesIO
 import base64
 import json
@@ -11,6 +12,9 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.edge_visualization import build_edge_response
 from models.image_utils import convolve_gray_image, make_histogram, process_image
+
+mimetypes.add_type("application/javascript", ".mjs")
+mimetypes.add_type("application/wasm", ".wasm")
 
 app = Flask(__name__)
 CVCLASS_PREFIX = os.environ.get("CVCLASS_PREFIX", "/cvclass")
@@ -32,6 +36,43 @@ ALLOWED_GRAY_METHODS = {"weighted", "average", "max", "min"}
 ALLOWED_CHANNELS = {"red", "green", "blue"}
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+COMPUTE_CONFIG_PATH = os.path.join(app.root_path, "compute_config.json")
+
+
+def load_compute_config():
+    default_config = {
+        "grayscale": "backend",
+        "image_convolution": "backend",
+        "edge_detection": "backend",
+        "digit_recognition": "backend",
+    }
+    try:
+        with open(COMPUTE_CONFIG_PATH, "r", encoding="utf-8") as config_file:
+            user_config = json.load(config_file)
+    except (OSError, json.JSONDecodeError):
+        user_config = {}
+
+    config = default_config.copy()
+    for key, value in user_config.items():
+        if key in config and value in {"frontend", "backend"}:
+            config[key] = value
+    return config
+
+
+def compute_mode(feature):
+    return load_compute_config().get(feature, "backend")
+
+
+def frontend_only_response(feature_name):
+    return jsonify({
+        "error": f"{feature_name} 当前配置为前端计算，后端计算接口已关闭",
+        "compute_mode": "frontend",
+    }), 409
+
+
+@app.context_processor
+def inject_compute_config():
+    return {"compute_config": load_compute_config()}
 
 
 def allowed_file(filename):
@@ -100,6 +141,8 @@ def edge_detection_page():
 
 @app.route("/edge-detection/<mode>", methods=["GET"])
 def edge_detection_mode_page(mode):
+    if mode == "teed":
+        return render_template("edge_teed.html", active_page="edge", edge_mode=mode)
     if mode not in {"compare", "kernel", "canny"}:
         return redirect(url_for("edge_detection_mode_page", mode="compare"))
     return render_template("edge_detection.html", active_page="edge", edge_mode=mode)
@@ -116,6 +159,9 @@ def parse_threshold(value):
 
 
 def handle_process_request(default_operation="grayscale", allow_operation_param=True):
+    if compute_mode("grayscale") == "frontend":
+        return frontend_only_response("图像处理")
+
     if "image" not in request.files:
         return jsonify({"error": "请先选择并上传图片文件"}), 400
 
@@ -198,6 +244,9 @@ def grayscale():
 
 @app.route("/convolve-image", methods=["POST"])
 def convolve_image():
+    if compute_mode("image_convolution") == "frontend":
+        return frontend_only_response("图像卷积")
+
     if "image" not in request.files:
         return jsonify({"error": "请先选择并上传图片文件"}), 400
 
@@ -258,6 +307,9 @@ def convolve_image():
 
 @app.route("/api/edge-detect", methods=["POST"])
 def edge_detect_api():
+    if compute_mode("edge_detection") == "frontend":
+        return frontend_only_response("边缘检测")
+
     try:
         return jsonify(build_edge_response(request.form, request.files, app.static_folder, allowed_file))
     except (UnidentifiedImageError, ValueError) as error:
@@ -268,6 +320,9 @@ def edge_detect_api():
 
 @app.route("/api/digit-recognize", methods=["POST"])
 def digit_recognize():
+    if compute_mode("digit_recognition") == "frontend":
+        return frontend_only_response("手写数字识别")
+
     data = request.get_json(silent=True) or {}
     canvas_28x28 = data.get("canvas")
     preview = data.get("preprocessed_image", "")

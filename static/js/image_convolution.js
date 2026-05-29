@@ -74,6 +74,10 @@ let currentKernelLabel = imageKernelTemplates.box_blur.label;
 let currentViewMode = "side";
 let currentLoadToken = 0;
 
+function computeMode(feature) {
+    return window.CVCLASS_COMPUTE_CONFIG?.[feature] || "backend";
+}
+
 function cloneMatrix(matrix) {
     return matrix.map((row) => row.slice());
 }
@@ -503,16 +507,55 @@ async function applyImageConvolution() {
         return;
     }
 
-    imageConvEls.message.textContent = "前端正在使用 Canvas 执行卷积...";
+    const useBackend = computeMode("image_convolution") === "backend";
+    imageConvEls.message.textContent = useBackend ? "正在调用 Flask 后端执行卷积..." : "正在使用 Canvas 执行卷积...";
     imageConvEls.apply.disabled = true;
 
     try {
         const padding = Number(imageConvEls.padding.value);
         const stride = Number(imageConvEls.stride.value);
         const displayMode = imageConvEls.displayMode?.value || "auto";
-        const result = convolveImageData(currentImageData, currentKernel, padding, stride, displayMode);
+        let result;
 
-        imageConvEls.result.src = imageDataToUrl(result.imageData);
+        if (useBackend) {
+            const formData = new FormData();
+            formData.append("image", currentFile);
+            formData.append("kernel", JSON.stringify(currentKernel));
+            formData.append("padding", String(padding));
+            formData.append("stride", String(stride));
+            formData.append("display_mode", displayMode);
+            const response = await fetch(cvclassUrl("/convolve-image"), {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "后端卷积失败");
+            }
+            result = {
+                imageUrl: data.image,
+                width: data.width,
+                height: data.height,
+                min: data.min,
+                max: data.max,
+                displayMode: data.display_mode,
+                elapsedText: `${data.elapsed_ms} ms`
+            };
+        } else {
+            const start = performance.now();
+            const localResult = convolveImageData(currentImageData, currentKernel, padding, stride, displayMode);
+            result = {
+                imageUrl: imageDataToUrl(localResult.imageData),
+                width: localResult.width,
+                height: localResult.height,
+                min: localResult.min,
+                max: localResult.max,
+                displayMode: localResult.displayMode,
+                elapsedText: `${Math.round((performance.now() - start) * 100) / 100} ms`
+            };
+        }
+
+        imageConvEls.result.src = result.imageUrl;
         imageConvEls.result.classList.add("is-visible");
         syncSliderSources();
         imageConvEls.size.textContent = `${result.width} × ${result.height}`;
@@ -528,7 +571,7 @@ async function applyImageConvolution() {
             `stride：${stride}`,
             `显示方式：${result.displayMode}`,
             `输出范围：${Math.round(result.min)} ~ ${Math.round(result.max)}`,
-            "处理耗时：None"
+            `处理耗时：${result.elapsedText}`
         ]);
     } catch (error) {
         imageConvEls.message.textContent = error.message;

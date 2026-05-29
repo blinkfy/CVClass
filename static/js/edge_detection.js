@@ -7,11 +7,11 @@
     const basePath = window.CVCLASS_BASE_PATH || "";
     const assetsBase = root.dataset.assetsBase || "";
     const samples = [
-        { file: "espresso_1.jpeg", label: "咖啡" },
-        { file: "bus_1.jpeg", label: "校车" },
-        { file: "pizza_1.jpeg", label: "披萨" },
-        { file: "bug_1.jpeg", label: "瓢虫" },
-        { file: "car_1.jpeg", label: "跑车" }
+        { file: "cameraman.png", label: "Cameraman" },
+        { file: "house.png", label: "House" },
+        { file: "lena_color_512.png", label: "Lena" },
+        { file: "mandril_color.png", label: "Mandrill" },
+        { file: "peppers_color.png", label: "Peppers" }
     ];
 
     const compareTimeline = ["算子分类", "一阶导数 / 二阶导数 / Canny", "结果对比"];
@@ -29,6 +29,16 @@
         LoG: "LoG / Marr",
         scharr: "Scharr",
         canny: "Canny"
+    };
+
+    const processNoteImages = {
+        sobel: "sobel.webp",
+        prewitt: "prewitt.webp",
+        roberts: "roberts.webp",
+        kirsch: "kirsch.webp",
+        laplacian: "laplacian.webp",
+        LoG: "log.webp",
+        canny: "canny.webp"
     };
 
     const methodInfo = {
@@ -301,6 +311,7 @@
         playControls: root.querySelector(".edge-play-controls"),
         infoTitle: document.getElementById("edgeInfoTitle"),
         infoText: document.getElementById("edgeInfoText"),
+        processNoteImage: document.getElementById("edgeProcessNoteImage"),
         formula: document.getElementById("edgeFormula"),
         liveLogic: document.getElementById("edgeLiveLogic"),
         kernelBox: document.getElementById("edgeKernelBox"),
@@ -315,7 +326,7 @@
 
     const state = {
         tab: root.dataset.edgeMode || "compare",
-        sample: "espresso_1.jpeg",
+        sample: "cameraman.png",
         file: null,
         data: null,
         comparePreview: null,
@@ -340,6 +351,10 @@
 
     function endpoint(path) {
         return `${basePath}${path}`;
+    }
+
+    function computeMode(feature) {
+        return window.CVCLASS_COMPUTE_CONFIG?.[feature] || "backend";
     }
 
     function escapeHtml(value) {
@@ -376,6 +391,15 @@
 
     function infoFor(method) {
         return methodInfo[method] || { name: methodLabels[method] || method, category: "-", summary: "", pros: "-", cons: "-", best_for: "-" };
+    }
+
+    function updateProcessNoteImage(method) {
+        if (!els.processNoteImage) return;
+        const normalized = method === "original" ? "sobel" : method;
+        const file = processNoteImages[normalized] || processNoteImages.sobel;
+        const label = methodLabels[normalized] || methodLabels.sobel;
+        els.processNoteImage.src = `${assetsBase}${file}`;
+        els.processNoteImage.alt = `${label} 算法介绍`;
     }
 
     function kernelsFor(method) {
@@ -573,6 +597,487 @@
         }, 180);
     }
 
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error("图片读取失败"));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function loadImageElement(src) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error("图片加载失败"));
+            image.src = src;
+        });
+    }
+
+    function canvasToPng(canvas) {
+        return canvas.toDataURL("image/png");
+    }
+
+    function formatClientFileSize(size) {
+        if (!Number.isFinite(size)) return "示例图";
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
+        return `${(size / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    async function loadEdgeClientSource() {
+        const src = state.file ? await readFileAsDataUrl(state.file) : `${assetsBase}${state.sample}`;
+        const image = await loadImageElement(src);
+        const maxSide = 960;
+        const sourceW = image.naturalWidth || image.width;
+        const sourceH = image.naturalHeight || image.height;
+        const scale = Math.min(1, maxSide / Math.max(sourceW, sourceH));
+        const width = Math.max(1, Math.round(sourceW * scale));
+        const height = Math.max(1, Math.round(sourceH * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(image, 0, 0, width, height);
+        const rgba = context.getImageData(0, 0, width, height).data;
+        const gray = new Float32Array(width * height);
+        for (let i = 0; i < width * height; i += 1) {
+            gray[i] = rgba[i * 4] * 0.299 + rgba[i * 4 + 1] * 0.587 + rgba[i * 4 + 2] * 0.114;
+        }
+        return {
+            width,
+            height,
+            gray,
+            original: canvasToPng(canvas),
+            info: {
+                filename: state.file?.name || state.sample,
+                size: state.file ? formatClientFileSize(state.file.size) : "示例图",
+                width,
+                height
+            }
+        };
+    }
+
+    function clipByte(value) {
+        return Math.max(0, Math.min(255, Math.trunc(value)));
+    }
+
+    function grayDataUrl(values, width, height, options = {}) {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        const imageData = context.createImageData(width, height);
+        const data = imageData.data;
+        let min = Infinity;
+        let max = -Infinity;
+        if (options.normalize) {
+            for (let i = 0; i < values.length; i += 1) {
+                const value = Number(values[i]) || 0;
+                min = Math.min(min, value);
+                max = Math.max(max, value);
+            }
+        }
+        for (let i = 0; i < width * height; i += 1) {
+            let value = Number(values[i]) || 0;
+            if (options.normalize) {
+                value = max > min ? (value - min) / (max - min) * 255 : 0;
+            }
+            value = options.invert ? 255 - value : value;
+            const offset = i * 4;
+            const byte = clipByte(value);
+            data[offset] = byte;
+            data[offset + 1] = byte;
+            data[offset + 2] = byte;
+            data[offset + 3] = 255;
+        }
+        context.putImageData(imageData, 0, 0);
+        return canvasToPng(canvas);
+    }
+
+    function convolveGray(values, width, height, kernel) {
+        const size = kernel.length;
+        const pad = Math.floor(size / 2);
+        const output = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                let sum = 0;
+                for (let ky = 0; ky < size; ky += 1) {
+                    const yy = clamp(y + ky - pad, 0, height - 1);
+                    for (let kx = 0; kx < size; kx += 1) {
+                        const xx = clamp(x + kx - pad, 0, width - 1);
+                        sum += values[yy * width + xx] * kernel[ky][kx];
+                    }
+                }
+                output[y * width + x] = sum;
+            }
+        }
+        return output;
+    }
+
+    function absArray(values) {
+        const output = new Float32Array(values.length);
+        for (let i = 0; i < values.length; i += 1) output[i] = Math.abs(values[i]);
+        return output;
+    }
+
+    function hypotArray(a, b) {
+        const output = new Float32Array(a.length);
+        for (let i = 0; i < a.length; i += 1) output[i] = Math.hypot(a[i], b[i]);
+        return output;
+    }
+
+    function thresholdArray(values, threshold) {
+        const output = new Uint8ClampedArray(values.length);
+        for (let i = 0; i < values.length; i += 1) output[i] = values[i] >= threshold ? 255 : 0;
+        return output;
+    }
+
+    function arrayStatsClient(values) {
+        if (!values?.length) return { min: 0, max: 0, mean: 0 };
+        let min = Infinity;
+        let max = -Infinity;
+        let sum = 0;
+        for (let i = 0; i < values.length; i += 1) {
+            const value = Number(values[i]) || 0;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+            sum += value;
+        }
+        return {
+            min: Math.round(min * 100) / 100,
+            max: Math.round(max * 100) / 100,
+            mean: Math.round((sum / values.length) * 100) / 100
+        };
+    }
+
+    function edgeRatioClient(values) {
+        if (!values?.length) return 0;
+        let count = 0;
+        for (let i = 0; i < values.length; i += 1) {
+            if (values[i] >= 128) count += 1;
+        }
+        return Math.round((count / values.length * 100) * 100) / 100;
+    }
+
+    function kirschKernel(direction) {
+        const kernels = {
+            n: [[-3, -3, 5], [-3, 0, 5], [-3, -3, 5]],
+            ne: [[-3, -3, -3], [-3, 0, 5], [-3, 5, 5]],
+            e: [[-3, -3, -3], [-3, 0, -3], [5, 5, 5]],
+            se: [[-3, -3, -3], [5, 0, -3], [5, 5, -3]],
+            s: [[5, -3, -3], [5, 0, -3], [5, -3, -3]],
+            sw: [[5, 5, -3], [5, 0, -3], [-3, -3, -3]],
+            w: [[5, 5, 5], [-3, 0, -3], [-3, -3, -3]],
+            nw: [[-3, 5, 5], [-3, 0, 5], [-3, -3, -3]]
+        };
+        return kernels[direction] || kernels.n;
+    }
+
+    function edgeKernelClientPipeline(source, method, threshold, includeOriginal = true) {
+        const { width, height, gray } = source;
+        const steps = includeOriginal
+            ? [{ key: "original", label: "Image", image: source.original }]
+            : [];
+        steps.push({ key: "gray", label: "Gray", image: grayDataUrl(gray, width, height) });
+        let response;
+        if (["sobel", "prewitt", "roberts", "scharr"].includes(method)) {
+            const gx = convolveGray(gray, width, height, edgeKernels[`${method}_x`]);
+            const gy = convolveGray(gray, width, height, edgeKernels[`${method}_y`]);
+            response = hypotArray(gx, gy);
+            steps.push(
+                { key: "gx", label: "Gx", image: grayDataUrl(gx, width, height, { normalize: true }) },
+                { key: "gy", label: "Gy", image: grayDataUrl(gy, width, height, { normalize: true }) },
+                { key: "magnitude", label: "Magnitude", image: grayDataUrl(response, width, height) }
+            );
+        } else if (method === "kirsch") {
+            const directions = ["n", "ne", "e", "se", "s", "sw", "w", "nw"];
+            response = new Float32Array(width * height).fill(-Infinity);
+            directions.forEach((direction) => {
+                const grad = convolveGray(gray, width, height, kirschKernel(direction));
+                for (let i = 0; i < grad.length; i += 1) response[i] = Math.max(response[i], grad[i]);
+            });
+            steps.push(
+                { key: "response", label: "8-dir Response", image: grayDataUrl(response, width, height) },
+                { key: "magnitude", label: "Magnitude", image: grayDataUrl(response, width, height) }
+            );
+        } else {
+            const kernel = edgeKernels[method] || edgeKernels.laplacian;
+            response = absArray(convolveGray(gray, width, height, kernel));
+            steps.push(
+                { key: "response", label: "Kernel Response", image: grayDataUrl(response, width, height) },
+                { key: "magnitude", label: "Abs Response", image: grayDataUrl(response, width, height) }
+            );
+        }
+        const thresholded = thresholdArray(response, Number(threshold) || 0);
+        steps.push(
+            { key: "threshold", label: "Threshold", image: grayDataUrl(thresholded, width, height) },
+            { key: "final", label: "Final", image: grayDataUrl(thresholded, width, height) }
+        );
+        return {
+            method,
+            info: { method },
+            steps,
+            final: steps[steps.length - 1].image,
+            edge_ratio: edgeRatioClient(thresholded),
+            stats: arrayStatsClient(response)
+        };
+    }
+
+    function gaussianKernel(size) {
+        const sigma = 0.3 * ((size - 1) * 0.5 - 1) + 0.8;
+        const center = Math.floor(size / 2);
+        const kernel = [];
+        let sum = 0;
+        for (let y = 0; y < size; y += 1) {
+            const row = [];
+            for (let x = 0; x < size; x += 1) {
+                const dx = x - center;
+                const dy = y - center;
+                const value = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+                row.push(value);
+                sum += value;
+            }
+            kernel.push(row);
+        }
+        return kernel.map((row) => row.map((value) => value / sum));
+    }
+
+    function interpClient(values, width, height, y, x) {
+        const y0 = clamp(Math.floor(y), 0, height - 1);
+        const x0 = clamp(Math.floor(x), 0, width - 1);
+        const y1 = clamp(y0 + 1, 0, height - 1);
+        const x1 = clamp(x0 + 1, 0, width - 1);
+        const dy = y - y0;
+        const dx = x - x0;
+        return (1 - dy) * (1 - dx) * values[y0 * width + x0]
+            + dy * (1 - dx) * values[y1 * width + x0]
+            + (1 - dy) * dx * values[y0 * width + x1]
+            + dy * dx * values[y1 * width + x1];
+    }
+
+    function nmsClient(grad, angle, width, height, precise) {
+        const output = new Float32Array(width * height);
+        for (let y = 1; y < height - 1; y += 1) {
+            for (let x = 1; x < width - 1; x += 1) {
+                const index = y * width + x;
+                const g = grad[index];
+                if (precise) {
+                    const rad = angle[index] * Math.PI / 180;
+                    const dx = Math.cos(rad);
+                    const dy = Math.sin(rad);
+                    if (g >= interpClient(grad, width, height, y + dy, x + dx)
+                        && g >= interpClient(grad, width, height, y - dy, x - dx)) {
+                        output[index] = g;
+                    }
+                } else {
+                    const a = angle[index];
+                    let g1;
+                    let g2;
+                    if (a >= 22.5 && a < 67.5) {
+                        g1 = grad[(y - 1) * width + x + 1];
+                        g2 = grad[(y + 1) * width + x - 1];
+                    } else if (a >= 67.5 && a < 112.5) {
+                        g1 = grad[(y - 1) * width + x];
+                        g2 = grad[(y + 1) * width + x];
+                    } else if (a >= 112.5 && a < 157.5) {
+                        g1 = grad[(y - 1) * width + x - 1];
+                        g2 = grad[(y + 1) * width + x + 1];
+                    } else {
+                        g1 = grad[y * width + x + 1];
+                        g2 = grad[y * width + x - 1];
+                    }
+                    if (g >= g1 && g >= g2) output[index] = g;
+                }
+            }
+        }
+        return output;
+    }
+
+    function directionVectorFieldClient(grad, angle, width, height, targetCount = 18) {
+        const step = Math.max(2, Math.floor(Math.min(width, height) / targetCount));
+        const positives = [];
+        for (let i = 0; i < grad.length; i += 1) {
+            if (grad[i] > 0) positives.push(grad[i]);
+        }
+        positives.sort((a, b) => a - b);
+        const scale = positives.length ? positives[Math.min(positives.length - 1, Math.floor(positives.length * 0.92))] || 1 : 1;
+        const vectors = [];
+        const offset = Math.floor(step / 2);
+        for (let y = offset; y < height; y += step) {
+            for (let x = offset; x < width; x += step) {
+                const index = y * width + x;
+                const magnitude = Math.max(0, Math.min(1, grad[index] / scale));
+                if (magnitude < 0.08) continue;
+                vectors.push({
+                    x: Math.round(x * 100) / 100,
+                    y: Math.round(y * 100) / 100,
+                    angle: Math.round(angle[index] * 100) / 100,
+                    magnitude: Math.round(magnitude * 1000) / 1000
+                });
+            }
+        }
+        return { width, height, vectors };
+    }
+
+    function cannyClientPipeline(source, options, includeOriginal = true) {
+        const { width, height, gray } = source;
+        const apertureSize = [3, 5, 7].includes(Number(options.apertureSize)) ? Number(options.apertureSize) : 5;
+        const low = Math.min(Number(options.threshold1) || 0, Number(options.threshold2) || 0);
+        const high = Math.max(Number(options.threshold1) || 0, Number(options.threshold2) || 0);
+        const blurred = convolveGray(gray, width, height, gaussianKernel(apertureSize));
+        const gx = convolveGray(blurred, width, height, edgeKernels.sobel_x);
+        const gy = convolveGray(blurred, width, height, edgeKernels.sobel_y);
+        const grad = new Float32Array(width * height);
+        const angle = new Float32Array(width * height);
+        for (let i = 0; i < grad.length; i += 1) {
+            grad[i] = options.l2Gradient ? Math.hypot(gx[i], gy[i]) : Math.abs(gx[i]) + Math.abs(gy[i]);
+            angle[i] = ((Math.atan2(gy[i], gx[i]) * 180 / Math.PI) % 180 + 180) % 180;
+        }
+        const nms = nmsClient(grad, angle, width, height, Boolean(options.precise));
+        const doubleThreshold = new Uint8ClampedArray(width * height);
+        const edges = new Uint8ClampedArray(width * height);
+        const queue = [];
+        for (let i = 0; i < nms.length; i += 1) {
+            if (nms[i] >= high) {
+                doubleThreshold[i] = 255;
+                edges[i] = 255;
+                queue.push(i);
+            } else if (nms[i] >= low) {
+                doubleThreshold[i] = 128;
+            }
+        }
+        for (let head = 0; head < queue.length; head += 1) {
+            const index = queue[head];
+            const y = Math.floor(index / width);
+            const x = index % width;
+            for (let dy = -1; dy <= 1; dy += 1) {
+                for (let dx = -1; dx <= 1; dx += 1) {
+                    if (!dx && !dy) continue;
+                    const yy = y + dy;
+                    const xx = x + dx;
+                    if (yy < 0 || yy >= height || xx < 0 || xx >= width) continue;
+                    const ni = yy * width + xx;
+                    if (!edges[ni] && nms[ni] >= low) {
+                        edges[ni] = 255;
+                        queue.push(ni);
+                    }
+                }
+            }
+        }
+        const steps = includeOriginal
+            ? [{ key: "original", label: "Image", image: source.original }]
+            : [];
+        steps.push(
+            { key: "gray", label: "Gray", image: grayDataUrl(gray, width, height) },
+            { key: "blur", label: "Gaussian Blur", image: grayDataUrl(blurred, width, height) },
+            { key: "gradient", label: "Gradient", image: grayDataUrl(grad, width, height) },
+            {
+                key: "direction",
+                label: "Direction",
+                image: grayDataUrl(angle, width, height, { normalize: true }),
+                vector_field: directionVectorFieldClient(grad, angle, width, height)
+            },
+            { key: "nms", label: "NMS", image: grayDataUrl(nms, width, height) },
+            { key: "double", label: "Double Threshold", image: grayDataUrl(doubleThreshold, width, height) },
+            { key: "hysteresis", label: "Hysteresis", image: grayDataUrl(edges, width, height) }
+        );
+        return {
+            method: "canny",
+            info: {
+                method: "canny",
+                threshold1: low,
+                threshold2: high,
+                apertureSize,
+                L2gradient: Boolean(options.l2Gradient),
+                precise: Boolean(options.precise)
+            },
+            steps,
+            final: steps[steps.length - 1].image,
+            edge_ratio: edgeRatioClient(edges),
+            stats: arrayStatsClient(grad)
+        };
+    }
+
+    function edgeClientPipeline(source, mode, method, includeOriginal = true) {
+        if (method === "canny" || mode === "canny") {
+            return cannyClientPipeline(source, {
+                threshold1: mode === "compare" ? controlValue(els.compareThreshold1, "50") : controlValue(els.threshold1, "50"),
+                threshold2: mode === "compare" ? controlValue(els.compareThreshold2, "150") : controlValue(els.threshold2, "150"),
+                apertureSize: mode === "compare" ? controlValue(els.compareAperture, "5") : controlValue(els.aperture, "5"),
+                l2Gradient: mode === "compare" ? controlChecked(els.compareL2) : controlChecked(els.l2),
+                precise: mode === "compare" ? controlChecked(els.comparePrecise) : controlChecked(els.precise)
+            }, includeOriginal);
+        }
+        return edgeKernelClientPipeline(
+            source,
+            method || "sobel",
+            mode === "compare" ? controlValue(els.compareThreshold, "96") : controlValue(els.threshold, "96"),
+            includeOriginal
+        );
+    }
+
+    async function requestEdgeClient(mode, requestId, previousStepIndex, previousStepKey) {
+        const start = performance.now();
+        const source = await loadEdgeClientSource();
+        if (requestId !== state.requestId) return;
+        if (mode === "compare") {
+            state.compareLoading = true;
+            state.comparePreview = null;
+            state.compareLoadingMethods = compareMethods.filter((method) => method !== "original");
+            render();
+            const compare = compareMethods.map((method) => ({
+                ...edgeClientPipeline(source, "compare", method, false),
+                elapsed_ms: 0
+            }));
+            state.data = {
+                original: source.original,
+                info: source.info,
+                compare,
+                gray: compare[0]?.steps?.[0]?.image || source.original,
+                final: compare[0]?.final || source.original,
+                elapsed_ms: Number((performance.now() - start).toFixed(2))
+            };
+            state.compareLoading = false;
+            state.comparePreview = null;
+            state.compareLoadingMethods = [];
+            state.stepIndex = 0;
+            state.timelineIndex = 0;
+            render();
+            setReady(`处理完成：${source.info.filename}，${source.info.width} × ${source.info.height}，浏览器计算耗时 ${state.data.elapsed_ms} ms`);
+            return;
+        }
+        const pipeline = edgeClientPipeline(source, mode, mode === "canny" ? "canny" : currentMethod(), true);
+        const data = {
+            original: source.original,
+            info: source.info,
+            pipeline,
+            gray: pipeline.steps[1]?.image || source.original,
+            final: pipeline.final,
+            elapsed_ms: Number((performance.now() - start).toFixed(2))
+        };
+        state.data = data;
+        if (pipeline.steps?.length) {
+            const sameKeyIndex = previousStepKey
+                ? pipeline.steps.findIndex((step) => step.key === previousStepKey)
+                : -1;
+            state.stepIndex = sameKeyIndex >= 0
+                ? sameKeyIndex
+                : Math.min(previousStepIndex, pipeline.steps.length - 1);
+            state.timelineIndex = Math.min(
+                (mode === "canny" ? cannyTimeline : kernelTimeline).length - 1,
+                state.stepIndex
+            );
+        } else {
+            state.stepIndex = 0;
+            state.timelineIndex = 0;
+        }
+        render();
+        setReady(`处理完成：${data.info.filename}，${data.info.width} × ${data.info.height}，浏览器计算耗时 ${data.elapsed_ms} ms`);
+    }
+
     async function requestEdge(mode) {
         clearPlayback();
         state.lastProbe = null;
@@ -588,7 +1093,23 @@
         const previousStepKey = previousStep?.key || null;
         state.tab = mode;
         const requestId = ++state.requestId;
-        setLoading("正在调用后端手写 NumPy 边缘检测函数...");
+        setLoading(computeMode("edge_detection") === "frontend"
+            ? "正在使用浏览器计算边缘检测结果..."
+            : "正在调用后端手写 NumPy 边缘检测函数...");
+        if (computeMode("edge_detection") === "frontend") {
+            try {
+                await requestEdgeClient(mode, requestId, previousStepIndex, previousStepKey);
+            } catch (error) {
+                if (requestId === state.requestId) {
+                    state.compareLoading = false;
+                    state.comparePreview = null;
+                    state.compareLoadingMethods = [];
+                    render();
+                    setReady(error.message || "浏览器边缘检测失败");
+                }
+            }
+            return;
+        }
         if (mode === "compare") {
             const leftMethod = els.compareA?.value || "original";
             const rightMethod = els.compareB?.value || "sobel";
@@ -1779,7 +2300,8 @@
         const selectedMethod = rightMethod !== "original" ? rightMethod : (leftMethod !== "original" ? leftMethod : "sobel");
         const selectedInfo = infoFor(selectedMethod);
         const selectedResult = resultByMethod(selectedMethod);
-        els.infoTitle.textContent = `当前选中算法 · ${selectedInfo.name}`;
+        //els.infoTitle.textContent = `当前选中算法 · ${selectedInfo.name}`;
+        updateProcessNoteImage(selectedMethod);
         els.infoText.innerHTML = `
             <span><strong>类别：</strong>${escapeHtml(selectedInfo.category)}</span>
             <span><strong>特点：</strong>${escapeHtml(selectedInfo.summary)}</span>
@@ -1805,6 +2327,7 @@
         const info = infoFor(pipeline.method);
         const cannyDetail = pipeline.method === "canny" ? cannyStepDetails[step.key] : null;
         els.infoTitle.textContent = `${info.name} · ${step.label}`;
+        updateProcessNoteImage(pipeline.method);
         els.infoText.textContent = cannyDetail?.process || stepNotes[step.key] || info.summary;
         renderFormula(cannyFormulaOverrides[step.key] || cannyDetail?.formula || kernelFormula(pipeline.method), cannyFormulaHighlights[step.key] ?? -1);
         if (els.liveLogic) {
@@ -1982,7 +2505,7 @@
         }
     }
 
-    function renderKernelTeachingEmpty(message = "点击主图中的任意像素，前端会取该位置邻域 Patch，乘以当前 Kernel，展示乘积矩阵、求和响应和阈值判断。") {
+    function renderKernelTeachingEmpty(message = "点击主图中的任意像素，系统会取该位置邻域 Patch，乘以当前 Kernel，展示乘积矩阵、求和响应和阈值判断。") {
         stopProbeAnimation();
         state.lastProbe = null;
         state.probeStepIndex = 0;

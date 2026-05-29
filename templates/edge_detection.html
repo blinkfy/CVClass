@@ -33,6 +33,7 @@
         <a class="{{ 'is-active' if edge_mode == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
         <a class="{{ 'is-active' if edge_mode == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
         <a class="{{ 'is-active' if edge_mode == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
+        <a class="{{ 'is-active' if edge_mode == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
     </nav>
 
     <section class="edge-layout">
@@ -338,6 +339,9 @@
             <div>
                 <span class="section-label">Process Notes</span>
                 <h2 id="edgeInfoTitle">当前选中算法说明</h2>
+            </div>
+            <div class="edge-process-note-image" aria-label="算法介绍图片">
+                <img id="edgeProcessNoteImage" src="{{ url_for('static', filename='assets/img/sobel.webp') }}" alt="Sobel 算法介绍" loading="lazy">
             </div>
             <p id="edgeInfoText">选择 Tab 后查看对应算法说明。</p>
             <div id="edgeStepPreview" class="edge-step-preview-card" hidden>
