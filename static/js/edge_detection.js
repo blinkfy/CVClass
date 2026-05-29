@@ -176,8 +176,26 @@
         nms: "沿梯度方向保留局部最大值\nOtherwise suppress to 0"
     };
 
+    const cannyPreviewNotes = {
+        original: "原始输入图像，用作后续 Canny 流水线的起点。",
+        gray: "彩色图到灰度图的擦除动画，强调通道压缩到单通道亮度。",
+        blur: "清晰图像逐渐被高斯平滑结果覆盖，表现降噪过程。",
+        gradient: "边缘响应从暗到亮出现，亮处表示梯度幅值更大。",
+        direction: "方向箭头从图像中浮现，位置、方向和长度来自真实梯度向量。",
+        nms: "粗边缘沿梯度方向被压细，只保留局部最大响应。",
+        double: "强边缘、弱边缘、抑制区域分层点亮，为滞后连接做准备。",
+        hysteresis: "强边缘像电流一样连接相邻弱边缘，形成连续边缘。",
+        final: "最终边缘线被逐步描出。"
+    };
+
     const stepAnimationClasses = {
         gray: "is-anim-gray",
+        gx: "is-anim-kernel-response",
+        gy: "is-anim-kernel-response",
+        response: "is-anim-kernel-response",
+        magnitude: "is-anim-kernel-magnitude",
+        threshold: "is-anim-kernel-threshold",
+        final: "is-anim-kernel-final",
         blur: "is-anim-blur",
         gradient: "is-anim-gradient",
         nms: "is-anim-nms",
@@ -235,6 +253,9 @@
         mainBaseImage: document.getElementById("edgeMainBaseImage"),
         mainImage: document.getElementById("edgeMainImage"),
         vectorCanvas: document.getElementById("edgeVectorCanvas"),
+        mainStageGrid: root.querySelector(".edge-main-stage-grid"),
+        sampleOverlay: document.getElementById("edgeSampleOverlay"),
+        edgeDot: document.getElementById("edgeEdgeDot"),
         thumbs: document.getElementById("edgeStepThumbs"),
         stageMeta: document.getElementById("edgeStageMeta"),
         stageMetaTitle: document.getElementById("edgeStageMetaTitle"),
@@ -247,6 +268,27 @@
         kernelTeaching: document.getElementById("edgeKernelTeaching"),
         kernelProbeBadge: document.getElementById("edgeKernelProbeBadge"),
         kernelProcessCards: document.getElementById("edgeKernelProcessCards"),
+        formulaCanvas: document.getElementById("edgeFormulaCanvas"),
+        drawStage: document.getElementById("edgeDrawStage"),
+        flowLayer: document.getElementById("edgeFlowLayer"),
+        strokePath: document.getElementById("edgeStrokePath"),
+        flowDot: document.getElementById("edgeFlowDot"),
+        drawPatch: document.getElementById("edgeDrawPatch"),
+        drawKernel: document.getElementById("edgeDrawKernel"),
+        drawProduct: document.getElementById("edgeDrawProduct"),
+        currentMultiply: document.getElementById("edgeCurrentMultiply"),
+        sumValue: document.getElementById("edgeSumValue"),
+        sumTrace: document.getElementById("edgeSumTrace"),
+        responseValue: document.getElementById("edgeResponseValue"),
+        responseFormula: document.getElementById("edgeResponseFormula"),
+        thresholdDecision: document.getElementById("edgeThresholdDecision"),
+        thresholdFormula: document.getElementById("edgeThresholdFormula"),
+        responseNode: document.getElementById("edgeNodeResponse"),
+        thresholdNode: document.getElementById("edgeNodeThreshold"),
+        probePlay: document.getElementById("edgeProbePlay"),
+        probeStep: document.getElementById("edgeProbeStep"),
+        probeReset: document.getElementById("edgeProbeReset"),
+        probeSpeed: document.getElementById("edgeProbeSpeed"),
         kernelFlowTitle: document.getElementById("edgeKernelFlowTitle"),
         timeline: document.getElementById("edgeTimeline"),
         playControls: root.querySelector(".edge-play-controls"),
@@ -255,6 +297,9 @@
         formula: document.getElementById("edgeFormula"),
         kernelBox: document.getElementById("edgeKernelBox"),
         stats: document.getElementById("edgeStats"),
+        stepPreview: document.getElementById("edgeStepPreview"),
+        stepPreviewBody: document.getElementById("edgeStepPreviewBody"),
+        stepPreviewText: document.getElementById("edgeStepPreviewText"),
         probeCard: root.querySelector(".edge-probe-card"),
         probeHint: document.getElementById("edgeProbeHint"),
         probeBox: document.getElementById("edgeProbeBox")
@@ -270,7 +315,10 @@
         timer: null,
         refreshTimer: null,
         loading: false,
-        lastProbe: null
+        lastProbe: null,
+        probeStepIndex: 0,
+        probeTimer: null,
+        probePlaying: false
     };
 
     function endpoint(path) {
@@ -303,6 +351,10 @@
         const cols = Array.isArray(matrix[0]) ? matrix[0].length : 1;
         const cells = matrix.flat().map((value) => `<span class="edge-kernel-cell">${Number(value).toFixed(Math.abs(value) >= 10 ? 0 : 1)}</span>`).join("");
         return `<div class="edge-kernel-matrix" style="grid-template-columns: repeat(${cols}, 32px)" data-rows="${rows}">${cells}</div>`;
+    }
+
+    function stageKernelHtml(matrix, label) {
+        return `<div class="edge-stage-kernel-item"><span>${escapeHtml(label)}</span>${matrixHtml(matrix)}</div>`;
     }
 
     function infoFor(method) {
@@ -441,6 +493,9 @@
     async function requestEdge(mode) {
         clearPlayback();
         state.lastProbe = null;
+        stopProbeAnimation();
+        renderProbeCanvas(null);
+        updateSampleOverlay(null, false);
         if (state.refreshTimer) {
             window.clearTimeout(state.refreshTimer);
             state.refreshTimer = null;
@@ -614,6 +669,9 @@
         renderCompareWall();
         renderCompareInsights();
         updateInfoForCompare();
+        if (els.stepPreview) {
+            els.stepPreview.hidden = true;
+        }
     }
 
     function stepForTimelineLabel(label, pipeline) {
@@ -783,6 +841,9 @@
                 ? "Image → Gray → Gaussian Blur → Gradient → Direction → NMS → Double Threshold → Hysteresis"
                 : "Image → Gray → Gx → Gy → Magnitude → Threshold → Final";
         }
+        if (els.mainStageGrid) {
+            els.mainStageGrid.classList.toggle("is-kernel", state.tab === "kernel");
+        }
         const step = pipeline.steps[state.stepIndex] || pipeline.steps[0];
         const info = infoFor(pipeline.method);
         els.stageEyebrow.textContent = state.tab === "canny" ? "Canny Pipeline" : "Kernel Operator";
@@ -800,19 +861,310 @@
             renderStepImage(pipeline, step);
         }
         applyStepAnimation(step.key);
-        els.thumbs.innerHTML = pipeline.steps.map((item, index) => `
-            <button class="edge-step-thumb ${index === state.stepIndex ? "is-active" : ""}" type="button" data-step-index="${index}">
+        els.thumbs.innerHTML = pipeline.steps.map((item, index) => {
+            const isCannyThumb = state.tab === "canny";
+            const cannyClass = isCannyThumb ? `has-thumb-anim edge-thumb-${item.key}` : "";
+            const previousThumb = pipeline.steps[Math.max(0, index - 1)] || item;
+            const imageMarkup = isCannyThumb
+                ? `<span class="edge-thumb-media">
+                    <img class="edge-thumb-base-img" src="${previousThumb.image}" alt="">
+                    <img class="edge-thumb-current-img" src="${item.image}" alt="${escapeHtml(item.label)}">
+                    ${thumbAnimationMarkup(item.key, pipeline)}
+                </span>`
+                : `<img src="${item.image}" alt="${escapeHtml(item.label)}">`;
+            return `
+            <button class="edge-step-thumb ${cannyClass} ${index === state.stepIndex ? "is-active" : ""}" type="button" data-step-index="${index}">
                 ${index === state.stepIndex ? `<em>CURRENT</em>` : ""}
-                <img src="${item.image}" alt="${escapeHtml(item.label)}">
+                ${imageMarkup}
                 <span>${escapeHtml(item.label)}</span>
             </button>
-        `).join("");
+        `;
+        }).join("");
         els.timeline.innerHTML = "";
         updateStageMeta(pipeline);
         if (state.tab === "kernel" && !state.lastProbe) {
             renderKernelTeachingExample(pipeline.method);
         }
         updateInfoForPipeline(pipeline, step);
+        if (!state.lastProbe) {
+            updateSampleOverlay(null, false);
+        }
+    }
+
+    function representativeVectors(pipeline, limit = 5) {
+        const field = pipeline?.steps?.find((step) => step.key === "direction")?.vector_field;
+        const vectors = Array.isArray(field?.vectors) ? field.vectors : [];
+        const width = Number(field?.width) || 1;
+        const height = Number(field?.height) || 1;
+        const selected = [];
+        vectors
+            .filter((vector) => Number.isFinite(vector.x) && Number.isFinite(vector.y) && Number.isFinite(vector.angle))
+            .sort((a, b) => (Number(b.magnitude) || 0) - (Number(a.magnitude) || 0))
+            .forEach((vector) => {
+                if (selected.length >= limit) return;
+                const xPct = Math.max(8, Math.min(92, Number(vector.x) / width * 100));
+                const yPct = Math.max(10, Math.min(88, Number(vector.y) / height * 100));
+                const tooClose = selected.some((item) => Math.hypot(item.xPct - xPct, item.yPct - yPct) < 18);
+                if (tooClose) return;
+                selected.push({
+                    xPct,
+                    yPct,
+                    angleDeg: Number(vector.angle) * 180 / Math.PI,
+                    magnitude: Math.max(0.18, Math.min(1, Number(vector.magnitude) || 0.18)),
+                });
+            });
+        return selected;
+    }
+
+    function vectorArrowMarkup(vectors) {
+        return vectors.map((vector, index) => {
+            const length = Math.round(16 + vector.magnitude * 18);
+            const alpha = Math.max(0.58, Math.min(1, 0.55 + vector.magnitude * 0.45));
+            return `<i class="edge-thumb-arrow edge-thumb-vector" style="--edge-arrow-alpha:${alpha};left:${vector.xPct.toFixed(2)}%;top:${vector.yPct.toFixed(2)}%;width:${length}px;transform:translate(-50%, -50%) rotate(${vector.angleDeg.toFixed(1)}deg);animation-delay:${(index * 0.22).toFixed(2)}s"></i>`;
+        }).join("");
+    }
+
+    function vectorDotMarkup(vectors) {
+        const classes = ["edge-thumb-dot-strong", "edge-thumb-dot-weak", "edge-thumb-dot-suppressed"];
+        return vectors.slice(0, 3).map((vector, index) => (
+            `<i class="edge-thumb-dot ${classes[index]}" style="left:${vector.xPct.toFixed(2)}%;top:${vector.yPct.toFixed(2)}%;animation-delay:${(index * 0.25).toFixed(2)}s"></i>`
+        )).join("");
+    }
+
+    function thumbAnimationMarkup(key, pipeline) {
+        const vectors = representativeVectors(pipeline, key === "direction" ? 6 : 4);
+        const imageMotion = `<i class="edge-thumb-sheen"></i>`;
+        if (key === "gray" || key === "blur" || key === "gradient" || key === "final") {
+            return imageMotion;
+        }
+        if (key === "direction") {
+            return `${imageMotion}${vectorArrowMarkup(vectors)}`;
+        }
+        if (key === "nms") {
+            const vector = vectors[0] || { xPct: 50, yPct: 50, angleDeg: 0, magnitude: 0.5 };
+            const length = Math.round(28 + vector.magnitude * 22);
+            return `${imageMotion}<i class="edge-thumb-nms-line" style="left:${vector.xPct.toFixed(2)}%;top:${vector.yPct.toFixed(2)}%;width:${length}px;transform:translate(-50%, -50%) rotate(${vector.angleDeg.toFixed(1)}deg)"></i>`;
+        }
+        if (key === "double") {
+            return `${imageMotion}${vectorDotMarkup(vectors)}`;
+        }
+        if (key === "hysteresis") {
+            const first = vectors[0] || { xPct: 18, yPct: 58 };
+            const last = vectors[1] || { xPct: 72, yPct: 46 };
+            return `${imageMotion}<i class="edge-thumb-trace" style="--edge-trace-x0:${first.xPct.toFixed(2)}%;--edge-trace-y0:${first.yPct.toFixed(2)}%;--edge-trace-x1:${last.xPct.toFixed(2)}%;--edge-trace-y1:${last.yPct.toFixed(2)}%"></i>`;
+        }
+        return imageMotion;
+    }
+
+    function stepByKey(pipeline, key) {
+        return pipeline?.steps?.find((item) => item.key === key);
+    }
+
+    function previewArrowsMarkup(pipeline) {
+        return representativeVectors(pipeline, 7).map((vector, index) => {
+            const length = Math.round(28 + vector.magnitude * 32);
+            const alpha = Math.max(0.62, Math.min(1, 0.56 + vector.magnitude * 0.44));
+            return `<i class="edge-preview-arrow" style="--edge-arrow-alpha:${alpha};--edge-arrow-rotate:${vector.angleDeg.toFixed(1)}deg;left:${vector.xPct.toFixed(2)}%;top:${vector.yPct.toFixed(2)}%;width:${length}px;animation-delay:${(index * 0.18).toFixed(2)}s"></i>`;
+        }).join("");
+    }
+
+    function previewDotsMarkup(pipeline) {
+        const classes = ["is-strong", "is-weak", "is-suppressed", "is-strong", "is-weak"];
+        return representativeVectors(pipeline, 5).map((vector, index) => (
+            `<i class="edge-preview-dot ${classes[index] || "is-weak"}" style="left:${vector.xPct.toFixed(2)}%;top:${vector.yPct.toFixed(2)}%;animation-delay:${(index * 0.2).toFixed(2)}s"></i>`
+        )).join("");
+    }
+
+    function previewTraceMarkup(pipeline) {
+        const vectors = representativeVectors(pipeline, 4);
+        const first = vectors[0] || { xPct: 18, yPct: 58 };
+        const last = vectors[2] || vectors[1] || { xPct: 76, yPct: 42 };
+        return `<i class="edge-preview-trace" style="--edge-trace-x0:${first.xPct.toFixed(2)}%;--edge-trace-y0:${first.yPct.toFixed(2)}%;--edge-trace-x1:${last.xPct.toFixed(2)}%;--edge-trace-y1:${last.yPct.toFixed(2)}%"></i>`;
+    }
+
+    function calculationPreviewFor(stepKey) {
+        const map = {
+            original: {
+                title: "Input",
+                nodes: ["Input Image", "RGB Pixels", "Canny Pipeline"],
+                active: 0,
+                formula: "输入图像保持比例，后续步骤在灰度空间中继续计算。"
+            },
+            gray: {
+                title: "Gray",
+                nodes: ["R,G,B", "0.299R + 0.587G + 0.114B", "Gray"],
+                active: 1,
+                formula: "每个像素把 3 个颜色通道压缩为 1 个亮度值。"
+            },
+            blur: {
+                title: "Blur",
+                nodes: ["Gray Patch", "Gaussian Kernel", "Weighted Sum", "Blurred Pixel"],
+                active: 2,
+                formula: "用高斯权重做局部加权平均，先降低噪声。"
+            },
+            gradient: {
+                title: "Gradient",
+                nodes: ["Blur", "Sobel X/Y", "Gx, Gy", "Magnitude"],
+                active: 2,
+                formula: "G = sqrt(Gx^2 + Gy^2)，左右和上下两路梯度先并行，再合成幅值。"
+            },
+            direction: {
+                title: "Direction",
+                nodes: ["Gx, Gy", "atan2(Gy, Gx)", "Angle", "Vector Field"],
+                active: 1,
+                formula: "方向来自 atan2，箭头朝向表示角度，箭头长度表示归一化梯度幅值。"
+            },
+            nms: {
+                title: "NMS",
+                nodes: ["Magnitude", "Direction", "Compare Neighbors", "Thin Edge"],
+                active: 2,
+                formula: "沿梯度方向比较相邻像素，只保留局部最大响应。"
+            },
+            double: {
+                title: "Double Threshold",
+                nodes: ["NMS", "High / Low", "Strong", "Weak", "Suppressed"],
+                active: 1,
+                formula: "高阈值以上为强边缘，低阈值和高阈值之间为弱边缘，其余抑制。"
+            },
+            hysteresis: {
+                title: "Hysteresis",
+                nodes: ["Strong Edge", "8-neighbor Search", "Connected Weak", "Final Edge"],
+                active: 1,
+                formula: "从强边缘出发搜索 8 邻域，只保留连通弱边缘。"
+            },
+            final: {
+                title: "Final",
+                nodes: ["Connected Edges", "Binary Map", "Final Output"],
+                active: 2,
+                formula: "输出最终二值边缘图。"
+            }
+        };
+        return map[stepKey] || map.original;
+    }
+
+    function calculationModeFor(stepKey) {
+        return {
+            original: "source",
+            gray: "gray",
+            blur: "multiply",
+            gradient: "gradient",
+            direction: "vector",
+            nms: "suppress",
+            double: "threshold",
+            hysteresis: "connect",
+            final: "source"
+        }[stepKey] || "source";
+    }
+
+    function calculationStageMarkup(mode) {
+        const grid = "<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>";
+        const particles = `<i class="edge-calc-particle is-a"></i><i class="edge-calc-particle is-b"></i><i class="edge-calc-particle is-c"></i>`;
+        if (mode === "gray") {
+            return `<div class="edge-calc-color-stack"><i class="is-r"></i><i class="is-g"></i><i class="is-b"></i></div><div class="edge-calc-operator">weighted sum</div><div class="edge-calc-result is-gray"></div>${particles}`;
+        }
+        if (mode === "gradient") {
+            return `
+                <div class="edge-grad-source">Blur Patch</div>
+                <div class="edge-grad-branch is-x"><b>Sobel X</b><i></i></div>
+                <div class="edge-grad-branch is-y"><b>Sobel Y</b><i></i></div>
+                <div class="edge-grad-combine"><span>Gx^2 + Gy^2</span><strong>sqrt</strong></div>
+                <div class="edge-grad-output"><i></i></div>
+                <i class="edge-grad-pulse is-x"></i>
+                <i class="edge-grad-pulse is-y"></i>
+            `;
+        }
+        if (mode === "multiply") {
+            return `
+                <div class="edge-calc-lab is-patch"><b>Patch</b><div class="edge-calc-matrix-mini">${grid}</div></div>
+                <div class="edge-calc-lab is-kernel"><b>Kernel</b><div class="edge-calc-kernel-disc"><i></i><i></i><i></i></div></div>
+                <div class="edge-calc-product-stream"><i></i><i></i><i></i><i></i></div>
+                <div class="edge-calc-output-pixel"><b>Σ</b><span></span></div>
+            `;
+        }
+        if (mode === "vector") {
+            return `
+                <div class="edge-vector-plane"><i class="axis-x"></i><i class="axis-y"></i><b>Gx</b><em>Gy</em><span></span></div>
+                <div class="edge-calc-operator">atan2</div>
+                <div class="edge-calc-vector-out"><i></i><i></i><i></i></div>
+                <i class="edge-angle-arc"></i>
+            `;
+        }
+        if (mode === "suppress") {
+            return `
+                <div class="edge-nms-scan"><i class="is-prev"></i><i class="is-center"></i><i class="is-next"></i><span></span></div>
+                <div class="edge-calc-operator">keep max</div>
+                <div class="edge-calc-thin-line"></div>
+                <i class="edge-nms-cutter"></i>
+            `;
+        }
+        if (mode === "threshold") {
+            return `
+                <div class="edge-threshold-ruler"><i class="low"></i><i class="high"></i><span></span></div>
+                <div class="edge-threshold-samples"><i class="is-off"></i><i class="is-weak"></i><i class="is-strong"></i></div>
+                <div class="edge-calc-threshold-dots"><i class="is-strong"></i><i class="is-weak"></i><i class="is-off"></i></div>
+                <i class="edge-threshold-gate"></i>
+            `;
+        }
+        if (mode === "connect") {
+            return `
+                <div class="edge-hysteresis-map"><i class="is-strong"></i><i class="is-weak a"></i><i class="is-weak b"></i><i class="is-weak c"></i><i class="is-noise"></i><span></span></div>
+                <div class="edge-calc-operator">8-neighbor</div>
+                <div class="edge-calc-connected"><i></i></div>
+                <i class="edge-calc-electric"></i>
+            `;
+        }
+        return `<div class="edge-calc-source-block"></div><div class="edge-calc-operator">input</div><div class="edge-calc-result is-image"></div>${particles}`;
+    }
+
+    function renderCalculationPreview(pipeline, step) {
+        if (!els.stepPreview || !els.stepPreviewBody || !els.stepPreviewText) return;
+        if (pipeline?.method !== "canny") {
+            els.stepPreview.hidden = true;
+            return;
+        }
+        const preview = calculationPreviewFor(step.key);
+        const field = step.key === "direction"
+            ? pipeline?.steps?.find((item) => item.key === "direction")?.vector_field
+            : null;
+        const low = pipeline?.info?.threshold1;
+        const high = pipeline?.info?.threshold2;
+        const detailText = {
+            gradient: "Sobel X / Sobel Y",
+            direction: field?.vectors?.length ? `${field.vectors.length} vectors` : "atan2(Gy, Gx)",
+            nms: "keep local max",
+            double: Number.isFinite(low) && Number.isFinite(high) ? `low ${low} / high ${high}` : "low / high",
+            hysteresis: "8-neighbor search"
+        }[step.key] || preview.nodes[preview.active] || step.label;
+        els.stepPreview.hidden = false;
+        const mode = calculationModeFor(step.key);
+        els.stepPreviewBody.innerHTML = `
+            <div class="edge-calc-preview-head">
+                <strong>${escapeHtml(preview.title || step.label)}</strong>
+                <span>${escapeHtml(detailText)}</span>
+            </div>
+            <div class="edge-calc-preview edge-calc-${escapeHtml(step.key)} edge-calc-mode-${escapeHtml(mode)}">
+                <div class="edge-calc-stage">
+                    ${calculationStageMarkup(mode)}
+                </div>
+            </div>
+        `;
+        els.stepPreviewText.textContent = preview.formula;
+        return;
+        els.stepPreviewBody.innerHTML = `
+            <div class="edge-calc-preview edge-calc-${escapeHtml(step.key)}">
+                <div class="edge-calc-nodes">
+                    ${preview.nodes.map((node, index) => `
+                        <span class="edge-calc-node ${index === preview.active ? "is-active" : ""}" style="animation-delay:${(index * 0.14).toFixed(2)}s">${escapeHtml(node)}</span>
+                    `).join('<i class="edge-calc-arrow">→</i>')}
+                </div>
+                <div class="edge-calc-meter"><span></span></div>
+            </div>
+        `;
+        els.stepPreviewText.textContent = preview.formula;
+    }
+
+    function renderStepPreview(pipeline, step) {
+        renderCalculationPreview(pipeline, step);
     }
 
     function renderTimeline(items) {
@@ -899,6 +1251,7 @@
             <span>输出尺寸：${meta.width || "-"} × ${meta.height || "-"}</span>
             <span>响应范围：${pipeline.stats.min} ~ ${pipeline.stats.max}</span>
         `;
+        renderStepPreview(pipeline, step);
     }
 
     function render() {
@@ -955,6 +1308,7 @@
     function loadGrayMatrix(src) {
         return new Promise((resolve, reject) => {
             const image = new Image();
+            image.crossOrigin = "anonymous";
             image.onload = () => {
                 const canvas = document.createElement("canvas");
                 canvas.width = image.naturalWidth || image.width;
@@ -1054,67 +1408,200 @@
     }
 
     function renderKernelTeachingExample(method = currentMethod()) {
-        renderKernelProcessCards(staticProbeFor(method));
+        setProbe(staticProbeFor(method), { autoplay: false });
         if (els.kernelProbeBadge) {
             els.kernelProbeBadge.textContent = "静态教学示例";
         }
     }
 
     function renderKernelTeachingEmpty(message = "点击主图中的任意像素，前端会取该位置邻域 Patch，乘以当前 Kernel，展示乘积矩阵、求和响应和阈值判断。") {
-        if (!els.kernelProcessCards) return;
-        els.kernelProcessCards.innerHTML = `
-            <article class="edge-process-card is-empty">
-                <span>Probe Hint</span>
-                <p>${escapeHtml(message)}</p>
-            </article>
-            ${["Patch × Kernel", "Product", "Sum", "Response", "Threshold"].map((label) => `
-                <article class="edge-process-card is-placeholder">
-                    <span>${label}</span>
-                    <p>等待选择像素后显示该阶段的局部数值。</p>
-                </article>
-            `).join("")}
-        `;
+        stopProbeAnimation();
+        state.lastProbe = null;
+        state.probeStepIndex = 0;
+        renderProbeCanvas(null);
+        updateSampleOverlay(null, false);
         if (els.kernelProbeBadge) {
             els.kernelProbeBadge.textContent = "点击图像像素开始";
         }
+        if (els.currentMultiply) els.currentMultiply.textContent = message;
     }
 
-    function renderKernelProcessCards(probe) {
-        if (!els.kernelProcessCards || !probe) return;
-        const positionText = probe.isExample ? "示例像素" : `像素 (${probe.x}, ${probe.y})`;
-        els.kernelProcessCards.innerHTML = `
-            <article class="edge-process-card">
-                <span>Patch × Kernel</span>
-                <p>以${positionText}为中心取邻域，与当前卷积核逐元素相乘。</p>
-                <div class="edge-process-matrix-pair">
-                    ${compactMatrixHtml(probe.patch, "Patch")}
-                    <b>×</b>
-                    ${compactMatrixHtml(probe.primaryKernel, "Kernel")}
-                </div>
-            </article>
-            <article class="edge-process-card">
-                <span>Product</span>
-                <p>每个位置得到一个乘积贡献。</p>
-                ${compactMatrixHtml(probe.product, "Product")}
-            </article>
-            <article class="edge-process-card">
-                <span>Sum</span>
-                <p>把 Product 矩阵所有元素相加，得到当前方向的卷积响应。</p>
-                <strong class="edge-response-value">Σ Product = ${probe.gx.toFixed(2)}</strong>
-            </article>
-            <article class="edge-process-card">
-                <span>Response</span>
-                <p>${probe.hasSecondary ? `同时计算 Gy = ${probe.gy.toFixed(2)}，再合成为幅值。` : "单核算子取响应绝对值作为边缘强度。"}</p>
-                <strong class="edge-response-value">${probe.responseLabel}</strong>
-            </article>
-            <article class="edge-process-card ${probe.isEdge ? "is-edge" : "is-non-edge"}">
-                <span>Threshold</span>
-                <p>${probe.magnitude.toFixed(2)} ${probe.isEdge ? "≥" : "<"} ${probe.threshold}</p>
-                <strong>${probe.isEdge ? "Edge" : "Non-edge"}</strong>
-            </article>
-        `;
+    function probeCellCount(probe) {
+        return Array.isArray(probe?.patch) ? probe.patch.length * (probe.patch[0]?.length || 0) : 0;
+    }
+
+    function probeSpeedDelay() {
+        const speed = els.probeSpeed?.value || "medium";
+        if (speed === "slow") return 920;
+        if (speed === "fast") return 280;
+        return 560;
+    }
+
+    function flatValue(matrix, index) {
+        const cols = matrix?.[0]?.length || 1;
+        return matrix?.[Math.floor(index / cols)]?.[index % cols] ?? 0;
+    }
+
+    function formatNumber(value, digits = 0) {
+        const number = Number(value) || 0;
+        return Math.abs(number) >= 100 ? number.toFixed(0) : number.toFixed(digits);
+    }
+
+    function matrixCellsHtml(matrix, role, activeIndex = -1, revealUntil = matrix?.length * (matrix?.[0]?.length || 0)) {
+        if (!Array.isArray(matrix) || !matrix.length) return "";
+        const cols = matrix[0].length;
+        const flat = matrix.flat();
+        return flat.map((value, index) => `
+            <span class="edge-draw-cell ${index === activeIndex ? "is-active" : ""} ${index < revealUntil ? "is-written" : "is-pending"}" data-cell="${index}" style="--cell-delay:${index * 34}ms">
+                ${index < revealUntil || role !== "product" ? escapeHtml(formatNumber(value, role === "product" ? 0 : 0)) : ""}
+            </span>
+        `).join("");
+    }
+
+    function renderProbeCanvas(probe) {
+        if (!els.formulaCanvas) return;
+        if (!probe) {
+            if (els.drawPatch) els.drawPatch.innerHTML = "";
+            if (els.drawKernel) els.drawKernel.innerHTML = "";
+            if (els.drawProduct) els.drawProduct.innerHTML = "";
+            if (els.sumValue) els.sumValue.textContent = "0.00";
+            if (els.sumTrace) els.sumTrace.textContent = "等待累加";
+            if (els.responseValue) els.responseValue.textContent = "-";
+            if (els.responseFormula) els.responseFormula.textContent = "sqrt(Gx² + Gy²)";
+            if (els.thresholdDecision) els.thresholdDecision.textContent = "-";
+            if (els.thresholdFormula) els.thresholdFormula.textContent = "Response ? Threshold";
+            if (els.currentMultiply) els.currentMultiply.textContent = "点击主图选择像素。";
+            return;
+        }
+        const count = probeCellCount(probe);
+        const step = clamp(state.probeStepIndex, 0, count + 2);
+        const activeIndex = Math.min(step, count - 1);
+        const revealProductUntil = Math.min(step + 1, count);
+        const productFlat = probe.product.flat();
+        const partial = productFlat.slice(0, Math.min(step + 1, count)).reduce((total, value) => total + value, 0);
+        const currentPatch = flatValue(probe.patch, activeIndex);
+        const currentKernel = flatValue(probe.primaryKernel, activeIndex);
+        const currentProduct = currentPatch * currentKernel;
+        const gridStyle = `grid-template-columns: repeat(${probe.patch[0].length}, minmax(0, 1fr))`;
+        els.drawPatch.style = gridStyle;
+        els.drawKernel.style = gridStyle;
+        els.drawProduct.style = gridStyle;
+        els.drawPatch.innerHTML = matrixCellsHtml(probe.patch, "patch", activeIndex, count);
+        els.drawKernel.innerHTML = matrixCellsHtml(probe.primaryKernel, "kernel", activeIndex, count);
+        els.drawProduct.innerHTML = matrixCellsHtml(probe.product, "product", activeIndex, revealProductUntil);
+        els.formulaCanvas.classList.toggle("is-edge", probe.isEdge && step >= count + 2);
+        els.formulaCanvas.classList.toggle("is-non-edge", !probe.isEdge && step >= count + 2);
+        els.formulaCanvas.style.setProperty("--flow-progress", `${Math.min(1, step / Math.max(1, count + 2))}`);
+        if (els.currentMultiply) {
+            els.currentMultiply.textContent = step < count
+                ? `${formatNumber(currentPatch)} × ${formatNumber(currentKernel)} = ${formatNumber(currentProduct)}`
+                : "乘法完成";
+        }
+        if (els.sumValue) els.sumValue.textContent = step < count ? formatNumber(partial, 0) : formatNumber(probe.gx, 0);
+        if (els.sumTrace) {
+            if (step < count) {
+                const terms = productFlat.slice(0, Math.min(step + 1, count)).map((value) => {
+                    const cls = value >= 0 ? "is-positive" : "is-negative";
+                    return `<span class="edge-sum-item ${cls}">${formatNumber(value)}</span>`;
+                });
+                const hiddenCount = Math.max(0, terms.length - 4);
+                els.sumTrace.innerHTML = hiddenCount
+                    ? `${terms.slice(-4).join("<span class=\"edge-sum-operator\">+</span>")}<span class=\"edge-sum-more\">…</span>`
+                    : terms.join("<span class=\"edge-sum-operator\">+</span>");
+            } else {
+                els.sumTrace.textContent = `Σ Product = ${formatNumber(probe.gx, 0)}`;
+            }
+        }
+        if (els.responseValue) {
+            els.responseValue.textContent = step >= count + 1 ? probe.magnitude.toFixed(2) : "等待";
+        }
+        if (els.responseNode) {
+            els.responseNode.classList.toggle("is-active", step >= count + 1);
+        }
+        if (els.responseFormula) {
+            els.responseFormula.textContent = probe.hasSecondary
+                ? `sqrt(${probe.gx.toFixed(2)}² + ${probe.gy.toFixed(2)}²)`
+                : `|${probe.gx.toFixed(2)}|`;
+        }
+        if (els.thresholdDecision) {
+            els.thresholdDecision.textContent = step >= count + 2 ? (probe.isEdge ? "Edge" : "Non-edge") : "等待";
+        }
+        if (els.thresholdNode) {
+            els.thresholdNode.classList.toggle("is-edge", Boolean(step >= count + 2 && probe.isEdge));
+            els.thresholdNode.classList.toggle("is-non-edge", Boolean(step >= count + 2 && !probe.isEdge));
+        }
+        if (els.thresholdFormula) {
+            els.thresholdFormula.textContent = step >= count + 2
+                ? `${probe.magnitude.toFixed(2)} ${probe.isEdge ? "≥" : "<"} ${probe.threshold}`
+                : `Threshold = ${probe.threshold}`;
+        }
+        updateFlowPath(step, count + 2);
+        if (step >= count + 2) {
+            updateSampleOverlay(probe, true);
+        }
+    }
+
+    function updateFlowPath(step, maxStep) {
+        if (!els.strokePath || !els.flowDot) return;
+        const length = els.strokePath.getTotalLength ? els.strokePath.getTotalLength() : 900;
+        const progress = Math.min(1, Math.max(0, step / Math.max(1, maxStep)));
+        els.strokePath.style.strokeDasharray = `${length}`;
+        els.strokePath.style.strokeDashoffset = `${length * (1 - progress)}`;
+        const point = els.strokePath.getPointAtLength ? els.strokePath.getPointAtLength(length * progress) : { x: 160, y: 122 };
+        els.flowDot.setAttribute("cx", point.x);
+        els.flowDot.setAttribute("cy", point.y);
+    }
+
+    function stopProbeAnimation() {
+        if (state.probeTimer) {
+            window.clearInterval(state.probeTimer);
+            state.probeTimer = null;
+        }
+        state.probePlaying = false;
+        if (els.probePlay) els.probePlay.textContent = "播放计算";
+    }
+
+    function advanceProbeStep() {
+        const probe = state.lastProbe;
+        if (!probe) return;
+        const maxStep = probeCellCount(probe) + 2;
+        state.probeStepIndex = Math.min(maxStep, state.probeStepIndex + 1);
+        renderProbeCanvas(probe);
+        if (state.probeStepIndex >= maxStep) {
+            stopProbeAnimation();
+        }
+    }
+
+    function playProbeAnimation() {
+        const probe = state.lastProbe || staticProbeFor(currentMethod());
+        if (!state.lastProbe) setProbe(probe, { autoplay: false });
+        if (state.probePlaying) {
+            stopProbeAnimation();
+            return;
+        }
+        state.probePlaying = true;
+        if (els.probePlay) els.probePlay.textContent = "暂停";
+        state.probeTimer = window.setInterval(advanceProbeStep, probeSpeedDelay());
+    }
+
+    function resetProbeAnimation() {
+        stopProbeAnimation();
+        state.probeStepIndex = 0;
+        renderProbeCanvas(state.lastProbe || staticProbeFor(currentMethod()));
+        updateSampleOverlay(state.lastProbe, false);
+    }
+
+    function setProbe(probe, options = {}) {
+        stopProbeAnimation();
+        state.lastProbe = probe;
+        state.probeStepIndex = 0;
+        renderProbeCanvas(probe);
         if (els.kernelProbeBadge) {
             els.kernelProbeBadge.textContent = probe.isExample ? "静态教学示例" : `当前像素 (${probe.x}, ${probe.y})`;
+        }
+        updateSampleOverlay(probe, false);
+        if (options.autoplay) {
+            playProbeAnimation();
         }
     }
 
@@ -1125,7 +1612,7 @@
         const stats = pipeline?.stats || {};
         updateKernelCategoryNote(method);
         if (!els.stageMeta) return;
-        els.stageMeta.hidden = state.tab === "compare";
+        els.stageMeta.hidden = state.tab !== "kernel";
         els.stageMetaTitle.textContent = state.tab === "canny" ? "Canny 多阶段流程" : `${info.name} 响应`;
         if (els.stageKernelExplain) {
             els.stageKernelExplain.textContent = state.tab === "kernel"
@@ -1135,9 +1622,9 @@
         if (state.tab === "kernel") {
             const kernels = kernelsFor(method);
             if (kernels.x || kernels.y) {
-                els.stageKernelMini.innerHTML = `<span>Kx</span>${matrixHtml(kernels.x)}<span>Ky</span>${matrixHtml(kernels.y)}`;
+                els.stageKernelMini.innerHTML = `${stageKernelHtml(kernels.x, "Kx")}${stageKernelHtml(kernels.y, "Ky")}`;
             } else if (kernels.single) {
-                els.stageKernelMini.innerHTML = matrixHtml(kernels.single);
+                els.stageKernelMini.innerHTML = stageKernelHtml(kernels.single, "Kernel");
             } else {
                 els.stageKernelMini.textContent = "当前算子无单一显示核。";
             }
@@ -1155,14 +1642,10 @@
     }
 
     async function requestProbe(event) {
-        if (state.tab !== "kernel" || !state.data?.pipeline) {
-            els.probeHint.textContent = "Canny 当前显示流水线阶段说明";
-            els.probeBox.textContent = "Canny 的局部探针需要沿梯度方向、NMS 和滞后连接联合解释；此处保留结构用于后续扩展。";
-            return;
-        }
+        if (state.tab !== "kernel" || !state.data?.pipeline) return;
         const img = els.mainImage;
         if (!img.naturalWidth || !img.naturalHeight) return;
-        const rect = img.getBoundingClientRect();
+        const rect = els.mainImageButton.getBoundingClientRect();
         const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
         const drawW = img.naturalWidth * scale;
         const drawH = img.naturalHeight * scale;
@@ -1173,12 +1656,15 @@
         if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) return;
 
         try {
-            els.probeHint.textContent = `正在计算 (${x}, ${y})`;
+            if (els.kernelProbeBadge) {
+                els.kernelProbeBadge.textContent = `正在计算 (${x}, ${y})`;
+            }
             const method = currentMethod();
             const kernels = kernelsFor(method);
             const primaryKernel = kernels.x || kernels.single || edgeKernels.sobel_x;
             const secondaryKernel = kernels.y || null;
-            const { gray } = await loadGrayMatrix(state.data.original);
+            const sourceImage = state.data.pipeline?.steps?.[0]?.image || state.data.original;
+            const { gray } = await loadGrayMatrix(sourceImage);
             const sourcePatch = patchFor(gray, x, y, primaryKernel.length);
             const product = multiplyMatrix(sourcePatch, primaryKernel);
             const gx = sumMatrix(product);
@@ -1203,22 +1689,53 @@
                 isEdge: magnitude >= threshold,
                 responseLabel: secondaryKernel ? `sqrt(Gx² + Gy²) = ${magnitude.toFixed(2)}` : `|sum| = ${magnitude.toFixed(2)}`
             };
-            state.lastProbe = probe;
-            els.probeHint.textContent = `像素 (${x}, ${y})`;
-            els.probeBox.innerHTML = `
-                <div class="edge-probe-matrices">
-                    <div><strong>Patch</strong>${matrixHtml(sourcePatch)}</div>
-                    <div><strong>Kernel</strong>${matrixHtml(primaryKernel)}</div>
-                    <div><strong>Product</strong>${matrixHtml(product)}</div>
-                </div>
-                <span>Gx=${gx.toFixed(2)}，Gy=${gy.toFixed(2)}，Magnitude=${magnitude.toFixed(2)}，Threshold=${threshold}，判断：${magnitude >= threshold ? "Edge" : "Non-edge"}</span>
-            `;
-            renderKernelProcessCards(probe);
+            setProbe(probe, { autoplay: true });
         } catch (error) {
-            els.probeHint.textContent = "探针失败";
-            els.probeBox.textContent = error.message || "局部计算探针处理失败。";
             renderKernelTeachingEmpty(error.message || "局部计算探针处理失败。");
         }
+    }
+
+    function updateSampleOverlay(probe, showEdge) {
+        if (!els.sampleOverlay || !els.mainImageButton || !els.mainImage) return;
+        if (!probe) {
+            els.sampleOverlay.hidden = true;
+            if (els.edgeDot) {
+                els.edgeDot.classList.remove("is-edge", "is-non-edge");
+            }
+            return;
+        }
+        const img = els.mainImage;
+        const rect = els.mainImageButton.getBoundingClientRect();
+        if (!img.naturalWidth || !img.naturalHeight) return;
+        const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
+        const drawW = img.naturalWidth * scale;
+        const drawH = img.naturalHeight * scale;
+        const offsetX = (rect.width - drawW) / 2;
+        const offsetY = (rect.height - drawH) / 2;
+        const x = offsetX + probe.x * scale;
+        const y = offsetY + probe.y * scale;
+        const cellSize = Math.max(14, Math.min(22, scale * 6));
+        const gridSize = cellSize * (probe.patch?.length || 3);
+        const grid = els.sampleOverlay.querySelector(".edge-sample-grid");
+        const center = els.sampleOverlay.querySelector(".edge-sample-center");
+        if (grid) {
+            grid.style.left = `${x}px`;
+            grid.style.top = `${y}px`;
+            grid.style.width = `${gridSize}px`;
+            grid.style.height = `${gridSize}px`;
+            grid.style.backgroundSize = `${cellSize}px ${cellSize}px`;
+        }
+        if (center) {
+            center.style.left = `${x}px`;
+            center.style.top = `${y}px`;
+        }
+        if (els.edgeDot) {
+            els.edgeDot.style.left = `${x}px`;
+            els.edgeDot.style.top = `${y}px`;
+            els.edgeDot.classList.toggle("is-edge", Boolean(showEdge && probe.isEdge));
+            els.edgeDot.classList.toggle("is-non-edge", Boolean(showEdge && !probe.isEdge));
+        }
+        els.sampleOverlay.hidden = false;
     }
 
     function bindEvents() {
@@ -1349,6 +1866,28 @@
             if (action === "play") togglePlayback();
             if (action === "reset") resetTimeline();
         });
+        if (els.probePlay) {
+            els.probePlay.addEventListener("click", playProbeAnimation);
+        }
+        if (els.probeStep) {
+            els.probeStep.addEventListener("click", () => {
+                if (!state.lastProbe) {
+                    setProbe(staticProbeFor(currentMethod()), { autoplay: false });
+                }
+                advanceProbeStep();
+            });
+        }
+        if (els.probeReset) {
+            els.probeReset.addEventListener("click", resetProbeAnimation);
+        }
+        if (els.probeSpeed) {
+            els.probeSpeed.addEventListener("change", () => {
+                if (state.probePlaying) {
+                    stopProbeAnimation();
+                    playProbeAnimation();
+                }
+            });
+        }
         els.mainImageButton.addEventListener("click", requestProbe);
     }
 

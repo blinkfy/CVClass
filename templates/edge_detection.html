@@ -228,7 +228,26 @@
                             <img id="edgeMainBaseImage" class="edge-main-base-image" alt="上一步边缘检测步骤图">
                             <img id="edgeMainImage" alt="当前边缘检测步骤图">
                             <canvas id="edgeVectorCanvas" class="edge-vector-canvas" aria-label="梯度方向向量场"></canvas>
+                            <div id="edgeSampleOverlay" class="edge-sample-overlay" hidden>
+                                <span class="edge-sample-grid"></span>
+                                <span class="edge-sample-center"></span>
+                                <span id="edgeEdgeDot" class="edge-edge-dot"></span>
+                            </div>
                         </button>
+                        <aside id="edgeStageMeta" class="edge-stage-meta" aria-label="当前算子与响应信息" {% if edge_mode != 'kernel' %}hidden{% endif %}>
+                            <div>
+                                <span class="section-label">Current Kernel</span>
+                                <strong id="edgeStageMetaTitle">等待运行</strong>
+                            </div>
+                            <p id="edgeStageKernelExplain" class="edge-stage-kernel-explain">选择卷积核算子后显示该算子的教学说明。</p>
+                            <div id="edgeStageKernelMini" class="edge-stage-kernel-mini">选择卷积核算子后显示模板。</div>
+                            <dl class="edge-stage-response-meta">
+                                <div><dt>Response</dt><dd id="edgeStageResponseRange">-</dd></div>
+                                <div><dt>Threshold</dt><dd id="edgeStageThresholdMeta">-</dd></div>
+                                <div><dt>Edge ratio</dt><dd id="edgeStageEdgeRatio">-</dd></div>
+                            </dl>
+                            <p id="edgeStageProbePrompt">点击左侧图像像素后，下方展示该位置的局部卷积计算。</p>
+                        </aside>
                     </div>
                     <div id="edgeKernelFlowTitle" class="edge-kernel-flow-title" {% if edge_mode == 'compare' %}hidden{% endif %}>
                         <strong>KERNEL FLOW:</strong>
@@ -238,16 +257,61 @@
                     <section id="edgeKernelTeaching" class="edge-kernel-teaching" {% if edge_mode != 'kernel' %}hidden{% endif %}>
                         <div class="edge-kernel-teaching-head">
                             <div>
-                                <span class="section-label">Local Convolution Probe</span>
-                                <h3>Patch × Kernel → Product → Sum → Response → Threshold</h3>
+                                <span class="section-label">Animated Formula Canvas / Local Convolution Probe</span>
+                                <h3>Patch → Kernel → Product → Sum → Response → Threshold</h3>
                             </div>
-                            <span id="edgeKernelProbeBadge">点击图像像素开始</span>
+                            <div class="edge-probe-controls" aria-label="公式动画控制">
+                                <button id="edgeProbePlay" type="button">播放计算</button>
+                                <button id="edgeProbeStep" type="button">单步</button>
+                                <button id="edgeProbeReset" type="button">重置</button>
+                                <label>速度
+                                    <select id="edgeProbeSpeed">
+                                        <option value="slow">慢</option>
+                                        <option value="medium" selected>中</option>
+                                        <option value="fast">快</option>
+                                    </select>
+                                </label>
+                            </div>
                         </div>
-                        <div id="edgeKernelProcessCards" class="edge-kernel-process-cards">
-                            <article class="edge-process-card is-empty">
-                                <span>提示</span>
-                                <p>点击主图中的任意像素，前端会取该位置邻域 Patch，乘以当前 Kernel，展示乘积矩阵、求和响应和阈值判断。</p>
-                            </article>
+                        <div class="edge-kernel-teaching-sub">
+                            <span id="edgeKernelProbeBadge" class="edge-probe-badge">点击图像像素开始</span>
+                        </div>
+                        <div id="edgeFormulaCanvas" class="edge-formula-canvas edge-animated-probe">
+                            <svg id="edgeFlowLayer" class="edge-flow-layer" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-hidden="true">
+                                <path id="edgeStrokePath" class="edge-stroke-path" d="M 70 110 L 930 110"></path>
+                                <circle id="edgeFlowDot" class="edge-flow-dot" r="5" cx="70" cy="110"></circle>
+                            </svg>
+                            <div id="edgeDrawStage" class="edge-draw-stage">
+                                <section class="edge-compute-node edge-node-patch" data-node="patch">
+                                    <span>Patch</span>
+                                    <div id="edgeDrawPatch" class="edge-draw-matrix edge-matrix-patch"></div>
+                                </section>
+                                <section class="edge-compute-node edge-node-kernel" data-node="kernel">
+                                    <span>Kernel</span>
+                                    <div id="edgeDrawKernel" class="edge-draw-matrix edge-matrix-kernel"></div>
+                                </section>
+                                <section class="edge-compute-node edge-node-product" data-node="product">
+                                    <span>Product</span>
+                                    <div id="edgeDrawProduct" class="edge-draw-matrix edge-matrix-product"></div>
+                                    <strong id="edgeCurrentMultiply" class="edge-current-multiply">点击图像选择像素</strong>
+                                </section>
+                                <div class="edge-formula-spacer" aria-hidden="true"></div>
+                                <section class="edge-compute-node edge-node-sum" data-node="sum">
+                                    <span>Sum</span>
+                                    <div class="edge-sum-pool"><b>Σ</b><strong id="edgeSumValue">0.00</strong></div>
+                                    <p id="edgeSumTrace">等待累加</p>
+                                </section>
+                                <section id="edgeNodeResponse" class="edge-compute-node edge-node-response" data-node="response">
+                                    <span>Response</span>
+                                    <strong id="edgeResponseValue">-</strong>
+                                    <p id="edgeResponseFormula">sqrt(Gx² + Gy²)</p>
+                                </section>
+                                <section id="edgeNodeThreshold" class="edge-compute-node edge-node-threshold" data-node="threshold">
+                                    <span>Threshold</span>
+                                    <strong id="edgeThresholdDecision">-</strong>
+                                    <p id="edgeThresholdFormula">Response ? Threshold</p>
+                                </section>
+                            </div>
                         </div>
                     </section>
                 </section>
@@ -264,6 +328,11 @@
                 <h2 id="edgeInfoTitle">当前选中算法说明</h2>
             </div>
             <p id="edgeInfoText">选择 Tab 后查看对应算法说明。</p>
+            <div id="edgeStepPreview" class="edge-step-preview-card" hidden>
+                <strong>当前步骤计算过程</strong>
+                <div id="edgeStepPreviewBody" class="edge-step-preview-body"></div>
+                <p id="edgeStepPreviewText">点击 Canny 步骤卡片查看对应计算链路。</p>
+            </div>
             <div class="edge-formula-card" {% if edge_mode == 'compare' %}hidden{% endif %}>
                 <strong>公式说明</strong>
                 <pre id="edgeFormula">G = sqrt(Gx² + Gy²)</pre>
@@ -280,15 +349,6 @@
             <article class="edge-boundary-card">
                 <strong>核心代码边界</strong>
                 <p>边缘检测核心计算来自项目中的手写 NumPy / Numba 函数，不调用 OpenCV 或 skimage 的边缘检测封装函数。</p>
-            </article>
-            <article class="edge-probe-card" {% if edge_mode != 'kernel' %}hidden{% endif %}>
-                <div>
-                    <strong>局部计算探针</strong>
-                    <span id="edgeProbeHint">点击主舞台图像中的某个像素。</span>
-                </div>
-                <div id="edgeProbeBox" class="edge-probe-box">
-                    当前未选择像素。Canny 流水线展示阶段性说明，卷积核算子支持 Patch / Kernel / Product 探针。
-                </div>
             </article>
         </aside>
     </section>
