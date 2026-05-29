@@ -134,8 +134,8 @@
                 </div>
                 <label>显示模式
                     <select id="edgeKernelDisplay">
-                        <option value="steps">步骤缩略图</option>
-                        <option value="slider">原图/结果滑块</option>
+                        <option value="current">当前步骤图</option>
+                        <option value="diff">上一步 / 当前滑动对比</option>
                     </select>
                 </label>
                 <label>阈值 <strong id="edgeThresholdValue">96</strong>
@@ -157,6 +157,12 @@
                 </label>
                 <label>threshold2 <strong id="edgeT2Value">150</strong>
                     <input id="edgeThreshold2" type="range" min="0" max="255" value="150">
+                </label>
+                <label>显示模式
+                    <select id="edgeCannyDisplay">
+                        <option value="current">当前步骤图</option>
+                        <option value="diff">上一步 / 当前滑动对比</option>
+                    </select>
                 </label>
                 <label class="edge-check">
                     <input id="edgeL2" type="checkbox">
@@ -228,6 +234,11 @@
                             <img id="edgeMainBaseImage" class="edge-main-base-image" alt="上一步边缘检测步骤图">
                             <img id="edgeMainImage" alt="当前边缘检测步骤图">
                             <canvas id="edgeVectorCanvas" class="edge-vector-canvas" aria-label="梯度方向向量场"></canvas>
+                            <span id="edgeStageSliderHandle" class="edge-stage-slider-handle" hidden></span>
+                            <span id="edgeStageSliderLabels" class="edge-stage-slider-labels" hidden>
+                                <span id="edgeStageSliderLeftLabel">上一步</span>
+                                <span id="edgeStageSliderRightLabel">当前步骤</span>
+                            </span>
                             <div id="edgeSampleOverlay" class="edge-sample-overlay" hidden>
                                 <span class="edge-sample-grid"></span>
                                 <span class="edge-sample-center"></span>
@@ -334,12 +345,9 @@
                 <p id="edgeStepPreviewText">点击 Canny 步骤卡片查看对应计算链路。</p>
             </div>
             <div class="edge-formula-card" {% if edge_mode == 'compare' %}hidden{% endif %}>
-                <strong>公式说明</strong>
+                <strong>公式与阈值逻辑</strong>
                 <pre id="edgeFormula">G = sqrt(Gx² + Gy²)</pre>
-            </div>
-            <div class="edge-kernel-card" {% if edge_mode != 'kernel' %}hidden{% endif %}>
-                <strong>当前卷积核</strong>
-                <div id="edgeKernelBox" class="edge-kernel-box">-</div>
+                <div class="edge-live-logic" id="edgeLiveLogic">运行流程后显示当前步骤的公式逻辑。</div>
             </div>
             <div class="edge-stat-grid" id="edgeStats">
                 <span>耗时：-</span>

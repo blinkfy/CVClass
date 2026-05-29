@@ -248,11 +248,16 @@
         threshold2Value: document.getElementById("edgeT2Value"),
         l2: document.getElementById("edgeL2"),
         precise: document.getElementById("edgePrecise"),
+        cannyDisplay: document.getElementById("edgeCannyDisplay"),
         cannyBtn: document.getElementById("edgeCannyBtn"),
         mainImageButton: document.getElementById("edgeMainImageButton"),
         mainBaseImage: document.getElementById("edgeMainBaseImage"),
         mainImage: document.getElementById("edgeMainImage"),
         vectorCanvas: document.getElementById("edgeVectorCanvas"),
+        stageSliderHandle: document.getElementById("edgeStageSliderHandle"),
+        stageSliderLabels: document.getElementById("edgeStageSliderLabels"),
+        stageSliderLeftLabel: document.getElementById("edgeStageSliderLeftLabel"),
+        stageSliderRightLabel: document.getElementById("edgeStageSliderRightLabel"),
         mainStageGrid: root.querySelector(".edge-main-stage-grid"),
         sampleOverlay: document.getElementById("edgeSampleOverlay"),
         edgeDot: document.getElementById("edgeEdgeDot"),
@@ -295,6 +300,7 @@
         infoTitle: document.getElementById("edgeInfoTitle"),
         infoText: document.getElementById("edgeInfoText"),
         formula: document.getElementById("edgeFormula"),
+        liveLogic: document.getElementById("edgeLiveLogic"),
         kernelBox: document.getElementById("edgeKernelBox"),
         stats: document.getElementById("edgeStats"),
         stepPreview: document.getElementById("edgeStepPreview"),
@@ -318,7 +324,9 @@
         lastProbe: null,
         probeStepIndex: 0,
         probeTimer: null,
-        probePlaying: false
+        probePlaying: false,
+        stageSplit: 50,
+        stageSplitDragging: false
     };
 
     function endpoint(path) {
@@ -720,15 +728,62 @@
         return previous || pipeline.steps[stepIndex] || pipeline.steps[0];
     }
 
+    function stageDisplayMode() {
+        if (state.tab === "kernel") {
+            return els.kernelDisplay?.value || "current";
+        }
+        if (state.tab === "canny") {
+            return els.cannyDisplay?.value || "current";
+        }
+        return "current";
+    }
+
+    function updateStageSplit(percent = state.stageSplit) {
+        const value = Math.max(4, Math.min(96, Number(percent) || 50));
+        state.stageSplit = value;
+        if (els.mainImageButton) {
+            els.mainImageButton.style.setProperty("--edge-stage-split", `${value}%`);
+        }
+        if (els.stageSliderHandle) {
+            els.stageSliderHandle.style.left = `${value}%`;
+        }
+    }
+
+    function setStageSplitFromEvent(event) {
+        if (!els.mainImageButton) return;
+        const rect = els.mainImageButton.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        updateStageSplit((x / Math.max(1, rect.width)) * 100);
+    }
+
+    function updateStageSliderLabels(previousStep, step, showSlider) {
+        if (els.stageSliderHandle) {
+            els.stageSliderHandle.hidden = !showSlider;
+        }
+        if (els.stageSliderLabels) {
+            els.stageSliderLabels.hidden = !showSlider;
+        }
+        if (!showSlider) return;
+        if (els.stageSliderLeftLabel) {
+            els.stageSliderLeftLabel.textContent = previousStep?.label || "上一步";
+        }
+        if (els.stageSliderRightLabel) {
+            els.stageSliderRightLabel.textContent = step?.label || "当前步骤";
+        }
+    }
+
     function renderStepImage(pipeline, step) {
         const previousStep = previousDisplayStep(pipeline, state.stepIndex);
-        const shouldHoldCurrent = step.key === "nms" && previousStep?.key === "direction";
-        const baseImage = step.key === "original" || shouldHoldCurrent ? step.image : previousStep.image;
+        const showDiff = stageDisplayMode() === "diff" && state.stepIndex > 0;
+        const baseImage = showDiff ? previousStep.image : step.image;
         if (els.mainBaseImage) {
             els.mainBaseImage.src = baseImage;
-            els.mainBaseImage.hidden = step.key === "original";
+            els.mainBaseImage.hidden = !showDiff;
         }
         els.mainImage.src = step.image;
+        els.mainImageButton.classList.toggle("is-diff-mode", showDiff);
+        updateStageSliderLabels(previousStep, step, showDiff);
+        updateStageSplit();
     }
 
     function drawDirectionVectors(step) {
@@ -848,13 +903,16 @@
         const info = infoFor(pipeline.method);
         els.stageEyebrow.textContent = state.tab === "canny" ? "Canny Pipeline" : "Kernel Operator";
         els.stageTitle.textContent = `${info.name} · ${step.label}`;
-        if (step.key === "direction" && state.tab === "canny") {
+        const showDiff = stageDisplayMode() === "diff" && state.stepIndex > 0;
+        if (step.key === "direction" && state.tab === "canny" && !showDiff) {
             const previousStep = pipeline.steps[Math.max(0, state.stepIndex - 1)];
             if (els.mainBaseImage) {
                 els.mainBaseImage.src = previousStep?.image || step.image;
                 els.mainBaseImage.hidden = false;
             }
             els.mainImage.src = previousStep?.image || step.image;
+            els.mainImageButton.classList.remove("is-diff-mode");
+            updateStageSliderLabels(previousStep, step, false);
             window.requestAnimationFrame(() => drawDirectionVectors(step));
         } else {
             clearDirectionVectors();
@@ -1060,7 +1118,7 @@
         const grid = "<span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>";
         const particles = `<i class="edge-calc-particle is-a"></i><i class="edge-calc-particle is-b"></i><i class="edge-calc-particle is-c"></i>`;
         if (mode === "gray") {
-            return `<div class="edge-calc-color-stack"><i class="is-r"></i><i class="is-g"></i><i class="is-b"></i></div><div class="edge-calc-operator">weighted sum</div><div class="edge-calc-result is-gray"></div>${particles}`;
+            return `<div class="edge-calc-color-stack"><i class="is-r"></i><i class="is-g"></i><i class="is-b"></i></div><div class="edge-calc-operator">weighted sum</div><div class="edge-calc-result is-gray"><span>L</span></div>${particles}<i class="edge-calc-flow-line"></i>`;
         }
         if (mode === "gradient") {
             return `
@@ -1071,6 +1129,8 @@
                 <div class="edge-grad-output"><i></i></div>
                 <i class="edge-grad-pulse is-x"></i>
                 <i class="edge-grad-pulse is-y"></i>
+                <i class="edge-grad-rail is-x"></i>
+                <i class="edge-grad-rail is-y"></i>
             `;
         }
         if (mode === "multiply") {
@@ -1079,6 +1139,7 @@
                 <div class="edge-calc-lab is-kernel"><b>Kernel</b><div class="edge-calc-kernel-disc"><i></i><i></i><i></i></div></div>
                 <div class="edge-calc-product-stream"><i></i><i></i><i></i><i></i></div>
                 <div class="edge-calc-output-pixel"><b>Σ</b><span></span></div>
+                <i class="edge-calc-flow-line"></i>
             `;
         }
         if (mode === "vector") {
@@ -1087,6 +1148,7 @@
                 <div class="edge-calc-operator">atan2</div>
                 <div class="edge-calc-vector-out"><i></i><i></i><i></i></div>
                 <i class="edge-angle-arc"></i>
+                <i class="edge-vector-angle-label">θ</i>
             `;
         }
         if (mode === "suppress") {
@@ -1095,6 +1157,7 @@
                 <div class="edge-calc-operator">keep max</div>
                 <div class="edge-calc-thin-line"></div>
                 <i class="edge-nms-cutter"></i>
+                <i class="edge-nms-scan-beam"></i>
             `;
         }
         if (mode === "threshold") {
@@ -1103,6 +1166,7 @@
                 <div class="edge-threshold-samples"><i class="is-off"></i><i class="is-weak"></i><i class="is-strong"></i></div>
                 <div class="edge-calc-threshold-dots"><i class="is-strong"></i><i class="is-weak"></i><i class="is-off"></i></div>
                 <i class="edge-threshold-gate"></i>
+                <i class="edge-threshold-label is-low">low</i><i class="edge-threshold-label is-high">high</i>
             `;
         }
         if (mode === "connect") {
@@ -1111,6 +1175,7 @@
                 <div class="edge-calc-operator">8-neighbor</div>
                 <div class="edge-calc-connected"><i></i></div>
                 <i class="edge-calc-electric"></i>
+                <i class="edge-connect-halo"></i>
             `;
         }
         return `<div class="edge-calc-source-block"></div><div class="edge-calc-operator">input</div><div class="edge-calc-result is-image"></div>${particles}`;
@@ -1189,6 +1254,7 @@
     }
 
     function renderKernelBox(info) {
+        if (!els.kernelBox) return;
         const method = info?.method;
         if (!method) {
             els.kernelBox.textContent = "-";
@@ -1207,6 +1273,29 @@
             return;
         }
         els.kernelBox.textContent = method === "canny" ? "Canny 使用高斯核、Sobel 核、NMS 和双阈值，不是单一卷积核。" : "-";
+    }
+
+    function liveLogicForPipeline(pipeline, step) {
+        if (!pipeline || !step) return "等待运行边缘检测流程。";
+        if (pipeline.method !== "canny") {
+            return state.lastProbe
+                ? els.liveLogic?.textContent || "局部卷积探针已计算。"
+                : "点击中间主图上的一个像素，查看 Patch × Kernel、响应值和阈值判断。";
+        }
+        const low = pipeline.info?.threshold1 ?? controlValue(els.threshold1, "50");
+        const high = pipeline.info?.threshold2 ?? controlValue(els.threshold2, "150");
+        const map = {
+            original: "输入图像作为 Canny 流水线起点，后续计算会先转入灰度空间。",
+            gray: "RGB 按 0.299R + 0.587G + 0.114B 合成为单通道灰度。",
+            blur: "灰度 Patch 与高斯核逐项加权求和，输出平滑后的像素。",
+            gradient: "Sobel X/Y 计算 Gx、Gy，再合成为梯度幅值。",
+            direction: "atan2(Gy, Gx) 得到梯度方向，方向用于后续 NMS 邻域选择。",
+            nms: "沿梯度方向比较前后邻点；只有局部最大响应会被保留。",
+            double: `NMS 响应按阈值分类：>= ${high} 为强边缘，${low}~${high} 为弱边缘，< ${low} 被抑制。`,
+            hysteresis: "从强边缘出发搜索 8 邻域，保留与强边缘连通的弱边缘。",
+            final: "最终输出强边缘和被连接的弱边缘组成的二值边缘图。"
+        };
+        return map[step.key] || "当前步骤使用上方公式更新边缘响应。";
     }
 
     function updateInfoForCompare() {
@@ -1243,6 +1332,9 @@
         els.infoTitle.textContent = `${info.name} · ${step.label}`;
         els.infoText.textContent = cannyDetail?.process || stepNotes[step.key] || info.summary;
         renderFormula(cannyFormulaOverrides[step.key] || cannyDetail?.formula || kernelFormula(pipeline.method), cannyFormulaHighlights[step.key] ?? -1);
+        if (els.liveLogic) {
+            els.liveLogic.textContent = liveLogicForPipeline(pipeline, step);
+        }
         renderKernelBox(pipeline.info);
         const meta = state.data?.info || {};
         els.stats.innerHTML = `
@@ -1432,9 +1524,9 @@
 
     function probeSpeedDelay() {
         const speed = els.probeSpeed?.value || "medium";
-        if (speed === "slow") return 920;
-        if (speed === "fast") return 280;
-        return 560;
+        if (speed === "slow") return 1400;
+        if (speed === "fast") return 720;
+        return 1020;
     }
 
     function flatValue(matrix, index) {
@@ -1452,7 +1544,7 @@
         const cols = matrix[0].length;
         const flat = matrix.flat();
         return flat.map((value, index) => `
-            <span class="edge-draw-cell ${index === activeIndex ? "is-active" : ""} ${index < revealUntil ? "is-written" : "is-pending"}" data-cell="${index}" style="--cell-delay:${index * 34}ms">
+            <span class="edge-draw-cell ${index === activeIndex ? "is-active" : ""} ${index < revealUntil ? "is-written" : "is-pending"} ${role === "product" ? "edge-product-cell" : ""}" data-cell="${index}" style="--cell-delay:${index * 34}ms">
                 ${index < revealUntil || role !== "product" ? escapeHtml(formatNumber(value, role === "product" ? 0 : 0)) : ""}
             </span>
         `).join("");
@@ -1471,6 +1563,7 @@
             if (els.thresholdDecision) els.thresholdDecision.textContent = "-";
             if (els.thresholdFormula) els.thresholdFormula.textContent = "Response ? Threshold";
             if (els.currentMultiply) els.currentMultiply.textContent = "点击主图选择像素。";
+            if (els.liveLogic) els.liveLogic.textContent = "点击中间主图上的一个像素，查看公式和阈值判断。";
             return;
         }
         const count = probeCellCount(probe);
@@ -1482,6 +1575,7 @@
         const currentPatch = flatValue(probe.patch, activeIndex);
         const currentKernel = flatValue(probe.primaryKernel, activeIndex);
         const currentProduct = currentPatch * currentKernel;
+        state.lastProbeRenderStep = state.lastProbeRenderStep ?? -1;
         const gridStyle = `grid-template-columns: repeat(${probe.patch[0].length}, minmax(0, 1fr))`;
         els.drawPatch.style = gridStyle;
         els.drawKernel.style = gridStyle;
@@ -1492,12 +1586,31 @@
         els.formulaCanvas.classList.toggle("is-edge", probe.isEdge && step >= count + 2);
         els.formulaCanvas.classList.toggle("is-non-edge", !probe.isEdge && step >= count + 2);
         els.formulaCanvas.style.setProperty("--flow-progress", `${Math.min(1, step / Math.max(1, count + 2))}`);
+        
+        if (step < count && state.lastProbeRenderStep !== state.probeStepIndex) {
+            state.lastProbeRenderStep = state.probeStepIndex;
+            window.setTimeout(() => spawnFlyingParticles(probe, step, count), 10);
+        } else if (step === 0) {
+            state.lastProbeRenderStep = 0;
+        }
+        
         if (els.currentMultiply) {
             els.currentMultiply.textContent = step < count
                 ? `${formatNumber(currentPatch)} × ${formatNumber(currentKernel)} = ${formatNumber(currentProduct)}`
                 : "乘法完成";
         }
-        if (els.sumValue) els.sumValue.textContent = step < count ? formatNumber(partial, 0) : formatNumber(probe.gx, 0);
+        if (els.sumValue) {
+            const newSumText = step < count ? formatNumber(partial, 0) : formatNumber(probe.gx, 0);
+            if (els.sumValue.textContent !== newSumText) {
+                els.sumValue.textContent = newSumText;
+                const pool = els.sumValue.closest('.edge-sum-pool');
+                if (pool) {
+                    pool.classList.remove('is-flashing');
+                    void pool.offsetWidth;
+                    pool.classList.add('is-flashing');
+                }
+            }
+        }
         if (els.sumTrace) {
             if (step < count) {
                 const terms = productFlat.slice(0, Math.min(step + 1, count)).map((value) => {
@@ -1535,10 +1648,80 @@
                 ? `${probe.magnitude.toFixed(2)} ${probe.isEdge ? "≥" : "<"} ${probe.threshold}`
                 : `Threshold = ${probe.threshold}`;
         }
+        if (els.liveLogic) {
+            let logicText = "等待计算开始...";
+            if (step < count) {
+                logicText = `当前乘法: ${formatNumber(currentPatch)} × ${formatNumber(currentKernel)} = ${formatNumber(currentProduct)}`;
+            } else if (step === count || step === count + 1) {
+                logicText = `计算响应值: ${probe.magnitude.toFixed(2)}`;
+            } else if (step >= count + 2) {
+                logicText = `阈值判断: ${probe.magnitude.toFixed(2)} ${probe.isEdge ? "≥" : "<"} ${probe.threshold} ➔ ${probe.isEdge ? "Edge" : "Non-edge"}`;
+            }
+            els.liveLogic.textContent = logicText;
+        }
         updateFlowPath(step, count + 2);
         if (step >= count + 2) {
             updateSampleOverlay(probe, true);
         }
+    }
+
+    function spawnFlyingParticles(probe, step, count) {
+        if (step >= count || !els.formulaCanvas) return;
+        const patchCell = els.drawPatch.querySelector(`[data-cell="${step}"]`);
+        const kernelCell = els.drawKernel.querySelector(`[data-cell="${step}"]`);
+        const productCell = els.drawProduct.querySelector(`[data-cell="${step}"]`);
+        const sumPool = els.sumValue ? els.sumValue.closest('.edge-sum-pool') : null;
+        if (!patchCell || !kernelCell || !productCell || !sumPool) return;
+
+        const patchVal = flatValue(probe.patch, step);
+        const kernelVal = flatValue(probe.primaryKernel, step);
+        const productVal = patchVal * kernelVal;
+        const containerRect = els.formulaCanvas.getBoundingClientRect();
+        const flyInDuration = 340;
+        const settleDuration = 60;
+        const productToSumDelay = 260;
+        const flyOutDuration = 280;
+
+        const createFlyer = (text, startEl, endEl, delay, cls) => {
+            const startRect = startEl.getBoundingClientRect();
+            const tarRect = endEl.getBoundingClientRect();
+            const p = document.createElement("div");
+            p.className = `edge-flying-particle edge-fly-${cls}`;
+            p.textContent = text;
+            p.style.left = `${startRect.left - containerRect.left + startRect.width/2}px`;
+            p.style.top = `${startRect.top - containerRect.top + startRect.height/2}px`;
+            els.formulaCanvas.appendChild(p);
+
+            setTimeout(() => {
+                const startX = startRect.left - containerRect.left + startRect.width / 2;
+                const startY = startRect.top - containerRect.top + startRect.height / 2;
+                const endX = tarRect.left - containerRect.left + tarRect.width / 2;
+                const endY = tarRect.top - containerRect.top + tarRect.height / 2;
+                const midX = (startX + endX) / 2;
+                const midY = Math.min(startY, endY) - 24;
+                const duration = cls === 'product' ? flyOutDuration : flyInDuration;
+                p.animate([
+                    { transform: `translate(-50%, -50%) translate(0px, 0px) scale(1)`, offset: 0, opacity: 1 },
+                    { transform: `translate(-50%, -50%) translate(${midX - startX}px, ${midY - startY}px) scale(1.08)`, offset: 0.42, opacity: 1 },
+                    { transform: `translate(-50%, -50%) translate(${endX - startX}px, ${endY - startY}px) scale(0.96)`, offset: 0.86, opacity: 1 },
+                    { transform: `translate(-50%, -50%) translate(${endX - startX}px, ${endY - startY}px) scale(0.75)`, offset: 1, opacity: 0 }
+                ], {
+                    duration,
+                    delay,
+                    easing: 'cubic-bezier(0.22, 0.85, 0.3, 1)',
+                    fill: 'forwards'
+                });
+            }, 0);
+
+            setTimeout(() => p.remove(), delay + (cls === 'product' ? flyOutDuration : flyInDuration) + 160);
+        };
+
+        createFlyer(formatNumber(patchVal, 0), patchCell, productCell, 20, 'patch');
+        createFlyer(formatNumber(kernelVal, 0), kernelCell, productCell, 20, 'kernel');
+
+        setTimeout(() => {
+            createFlyer(formatNumber(productVal, 0), productCell, sumPool, productToSumDelay, 'product');
+        }, flyInDuration + settleDuration);
     }
 
     function updateFlowPath(step, maxStep) {
@@ -1642,6 +1825,7 @@
     }
 
     async function requestProbe(event) {
+        if (stageDisplayMode() === "diff") return;
         if (state.tab !== "kernel" || !state.data?.pipeline) return;
         const img = els.mainImage;
         if (!img.naturalWidth || !img.naturalHeight) return;
@@ -1732,8 +1916,24 @@
         if (els.edgeDot) {
             els.edgeDot.style.left = `${x}px`;
             els.edgeDot.style.top = `${y}px`;
+            
+            const wasEdge = els.edgeDot.classList.contains("is-edge");
+            const wasNonEdge = els.edgeDot.classList.contains("is-non-edge");
+            
             els.edgeDot.classList.toggle("is-edge", Boolean(showEdge && probe.isEdge));
             els.edgeDot.classList.toggle("is-non-edge", Boolean(showEdge && !probe.isEdge));
+            
+            if (showEdge && (!wasEdge && !wasNonEdge)) {
+                 // Trigger flash
+                 els.edgeDot.classList.remove("is-flashing");
+                 void els.edgeDot.offsetWidth;
+                 els.edgeDot.classList.add("is-flashing");
+                 setTimeout(() => {
+                     if (els.edgeDot) els.edgeDot.classList.remove("is-flashing");
+                 }, 650);
+            } else if (!showEdge) {
+                 els.edgeDot.classList.remove("is-flashing");
+            }
         }
         els.sampleOverlay.hidden = false;
     }
@@ -1820,6 +2020,16 @@
                 scheduleRefresh("kernel");
             }
         });
+        on(els.kernelDisplay, "change", () => {
+            if (state.tab === "kernel") {
+                renderPipeline();
+            }
+        });
+        on(els.cannyDisplay, "change", () => {
+            if (state.tab === "canny") {
+                renderPipeline();
+            }
+        });
         on(els.compareAperture, "change", () => {
             if (state.tab === "compare") {
                 scheduleRefresh("compare");
@@ -1886,6 +2096,27 @@
                     stopProbeAnimation();
                     playProbeAnimation();
                 }
+            });
+        }
+        if (els.mainImageButton) {
+            els.mainImageButton.addEventListener("pointerdown", (event) => {
+                if (stageDisplayMode() !== "diff" || state.stepIndex <= 0) return;
+                state.stageSplitDragging = true;
+                els.mainImageButton.setPointerCapture?.(event.pointerId);
+                setStageSplitFromEvent(event);
+                event.preventDefault();
+            });
+            els.mainImageButton.addEventListener("pointermove", (event) => {
+                if (!state.stageSplitDragging) return;
+                setStageSplitFromEvent(event);
+            });
+            els.mainImageButton.addEventListener("pointerup", (event) => {
+                if (!state.stageSplitDragging) return;
+                state.stageSplitDragging = false;
+                els.mainImageButton.releasePointerCapture?.(event.pointerId);
+            });
+            els.mainImageButton.addEventListener("pointercancel", () => {
+                state.stageSplitDragging = false;
             });
         }
         els.mainImageButton.addEventListener("click", requestProbe);
