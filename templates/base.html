@@ -36,6 +36,13 @@
                 <a class="{{ 'active' if active_sub_page|default('') == 'conv_gradient_lab' else '' }}" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
             </div>
             <a class="{{ 'active' if active_page == 'edge' else '' }}" href="{{ url_for('edge_detection_page') }}">第四节：图像边缘检测</a>
+            <div class="sidebar-subnav" aria-label="第四节子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">可比/对比视图</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">核响应演示</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 步骤</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED 深度拓展</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'applications' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
+            </div>
             <span class="disabled">第五节：</span>
             <span class="disabled">第六节：</span>
         </nav>

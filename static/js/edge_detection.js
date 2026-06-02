@@ -21,7 +21,7 @@
 
     const compareTimeline = ["算子分类", "一阶导数 / 二阶导数 / Canny", "结果对比"];
     const compareMethods = ["roberts", "sobel", "prewitt", "kirsch", "laplacian", "LoG", "canny", "teed"];
-    const kernelTimeline = ["Image", "Gray", "Kernel Response", "Magnitude", "Threshold", "Final"];
+    const kernelTimeline = ["Image", "Gray", "Kernel Response", "Magnitude", "Threshold"];
     const cannyTimeline = ["Image", "Gray", "Gaussian Blur", "Gradient", "Direction", "NMS", "Double Threshold", "Hysteresis"];
 
     const methodLabels = {
@@ -44,7 +44,8 @@
         kirsch: "kirsch.webp",
         laplacian: "laplacian.webp",
         LoG: "log.webp",
-        canny: "canny.webp"
+        canny: "canny.webp",
+        teed: "teed.webp"
     };
 
     const methodInfo = {
@@ -364,6 +365,7 @@
         hysteresisFrame: null,
         hysteresisPlan: null,
         hysteresisPlanKey: "",
+        stageImageTransitionId: 0,
         requestId: 0
     };
 
@@ -1014,7 +1016,7 @@
                 { key: "final", label: "Final Edge", image: final }
             ],
             final,
-            edge_ratio: edgeRatioClient(byteValues),
+            edge_ratio: edgeTeedRatio(values),
             stats: arrayStatsClient(byteValues),
             elapsed_ms: Number(elapsedMs.toFixed(2))
         };
@@ -1240,6 +1242,24 @@
         let count = 0;
         for (let i = 0; i < values.length; i += 1) {
             if (values[i] >= 128) count += 1;
+        }
+        return Math.round((count / values.length * 100) * 100) / 100;
+    }
+
+    function edgeTeedRatio(values) {
+        if (!values?.length) return 0;
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < values.length; i += 1) {
+            const value = Number(values[i]) || 0;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
+        if (max <= min) return 0;
+        let count = 0;
+        for (let i = 0; i < values.length; i += 1) {
+            const normalized = ((Number(values[i]) || 0) - min) / (max - min);
+            if (normalized >= 0.68) count += 1;
         }
         return Math.round((count / values.length * 100) * 100) / 100;
     }
@@ -2217,10 +2237,24 @@
         const baseImage = showDiff ? displayImageForStep(pipeline, state.stepIndex - 1) : displayImageForStep(pipeline, state.stepIndex);
         const currentImage = displayImageForStep(pipeline, state.stepIndex);
         if (els.mainBaseImage) {
-            els.mainBaseImage.src = baseImage;
-            els.mainBaseImage.hidden = !showDiff;
+            const transitionBase = state.tab === "canny" && !showDiff
+                ? displayImageForStep(pipeline, state.stepIndex - 1)
+                : baseImage;
+            els.mainBaseImage.src = transitionBase || baseImage;
+            els.mainBaseImage.hidden = !(showDiff || (state.tab === "canny" && transitionBase && transitionBase !== currentImage));
         }
-        els.mainImage.src = currentImage;
+        if (state.tab === "canny" && !showDiff && els.mainImage.src !== currentImage) {
+            const transitionId = state.stageImageTransitionId + 1;
+            state.stageImageTransitionId = transitionId;
+            els.mainImage.src = currentImage;
+            window.setTimeout(() => {
+                if (state.stageImageTransitionId === transitionId && els.mainBaseImage && stageDisplayMode() !== "diff") {
+                    els.mainBaseImage.hidden = true;
+                }
+            }, 720);
+        } else {
+            els.mainImage.src = currentImage;
+        }
         els.mainImageButton.classList.toggle("is-diff-mode", showDiff);
         updateStageSliderLabels(previousStep, step, showDiff);
         updateStageSplit();
@@ -2528,8 +2562,19 @@
         els.kernelFlowTitle.hidden = state.tab === "compare";
         const labels = state.tab === "canny"
             ? ["Image", "Gray", "Blur", "Gradient", "Direction", "NMS", "Double", "Hysteresis"]
-            : ["Image", "Gray", "Gx/Gy", "Magnitude", "Threshold", "Final"];
-        const stepIndex = Math.max(0, pipeline.steps.findIndex((item) => item === step || item.key === step?.key));
+            : ["Image", "Gray", "Gx/Gy", "Magnitude", "Threshold"];
+        const kernelFlowIndex = {
+            original: 0,
+            gray: 1,
+            gx: 2,
+            gy: 2,
+            response: 2,
+            magnitude: 3,
+            threshold: 4
+        };
+        const stepIndex = state.tab === "kernel"
+            ? (kernelFlowIndex[step?.key] ?? 0)
+            : Math.max(0, pipeline.steps.findIndex((item) => item === step || item.key === step?.key));
         els.kernelFlowTitle.style.setProperty("--edge-flow-count", labels.length);
         els.kernelFlowTitle.innerHTML = `
             <strong>${state.tab === "canny" ? "CANNY FLOW" : "KERNEL FLOW"}</strong>
@@ -2558,6 +2603,12 @@
         }
     }
 
+    function visiblePipelineSteps(pipeline) {
+        const steps = pipeline?.steps || [];
+        if (state.tab !== "kernel") return steps;
+        return steps.filter((step) => step.key !== "final");
+    }
+
     function renderPipeline() {
         const pipeline = state.data?.pipeline;
         if (!pipeline) return;
@@ -2572,7 +2623,11 @@
         if (els.mainStageGrid) {
             els.mainStageGrid.classList.toggle("is-kernel", state.tab === "kernel");
         }
-        const step = pipeline.steps[state.stepIndex] || pipeline.steps[0];
+        const visibleSteps = visiblePipelineSteps(pipeline);
+        if (state.stepIndex >= visibleSteps.length) {
+            state.stepIndex = Math.max(0, visibleSteps.length - 1);
+        }
+        const step = visibleSteps[state.stepIndex] || visibleSteps[0] || pipeline.steps[0];
         renderFlowTimeline(pipeline, step);
         const info = infoFor(pipeline.method);
         els.stageEyebrow.textContent = state.tab === "canny" ? "Canny Pipeline" : "Kernel Operator";
@@ -2589,13 +2644,26 @@
             updateStageSliderLabels(previousStep, step, false);
             window.requestAnimationFrame(() => drawDirectionVectors(step));
         } else {
-            clearDirectionVectors();
+            const keepDirectionOverlay = state.tab === "canny"
+                && !showDiff
+                && pipeline.steps[Math.max(0, state.stepIndex - 1)]?.key === "direction";
+            if (!keepDirectionOverlay) {
+                clearDirectionVectors();
+            }
             renderStepImage(pipeline, step);
             renderDirectionCompareOverlay(pipeline, step);
+            if (keepDirectionOverlay) {
+                const transitionId = state.stageImageTransitionId;
+                window.setTimeout(() => {
+                    if (state.stageImageTransitionId === transitionId && stageDisplayMode() !== "diff") {
+                        clearDirectionVectors();
+                    }
+                }, 720);
+            }
         }
         applyStepAnimation(step.key);
         renderHysteresisOverlay(pipeline, step);
-        els.thumbs.innerHTML = pipeline.steps.map((item, index) => {
+        els.thumbs.innerHTML = visibleSteps.map((item, index) => {
             const isCannyThumb = state.tab === "canny";
             const cannyClass = isCannyThumb ? `has-thumb-anim edge-thumb-${item.key}` : "";
             const previousThumb = pipeline.steps[Math.max(0, index - 1)] || item;
@@ -3043,7 +3111,7 @@
         }
         const pipeline = state.data?.pipeline;
         if (!pipeline) return;
-        const length = pipeline.steps.length;
+        const length = visiblePipelineSteps(pipeline).length;
         state.stepIndex = (state.stepIndex + delta + length) % length;
         const activeTimeline = state.tab === "canny" ? cannyTimeline : kernelTimeline;
         state.timelineIndex = Math.min(activeTimeline.length - 1, state.stepIndex);
@@ -3181,7 +3249,7 @@
     function renderKernelTeachingExample(method = currentMethod()) {
         setProbe(staticProbeFor(method), { autoplay: false });
         if (els.kernelProbeBadge) {
-            els.kernelProbeBadge.textContent = "静态教学示例";
+            els.kernelProbeBadge.textContent = "静态示例，点击图像像素开始动态演示";
         }
     }
 
@@ -3459,7 +3527,7 @@
         state.probeStepIndex = 0;
         renderProbeCanvas(probe);
         if (els.kernelProbeBadge) {
-            els.kernelProbeBadge.textContent = probe.isExample ? "静态教学示例" : `当前像素 (${probe.x}, ${probe.y})`;
+            els.kernelProbeBadge.textContent = probe.isExample ? "静态教学示例，点击图像像素开始动态演示" : `当前像素 (${probe.x}, ${probe.y})`;
         }
         updateSampleOverlay(probe, false);
         if (options.autoplay) {

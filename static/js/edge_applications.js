@@ -28,7 +28,6 @@
         source: document.getElementById("edgeAppSource"),
         mode: document.getElementById("edgeAppMode"),
         speed: document.getElementById("edgeAppSpeed"),
-        resolution: document.getElementById("edgeAppResolution"),
         resolutionBadge: document.getElementById("edgeAppResolutionBadge"),
         modePill: document.getElementById("edgeAppModePill"),
         processSteps: document.getElementById("edgeAppProcessSteps"),
@@ -70,6 +69,15 @@
         maxLines: document.getElementById("edgeAppMaxLines"),
         maxLinesValue: document.getElementById("edgeAppMaxLinesValue"),
         showAccumulator: document.getElementById("edgeAppShowAccumulator"),
+        cutoutMode: document.getElementById("edgeAppCutoutMode"),
+        autoCutout: document.getElementById("edgeAppAutoCutout"),
+        showCutoutWorkspace: document.getElementById("edgeAppShowCutoutWorkspace"),
+        cutoutPanel: document.getElementById("edgeAppCutoutPanel"),
+        cutoutWorkspace: document.getElementById("edgeAppCutoutWorkspace"),
+        cutoutHint: document.getElementById("edgeAppCutoutHint"),
+        duplicateCutout: document.getElementById("edgeAppDuplicateCutout"),
+        deleteCutout: document.getElementById("edgeAppDeleteCutout"),
+        downloadCutout: document.getElementById("edgeAppDownloadCutout"),
         radiusMin: document.getElementById("edgeAppRadiusMin"),
         radiusMinValue: document.getElementById("edgeAppRadiusMinValue"),
         radiusMax: document.getElementById("edgeAppRadiusMax"),
@@ -97,7 +105,13 @@
         processAnimStart: performance.now(),
         phase: 0,
         modeData: null,
-        selectedContour: -1
+        selectedContour: -1,
+        hoverContour: -1,
+        cutouts: [],
+        selectedCutout: -1,
+        nextCutoutId: 1,
+        drag: null,
+        clipboardCutout: null
     };
 
     function escapeHtml(value) {
@@ -439,6 +453,9 @@
         root.querySelectorAll("[data-mode-panel]").forEach((panel) => {
             panel.hidden = panel.dataset.modePanel !== els.mode.value;
         });
+        if (els.cutoutPanel) {
+            els.cutoutPanel.hidden = els.mode.value !== "contour" || !els.showCutoutWorkspace?.checked;
+        }
     }
 
     function updateRangeLabels() {
@@ -450,7 +467,7 @@
         els.radiusMaxValue.textContent = els.radiusMax.value;
         els.circleVoteValue.textContent = els.circleVote.value;
         els.maxCirclesValue.textContent = els.maxCircles.value;
-        if (els.resolutionBadge) els.resolutionBadge.textContent = `${els.resolution.value} px`;
+        if (els.resolutionBadge) els.resolutionBadge.textContent = `${maxWorkWidth} px`;
     }
 
     function loadImage(src) {
@@ -465,7 +482,7 @@
     function prepareImage(image) {
         const sourceW = image.naturalWidth || image.width;
         const sourceH = image.naturalHeight || image.height;
-        const workWidth = Number(els.resolution?.value || maxWorkWidth);
+        const workWidth = maxWorkWidth;
         const scale = Math.min(1, workWidth / sourceW);
         const width = Math.max(1, Math.round(sourceW * scale));
         const height = Math.max(1, Math.round(sourceH * scale));
@@ -753,8 +770,11 @@
         return peaks.slice(0, maxCircles);
     }
 
-    function drawAccumulator(canvas, accumulator, width, height, maxVote) {
-        const context = canvas.getContext("2d");
+    function accumulatorImageData(accumulator, width, height, maxVote) {
+        const scratch = document.createElement("canvas");
+        scratch.width = width;
+        scratch.height = height;
+        const context = scratch.getContext("2d");
         const imageData = context.createImageData(width, height);
         const scale = maxVote ? 1 / maxVote : 0;
         for (let i = 0; i < accumulator.length; i += 1) {
@@ -765,25 +785,36 @@
             imageData.data[i * 4 + 3] = 255;
         }
         context.putImageData(imageData, 0, 0);
+        return scratch;
+    }
+
+    function drawAccumulator(canvas, accumulator, width, height, maxVote) {
+        setCanvasSize(canvas, width, height);
+        const source = accumulatorImageData(accumulator, width, height, maxVote);
+        const context = canvas.getContext("2d");
+        context.drawImage(source, 0, 0);
     }
 
     function drawLineAccumulator(canvas, model) {
-        setCanvasSize(canvas, model.thetaBins, model.rhoBins);
-        drawAccumulator(canvas, model.accumulator, model.thetaBins, model.rhoBins, model.maxVote);
+        const previewWidth = 360;
+        const previewHeight = 240;
+        setCanvasSize(canvas, previewWidth, previewHeight);
+        const source = accumulatorImageData(model.accumulator, model.thetaBins, model.rhoBins, model.maxVote);
         const context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = true;
+        context.drawImage(source, 0, 0, model.thetaBins, model.rhoBins, 0, 0, previewWidth, previewHeight);
         context.strokeStyle = "#22c55e";
-        context.lineWidth = 1;
+        context.lineWidth = 2;
         model.lines.forEach((line) => {
-            const t = Math.round(line.theta / model.thetaStep);
-            const r = Math.round((line.rho + model.diagonal) / model.rhoResolution);
+            const t = Math.round(line.theta / model.thetaStep) / Math.max(1, model.thetaBins - 1) * previewWidth;
+            const r = Math.round((line.rho + model.diagonal) / model.rhoResolution) / Math.max(1, model.rhoBins - 1) * previewHeight;
             context.beginPath();
-            context.arc(t, r, 3, 0, Math.PI * 2);
+            context.arc(t, r, 5, 0, Math.PI * 2);
             context.stroke();
         });
     }
 
     function drawCircleAccumulator(canvas, model) {
-        setCanvasSize(canvas, state.width, state.height);
         drawAccumulator(canvas, model.accumulator, state.width, state.height, model.maxVote);
     }
 
@@ -821,7 +852,7 @@
         });
     }
 
-    function drawContours(canvas, contours, noise, revealCount = contours.length, selected = -1) {
+    function drawContours(canvas, contours, noise, revealCount = contours.length, selected = -1, hover = -1) {
         drawBaseOverlay(canvas, 0.64);
         const context = canvas.getContext("2d");
         noise.forEach((contour) => {
@@ -832,14 +863,18 @@
         });
         contours.slice(0, revealCount).forEach((contour, index) => {
             const color = colors[index % colors.length];
-            context.fillStyle = index === selected ? "#22c55e" : color;
+            const isHot = index === selected || index === hover;
+            context.fillStyle = index === selected ? "#22c55e" : (index === hover ? "#f97316" : color);
             contour.points.forEach((pointIndex) => {
                 context.fillRect(pointIndex % state.width, Math.floor(pointIndex / state.width), 1, 1);
             });
-            if (els.showBox.checked || index === selected) {
+            if (els.showBox.checked || isHot) {
                 context.strokeStyle = index === selected ? "#16a34a" : color;
-                context.lineWidth = index === selected ? 3 : 1.5;
+                context.shadowColor = isHot ? "rgba(37,99,235,0.55)" : "transparent";
+                context.shadowBlur = isHot ? 10 : 0;
+                context.lineWidth = isHot ? 3 : 1.5;
                 context.strokeRect(contour.bbox.x, contour.bbox.y, contour.bbox.width, contour.bbox.height);
+                context.shadowBlur = 0;
             }
             if (els.showId.checked) {
                 context.fillStyle = color;
@@ -862,19 +897,344 @@
             circle: "边缘点对可能圆心投票，中心累加器中的峰值映射回原图形成检测圆。"
         };
         const formulas = {
-            contour: `Connected Components by ${els.connectivity.value}-neighborhood`,
-            line: "rho = x cos(theta) + y sin(theta)",
-            circle: "(x - a)^2 + (y - b)^2 = r^2"
+            contour: `\\text{Connected Components by }${els.connectivity.value}\\text{-neighborhood}`,
+            line: "\\rho = x\\cos(\\theta) + y\\sin(\\theta)",
+            circle: "(x-a)^2 + (y-b)^2 = r^2"
         };
         els.infoTitle.textContent = titles[mode];
         els.infoText.textContent = texts[mode];
-        els.formula.textContent = formulas[mode];
+        renderAppFormula(formulas[mode]);
+    }
+
+    function updateCutoutInfo() {
+        els.infoTitle.textContent = "Contour Cutout";
+        els.infoText.textContent = "根据检测到的轮廓区域，从原图中裁剪对应像素，形成可单独拖拽和导出的对象。";
+        renderAppFormula(els.cutoutMode?.value === "mask"
+            ? "\\mathrm{bbox}=[x_{min},y_{min},x_{max},y_{max}],\\quad \\alpha = \\begin{cases}255,& p\\in\\mathrm{mask}\\\\0,& p\\notin\\mathrm{mask}\\end{cases}"
+            : "\\mathrm{bbox}=[x_{min},y_{min},x_{max},y_{max}],\\quad \\mathrm{cutout}=I[\\mathrm{bbox}]");
+    }
+
+    function renderAppFormula(tex) {
+        if (!els.formula) return;
+        els.formula.innerHTML = "";
+        if (window.katex && tex) {
+            try {
+                window.katex.render(tex, els.formula, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+                return;
+            } catch (_error) {
+                // Fallback below keeps the page usable if KaTeX rejects a token.
+            }
+        }
+        els.formula.textContent = tex || "";
     }
 
     function renderStats(entries) {
         els.stats.innerHTML = entries.map(([key, value]) => `
             <div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd></div>
         `).join("");
+    }
+
+    function contourAtCanvasEvent(event) {
+        if (!state.modeData || state.modeData.mode !== "contour") return -1;
+        const rect = els.canvasC.getBoundingClientRect();
+        const x = Math.round((event.clientX - rect.left) * state.width / rect.width);
+        const y = Math.round((event.clientY - rect.top) * state.height / rect.height);
+        return state.modeData.contours.findIndex((contour) => (
+            x >= contour.bbox.x
+            && y >= contour.bbox.y
+            && x <= contour.bbox.x + contour.bbox.width
+            && y <= contour.bbox.y + contour.bbox.height
+        ));
+    }
+
+    function redrawContourOverlay() {
+        if (!state.modeData || state.modeData.mode !== "contour") return;
+        drawContours(
+            els.canvasC,
+            state.modeData.contours,
+            state.modeData.noise,
+            state.modeData.reveal,
+            state.selectedContour,
+            state.hoverContour
+        );
+    }
+
+    function createSourceCanvas() {
+        const canvas = document.createElement("canvas");
+        canvas.width = state.width;
+        canvas.height = state.height;
+        canvas.getContext("2d").putImageData(state.imageData, 0, 0);
+        return canvas;
+    }
+
+    function contourLooksClosed(contour) {
+        if (!contour || contour.points.length < 12) return false;
+        const density = contour.points.length / Math.max(1, contour.bbox.width * contour.bbox.height);
+        return density > 0.035;
+    }
+
+    function buildContourInteriorMask(contour, width, height) {
+        const pad = 2;
+        const maskWidth = width + pad * 2;
+        const maskHeight = height + pad * 2;
+        const total = maskWidth * maskHeight;
+        const boundary = new Uint8Array(total);
+        const outside = new Uint8Array(total);
+        const queue = new Int32Array(total);
+        const markBoundary = (x, y) => {
+            if (x < 0 || y < 0 || x >= maskWidth || y >= maskHeight) return;
+            boundary[y * maskWidth + x] = 1;
+        };
+
+        contour.points.forEach((pointIndex) => {
+            const x = pointIndex % state.width - contour.bbox.x + pad;
+            const y = Math.floor(pointIndex / state.width) - contour.bbox.y + pad;
+            for (let dy = -1; dy <= 1; dy += 1) {
+                for (let dx = -1; dx <= 1; dx += 1) markBoundary(x + dx, y + dy);
+            }
+        });
+
+        let head = 0;
+        let tail = 0;
+        const pushOutside = (x, y) => {
+            if (x < 0 || y < 0 || x >= maskWidth || y >= maskHeight) return;
+            const index = y * maskWidth + x;
+            if (outside[index] || boundary[index]) return;
+            outside[index] = 1;
+            queue[tail] = index;
+            tail += 1;
+        };
+
+        for (let x = 0; x < maskWidth; x += 1) {
+            pushOutside(x, 0);
+            pushOutside(x, maskHeight - 1);
+        }
+        for (let y = 0; y < maskHeight; y += 1) {
+            pushOutside(0, y);
+            pushOutside(maskWidth - 1, y);
+        }
+        while (head < tail) {
+            const current = queue[head];
+            head += 1;
+            const x = current % maskWidth;
+            const y = Math.floor(current / maskWidth);
+            pushOutside(x + 1, y);
+            pushOutside(x - 1, y);
+            pushOutside(x, y + 1);
+            pushOutside(x, y - 1);
+        }
+
+        const insideMask = new Uint8Array(width * height);
+        let insideCount = 0;
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                const paddedIndex = (y + pad) * maskWidth + x + pad;
+                if (!outside[paddedIndex]) {
+                    insideMask[y * width + x] = 1;
+                    insideCount += 1;
+                }
+            }
+        }
+        return { mask: insideMask, insideCount };
+    }
+
+    function createCutoutCanvas(contour, mode) {
+        const bbox = contour.bbox;
+        const source = createSourceCanvas();
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, bbox.width);
+        canvas.height = Math.max(1, bbox.height);
+        const context = canvas.getContext("2d");
+        context.drawImage(source, bbox.x, bbox.y, bbox.width, bbox.height, 0, 0, bbox.width, bbox.height);
+        let actualMode = mode;
+        if (mode === "mask") {
+            if (contourLooksClosed(contour)) {
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const interior = buildContourInteriorMask(contour, canvas.width, canvas.height);
+                if (interior.insideCount <= contour.points.length) {
+                    actualMode = "bbox";
+                    if (els.cutoutHint) els.cutoutHint.textContent = "当前轮廓未形成稳定闭合区域，已使用外接框剪裁。";
+                } else {
+                    for (let i = 0; i < interior.mask.length; i += 1) {
+                        imageData.data[i * 4 + 3] = interior.mask[i] ? 255 : 0;
+                    }
+                    context.putImageData(imageData, 0, 0);
+                }
+            } else {
+                actualMode = "bbox";
+                if (els.cutoutHint) els.cutoutHint.textContent = "当前轮廓不闭合，已使用外接框剪裁。";
+            }
+        }
+        return { canvas, mode: actualMode };
+    }
+
+    function defaultCutoutSize(canvas) {
+        const maxW = 128;
+        const maxH = 116;
+        const scale = Math.min(1, maxW / Math.max(1, canvas.width), maxH / Math.max(1, canvas.height));
+        return {
+            w: Math.max(42, Math.round(canvas.width * scale)),
+            h: Math.max(42, Math.round(canvas.height * scale))
+        };
+    }
+
+    function cloneCanvas(sourceCanvas) {
+        const canvas = document.createElement("canvas");
+        canvas.width = sourceCanvas.width;
+        canvas.height = sourceCanvas.height;
+        canvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
+        return canvas;
+    }
+
+    function clampCutoutToWorkspace(cutout) {
+        if (!els.cutoutWorkspace || !cutout) return;
+        const rect = els.cutoutWorkspace.getBoundingClientRect();
+        cutout.w = Math.max(42, Math.min(cutout.w, Math.max(42, rect.width - cutout.x - 4)));
+        cutout.h = Math.max(42, Math.min(cutout.h, Math.max(42, rect.height - cutout.y - 4)));
+        cutout.x = Math.max(0, Math.min(cutout.x, Math.max(0, rect.width - cutout.w - 4)));
+        cutout.y = Math.max(0, Math.min(cutout.y, Math.max(0, rect.height - cutout.h - 4)));
+    }
+
+    function makeCutoutCopy(source, offset = 22) {
+        const canvas = cloneCanvas(source.canvas);
+        const copy = {
+            ...source,
+            id: state.nextCutoutId,
+            canvas,
+            x: source.x + offset,
+            y: source.y + offset,
+            w: source.w,
+            h: source.h
+        };
+        state.nextCutoutId += 1;
+        clampCutoutToWorkspace(copy);
+        return copy;
+    }
+
+    function addCutoutFromContour(contourIndex) {
+        if (!state.modeData || contourIndex < 0) return;
+        const contour = state.modeData.contours[contourIndex];
+        if (!contour) return;
+        const mode = els.cutoutMode?.value === "mask" ? "mask" : "bbox";
+        const cutoutCanvas = createCutoutCanvas(contour, mode);
+        const workspaceRect = els.cutoutWorkspace.getBoundingClientRect();
+        const displaySize = defaultCutoutSize(cutoutCanvas.canvas);
+        const cutout = {
+            id: state.nextCutoutId,
+            contourId: contourIndex + 1,
+            canvas: cutoutCanvas.canvas,
+            bbox: contour.bbox,
+            x: 18 + (state.cutouts.length % 5) * 28,
+            y: 18 + (state.cutouts.length % 3) * 22,
+            w: displaySize.w,
+            h: displaySize.h,
+            mode: cutoutCanvas.mode
+        };
+        state.nextCutoutId += 1;
+        cutout.x = Math.min(cutout.x, Math.max(0, workspaceRect.width - 80));
+        cutout.y = Math.min(cutout.y, Math.max(0, workspaceRect.height - 80));
+        clampCutoutToWorkspace(cutout);
+        state.cutouts.push(cutout);
+        state.selectedCutout = cutout.id;
+        renderCutouts();
+        if (els.cutoutHint && cutout.mode === "bbox") {
+            els.cutoutHint.textContent = `已从原图 bbox=[${contour.bbox.x}, ${contour.bbox.y}, ${contour.bbox.width}, ${contour.bbox.height}] 生成可拖拽对象。`;
+        } else if (els.cutoutHint && cutout.mode === "mask") {
+            els.cutoutHint.textContent = "已保留轮廓围起来的原图像素，轮廓外区域设置为透明。";
+        }
+    }
+
+    function renderCutouts() {
+        if (!els.cutoutWorkspace) return;
+        const liveIds = new Set(state.cutouts.map((cutout) => String(cutout.id)));
+        els.cutoutWorkspace.querySelectorAll(".edge-app-cutout").forEach((item) => {
+            if (!liveIds.has(item.dataset.cutoutId)) item.remove();
+        });
+        state.cutouts.forEach((cutout) => {
+            let item = els.cutoutWorkspace.querySelector(`[data-cutout-id="${cutout.id}"]`);
+            if (!item) {
+                item = document.createElement("button");
+                item.type = "button";
+                item.className = "edge-app-cutout";
+                item.dataset.cutoutId = String(cutout.id);
+                const canvas = document.createElement("canvas");
+                canvas.width = cutout.canvas.width;
+                canvas.height = cutout.canvas.height;
+                canvas.getContext("2d").drawImage(cutout.canvas, 0, 0);
+                item.appendChild(canvas);
+                const resizeHandle = document.createElement("span");
+                resizeHandle.className = "edge-app-cutout-resize";
+                resizeHandle.dataset.cutoutResize = "true";
+                resizeHandle.setAttribute("aria-hidden", "true");
+                item.appendChild(resizeHandle);
+                els.cutoutWorkspace.appendChild(item);
+            }
+            item.title = `Contour ${cutout.contourId} · ${cutout.mode}`;
+            updateCutoutElement(cutout);
+        });
+    }
+
+    function updateCutoutElement(cutout) {
+        if (!els.cutoutWorkspace || !cutout) return;
+        const item = els.cutoutWorkspace.querySelector(`[data-cutout-id="${cutout.id}"]`);
+        if (!item) return;
+        item.style.left = `${cutout.x}px`;
+        item.style.top = `${cutout.y}px`;
+        item.style.width = `${cutout.w}px`;
+        item.style.height = `${cutout.h}px`;
+        item.classList.toggle("is-selected", cutout.id === state.selectedCutout);
+    }
+
+    function updateCutoutSelection() {
+        if (!els.cutoutWorkspace) return;
+        els.cutoutWorkspace.querySelectorAll(".edge-app-cutout").forEach((item) => {
+            item.classList.toggle("is-selected", Number(item.dataset.cutoutId) === state.selectedCutout);
+        });
+    }
+
+    function deleteSelectedCutout() {
+        if (state.selectedCutout < 0) return false;
+        state.cutouts = state.cutouts.filter((cutout) => cutout.id !== state.selectedCutout);
+        state.selectedCutout = state.cutouts.at(-1)?.id || -1;
+        renderCutouts();
+        updateStats();
+        return true;
+    }
+
+    function copySelectedCutout() {
+        const source = state.cutouts.find((cutout) => cutout.id === state.selectedCutout);
+        if (!source) return false;
+        state.clipboardCutout = {
+            ...source,
+            canvas: cloneCanvas(source.canvas)
+        };
+        if (els.cutoutHint) els.cutoutHint.textContent = `已复制 cutout ${source.id}，可使用 Ctrl+V 粘贴。`;
+        return true;
+    }
+
+    function pasteCutout() {
+        if (!state.clipboardCutout) return false;
+        const copy = makeCutoutCopy(state.clipboardCutout, 24);
+        state.cutouts.push(copy);
+        state.selectedCutout = copy.id;
+        renderCutouts();
+        updateStats();
+        if (els.cutoutHint) els.cutoutHint.textContent = `已粘贴 cutout ${copy.id}，可拖拽移动或调整大小。`;
+        return true;
+    }
+
+    function duplicateSelectedCutout() {
+        const source = state.cutouts.find((cutout) => cutout.id === state.selectedCutout);
+        if (!source) return false;
+        const copy = makeCutoutCopy(source, 22);
+        state.cutouts.push(copy);
+        state.selectedCutout = copy.id;
+        renderCutouts();
+        updateStats();
+        return true;
     }
 
     function resetModeData() {
@@ -886,9 +1246,12 @@
         drawOriginal(els.canvasA);
         drawEdgeMap(els.canvasB);
         const mode = els.mode.value;
+        root.dataset.appMode = mode;
         if (mode === "contour") {
             const data = extractContours(state.edge, state.width, state.height, Number(els.connectivity.value), Number(els.minContour.value));
             state.modeData = { mode, ...data, reveal: 0 };
+            state.hoverContour = -1;
+            state.selectedContour = -1;
             els.panelA.textContent = "Original";
             els.panelB.textContent = "Edge Map";
             els.panelC.textContent = "Contour Overlay";
@@ -925,8 +1288,11 @@
                 ["contour count", state.modeData.contours.length],
                 ["largest contour size", state.modeData.contours[0]?.size || 0],
                 ["filtered noise count", state.modeData.noise.length],
+                ["selected id", selected ? state.selectedContour + 1 : "-"],
                 ["selected bbox", selected ? `${selected.bbox.x},${selected.bbox.y},${selected.bbox.width}x${selected.bbox.height}` : "-"],
-                ["selected length", selected?.size || "-"]
+                ["selected size", selected?.size || "-"],
+                ["selected length", selected?.size || "-"],
+                ["cutouts", state.cutouts.length]
             ]);
             return;
         }
@@ -959,7 +1325,7 @@
         if (state.modeData.mode === "contour") {
             state.phase = state.modeData.reveal < state.modeData.contours.length ? 4 : 6;
             state.modeData.reveal = Math.min(state.modeData.contours.length, state.modeData.reveal + Math.max(1, Math.round(speed.contour / 420)));
-            drawContours(els.canvasC, state.modeData.contours, state.modeData.noise, state.modeData.reveal, state.selectedContour);
+            redrawContourOverlay();
             done = state.modeData.reveal >= state.modeData.contours.length;
             setStatus(`linking contour ${state.modeData.reveal} / ${state.modeData.contours.length}`, done ? "ready" : "loading");
         } else if (state.modeData.mode === "line") {
@@ -1035,8 +1401,16 @@
             state.edgePoints = collectEdgePoints(state.edge, state.width, state.height, 9000);
             resetModeData();
         });
+        const skipRecomputeControls = new Set([
+            els.input,
+            els.mode,
+            els.source,
+            els.cutoutMode,
+            els.autoCutout,
+            els.showCutoutWorkspace
+        ].filter(Boolean));
         root.querySelectorAll("input, select").forEach((control) => {
-            if ([els.input, els.mode, els.source].includes(control)) return;
+            if (skipRecomputeControls.has(control)) return;
             control.addEventListener("input", () => {
                 updateRangeLabels();
                 if (!state.imageData) return;
@@ -1044,6 +1418,9 @@
                 state.edgePoints = collectEdgePoints(state.edge, state.width, state.height, 9000);
                 resetModeData();
             });
+        });
+        els.cutoutMode?.addEventListener("change", () => {
+            if (state.selectedContour >= 0) updateCutoutInfo();
         });
         els.play.addEventListener("click", () => {
             if (!state.modeData) return;
@@ -1092,19 +1469,118 @@
             renderTimeline();
             renderProcessSteps();
         });
+        els.canvasC.addEventListener("mousemove", (event) => {
+            if (!state.modeData || state.modeData.mode !== "contour") return;
+            const hover = contourAtCanvasEvent(event);
+            if (hover === state.hoverContour) return;
+            state.hoverContour = hover;
+            els.canvasC.style.cursor = hover >= 0 ? "pointer" : "default";
+            redrawContourOverlay();
+        });
+        els.canvasC.addEventListener("mouseleave", () => {
+            if (state.hoverContour < 0) return;
+            state.hoverContour = -1;
+            els.canvasC.style.cursor = "default";
+            redrawContourOverlay();
+        });
         els.canvasC.addEventListener("click", (event) => {
             if (!state.modeData || state.modeData.mode !== "contour") return;
-            const rect = els.canvasC.getBoundingClientRect();
-            const x = Math.round((event.clientX - rect.left) * state.width / rect.width);
-            const y = Math.round((event.clientY - rect.top) * state.height / rect.height);
-            state.selectedContour = state.modeData.contours.findIndex((contour) => (
-                x >= contour.bbox.x
-                && y >= contour.bbox.y
-                && x <= contour.bbox.x + contour.bbox.width
-                && y <= contour.bbox.y + contour.bbox.height
-            ));
-            drawContours(els.canvasC, state.modeData.contours, state.modeData.noise, state.modeData.reveal, state.selectedContour);
+            state.selectedContour = contourAtCanvasEvent(event);
+            redrawContourOverlay();
             updateStats();
+            if (state.selectedContour >= 0) {
+                updateCutoutInfo();
+                if (els.autoCutout?.checked) addCutoutFromContour(state.selectedContour);
+            }
+        });
+        if (els.showCutoutWorkspace) {
+            els.showCutoutWorkspace.addEventListener("change", updatePanelVisibility);
+        }
+        if (els.cutoutWorkspace) {
+            els.cutoutWorkspace.tabIndex = 0;
+            els.cutoutWorkspace.addEventListener("pointerdown", (event) => {
+                const item = event.target.closest(".edge-app-cutout");
+                if (!item) return;
+                const id = Number(item.dataset.cutoutId);
+                const cutout = state.cutouts.find((entry) => entry.id === id);
+                if (!cutout) return;
+                state.selectedCutout = id;
+                els.cutoutWorkspace.focus({ preventScroll: true });
+                const rect = els.cutoutWorkspace.getBoundingClientRect();
+                if (event.target.closest("[data-cutout-resize]")) {
+                    state.drag = {
+                        type: "resize",
+                        id,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        startW: cutout.w,
+                        startH: cutout.h,
+                        aspect: cutout.w / Math.max(1, cutout.h)
+                    };
+                } else {
+                    state.drag = {
+                        type: "move",
+                        id,
+                        dx: event.clientX - rect.left - cutout.x,
+                        dy: event.clientY - rect.top - cutout.y
+                    };
+                }
+                item.setPointerCapture(event.pointerId);
+                updateCutoutSelection();
+            });
+            els.cutoutWorkspace.addEventListener("pointermove", (event) => {
+                if (!state.drag) return;
+                const cutout = state.cutouts.find((entry) => entry.id === state.drag.id);
+                if (!cutout) return;
+                const rect = els.cutoutWorkspace.getBoundingClientRect();
+                if (state.drag.type === "resize") {
+                    const deltaX = event.clientX - state.drag.startX;
+                    const deltaY = event.clientY - state.drag.startY;
+                    const dominantDelta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY * state.drag.aspect;
+                    cutout.w = Math.max(42, Math.min(rect.width - cutout.x - 4, state.drag.startW + dominantDelta));
+                    cutout.h = Math.max(42, Math.min(rect.height - cutout.y - 4, cutout.w / state.drag.aspect));
+                } else {
+                    cutout.x = Math.max(0, Math.min(rect.width - cutout.w - 4, event.clientX - rect.left - state.drag.dx));
+                    cutout.y = Math.max(0, Math.min(rect.height - cutout.h - 4, event.clientY - rect.top - state.drag.dy));
+                }
+                updateCutoutElement(cutout);
+            });
+            els.cutoutWorkspace.addEventListener("pointerup", () => {
+                state.drag = null;
+            });
+            els.cutoutWorkspace.addEventListener("pointercancel", () => {
+                state.drag = null;
+            });
+        }
+        els.deleteCutout?.addEventListener("click", () => {
+            deleteSelectedCutout();
+        });
+        els.duplicateCutout?.addEventListener("click", () => {
+            duplicateSelectedCutout();
+        });
+        els.downloadCutout?.addEventListener("click", () => {
+            const cutout = state.cutouts.find((entry) => entry.id === state.selectedCutout);
+            if (!cutout) return;
+            const link = document.createElement("a");
+            link.download = `contour-cutout-${cutout.id}.png`;
+            link.href = cutout.canvas.toDataURL("image/png");
+            link.click();
+        });
+        document.addEventListener("keydown", (event) => {
+            const target = event.target;
+            const isEditing = target instanceof HTMLElement && (
+                target.isContentEditable
+                || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)
+            );
+            if (isEditing) return;
+            const hasModifier = event.ctrlKey || event.metaKey;
+            if (hasModifier && event.key.toLowerCase() === "c") {
+                if (copySelectedCutout()) event.preventDefault();
+            } else if (hasModifier && event.key.toLowerCase() === "v") {
+                if (pasteCutout()) event.preventDefault();
+            } else if (event.key === "Delete" || event.key === "Backspace") {
+                if (deleteSelectedCutout()) event.preventDefault();
+            }
         });
     }
 

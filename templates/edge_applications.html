@@ -2,6 +2,7 @@
 {% block title %}第四节：边缘检测应用实践{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/edge_detection.css') }}">
 {% endblock %}
 
@@ -84,6 +85,14 @@
                 </label>
                 <label class="edge-check"><input id="edgeAppShowBox" type="checkbox" checked><span>show bounding box</span></label>
                 <label class="edge-check"><input id="edgeAppShowId" type="checkbox" checked><span>show contour id</span></label>
+                <label>cutout mode
+                    <select id="edgeAppCutoutMode">
+                        <option value="bbox" selected>BBox Crop</option>
+                        <option value="mask">Mask Crop</option>
+                    </select>
+                </label>
+                <label class="edge-check"><input id="edgeAppAutoCutout" type="checkbox" checked><span>auto add cutout on click</span></label>
+                <label class="edge-check"><input id="edgeAppShowCutoutWorkspace" type="checkbox" checked><span>show cutout workspace</span></label>
             </div>
 
             <div class="edge-app-param-panel" data-mode-panel="line" hidden>
@@ -135,24 +144,15 @@
             </div>
 
             <div class="edge-control-group edge-app-control-section">
-                <strong>5. 性能选项</strong>
-                <label>演示分辨率
-                    <select id="edgeAppResolution">
-                        <option value="256">256</option>
-                        <option value="384" selected>384</option>
-                        <option value="512">512</option>
-                    </select>
-                </label>
-                <label class="edge-check"><input id="edgeAppWorkerHint" type="checkbox" checked><span>使用 Web Worker</span></label>
+                <strong>5. 动画控制</strong>
                 <label>动画播放速度
                     <select id="edgeAppSpeed">
                         <option value="slow">慢</option>
-                        <option value="medium" selected>中</option>
-                        <option value="fast">快</option>
+                        <option value="medium">中</option>
+                        <option value="fast" selected>快</option>
                     </select>
                 </label>
                 <div class="edge-play-controls edge-app-play-controls">
-                    <button id="edgeAppStart" class="edge-primary" type="button">开始演示</button>
                     <button id="edgeAppPlay" type="button">Play</button>
                     <button id="edgeAppStep" type="button">Step</button>
                     <button id="edgeAppReset" type="button">Reset</button>
@@ -204,19 +204,30 @@
                         <label>Speed
                             <select id="edgeAppStageSpeed">
                                 <option value="slow">0.5x</option>
-                                <option value="medium" selected>1x</option>
-                                <option value="fast">2x</option>
+                                <option value="medium">1x</option>
+                                <option value="fast" selected>2x</option>
                             </select>
                         </label>
                     </div>
                 </section>
+                <section id="edgeAppCutoutPanel" class="edge-app-cutout-panel">
+                    <header>
+                        <div>
+                            <span class="section-label">CUTOUT WORKSPACE</span>
+                            <h3>轮廓剪裁工作区</h3>
+                        </div>
+                        <div class="edge-play-controls edge-app-cutout-tools">
+                            <button id="edgeAppDuplicateCutout" type="button">复制</button>
+                            <button id="edgeAppDeleteCutout" type="button">删除</button>
+                            <button id="edgeAppDownloadCutout" type="button">下载 PNG</button>
+                        </div>
+                    </header>
+                    <div id="edgeAppCutoutHint" class="edge-app-cutout-hint">点击 Contour Overlay 中的轮廓，从原图裁剪出可拖拽对象。</div>
+                    <div id="edgeAppCutoutWorkspace" class="edge-app-cutout-workspace" aria-label="轮廓剪裁工作区"></div>
+                </section>
             </section>
 
             <section class="edge-panel edge-app-flow-shell">
-                <div>
-                    <span class="section-label">Application Flow</span>
-                    <h2>应用流程总览</h2>
-                </div>
                 <ol id="edgeAppTimeline" class="edge-flow-timeline edge-app-flow-timeline" aria-label="Application Flow 时间线"></ol>
             </section>
         </main>
@@ -239,12 +250,12 @@
             </article>
 
             <article class="edge-boundary-card">
-                <strong>CODE BOUNDARY / 代码边界</strong>
+                <strong>代码边界</strong>
                 <p>本应用页主要使用前端 Canvas / JavaScript 完成边缘图后处理、轮廓提取和 Hough 投票过程。Sobel / Canny 核心算法仍属于第四节传统边缘检测主线，TEED 为深度学习拓展展示。</p>
             </article>
             <div class="edge-app-runtime-badges">
                 <span>Web Worker: ON</span>
-                <span>分辨率：<b id="edgeAppResolutionBadge">384 px</b></span>
+                <span>分辨率：<b id="edgeAppResolutionBadge">512 px</b></span>
             </div>
         </aside>
     </section>
@@ -253,5 +264,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="{{ url_for('static', filename='js/edge_applications.js') }}"></script>
 {% endblock %}

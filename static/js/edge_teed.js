@@ -306,19 +306,7 @@
             side2: { html: "S<sub>i</sub> = Conv1x1(F<sub>i</sub>)", tokens: ["s2", "conv"] },
             side3: { html: "S<sub>i</sub> = Conv1x1(F<sub>i</sub>)", tokens: ["s3", "conv"] },
             fuse: {
-                html: [
-                    "<span class=\"edge-formula-step edge-formula-final edge-formula-step-6\">Final</span>",
-                    "<span>=</span>",
-                    "<span class=\"edge-formula-step edge-formula-sigmoid edge-formula-step-5\">sigmoid</span>",
-                    "<span>(</span>",
-                    "<span class=\"edge-formula-step edge-formula-pair edge-formula-step-1\"><b>w<sub>1</sub></b>·<em>S<sub>1</sub></em></span>",
-                    "<span>+</span>",
-                    "<span class=\"edge-formula-step edge-formula-pair edge-formula-step-2\"><b>w<sub>2</sub></b>·<em>S<sub>2</sub></em></span>",
-                    "<span>+</span>",
-                    "<span class=\"edge-formula-step edge-formula-pair edge-formula-step-3\"><b>w<sub>3</sub></b>·<em>S<sub>3</sub></em></span>",
-                    "<span class=\"edge-formula-step edge-formula-sum edge-formula-step-4\">sum</span>",
-                    "<span>)</span>"
-                ].join(""),
+                html: "<span class=\"edge-formula-step edge-formula-final edge-formula-step-6\">Final</span><span class=\"edge-formula-equals\">=</span><span class=\"edge-formula-step edge-formula-sigmoid edge-formula-step-5\">sigmoid</span><span class=\"edge-formula-paren\">(</span><span class=\"edge-formula-step edge-formula-pair edge-formula-step-1\"><b>w<sub>1</sub></b>·<em>S<sub>1</sub></em></span><span class=\"edge-formula-plus\">+</span><span class=\"edge-formula-step edge-formula-pair edge-formula-step-2\"><b>w<sub>2</sub></b>·<em>S<sub>2</sub></em></span><span class=\"edge-formula-plus\">+</span><span class=\"edge-formula-step edge-formula-pair edge-formula-step-3\"><b>w<sub>3</sub></b>·<em>S<sub>3</sub></em></span><span class=\"edge-formula-plus\">+</span><span class=\"edge-formula-step edge-formula-sum edge-formula-step-4\">sum</span><span class=\"edge-formula-paren\">)</span>",
                 tokens: ["final", "sigmoid", "sum", "w1", "w2", "w3", "s1", "s2", "s3"]
             }
         };
