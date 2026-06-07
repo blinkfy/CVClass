@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% macro feature_timeline(active) -%}
+<section class="feature-panel feature-flow">
+    <strong>完整计算流程</strong>
+    <div class="feature-flow-line">
+        {% set steps = [('gray','Gray','灰度化'), ('gradient','Gradient','梯度计算'), ('harris','Harris M','结构张量'), ('response','Response R','响应函数'), ('nms','NMS','非极大值抑制'), ('gaussian','Gaussian Pyramid','高斯金字塔'), ('dog','DoG','差分高斯'), ('extrema','Extrema','极值检测'), ('orientation','Orientation','方向分配'), ('descriptor','Descriptor','描述子生成'), ('matching','Matching','特征匹配')] %}
+        {% for key, en, zh in steps %}
+        <span class="flow-step {% if (active == 'harris' and key in ['gray','gradient','harris','response','nms']) or (active == 'scale' and key in ['gaussian','dog','extrema']) or (active == 'descriptor' and key in ['orientation','descriptor']) or (active == 'matching' and key in ['descriptor','matching']) or (active == 'compare' and key in ['gray','gradient','harris','response','nms','gaussian','dog','extrema']) %}is-active{% endif %}"><i>{{ loop.index }}</i><b>{{ en }}</b><small>{{ zh }}</small></span>
+        {% endfor %}
+    </div>
+</section>
+{%- endmacro %}
+
+{% block title %}第五节 图像角点检测与 SIFT 特征点检测{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feature_detection.css') }}">
+{% endblock %}
+
+{% block content %}
+<section
+    id="featurePage"
+    class="feature-page"
+    data-feature-mode="{{ feature_mode }}"
+    data-assets-base="{{ url_for('static', filename='assets/img/') }}"
+>
+    <header class="feature-hero">
+        <div>
+            <span class="section-label">Lesson 05 · Corner & SIFT Feature</span>
+            {% if feature_mode == 'harris' %}
+            <h1>Harris 角点检测过程可视化</h1>
+            <p>聚焦梯度计算、结构张量 M、Harris 响应 R 和非极大值抑制。</p>
+            {% elif feature_mode == 'sift_scale' %}
+            <h1>SIFT 尺度空间与 DoG 极值检测</h1>
+            <p>观察高斯金字塔、差分高斯金字塔和 3×3×3 尺度空间极值筛选。</p>
+            {% elif feature_mode == 'sift_descriptor' %}
+            <h1>SIFT 主方向与 128 维描述子</h1>
+            <p>展示方向直方图、4×4 单元划分、8-bin 梯度统计和描述子归一化。</p>
+            {% elif feature_mode == 'matching' %}
+            <h1>SIFT 特征匹配应用</h1>
+            <p>基于描述子 L2 距离和 Lowe ratio test 展示两图特征匹配过程。</p>
+            {% else %}
+            <h1>图像角点检测与 SIFT 特征点检测</h1>
+            <p>比较 Harris、Shi-Tomasi 与 SIFT 特征点结果，建立整体认识。</p>
+            {% endif %}
+        </div>
+        <strong>LESSON 05 · FEATURE DETECTION</strong>
+    </header>
+
+    <nav class="feature-tabs" aria-label="特征检测实验模块">
+        <a class="{{ 'is-active' if feature_mode == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
+        <a class="{{ 'is-active' if feature_mode == 'harris' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='harris') }}">Harris 角点过程</a>
+        <a class="{{ 'is-active' if feature_mode == 'sift_scale' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_scale') }}">SIFT 尺度空间</a>
+        <a class="{{ 'is-active' if feature_mode == 'sift_descriptor' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_descriptor') }}">SIFT 描述子</a>
+        <a class="{{ 'is-active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配应用</a>
+    </nav>
+
+    {% block feature_content %}{% endblock %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/feature_common.js') }}"></script>
+{% block feature_js %}{% endblock %}
+{% endblock %}

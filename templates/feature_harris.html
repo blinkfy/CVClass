@@ -1,0 +1,43 @@
+{% extends "feature_base.html" %}
+{% block feature_content %}
+<section class="feature-layout">
+    <aside class="feature-panel feature-controls">
+        <div><span class="section-label">Input & Params</span><h2>Harris 参数</h2></div>
+        <form id="featureHarrisForm" data-feature-form>
+            <input type="hidden" name="mode" value="harris">
+            <input type="hidden" name="example" data-example-input value="building">
+            <label class="feature-upload"><input type="file" name="image" accept="image/*"><span>上传图片</span><small data-file-name>当前使用示例图</small></label>
+            <div class="feature-samples" data-samples></div>
+            <div class="feature-control-group">
+                <label>窗口 σ <input name="harris_sigma" value="1.0" type="number" step="0.2"></label>
+                <label>k 值 <input name="harris_k" value="0.04" type="number" step="0.01"></label>
+                <label>响应阈值 <input name="harris_threshold" value="0.01" type="number" step="0.005"></label>
+                <label>NMS 半径 <input name="nms_radius" value="4" type="number"></label>
+                <label>最大角点 <input name="max_corners" value="500" type="number"></label>
+                <button class="feature-primary" type="submit">运行 Harris</button>
+            </div>
+        </form>
+    </aside>
+    <main class="feature-workspace">
+        <section class="feature-panel feature-stage">
+            <div class="feature-stage-head"><div><span class="section-label">Harris Pipeline</span><h2>角点检测流程</h2></div><span id="harrisElapsed" class="status-pill">等待运行</span></div>
+            <div class="feature-step-canvases">
+                <figure><canvas id="hOriginal"></canvas><figcaption>Original</figcaption></figure><figure><canvas id="hGray"></canvas><figcaption>Gray</figcaption></figure><figure><canvas id="hIx"></canvas><figcaption>Ix</figcaption></figure><figure><canvas id="hIy"></canvas><figcaption>Iy</figcaption></figure><figure><canvas id="hIx2"></canvas><figcaption>Ix²</figcaption></figure><figure><canvas id="hIy2"></canvas><figcaption>Iy²</figcaption></figure><figure><canvas id="hIxIy"></canvas><figcaption>IxIy</figcaption></figure><figure class="is-active"><canvas id="hResponse"></canvas><figcaption>R Response</figcaption></figure><figure><canvas id="hNms"></canvas><figcaption>NMS</figcaption></figure><figure><canvas id="hCorners"></canvas><figcaption>Corners</figcaption></figure>
+            </div>
+            <div class="feature-harris-lower">
+                <div><h3>局部计算探针</h3><div id="harrisProbe" class="feature-probe-grid"></div></div>
+                <div><h3>最终角点叠加</h3><div class="feature-canvas-frame"><canvas id="harrisFinalCanvas"></canvas></div><div id="harrisSummary" class="feature-stat-list"></div></div>
+            </div>
+        </section>
+    </main>
+    <aside class="feature-panel feature-info">
+        <div><span class="section-label">Process Notes</span><h2>Harris 角点过程</h2></div>
+        <div class="feature-note blue"><b>1 梯度计算</b><p>使用手写 Sobel 卷积计算 Ix、Iy。</p></div>
+        <div class="feature-note green"><b>2 结构张量 M</b><p>统计 Ix²、Iy²、IxIy 的局部加权和。</p></div>
+        <div class="feature-note orange"><b>3 Harris 响应</b><p>R = det(M) - k·trace(M)²。</p></div>
+        <div class="feature-boundary"><b>代码边界</b><p>后端只做梯度、M、R、NMS 计算；缩略图、热力图和角点叠加由前端 Canvas 完成。</p></div>
+    </aside>
+</section>
+{{ feature_timeline('harris') }}
+{% endblock %}
+{% block feature_js %}<script src="{{ url_for('static', filename='js/feature_harris.js') }}"></script>{% endblock %}

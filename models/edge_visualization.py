@@ -6,7 +6,7 @@ from time import perf_counter
 import numpy as np
 from PIL import Image
 
-from models.image_utils import _edge_detect, canny, edge_detect, image_to_gray
+from models.image_utils import fliter, canny, edge_detect, image_to_gray
 
 
 ALLOWED_EDGE_METHODS = {"sobel", "prewitt", "roberts", "kirsch", "laplacian", "LoG", "scharr", "canny"}
@@ -158,8 +158,8 @@ def edge_kernel_pipeline(image, method="sobel", threshold=96):
     steps = [{"key": "gray", "label": "Gray", "image": gray_result}]
 
     if method in {"sobel", "prewitt", "roberts", "scharr"}:
-        gx = _edge_detect(gray, f"{method}_x")
-        gy = _edge_detect(gray, f"{method}_y")
+        gx = fliter(gray, f"{method}_x")
+        gy = fliter(gray, f"{method}_y")
         response = np.hypot(gx, gy)
         steps.extend([
             {"key": "gx", "label": "Gx", "image": gray_image(normalize_array(gx))},
@@ -167,14 +167,14 @@ def edge_kernel_pipeline(image, method="sobel", threshold=96):
             {"key": "magnitude", "label": "Magnitude", "image": gray_image(response)},
         ])
     elif method == "kirsch":
-        responses = [_edge_detect(gray, f"kirsch_{direction}") for direction in ["n", "ne", "e", "se", "s", "sw", "w", "nw"]]
+        responses = [fliter(gray, f"kirsch_{direction}") for direction in ["n", "ne", "e", "se", "s", "sw", "w", "nw"]]
         response = np.max(np.stack(responses, axis=-1), axis=-1)
         steps.extend([
             {"key": "response", "label": "8-dir Response", "image": gray_image(response)},
             {"key": "magnitude", "label": "Magnitude", "image": gray_image(response)},
         ])
     else:
-        response = np.abs(_edge_detect(gray, method))
+        response = np.abs(fliter(gray, method))
         steps.extend([
             {"key": "response", "label": "Kernel Response", "image": gray_image(response)},
             {"key": "magnitude", "label": "Abs Response", "image": gray_image(response)},

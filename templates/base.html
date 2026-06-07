@@ -43,7 +43,14 @@
                 <a class="{{ 'active' if active_sub_page|default('') == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED 深度拓展</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'applications' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
             </div>
-            <span class="disabled">第五节：</span>
+            <a class="{{ 'active' if active_page == 'feature' else '' }}" href="{{ url_for('feature_detection_page') }}">第五节：角点与 SIFT 特征检测</a>
+            <div class="sidebar-subnav" aria-label="第五节子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'harris' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='harris') }}">Harris 角点过程</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'sift_scale' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_scale') }}">SIFT 尺度空间</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'sift_descriptor' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_descriptor') }}">SIFT 描述子</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配应用</a>
+            </div>
             <span class="disabled">第六节：</span>
         </nav>
     </aside>

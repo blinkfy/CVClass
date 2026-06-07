@@ -1,0 +1,24 @@
+{% extends "feature_base.html" %}
+{% block feature_content %}
+<section class="feature-layout">
+    <aside class="feature-panel feature-controls">
+        <div><span class="section-label">Input & Params</span><h2>SIFT 尺度参数</h2></div>
+        <form id="featureScaleForm" data-feature-form>
+            <input type="hidden" name="mode" value="sift_scale"><input type="hidden" name="example" data-example-input value="building">
+            <label class="feature-upload"><input type="file" name="image" accept="image/*"><span>上传图片</span><small data-file-name>当前使用示例图</small></label>
+            <div class="feature-samples" data-samples></div>
+            <div class="feature-control-group"><label>Octave 数<input name="sift_octaves" value="3" type="number"></label><label>每组尺度数<input name="sift_scales" value="3" type="number"></label><label>初始 σ<input name="sift_sigma" value="1.6" type="number" step="0.1"></label><label>DoG 阈值<input name="contrast_threshold" value="0.03" type="number" step="0.005"></label><label>边缘阈值<input name="edge_threshold" value="10" type="number"></label><button class="feature-primary" type="submit">构建尺度空间</button></div>
+        </form>
+    </aside>
+    <main class="feature-workspace">
+        <section class="feature-panel feature-stage"><div class="feature-stage-head"><div><span class="section-label">Scale Space</span><h2>SIFT 尺度空间与 DoG 极值检测</h2></div><span id="scaleElapsed" class="status-pill">等待运行</span></div>
+            <h3>Gaussian Pyramid</h3><div id="gaussianPyramid" class="feature-pyramid"></div>
+            <h3>DoG Pyramid</h3><div id="dogPyramid" class="feature-pyramid feature-dog-pyramid"></div>
+            <div class="feature-scale-lower"><div><h3>3×3×3 极值检测</h3><div id="dogProbe" class="feature-dog-probe"></div></div><div><h3>最终 SIFT 特征点</h3><div class="feature-canvas-frame"><canvas id="scaleSiftCanvas"></canvas></div><div id="scaleStats" class="feature-stat-list"></div></div></div>
+        </section>
+    </main>
+    <aside class="feature-panel feature-info"><div><span class="section-label">Process Notes</span><h2>SIFT 尺度空间</h2></div><div class="feature-note blue"><b>Gaussian Pyramid</b><p>每个 octave 内逐层增大 σ，形成多尺度图像。</p></div><div class="feature-note green"><b>DoG</b><p>相邻高斯层相减，突出尺度稳定结构。</p></div><div class="feature-note orange"><b>3×3×3 极值</b><p>中心点与空间和尺度方向 26 个邻居比较。</p></div><div class="feature-boundary"><b>代码边界</b><p>后端返回金字塔数组和关键点；所有金字塔缩略图和关键点圆环由前端绘制。</p></div></aside>
+</section>
+{{ feature_timeline('scale') }}
+{% endblock %}
+{% block feature_js %}<script src="{{ url_for('static', filename='js/feature_sift_scale.js') }}"></script>{% endblock %}

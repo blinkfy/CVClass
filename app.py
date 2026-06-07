@@ -11,6 +11,7 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.edge_visualization import build_edge_response
+from models.feature_utils import build_feature_match_response, build_feature_response
 from models.image_utils import convolve_gray_image, make_histogram, process_image
 
 mimetypes.add_type("application/javascript", ".mjs")
@@ -148,6 +149,29 @@ def edge_detection_mode_page(mode):
     if mode not in {"compare", "kernel", "canny"}:
         return redirect(url_for("edge_detection_mode_page", mode="compare"))
     return render_template("edge_detection.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
+
+@app.route("/feature-detection", methods=["GET"])
+def feature_detection_page():
+    return redirect(url_for("feature_detection_mode_page", mode="compare"))
+
+
+@app.route("/feature-detection/<mode>", methods=["GET"])
+def feature_detection_mode_page(mode):
+    feature_templates = {
+        "compare": "feature_compare.html",
+        "harris": "feature_harris.html",
+        "sift_scale": "feature_sift_scale.html",
+        "sift_descriptor": "feature_sift_descriptor.html",
+        "matching": "feature_matching.html",
+    }
+    if mode not in feature_templates:
+        return redirect(url_for("feature_detection_mode_page", mode="compare"))
+    return render_template(
+        feature_templates[mode],
+        active_page="feature",
+        active_sub_page=mode,
+        feature_mode=mode,
+    )
 
 def parse_threshold(value):
     try:
@@ -319,6 +343,28 @@ def edge_detect_api():
     except Exception:
         app.logger.exception("edge detection failed")
         return jsonify({"error": "边缘检测处理失败，请检查图片和参数后重试"}), 500
+
+
+@app.route("/api/feature-detect", methods=["POST"])
+def feature_detect_api():
+    try:
+        return jsonify(build_feature_response(request.form, request.files, app.static_folder, allowed_file))
+    except (UnidentifiedImageError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        app.logger.exception("feature detection failed")
+        return jsonify({"error": "特征检测处理失败，请检查图片和参数后重试"}), 500
+
+
+@app.route("/api/feature-match", methods=["POST"])
+def feature_match_api():
+    try:
+        return jsonify(build_feature_match_response(request.form, request.files, app.static_folder, allowed_file))
+    except (UnidentifiedImageError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        app.logger.exception("feature matching failed")
+        return jsonify({"error": "特征匹配处理失败，请检查图片和参数后重试"}), 500
 
 @app.route("/api/digit-recognize", methods=["POST"])
 def digit_recognize():
