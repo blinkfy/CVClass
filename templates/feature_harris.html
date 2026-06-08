@@ -25,6 +25,12 @@
                     <label>FAST NMS 半径<input id="fastNmsRadius" value="8" type="number" min="1" max="16"></label>
                     <label>FAST 最多角点<input id="fastMaxCorners" value="500" type="number" min="20" max="2000"></label>
                 </div>
+                <label>主图显示
+                    <select id="cornerDisplayMode">
+                        <option value="current">仅当前步骤</option>
+                        <option value="compare">与上一步对比</option>
+                    </select>
+                </label>
                 <label class="feature-switch"><input id="showSubpixel" type="checkbox" checked><span>显示亚像素定位</span></label>
                 <button class="feature-primary" type="submit">运行角点检测</button>
             </div>
@@ -38,11 +44,17 @@
             </div>
             <div class="feature-compare-status" id="cornerStepStatus">正在加载示例图...</div>
             <div>
-                <div class="feature-canvas-frame feature-corner-main-frame">
+                <div id="cornerMainFrame" class="feature-canvas-frame feature-corner-main-frame">
                     <canvas id="cornerStepCanvas" aria-label="当前步骤主图，点击图像选择局部探针位置"></canvas>
+                    <canvas id="cornerPreviousCanvas" class="corner-previous-canvas" aria-hidden="true"></canvas>
+                    <div id="cornerCompareDivider" class="corner-compare-divider" hidden></div>
+                </div>
+                <div id="cornerCompareControl" class="corner-compare-control" hidden>
+                    <span id="cornerPreviousLabel">上一步</span>
+                    <input id="cornerCompareRange" type="range" min="0" max="100" value="50" aria-label="上一步与当前步骤对比滑块">
+                    <span id="cornerCurrentLabel">当前步骤</span>
                 </div>
                 <p class="feature-corner-click-hint">点击主图任意位置切换局部计算探针；当前步骤将围绕该位置展开。</p>
-                <div id="cornerStepStats" class="feature-stat-list feature-stat-grid"></div>
             </div>
 
             <section class="feature-flow feature-corner-flow">
@@ -51,20 +63,36 @@
                 <div id="cornerFlowThumbs" class="feature-corner-thumbs"></div>
             </section>
 
-            <div class="feature-corner-current">
-                <section class="feature-chain-card">
-                    <div class="feature-chain-head">
-                        <div><span class="section-label">Local Probe Chain</span><h3 id="cornerChainTitle">当前步骤局部计算</h3></div>
-                        <span id="cornerPointBadge" class="status-pill">当前点 -</span>
+            <section class="feature-chain-card corner-motion-probe">
+                <div class="corner-motion-head">
+                    <div>
+                        <span class="section-label">Local Motion Probe</span>
+                        <h3 id="cornerMotionTitle">局部计算动态探针</h3>
                     </div>
-                    <div id="cornerChainProbe" class="feature-chain-grid"></div>
-                </section>
-                <aside class="feature-current-kernel">
-                    <span class="section-label">Current Probe</span>
-                    <h3 id="cornerProbeTitle">当前步骤明细</h3>
-                    <div id="cornerProbeSummary" class="feature-stat-list"></div>
-                </aside>
-            </div>
+                    <span id="cornerPointBadge" class="status-pill">当前点 -</span>
+                    <div class="corner-motion-controls" aria-label="局部探针动画控制">
+                        <button id="motionProbePlay" type="button">播放</button>
+                        <button id="motionProbePause" type="button">暂停</button>
+                        <button id="motionProbeStep" type="button">单步</button>
+                        <div class="corner-motion-speed" role="group" aria-label="动画速度">
+                            <button type="button" data-motion-speed="0.5">0.5x</button>
+                            <button type="button" class="is-active" data-motion-speed="1">1x</button>
+                            <button type="button" data-motion-speed="2">2x</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="corner-motion-layout">
+                    <div class="corner-motion-stage">
+                        <canvas id="cornerMotionCanvas" width="860" height="236" aria-label="当前点局部计算动画"></canvas>
+                        <div class="corner-motion-status"><span id="cornerMotionAction">准备计算</span><b id="cornerMotionFrame">01</b></div>
+                    </div>
+                    <aside class="corner-motion-result">
+                        <span class="section-label">Current Point Result</span>
+                        <h3 id="cornerProbeTitle">当前点关键结果</h3>
+                        <div id="cornerMotionMetrics" class="corner-motion-metrics"></div>
+                    </aside>
+                </div>
+            </section>
 
             <section id="cornerFinalSection" class="feature-chain-card" hidden>
                 <div class="feature-chain-head">

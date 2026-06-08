@@ -145,7 +145,7 @@
         const canvas = V.$(`${method}Canvas`);
         const original = state.source?.images?.original;
         if (!canvas || !original || !methodAvailable(method)) return;
-        const result = await V.drawBaseImage(canvas, original);
+        const result = await V.drawBaseImage(canvas, original, "#f8fbff");
         if (!result) return;
         drawMarkers(result.ctx, method);
         state.images[method] = canvas.toDataURL("image/png");
@@ -156,7 +156,7 @@
         const original = state.source?.images?.original;
         const canvas = V.$("featureCompareOverlayCanvas");
         if (!original || !canvas) return;
-        const result = await V.drawBaseImage(canvas, original);
+        const result = await V.drawBaseImage(canvas, original, "#f8fbff");
         if (!result) return;
         drawMarkers(result.ctx, state.left);
         if (state.right !== state.left) drawMarkers(result.ctx, state.right);

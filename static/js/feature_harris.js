@@ -15,12 +15,29 @@
     let requestId = 0;
     let selectedProbe = null;
     let animationFrameId = 0;
+    let animationStartTimer = 0;
     let currentImageFingerprint = "";
     let nmsCleanFrame = null;
     let canvasSizeTransitionTimer = 0;
+    let motionProbeFrameId = 0;
+    const motionProbeState = {
+        playing: true,
+        speed: 1,
+        progress: 0,
+        lastTime: 0,
+        signature: ""
+    };
+    let rawHarrisCache = {
+        key: "",
+        data: null
+    };
 
     function selectedAlgorithm() {
         return V.$("cornerAlgorithm")?.value || "harris";
+    }
+
+    function cornerDisplayMode() {
+        return V.$("cornerDisplayMode")?.value || "current";
     }
 
     function algorithmLabel() {
@@ -217,21 +234,122 @@
             });
         }
         V.$("cornerNoteBoundary").textContent = note.boundary || "";
-        const probe = currentData?.probe || {};
-        const values = selectedAlgorithm() === "fast" ? [
-            ["候选点", currentFast?.candidates?.length || 0],
-            ["NMS 保留", currentFast?.corners?.length || 0],
-            ["FAST 阈值", fastOptions().threshold],
-            ["连续点数", `FAST-${fastOptions().contiguous}`]
-        ] : [
-            ["当前点", probe.x !== undefined ? `(${probe.x}, ${probe.y})` : "-"],
-            ["det(M)", probe.det ?? "-"],
-            ["trace(M)", probe.trace ?? "-"],
-            [selectedAlgorithm() === "harris" ? "R" : "min eigen", probe.r ?? "-"],
-            ["候选点", selectedAlgorithm() === "harris" ? currentData?.harris?.candidate_count || 0 : currentData?.shi_tomasi?.candidate_count || 0],
-            ["NMS 保留", pointsForAlgorithm().length]
-        ];
-        V.renderStatList(V.$("cornerNoteValues"), values);
+        V.renderStatList(V.$("cornerNoteValues"), noteValuesForStep(stepKey));
+    }
+
+    function noteValuesForStep(stepKey) {
+        if (selectedAlgorithm() === "fast") return fastNoteValuesForStep(stepKey);
+        const arrays = currentData?.arrays || {};
+        const probe = currentProbeData();
+        const response = currentResponsePacked();
+        const candidateTotal = candidateCount();
+        const keptTotal = pointsForAlgorithm().length;
+        const suppressedRatio = candidateTotal ? ((candidateTotal - keptTotal) / candidateTotal * 100).toFixed(1) + "%" : "-";
+        const map = {
+            input: [
+                ["图像尺寸", `${currentData?.meta?.width || "-"}×${currentData?.meta?.height || "-"}`],
+                ["当前点", `(${probe.x}, ${probe.y})`],
+                ["Gray", formatNumber(probe.gray)]
+            ],
+            gray: [
+                ["当前点 Gray", formatNumber(probe.gray)],
+                ["灰度显示范围", formatRange(arrayStats(arrays.gray))]
+            ],
+            gradient: [
+                ["Ix raw", formatNumber(probe.ix)],
+                ["Iy raw", formatNumber(probe.iy)],
+                ["|∇I|", formatNumber(Math.hypot(probe.ix, probe.iy))]
+            ],
+            second: [
+                ["Ix² raw", formatNumber(probe.ix2)],
+                ["Iy² raw", formatNumber(probe.iy2)],
+                ["IxIy raw", formatNumber(probe.ixiy)]
+            ],
+            tensor: [
+                ["Sxx raw", formatNumber(probe.sxx)],
+                ["Syy raw", formatNumber(probe.syy)],
+                ["Sxy raw", formatNumber(probe.sxy)],
+                ["det raw", formatNumber(probe.det)],
+                ["trace raw", formatNumber(probe.trace)]
+            ],
+            response: [
+                [selectedAlgorithm() === "harris" ? "raw R" : "raw Shi R", formatNumber(probe.responseRaw)],
+                ["display R", formatNumber(probe.responseDisplay)],
+                ["raw 阈值", formatNumber(probe.thresholdRaw)],
+                ["候选点数", candidateTotal]
+            ],
+            nms: [
+                ["raw R", formatNumber(probe.responseRaw)],
+                ["display R", formatNumber(probe.responseDisplay)],
+                ["raw 阈值", formatNumber(probe.thresholdRaw)],
+                ["neighbor max raw", formatNumber(probe.nmsMaxRaw)],
+                ["NMS", probe.nmsResult ? "KEEP" : "SUPPRESS"],
+                ["抑制比例", suppressedRatio]
+            ],
+            refine: [
+                ["dx", formatNumber(probe.dx)],
+                ["dy", formatNumber(probe.dy)],
+                ["offset", formatNumber(probe.offset)],
+                ["valid", probe.refineValid ? "YES" : "NO"]
+            ],
+            final: [
+                ["最终点数", keptTotal],
+                ["raw R", formatNumber(probe.responseRaw)],
+                ["display R", formatNumber(probe.responseDisplay)]
+            ]
+        };
+        return map[stepKey] || map.final;
+    }
+
+    function fastNoteValuesForStep(stepKey) {
+        const point = fastProbePoint();
+        const candidateTotal = currentFast?.candidates?.length || 0;
+        const keptTotal = currentFast?.corners?.length || 0;
+        const suppressedRatio = candidateTotal ? ((candidateTotal - keptTotal) / candidateTotal * 100).toFixed(1) + "%" : "-";
+        const map = {
+            input: [["图像尺寸", `${currentGray?.width || "-"}×${currentGray?.height || "-"}`], ["灰度范围", formatRange(grayArrayStats())]],
+            gray: [["mean", formatNumber(grayArrayStats().mean)], ["std", formatNumber(grayArrayStats().std)], ["min", formatNumber(grayArrayStats().min)], ["max", formatNumber(grayArrayStats().max)]],
+            circle: [["当前点", point ? `(${point.x}, ${point.y})` : "-"], ["中心灰度", fastCenterValue(point)], ["圆周点数", 16], ["半径", 3]],
+            threshold: [["FAST 阈值", fastOptions().threshold], ["连续点数", `FAST-${fastOptions().contiguous}`], ["响应", point?.response ? formatNumber(point.response) : "-"], ["候选点数", candidateTotal]],
+            nms: [["候选点数", candidateTotal], ["保留点数", keptTotal], ["抑制比例", suppressedRatio]],
+            corners: [["最终点数", keptTotal], ["FAST 阈值", fastOptions().threshold], ["连续点数", `FAST-${fastOptions().contiguous}`]]
+        };
+        return map[stepKey] || map.corners;
+    }
+
+    function arrayStats(packed) {
+        const values = (packed?.values || []).map(value => Number(value)).filter(Number.isFinite);
+        if (!values.length) return { min: 0, max: 0, mean: 0, std: 0, maxAbs: 0 };
+        let min = Infinity;
+        let max = -Infinity;
+        let sum = 0;
+        let maxAbs = 0;
+        values.forEach(value => {
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+            sum += value;
+            maxAbs = Math.max(maxAbs, Math.abs(value));
+        });
+        const mean = sum / values.length;
+        const variance = values.reduce((acc, value) => acc + Math.pow(value - mean, 2), 0) / values.length;
+        return { min, max, mean, std: Math.sqrt(variance), maxAbs };
+    }
+
+    function grayArrayStats() {
+        if (!currentGray?.gray?.length) return { min: 0, max: 0, mean: 0, std: 0, maxAbs: 0 };
+        return arrayStats({ values: Array.from(currentGray.gray) });
+    }
+
+    function formatRange(stats) {
+        return `${formatNumber(stats.min)} ~ ${formatNumber(stats.max)}`;
+    }
+
+    function formatNumber(value) {
+        if (!Number.isFinite(Number(value))) return "-";
+        const number = Number(value);
+        if (Math.abs(number) >= 1000) return number.toFixed(0);
+        if (Math.abs(number) >= 10) return number.toFixed(2);
+        return number.toFixed(3);
     }
 
     function renderMatrixCard(container, title, matrix) {
@@ -295,8 +413,20 @@
             renderAnimatedFormula(box, selectedAlgorithm() === "harris" ? "Harris R" : "Min Eigen", "det(M)", selectedAlgorithm() === "harris" ? "- k·" : "→", selectedAlgorithm() === "harris" ? "trace²" : "min λ", selectedAlgorithm() === "harris" ? probe.r : "R");
             renderTextCard(box, "响应值", [["det(M)", probe.det ?? "-"], ["trace(M)", probe.trace ?? "-"], [selectedAlgorithm() === "harris" ? "R" : "min eigen", probe.r ?? "-"]]);
         } else if (stepKey === "nms") {
-            renderTextCard(box, "NMS 判定", [["候选点", candidateCount()], ["保留点", pointsForAlgorithm().length], ["当前点是否保留", nearestPointDistance(probe.x, probe.y, pointsForAlgorithm()) <= 3 ? "是" : "否"]]);
-            renderAnimatedFormula(box, "局部最大", "R(x,y)", "≥", "邻域响应", "keep / suppress");
+            const nms = nmsProbeDecision(probe);
+            renderTextCard(box, "NMS 当前点", [
+                ["坐标", `(${nms.x}, ${nms.y})`],
+                ["当前 R", nms.currentR],
+                ["局部最大 R", nms.localMax],
+                ["超过阈值", nms.aboveThreshold ? "是" : "否"],
+                ["局部最大", nms.localMaximum ? "是" : "否"],
+                ["NMS 结果", nms.kept ? "保留" : "删除"]
+            ]);
+            renderTextCard(box, nms.kept ? "保留原因" : "抑制原因", [
+                ["判断", nms.reason],
+                ["抑制点", nms.suppressor ? `(${nms.suppressor.x}, ${nms.suppressor.y})` : "-"],
+                ["邻域半径", nmsRadiusForCurrentAlgorithm()]
+            ]);
         } else if (stepKey === "refine") {
             const nearest = nearestRefinedProbe(probe.x, probe.y);
             renderTextCard(box, "亚像素偏移", [["offset x", nearest?.offset_x?.toFixed?.(3) ?? "-"], ["offset y", nearest?.offset_y?.toFixed?.(3) ?? "-"], ["偏移长度", nearest ? Math.hypot(nearest.offset_x, nearest.offset_y).toFixed(3) : "-"]]);
@@ -309,9 +439,9 @@
     function renderCurrentProbe(stepKey) {
         const box = V.$("cornerProbeSummary");
         if (!box) return;
-        const probe = currentData?.probe || {};
+        const probe = probeForCurrentSelection();
         if (selectedAlgorithm() === "fast") {
-            const point = currentFast?.corners?.[0] || currentFast?.candidates?.[0];
+            const point = fastProbePoint();
             V.renderStatList(box, [
                 ["坐标", point ? `(${point.x}, ${point.y})` : "-"],
                 ["中心灰度", fastCenterValue(point)],
@@ -324,6 +454,7 @@
         }
         const refined = refinedPoints();
         const offsets = subpixelOffsetStats(refined);
+        const nms = stepKey === "nms" ? nmsProbeDecision(probe) : null;
         const tables = {
             input: [["图像尺寸", `${currentData.meta.width}×${currentData.meta.height}`], ["当前算法", algorithmLabel()]],
             gray: [["当前点", `(${probe.x ?? "-"}, ${probe.y ?? "-"})`], ["灰度中心", centerOf(probe.gray_patch)]],
@@ -331,7 +462,14 @@
             second: [["Ix²", centerOf(probe.ix2_patch)], ["IxIy", centerOf(probe.ixiy_patch)], ["Iy²", centerOf(probe.iy2_patch)]],
             tensor: [["Sxx", probe.M?.[0]?.[0] ?? "-"], ["Sxy", probe.M?.[0]?.[1] ?? "-"], ["Syy", probe.M?.[1]?.[1] ?? "-"]],
             response: [["det(M)", probe.det ?? "-"], ["trace(M)", probe.trace ?? "-"], [selectedAlgorithm() === "harris" ? "R" : "min eigen", probe.r ?? "-"]],
-            nms: [["候选点", selectedAlgorithm() === "harris" ? currentData?.harris?.candidate_count || 0 : currentData?.shi_tomasi?.candidate_count || 0], ["NMS 保留", pointsForAlgorithm().length]],
+            nms: [
+                ["当前点", `(${nms?.x ?? "-"}, ${nms?.y ?? "-"})`],
+                ["当前 R", nms?.currentR ?? "-"],
+                ["邻域最大 R", nms?.localMax ?? "-"],
+                ["超过阈值", nms?.aboveThreshold ? "是" : "否"],
+                ["局部最大", nms?.localMaximum ? "是" : "否"],
+                ["NMS 结果", nms?.kept ? "保留" : "删除"]
+            ],
             refine: [["有效亚像素", refined.length], ["平均偏移", offsets.avg], ["最大偏移", offsets.max]],
             final: [["最终点数", pointsForAlgorithm().length], ["平均偏移", selectedAlgorithm() === "harris" ? offsets.avg : "-"], ["最大偏移", selectedAlgorithm() === "harris" ? offsets.max : "-"]]
         };
@@ -341,14 +479,15 @@
     function renderFastChain(stepKey) {
         const box = V.$("cornerChainProbe");
         box.innerHTML = "";
-        const point = currentFast?.corners?.[0] || currentFast?.candidates?.[0];
+        const point = fastProbePoint();
         if (stepKey === "input" || stepKey === "gray") {
             renderTextCard(box, "灰度中心", [["坐标", point ? `(${point.x}, ${point.y})` : "-"], ["中心灰度", fastCenterValue(point)]]);
         } else if (stepKey === "circle") {
             renderTextCard(box, "16 点圆周", [["半径", 3], ["圆周点", 16], ["中心", fastCenterValue(point)]]);
             renderAnimatedFormula(box, "圆周采样", "center", "→", "P0...P15", "16 values");
         } else if (stepKey === "threshold") {
-            renderTextCard(box, "连续阈值", [["阈值", currentFast?.threshold || fastOptions().threshold], ["连续点", `FAST-${currentFast?.contiguous || fastOptions().contiguous}`], ["极性", point?.polarity === "bright" ? "亮于中心" : "暗于中心"]]);
+            const polarity = point?.polarity === "bright" ? "亮于中心" : point?.polarity === "dark" ? "暗于中心" : "未形成连续段";
+            renderTextCard(box, "连续阈值", [["阈值", currentFast?.threshold || fastOptions().threshold], ["连续点", `FAST-${currentFast?.contiguous || fastOptions().contiguous}`], ["极性", polarity]]);
             renderAnimatedFormula(box, "阈值比较", "|Pi-C|", ">", "t", "candidate");
         } else if (stepKey === "nms") {
             renderTextCard(box, "FAST NMS", [["候选", currentFast?.candidates?.length || 0], ["半径", fastOptions().nmsRadius], ["保留", currentFast?.corners?.length || 0]]);
@@ -356,6 +495,1476 @@
         } else {
             renderTextCard(box, "最终角点", [["FAST 点", currentFast?.corners?.length || 0], ["标记", "黄色菱形"]]);
         }
+    }
+
+    function renderMotionProbe(stepKey) {
+        const canvas = V.$("cornerMotionCanvas");
+        if (!canvas || !currentData) return;
+        const algorithm = selectedAlgorithm();
+        const probe = algorithm === "fast" ? fastProbePoint() : probeForCurrentSelection();
+        const step = harrisSteps().find(item => item.key === stepKey) || { en: stepKey, zh: stepKey };
+        const signature = `${algorithm}:${stepKey}:${probe?.x ?? "-"}:${probe?.y ?? "-"}`;
+        if (motionProbeState.signature !== signature) {
+            motionProbeState.signature = signature;
+            motionProbeState.progress = 0;
+            motionProbeState.playing = true;
+            motionProbeState.lastTime = 0;
+        }
+        V.$("cornerMotionTitle").textContent = `${algorithmLabel()} · ${step.en}`;
+        V.$("cornerPointBadge").textContent = probe ? `当前点 (${probe.x}, ${probe.y})` : "当前点 -";
+        V.$("cornerProbeTitle").textContent = `${step.en} 关键结果`;
+        renderMotionMetrics(stepKey);
+        startMotionProbeLoop(stepKey);
+    }
+
+    function startMotionProbeLoop(stepKey) {
+        cancelMotionProbe();
+        const canvas = V.$("cornerMotionCanvas");
+        if (!canvas) return;
+        V.setCanvasSize(canvas, 860, 236);
+        const tick = now => {
+            const last = motionProbeState.lastTime || now;
+            const delta = Math.min(80, now - last);
+            motionProbeState.lastTime = now;
+            if (motionProbeState.playing) {
+                const duration = 5600 / Math.max(0.25, motionProbeState.speed);
+                motionProbeState.progress = (motionProbeState.progress + delta / duration) % 1;
+            }
+            drawMotionProbeFrame(canvas, stepKey, motionProbeState.progress);
+            motionProbeFrameId = requestAnimationFrame(tick);
+        };
+        motionProbeFrameId = requestAnimationFrame(tick);
+    }
+
+    function cancelMotionProbe() {
+        if (motionProbeFrameId) {
+            cancelAnimationFrame(motionProbeFrameId);
+            motionProbeFrameId = 0;
+        }
+    }
+
+    function motionActions(stepKey) {
+        if (selectedAlgorithm() === "fast") {
+            const fastMap = {
+                input: ["读取图像", "定位探针", "滑动窗口", "准备圆周"],
+                gray: ["RGB 采样", "灰度融合", "中心强度", "灰度 Patch"],
+                circle: ["中心像素", "半径 r=3", "16 点展开", "圆周编号"],
+                threshold: ["中心阈值", "亮暗分类", "连续段扫描", "通过判定"],
+                nms: ["候选点", "局部最大", "抑制", "保留"],
+                corners: ["候选集合", "NMS 结果", "菱形标记", "最终角点"]
+            };
+            return fastMap[stepKey] || ["中心点", "16 点采样", "亮暗分类", "连续弧段"];
+        }
+        const map = {
+            gradient: ["提取 Patch", "Kernel 覆盖", "乘积飞行", "累加向量"],
+            second: ["Ix/Iy 输入", "平方分裂", "交叉项", "三路汇聚"],
+            tensor: ["二阶项", "Gaussian 加权", "Sxx/Sxy/Syy", "组装 M"],
+            response: selectedAlgorithm() === "shi-tomasi" ? ["M 输入", "特征值", "λmin 高亮", "R 输出"] : ["M 输入", "det/trace", "公式高亮", "R 翻牌"],
+            nms: ["候选粒子", "阈值扫描", "邻域抑制", "保留结果"],
+            refine: ["整数角点", "二次拟合", "偏移向量", "亚像素点"],
+            gray: ["RGB 采样", "灰度融合", "中心值", "Patch 输出"],
+            input: ["读取图像", "选取探针", "局部窗口", "准备计算"]
+        };
+        return map[stepKey] || ["输入", "计算", "筛选", "输出"];
+    }
+
+    function motionPhase(stepKey, progress) {
+        const actions = motionActions(stepKey);
+        const raw = progress * actions.length;
+        const index = Math.min(actions.length - 1, Math.floor(raw));
+        const local = raw - index;
+        V.$("cornerMotionAction").textContent = actions[index] || "计算中";
+        V.$("cornerMotionFrame").textContent = String(index + 1).padStart(2, "0");
+        return { actions, index, local, pulse: 0.5 + 0.5 * Math.sin(progress * Math.PI * 2) };
+    }
+
+    function drawMotionProbeFrame(canvas, stepKey, progress) {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        drawMotionBackground(ctx, w, h);
+        const phase = motionPhase(stepKey, progress);
+        if (selectedAlgorithm() === "fast") drawMotionFast(ctx, stepKey, phase, w, h);
+        else if (stepKey === "input") drawMotionInput(ctx, phase, w, h);
+        else if (stepKey === "gray") drawMotionGray(ctx, phase, w, h);
+        else if (stepKey === "gradient") drawMotionGradient(ctx, phase, w, h);
+        else if (stepKey === "second") drawMotionSecond(ctx, phase, w, h);
+        else if (stepKey === "tensor") drawMotionTensor(ctx, phase, w, h);
+        else if (stepKey === "response") selectedAlgorithm() === "shi-tomasi" ? drawMotionShiResponse(ctx, phase, w, h) : drawMotionHarrisResponse(ctx, phase, w, h);
+        else if (stepKey === "nms") drawMotionNms(ctx, phase, w, h);
+        else if (stepKey === "refine") drawMotionRefine(ctx, phase, w, h);
+        else drawMotionGeneric(ctx, stepKey, phase, w, h);
+    }
+
+    function drawMotionBackground(ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        const gradient = ctx.createLinearGradient(0, 0, w, h);
+        gradient.addColorStop(0, "#f8fbff");
+        gradient.addColorStop(1, "#eaf4ff");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(37,99,235,.08)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 28) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 28) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+    }
+
+    function drawMotionInput(ctx, phase, w, h) {
+        const data = currentProbeData();
+        const patch = centerMatrix(data.gray_patch, 3);
+        const active = Math.min(8, Math.floor((phase.index + phase.local) / 4 * 9));
+        drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Local Patch");
+        const marker = activeCellPoint(54, 48, 116, 4);
+        drawNmsRadius(ctx, marker.x, marker.y, 18 + 7 * phase.pulse, "#facc15", .85);
+        drawMotionFlow(ctx, 182, 108, 318, 108, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawValueNode(ctx, 374, 78, "x, y", `(${data.x},${data.y})`, "#2563eb", 1);
+        drawValueNode(ctx, 374, 152, "Gray", data.gray, "#f97316", phase.index >= 2 ? 1 : .35);
+        drawMotionFlow(ctx, 430, 118, 548, 118, "#f97316", phase.index >= 2 ? phase.local : .18);
+        drawFlipValue(ctx, 622, 118, "probe", "ready", "#2563eb", phase.index >= 3 ? phase.local : .35);
+    }
+
+    function drawMotionGray(ctx, phase, w, h) {
+        const data = currentProbeData();
+        const patch = centerMatrix(data.gray_patch, 3);
+        const active = Math.min(8, Math.floor((phase.index + phase.local) / 4 * 9));
+        drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Pixel Patch");
+        drawMotionFlow(ctx, 182, 108, 286, 108, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawCompactFormulaBox(ctx, 298, 80, "RGB 加权融合", "0.299 R   +   0.587 G   +   0.114 B", "#2563eb", phase.index >= 1 ? 1 : .42);
+        drawMotionFlow(ctx, 516, 108, 592, 108, "#f97316", phase.index >= 2 ? phase.local : .2);
+        drawFlipValue(ctx, 662, 108, "Gray", data.gray, "#f97316", phase.index >= 2 ? phase.local : .35);
+        drawValueNode(ctx, 662, 176, "source", "center", "#2563eb", phase.index >= 3 ? 1 : .35);
+    }
+
+    function drawMotionGradient(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const patch = centerMatrix(probe.gray_patch, 3);
+        const kernelX = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
+        const kernelY = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
+        const useY = phase.index >= 2;
+        const active = Math.min(8, Math.floor(phase.local * 9));
+        const ix = Number(probe.ix) || 0;
+        const iy = Number(probe.iy) || 0;
+        const kernel = useY ? kernelY : kernelX;
+        drawMotionGrid(ctx, 34, 42, 126, patch, active, "#2563eb", "Gray Patch");
+        drawMotionGrid(ctx, 235, 42, 126, kernel, active, "#f97316", useY ? "Sobel Gy" : "Sobel Gx");
+        drawMotionFlow(ctx, 160, 104, 235, 104, "#60a5fa", phase.local);
+        const cell = activeCellPoint(34, 42, 126, active);
+        const product = (Number(flattenMatrix(patch)[active]) || 0) * (Number(flattenMatrix(kernel)[active]) || 0);
+        const ixProgress = !useY ? phase.local : 1;
+        const iyProgress = useY ? phase.local : 0;
+        drawFlyingNumber(ctx, product, cell.x, cell.y, 424, useY ? 146 : 58, phase.local, "#f97316");
+        drawAccumulator(ctx, 410, 30, "partial Ix", ix * Math.max(.1, ixProgress), ixProgress, "#2563eb");
+        drawAccumulator(ctx, 410, 130, "partial Iy", iy * Math.max(.1, iyProgress), Math.max(.18, iyProgress), "#06b6d4");
+        drawMotionFlow(ctx, 528, 60, 590, 60, "#2563eb", ixProgress);
+        drawMotionFlow(ctx, 528, 160, 590, 160, "#06b6d4", iyProgress);
+        drawValueNode(ctx, 640, 60, "final Ix", ix, "#2563eb", ixProgress);
+        drawValueNode(ctx, 640, 160, "final Iy", iy, "#06b6d4", Math.max(.35, iyProgress));
+        drawGradientVector(ctx, 770, 118, ix, iy, phase.pulse);
+    }
+
+    function drawMotionSecond(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const ix = Number(probe.ix) || 0;
+        const iy = Number(probe.iy) || 0;
+        const values = [
+            { label: "Ix²", value: probe.ix2, x: 430, y: 46, color: "#2563eb" },
+            { label: "IxIy", value: probe.ixiy, x: 430, y: 118, color: "#7c3aed" },
+            { label: "Iy²", value: probe.iy2, x: 430, y: 190, color: "#06b6d4" }
+        ];
+        drawValueNode(ctx, 130, 82, "Ix", ix, "#2563eb", 1);
+        drawValueNode(ctx, 130, 154, "Iy", iy, "#06b6d4", 1);
+        const tIx2 = Math.max(0, Math.min(1, phase.index / 3 + phase.local));
+        const tCross = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .22));
+        const tIy2 = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .44));
+        drawMotionFlow(ctx, 182, 82, 372, 46, "#2563eb", tIx2);
+        drawMotionFlow(ctx, 182, 82, 372, 118, "#7c3aed", tCross);
+        drawMotionFlow(ctx, 182, 154, 372, 118, "#7c3aed", tCross);
+        drawMotionFlow(ctx, 182, 154, 372, 190, "#06b6d4", tIy2);
+        drawValueNode(ctx, values[0].x, values[0].y, values[0].label, values[0].value, values[0].color, tIx2);
+        drawValueNode(ctx, values[1].x, values[1].y, values[1].label, values[1].value, values[1].color, tCross);
+        drawValueNode(ctx, values[2].x, values[2].y, values[2].label, values[2].value, values[2].color, tIy2);
+        drawCompactFormulaBox(ctx, 585, 48, "平方能量", "Ix × Ix     Iy × Iy", "#2563eb", phase.index >= 1 ? 1 : .35);
+        drawCompactFormulaBox(ctx, 585, 132, "方向相关", "Ix × Iy", "#7c3aed", phase.index >= 2 ? 1 : .3);
+    }
+
+    function drawMotionTensor(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const patches = [
+            { label: "Ix² patch", patch: centerMatrix(probe.ix2_patch, 3), x: 44, color: "#2563eb", target: "Sxx", value: probe.sxx, y: 48 },
+            { label: "IxIy patch", patch: centerMatrix(probe.ixiy_patch, 3), x: 164, color: "#7c3aed", target: "Sxy", value: probe.sxy, y: 118 },
+            { label: "Iy² patch", patch: centerMatrix(probe.iy2_patch, 3), x: 284, color: "#06b6d4", target: "Syy", value: probe.syy, y: 188 }
+        ];
+        patches.forEach((item, index) => {
+            const alpha = Math.max(.35, Math.min(1, phase.index / 3 + phase.local - index * .12));
+            drawWeightedPatch(ctx, item.x, 48, 86, item.patch, item.color, item.label, alpha);
+            drawMotionFlow(ctx, item.x + 86, 92, 430, 118, item.color, alpha);
+        });
+        drawGaussianGlow(ctx, 430, 118, 76, phase.pulse);
+        drawTinyText(ctx, "Gσ", 430, 123, "#ea580c", 15);
+        patches.forEach((item, index) => {
+            const t = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .2 - index * .1));
+            drawMotionFlow(ctx, 500, 118, 555, item.y, item.color, t);
+            drawValueNode(ctx, 610, item.y, item.target, item.value, item.color, Math.max(.25, t));
+        });
+        drawMatrixMotion(ctx, 722, 58, probe.M, phase.index >= 3 ? 1 : phase.local, "#f97316");
+    }
+
+    function drawMotionHarrisResponse(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        drawMatrixMotion(ctx, 48, 54, probe.M, 1, "#2563eb");
+        drawValueNode(ctx, 280, 70, "det(M)", probe.det, "#2563eb", phase.index >= 1 ? 1 : phase.local);
+        drawValueNode(ctx, 280, 154, "trace(M)", probe.trace, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
+        drawMotionFlow(ctx, 360, 70, 520, 92, "#2563eb", phase.index >= 2 ? 1 : phase.local);
+        drawMotionFlow(ctx, 360, 154, 520, 128, "#7c3aed", phase.index >= 2 ? 1 : phase.local);
+        drawFormulaBox(ctx, 510, 74, "R = det(M) - k · trace(M)²", "#f97316", phase.index >= 2 ? 1 : .45);
+        drawFlipValue(ctx, 660, 150, "raw R", probe.responseRaw, "#f97316", phase.index >= 3 ? phase.local : 0);
+        drawValueNode(ctx, 760, 168, "display R", probe.responseDisplay, "#2563eb", phase.index >= 3 ? 1 : .35);
+        drawHeatHalo(ctx, 735, 90, phase.pulse, "#f97316");
+    }
+
+    function drawMotionShiResponse(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const eig = eigenValuesFromProbe(probe);
+        drawMatrixMotion(ctx, 56, 54, probe.M, 1, "#16a34a");
+        drawMotionFlow(ctx, 220, 118, 360, 82, "#16a34a", phase.index >= 1 ? 1 : phase.local);
+        drawMotionFlow(ctx, 220, 118, 360, 158, "#16a34a", phase.index >= 1 ? 1 : phase.local);
+        drawBarNode(ctx, 410, 82, "λ1", eig.l1, "#2563eb", eig.l1 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
+        drawBarNode(ctx, 410, 158, "λ2", eig.l2, "#16a34a", eig.l2 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
+        drawFormulaBox(ctx, 560, 83, "R = min(λ1, λ2)", "#16a34a", phase.index >= 2 ? 1 : .42);
+        drawFlipValue(ctx, 675, 150, "λmin", eig.min, "#16a34a", phase.index >= 3 ? phase.local : 0);
+    }
+
+    function drawMotionNms(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const nms = nmsProbeDecision(probe);
+        const kept = pointsForAlgorithm();
+        const candidates = responseCandidatesForNms(kept, 130);
+        const selected = { x: 430, y: 110 };
+        const fade = phase.index >= 1 ? phase.local : 0;
+        candidates.slice(0, 70).forEach((point, index) => {
+            const px = 50 + (index % 14) * 28;
+            const py = 40 + Math.floor(index / 14) * 30;
+            const pass = index % 5 !== 0;
+            drawParticle(ctx, px, py, pass ? "#60a5fa" : "#cbd5e1", pass ? .55 : Math.max(.08, 1 - fade), 3.2);
+        });
+        drawValueNode(ctx, selected.x, selected.y, "raw R", nms.currentR, nms.kept ? "#f97316" : "#94a3b8", 1);
+        drawNmsRadius(ctx, selected.x, selected.y, 54 + 16 * phase.pulse, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 2 ? 1 : .25);
+        drawMotionFlow(ctx, selected.x + 62, selected.y, 620, selected.y, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
+        drawFlipValue(ctx, 650, 62, "threshold", nms.threshold, "#2563eb", 1);
+        drawFlipValue(ctx, 650, 134, "neighbor max", nms.localMax, "#7c3aed", phase.index >= 2 ? 1 : .35);
+        drawValueNode(ctx, 790, 76, "display R", nms.displayR, "#2563eb", 1);
+        drawValueNode(ctx, 790, 158, nms.kept ? "KEEP" : "SUPPRESS", nms.kept ? "raw" : "raw", nms.kept ? "#f97316" : "#94a3b8", phase.index >= 3 ? 1 : .35);
+    }
+
+    function drawMotionRefine(ctx, phase, w, h) {
+        const probe = currentProbeData();
+        const dx = probe.dx || 0;
+        const dy = probe.dy || 0;
+        const start = { x: 290, y: 118 };
+        const scale = 70;
+        const t = phase.index >= 2 ? Math.max(.25, phase.local) : .2;
+        const end = { x: start.x + dx * scale * t, y: start.y + dy * scale * t };
+        drawLocalPatchLens(ctx, 70, 44, "#2563eb", phase.pulse);
+        drawCrossGlyph(ctx, start.x, start.y, "#06b6d4", 16, 1 - t * .45);
+        drawMotionFlow(ctx, start.x, start.y, end.x, end.y, "#7c3aed", t);
+        drawRingGlyph(ctx, end.x, end.y, "#f97316", 18 + 3 * phase.pulse, phase.index >= 2 ? 1 : .35);
+        drawValueNode(ctx, 510, 80, "dx", dx.toFixed(3), "#7c3aed", 1);
+        drawValueNode(ctx, 510, 150, "dy", dy.toFixed(3), "#7c3aed", 1);
+        drawFlipValue(ctx, 675, 118, "offset", Math.hypot(dx, dy).toFixed(3), "#f97316", phase.index >= 3 ? phase.local : .45);
+    }
+
+    function drawMotionFast(ctx, stepKey, phase, w, h) {
+        const point = fastProbePoint();
+        const info = fastArcInfo(point);
+        if (stepKey === "input") {
+            drawMotionFastInput(ctx, point, phase, w, h);
+            return;
+        }
+        if (stepKey === "gray") {
+            drawMotionFastGray(ctx, point, phase, w, h);
+            return;
+        }
+        if (stepKey === "circle") {
+            drawMotionFastCircle(ctx, point, info, phase, w, h);
+            return;
+        }
+        if (stepKey === "threshold") {
+            drawMotionFastThreshold(ctx, point, info, phase, w, h);
+            return;
+        }
+        if (stepKey === "nms") {
+            drawMotionFastNms(ctx, point, phase, w, h);
+            return;
+        }
+        if (stepKey === "corners") {
+            drawMotionFastCorners(ctx, point, phase, w, h);
+            return;
+        }
+        drawMotionFastThreshold(ctx, point, info, phase, w, h);
+    }
+
+    function drawMotionFastInput(ctx, point, phase, w, h) {
+        const px = 86;
+        const py = 34;
+        const imageW = 300;
+        const imageH = 168;
+        const scanX = px + 24 + (imageW - 48) * ((phase.index + phase.local) / Math.max(1, phase.actions.length));
+        const scanY = py + 34 + ((phase.index % 2) ? 84 : 30) + 8 * Math.sin(phase.local * Math.PI);
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = "#bfdbfe";
+        ctx.lineWidth = 2;
+        roundRect(ctx, px, py, imageW, imageH, 18);
+        ctx.fill();
+        ctx.stroke();
+        const grid = 18;
+        for (let y = py + 10; y < py + imageH - 10; y += grid) {
+            for (let x = px + 10; x < px + imageW - 10; x += grid) {
+                const tone = 215 + 28 * Math.sin((x + y) * 0.04);
+                ctx.fillStyle = `rgb(${tone}, ${Math.min(255, tone + 10)}, 255)`;
+                ctx.fillRect(x, y, grid - 4, grid - 4);
+            }
+        }
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(scanX - 18, scanY - 18, 36, 36);
+        drawParticle(ctx, scanX, scanY, "#facc15", .9, 6);
+        drawMotionFlow(ctx, scanX + 28, scanY, 472, 86, "#60a5fa", phase.local);
+        drawValueNode(ctx, 520, 86, "Probe", point ? `(${point.x},${point.y})` : "-", "#2563eb", 1);
+        drawValueNode(ctx, 670, 148, "FAST", "r=3", "#f97316", phase.index >= 3 ? phase.local : .35);
+        ctx.fillStyle = "#31527f";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("输入图像上滑动候选中心，局部窗口进入 FAST 圆周检测。", px, 222);
+        ctx.restore();
+    }
+
+    function drawMotionFastGray(ctx, point, phase, w, h) {
+        const patch = fastGrayPatch(point, 2);
+        drawMotionGrid(ctx, 42, 46, 138, patch.rgb, Math.min(24, Math.floor((phase.index + phase.local) / 4 * 25)), "#2563eb", "RGB intensity");
+        drawMotionFlow(ctx, 184, 116, 298, 116, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawFormulaBox(ctx, 282, 82, "G = .299R + .587G + .114B", "#2563eb", phase.index >= 1 ? 1 : .4);
+        drawMotionFlow(ctx, 526, 116, 605, 116, "#f97316", phase.index >= 2 ? phase.local : .18);
+        drawMotionGrid(ctx, 626, 46, 138, patch.gray, Math.min(24, Math.floor((phase.index + phase.local) / 4 * 25)), "#f97316", "Gray Patch");
+        drawValueNode(ctx, 520, 172, "Center G", fastCenterValue(point), "#f97316", phase.index >= 2 ? 1 : .35);
+    }
+
+    function drawMotionFastCircle(ctx, point, info, phase, w, h) {
+        const cx = 250;
+        const cy = 118;
+        const radius = 70;
+        drawValueNode(ctx, 78, 118, "P", fastCenterValue(point), "#2563eb", 1);
+        V.fastCircle.forEach((offset, index) => {
+            const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius;
+            const state = info.states[index] || "similar";
+            const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
+            const appear = Math.max(.18, Math.min(1, phase.index / 3 + phase.local - index / 18));
+            drawParticle(ctx, x, y, color, appear, info.active.has(index) ? 8 : 6);
+            if (appear > .7) drawTinyText(ctx, index, x, y + 3, "#0f172a", 8);
+        });
+        drawNmsRadius(ctx, cx, cy, radius, "#2563eb", phase.index >= 1 ? .55 + .25 * phase.pulse : .24);
+        drawMotionFlow(ctx, 330, 118, 485, 118, "#60a5fa", phase.index >= 2 ? phase.local : .2);
+        drawFlipValue(ctx, 540, 82, "samples", "16", "#2563eb", phase.index >= 2 ? phase.local : .35);
+        drawFlipValue(ctx, 690, 142, "radius", "3 px", "#f97316", phase.index >= 3 ? phase.local : .35);
+    }
+
+    function drawMotionFastThreshold(ctx, point, info, phase, w, h) {
+        const cx = 230;
+        const cy = 118;
+        const radius = 66;
+        const center = Number(fastCenterValue(point)) || 0;
+        drawValueNode(ctx, 70, 72, "C+t", center + fastOptions().threshold, "#ca8a04", 1);
+        drawValueNode(ctx, 70, 164, "C-t", center - fastOptions().threshold, "#7c3aed", 1);
+        V.fastCircle.forEach((offset, index) => {
+            const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius;
+            const state = info.states[index] || "similar";
+            const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
+            const reveal = Math.max(.22, Math.min(1, phase.index / 3 + phase.local - index / 20));
+            drawParticle(ctx, x, y, color, reveal, info.active.has(index) ? 8 : 5.5);
+            if (reveal > .7) drawTinyText(ctx, state === "bright" ? "+" : state === "dark" ? "-" : "=", x, y + 3, "#0f172a", 8);
+        });
+        drawValueNode(ctx, cx, cy, "C", center, "#2563eb", 1);
+        drawFastArc(ctx, cx, cy, radius + 16, info, phase.index >= 2 ? 1 : phase.local);
+        drawMotionFlow(ctx, 318, 118, 470, 118, info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
+        drawFlipValue(ctx, 525, 72, "Bright Arc", info.bright, "#ca8a04", phase.index >= 2 ? 1 : .35);
+        drawFlipValue(ctx, 525, 148, "Dark Arc", info.dark, "#7c3aed", phase.index >= 2 ? 1 : .35);
+        drawFlipValue(ctx, 700, 110, `FAST-${fastOptions().contiguous}`, info.pass ? "PASS" : "FAIL", info.pass ? "#facc15" : "#94a3b8", phase.index >= 3 ? phase.local : .3);
+    }
+
+    function drawMotionFastCorners(ctx, point, phase, w, h) {
+        const candidates = (currentFast?.candidates || []).slice(0, 90);
+        const kept = currentFast?.corners || [];
+        const keptKeys = new Set(kept.map(item => `${item.x},${item.y}`));
+        candidates.forEach((item, index) => {
+            const x = 54 + (index % 15) * 25;
+            const y = 36 + Math.floor(index / 15) * 27;
+            const isKept = keptKeys.has(`${item.x},${item.y}`);
+            const alpha = phase.index < 1 ? .24 + (index % 5) * .08 : (isKept ? 1 : .12);
+            drawParticle(ctx, x, y, isKept ? "#facc15" : "#cbd5e1", alpha, isKept ? 5 : 3);
+        });
+        const selected = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
+        drawMotionFlow(ctx, 450, 118, 560, 118, "#facc15", phase.index >= 1 ? phase.local : .2);
+        drawDiamondGlyph(ctx, 610, 118, "#facc15", 22 + 4 * phase.pulse, phase.index >= 2 ? 1 : .35);
+        drawFlipValue(ctx, 705, 80, "Kept", kept.length, "#facc15", phase.index >= 1 ? 1 : .35);
+        drawFlipValue(ctx, 705, 158, "nearest", selected.point ? `${selected.point.x},${selected.point.y}` : "-", "#2563eb", phase.index >= 3 ? phase.local : .35);
+    }
+
+    function fastGrayPatch(point, radius = 2) {
+        const size = radius * 2 + 1;
+        const fallback = {
+            rgb: Array.from({ length: size }, () => Array(size).fill(0)),
+            gray: Array.from({ length: size }, () => Array(size).fill(0))
+        };
+        if (!point || !currentGray) return fallback;
+        const gray = [];
+        const rgb = [];
+        for (let yy = point.y - radius; yy <= point.y + radius; yy++) {
+            const grayRow = [];
+            const rgbRow = [];
+            for (let xx = point.x - radius; xx <= point.x + radius; xx++) {
+                const safeX = Math.max(0, Math.min(currentGray.width - 1, xx));
+                const safeY = Math.max(0, Math.min(currentGray.height - 1, yy));
+                const value = Math.round(currentGray.gray[safeY * currentGray.width + safeX] || 0);
+                grayRow.push(value);
+                rgbRow.push(value);
+            }
+            gray.push(grayRow);
+            rgb.push(rgbRow);
+        }
+        return { rgb, gray };
+    }
+
+    function drawDiamondGlyph(ctx, x, y, color, size, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = `${color}33`;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawMotionFastNms(ctx, point, phase, w, h) {
+        const candidates = (currentFast?.candidates || []).slice(0, 110);
+        const kept = currentFast?.corners || [];
+        const keptKeys = new Set(kept.map(item => `${item.x},${item.y}`));
+        const fade = phase.index >= 2 ? phase.local : 0;
+        candidates.forEach((item, index) => {
+            const x = 48 + (index % 18) * 24;
+            const y = 36 + Math.floor(index / 18) * 25;
+            const isKept = keptKeys.has(`${item.x},${item.y}`);
+            const alpha = isKept ? 1 : Math.max(.08, 1 - fade - (index % 4) * .08);
+            drawParticle(ctx, x, y, isKept ? "#facc15" : "#cbd5e1", alpha, isKept ? 5 : 3);
+        });
+        const selectedKept = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
+        const keep = selectedKept.distance <= Math.max(4, fastOptions().nmsRadius);
+        drawValueNode(ctx, 560, 74, "FAST score", point?.response || 0, keep ? "#facc15" : "#94a3b8", 1);
+        drawNmsRadius(ctx, 560, 74, 42 + 18 * phase.pulse, keep ? "#facc15" : "#94a3b8", phase.index >= 1 ? 1 : .35);
+        drawMotionFlow(ctx, 560, 118, 660, 118, keep ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .3);
+        drawFlipValue(ctx, 710, 78, "Candidates", candidates.length, "#2563eb", 1);
+        drawFlipValue(ctx, 710, 160, keep ? "KEEP" : "SUPPRESS", kept.length, keep ? "#facc15" : "#7c3aed", phase.index >= 3 ? phase.local : .4);
+    }
+
+    function drawMotionGeneric(ctx, stepKey, phase, w, h) {
+        const probe = selectedAlgorithm() === "fast" ? fastProbePoint() : probeForCurrentSelection();
+        drawLocalPatchLens(ctx, 70, 42, "#2563eb", phase.pulse);
+        drawValueNode(ctx, 390, 92, harrisSteps().find(item => item.key === stepKey)?.en || stepKey, `(${probe?.x ?? "-"}, ${probe?.y ?? "-"})`, "#2563eb", 1);
+        drawMotionFlow(ctx, 210, 118, 350, 118, "#60a5fa", phase.local);
+        drawFlipValue(ctx, 610, 118, "ready", "probe", "#f97316", phase.local);
+    }
+
+    function renderMotionMetrics(stepKey) {
+        const box = V.$("cornerMotionMetrics");
+        if (!box) return;
+        const rows = motionMetricRows(stepKey);
+        box.innerHTML = rows.slice(0, 6).map((row, index) => `
+            <div class="corner-motion-metric ${row.tone ? `is-${row.tone}` : ""}">
+                <span>${row.label}</span>
+                <strong style="animation-delay:${index * 45}ms">${row.value}</strong>
+            </div>
+        `).join("");
+    }
+
+    function motionMetricRows(stepKey) {
+        if (selectedAlgorithm() === "fast") {
+            const point = fastProbePoint();
+            const info = fastArcInfo(point);
+            if (stepKey === "input") {
+                return [
+                    { label: "探针坐标", value: point ? `(${point.x}, ${point.y})` : "-" },
+                    { label: "图像尺寸", value: currentGray ? `${currentGray.width}×${currentGray.height}` : "-" },
+                    { label: "窗口半径", value: "r=3", tone: "orange" }
+                ];
+            }
+            if (stepKey === "gray") {
+                return [
+                    { label: "中心灰度", value: fastCenterValue(point), tone: "orange" },
+                    { label: "灰度公式", value: "0.299/0.587/0.114" },
+                    { label: "Patch", value: "5×5" }
+                ];
+            }
+            if (stepKey === "circle") {
+                return [
+                    { label: "圆周点数", value: 16 },
+                    { label: "半径", value: "3 px", tone: "orange" },
+                    { label: "中心 P", value: fastCenterValue(point) }
+                ];
+            }
+            if (stepKey === "threshold") {
+                return [
+                    { label: "longest bright", value: info.bright, tone: "yellow" },
+                    { label: "longest dark", value: info.dark, tone: "purple" },
+                    { label: "FAST score", value: info.score, tone: "orange" },
+                    { label: `FAST-${fastOptions().contiguous}`, value: info.pass ? "PASS" : "FAIL", tone: info.pass ? "yellow" : "purple" }
+                ];
+            }
+            if (stepKey === "nms") {
+                const kept = nearestPointWithDistance(point?.x || 0, point?.y || 0, currentFast?.corners || []);
+                return [
+                    { label: "Candidates", value: currentFast?.candidates?.length || 0 },
+                    { label: "Kept", value: currentFast?.corners?.length || 0, tone: "yellow" },
+                    { label: "当前点", value: kept.distance <= fastOptions().nmsRadius ? "keep" : "suppress", tone: kept.distance <= fastOptions().nmsRadius ? "yellow" : "purple" },
+                    { label: "NMS radius", value: fastOptions().nmsRadius }
+                ];
+            }
+            if (stepKey === "corners") {
+                const kept = nearestPointWithDistance(point?.x || 0, point?.y || 0, currentFast?.corners || []);
+                return [
+                    { label: "最终角点", value: currentFast?.corners?.length || 0, tone: "yellow" },
+                    { label: "候选点", value: currentFast?.candidates?.length || 0 },
+                    { label: "最近角点", value: kept.point ? `(${kept.point.x}, ${kept.point.y})` : "-" },
+                    { label: "标记", value: "diamond", tone: "orange" }
+                ];
+            }
+            return [
+                { label: "中心 P", value: fastCenterValue(point) },
+                { label: "longest bright", value: info.bright, tone: "yellow" },
+                { label: "longest dark", value: info.dark, tone: "purple" },
+                { label: "FAST score", value: info.score, tone: "orange" },
+                { label: `FAST-${fastOptions().contiguous}`, value: info.pass ? "PASS" : "FAIL", tone: info.pass ? "yellow" : "purple" }
+            ];
+        }
+        const probe = currentProbeData();
+        const ix = Number(probe.ix) || 0;
+        const iy = Number(probe.iy) || 0;
+        if (stepKey === "gradient") return [
+            { label: "Ix", value: formatNumber(ix) },
+            { label: "Iy", value: formatNumber(iy) },
+            { label: "Magnitude", value: formatNumber(Math.hypot(ix, iy)), tone: "orange" },
+            { label: "Direction", value: `${(Math.atan2(iy, ix) * 180 / Math.PI).toFixed(1)}°`, tone: "purple" }
+        ];
+        if (stepKey === "second") return [
+            { label: "Ix² = Ix×Ix", value: formatNumber(probe.ix2) },
+            { label: "Iy² = Iy×Iy", value: formatNumber(probe.iy2) },
+            { label: "IxIy", value: formatNumber(probe.ixiy), tone: "purple" }
+        ];
+        if (stepKey === "tensor") return [
+            { label: "Sxx", value: formatNumber(probe.sxx) },
+            { label: "Syy", value: formatNumber(probe.syy) },
+            { label: "Sxy", value: formatNumber(probe.sxy), tone: "purple" },
+            { label: "det(M)", value: formatNumber(probe.det), tone: "orange" },
+            { label: "trace(M)", value: formatNumber(probe.trace) }
+        ];
+        if (stepKey === "response" && selectedAlgorithm() === "shi-tomasi") {
+            const eig = eigenValuesFromProbe(probe);
+            return [
+                { label: "λ1", value: formatNumber(eig.l1) },
+                { label: "λ2", value: formatNumber(eig.l2) },
+                { label: "λmin", value: formatNumber(eig.min), tone: "green" }
+            ];
+        }
+        if (stepKey === "response") return [
+            { label: "det(M)", value: formatNumber(probe.det) },
+            { label: "trace(M)", value: formatNumber(probe.trace) },
+            { label: "k", value: harrisK() },
+            { label: "raw R", value: formatNumber(probe.responseRaw), tone: "orange" },
+            { label: "display R", value: formatNumber(probe.responseDisplay) }
+        ];
+        if (stepKey === "nms") {
+            const nms = nmsProbeDecision(probe);
+            return [
+                { label: "raw R", value: formatNumber(nms.currentR) },
+                { label: "display R", value: formatNumber(nms.displayR) },
+                { label: "raw threshold", value: formatNumber(nms.threshold) },
+                { label: "neighbor max raw", value: formatNumber(nms.localMax) },
+                { label: "NMS", value: nms.kept ? "KEEP" : "SUPPRESS", tone: nms.kept ? "orange" : "purple" },
+                { label: "原因", value: nms.reason }
+            ];
+        }
+        if (stepKey === "refine") {
+            return [
+                { label: "dx", value: formatNumber(probe.dx), tone: "purple" },
+                { label: "dy", value: formatNumber(probe.dy), tone: "purple" },
+                { label: "offset", value: formatNumber(probe.offset), tone: "orange" },
+                { label: "valid", value: probe.refineValid ? "YES" : "NO", tone: probe.refineValid ? "orange" : "purple" }
+            ];
+        }
+        return [
+            { label: "坐标", value: `(${probe.x}, ${probe.y})` },
+            { label: "Gray", value: formatNumber(probe.gray) },
+            { label: "状态", value: "READY", tone: "orange" }
+        ];
+    }
+
+    function centerMatrix(matrix, size = 3) {
+        if (!Array.isArray(matrix) || !matrix.length) return Array.from({ length: size }, () => Array(size).fill(0));
+        const cy = Math.floor(matrix.length / 2);
+        const cx = Math.floor((matrix[cy] || []).length / 2);
+        const half = Math.floor(size / 2);
+        return Array.from({ length: size }, (_, row) =>
+            Array.from({ length: size }, (_, col) => matrix[cy - half + row]?.[cx - half + col] ?? 0)
+        );
+    }
+
+    function flattenMatrix(matrix) {
+        return (matrix || []).reduce((values, row) => values.concat(row || []), []);
+    }
+
+    function activeCellPoint(x, y, size, index) {
+        const cell = size / 3;
+        return { x: x + (index % 3 + .5) * cell, y: y + (Math.floor(index / 3) + .5) * cell };
+    }
+
+    function drawMotionGrid(ctx, x, y, size, matrix, active, color, label) {
+        const rows = matrix.length || 3;
+        const cols = matrix[0]?.length || 3;
+        const cellW = size / cols;
+        const cellH = size / rows;
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText(label, x, y - 10);
+        flattenMatrix(matrix).forEach((value, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const px = x + col * cellW;
+            const py = y + row * cellH;
+            const isActive = index === active;
+            ctx.fillStyle = isActive ? `${color}33` : "rgba(255,255,255,.72)";
+            ctx.strokeStyle = isActive ? color : "rgba(147,197,253,.55)";
+            ctx.lineWidth = isActive ? 2.5 : 1;
+            roundRect(ctx, px + 2, py + 2, cellW - 4, cellH - 4, 7);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = isActive ? color : "#52657f";
+            ctx.font = `${isActive ? 900 : 750} 10px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillText(formatCompact(value), px + cellW / 2, py + cellH / 2 + 3);
+        });
+        ctx.restore();
+    }
+
+    function drawCompactPatch(ctx, x, y, size, matrix, active, color, label) {
+        const rows = matrix.length || 3;
+        const cols = matrix[0]?.length || 3;
+        const cellW = size / cols;
+        const cellH = size / rows;
+        const centerIndex = Math.floor(rows * cols / 2);
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x, y - 10);
+        flattenMatrix(matrix).forEach((value, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const px = x + col * cellW;
+            const py = y + row * cellH;
+            const isCenter = index === centerIndex;
+            const isActive = index === active;
+            ctx.fillStyle = isCenter ? "rgba(249,115,22,.18)" : isActive ? `${color}24` : "rgba(255,255,255,.62)";
+            ctx.strokeStyle = isCenter ? "#f97316" : isActive ? color : "rgba(147,197,253,.45)";
+            ctx.lineWidth = isCenter ? 2.4 : isActive ? 1.8 : 1;
+            roundRect(ctx, px + 3, py + 3, cellW - 6, cellH - 6, 8);
+            ctx.fill();
+            ctx.stroke();
+            if (isCenter || isActive) {
+                ctx.fillStyle = isCenter ? "#ea580c" : color;
+                ctx.font = "950 12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(formatCompact(value), px + cellW / 2, py + cellH / 2 + 3);
+            }
+        });
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 10px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("中心值 + 扫描值", x, y + size + 16);
+        ctx.restore();
+    }
+
+    function drawWeightedPatch(ctx, x, y, size, matrix, color, label, alpha = 1) {
+        const rows = matrix.length || 3;
+        const cols = matrix[0]?.length || 3;
+        const values = flattenMatrix(matrix).map(value => Math.abs(Number(value) || 0));
+        const maxValue = Math.max(1e-9, ...values);
+        const cellW = size / cols;
+        const cellH = size / rows;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x, y - 10);
+        values.forEach((value, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const px = x + col * cellW;
+            const py = y + row * cellH;
+            const intensity = Math.sqrt(value / maxValue);
+            ctx.fillStyle = mixColor("#ffffff", color, 0.12 + intensity * 0.5);
+            ctx.strokeStyle = index === 4 ? "#f97316" : "rgba(147,197,253,.5)";
+            ctx.lineWidth = index === 4 ? 2.2 : 1;
+            roundRect(ctx, px + 2, py + 2, cellW - 4, cellH - 4, 7);
+            ctx.fill();
+            ctx.stroke();
+        });
+        const center = Number(matrix?.[1]?.[1]) || 0;
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "950 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(formatCompact(center), x + size / 2, y + size / 2 + 4);
+        ctx.restore();
+    }
+
+    function mixColor(from, to, amount) {
+        const parse = (hex) => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16));
+        const a = parse(from);
+        const b = parse(to);
+        const mixed = a.map((value, index) => Math.round(value + (b[index] - value) * amount));
+        return `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`;
+    }
+
+    function drawMotionFlow(ctx, x1, y1, x2, y2, color, progress) {
+        const t = Math.max(0, Math.min(1, progress));
+        ctx.save();
+        ctx.strokeStyle = `${color}44`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2);
+        ctx.stroke();
+        const px = x1 + (x2 - x1) * t;
+        const py = y1 + (y2 - y1) * easeInOutCubic(t);
+        const glow = ctx.createRadialGradient(px, py, 0, px, py, 13);
+        glow.addColorStop(0, color);
+        glow.addColorStop(1, `${color}00`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(px, py, 13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawFlyingNumber(ctx, value, x1, y1, x2, y2, progress, color) {
+        const t = easeInOutCubic(Math.max(0, Math.min(1, progress)));
+        drawMotionFlow(ctx, x1, y1, x2, y2, color, t);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "900 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(formatCompact(value), x1 + (x2 - x1) * t, y1 + (y2 - y1) * t - 8);
+        ctx.restore();
+    }
+
+    function drawAccumulator(ctx, x, y, label, value, progress, color) {
+        ctx.save();
+        ctx.globalAlpha = .35 + .65 * Math.max(0, Math.min(1, progress));
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 118, 60, 13);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#64748b";
+        ctx.font = "900 13px sans-serif";
+        ctx.fillText(label, x + 12, y + 20);
+        ctx.fillStyle = color;
+        ctx.font = "950 20px sans-serif";
+        ctx.fillText(formatCompact(Number(value) || 0), x + 12, y + 46);
+        ctx.restore();
+    }
+
+    function drawGradientVector(ctx, cx, cy, ix, iy, pulse) {
+        const magnitude = Math.hypot(ix, iy);
+        const scale = magnitude ? Math.min(62, 28 + Math.log10(magnitude + 1) * 12) : 24;
+        const angle = Math.atan2(iy, ix);
+        ctx.save();
+        ctx.strokeStyle = "rgba(37,99,235,.18)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 72, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "#7c3aed";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * scale, cy + Math.sin(angle) * scale);
+        ctx.stroke();
+        drawParticle(ctx, cx + Math.cos(angle) * scale, cy + Math.sin(angle) * scale, "#7c3aed", .8 + .2 * pulse, 7);
+        ctx.fillStyle = "#52657f";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(`|∇I| ${formatCompact(magnitude)}`, cx - 34, cy + 92);
+        ctx.restore();
+    }
+
+    function drawValueNode(ctx, cx, cy, label, value, color, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(.12, Math.min(1, alpha));
+        ctx.shadowColor = `${color}55`;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = "rgba(255,255,255,.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, cx - 52, cy - 27, 104, 54, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#64748b";
+        ctx.font = "900 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(label, cx, cy - 8);
+        ctx.fillStyle = color;
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText(formatCompact(value), cx, cy + 13);
+        ctx.restore();
+    }
+
+    function drawMotionFormulaText(ctx, x, y, formula, subtitle, color, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.font = "950 18px Georgia, serif";
+        ctx.fillText(formula, x, y);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "800 10px sans-serif";
+        ctx.fillText(subtitle, x, y + 20);
+        ctx.restore();
+    }
+
+    function drawGaussianGlow(ctx, cx, cy, radius, pulse) {
+        const glow = ctx.createRadialGradient(cx, cy, 5, cx, cy, radius);
+        glow.addColorStop(0, `rgba(249,115,22,${.48 + .15 * pulse})`);
+        glow.addColorStop(.35, "rgba(96,165,250,.28)");
+        glow.addColorStop(1, "rgba(96,165,250,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(249,115,22,.65)";
+        [0.35, 0.62, 0.9].forEach(scale => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * scale, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        drawTinyText(ctx, "Gσ", cx, cy + 4, "#ea580c", 14);
+    }
+
+    function drawMatrixMotion(ctx, x, y, matrix, alpha, color) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(.2, Math.min(1, alpha));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + 112);
+        ctx.lineTo(x + 12, y + 112);
+        ctx.moveTo(x + 132, y);
+        ctx.lineTo(x + 144, y);
+        ctx.lineTo(x + 144, y + 112);
+        ctx.lineTo(x + 132, y + 112);
+        ctx.stroke();
+        const values = [matrix?.[0]?.[0], matrix?.[0]?.[1], matrix?.[1]?.[0], matrix?.[1]?.[1]];
+        values.forEach((value, index) => {
+            drawTinyText(ctx, formatCompact(value), x + 45 + (index % 2) * 62, y + 35 + Math.floor(index / 2) * 52, color, 11);
+        });
+        ctx.restore();
+    }
+
+    function drawFormulaBox(ctx, x, y, text, color, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(255,255,255,.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 245, 55, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = "950 18px Georgia, serif";
+        ctx.textAlign = "center";
+        ctx.fillText(text, x + 122, y + 34);
+        ctx.restore();
+    }
+
+    function drawCompactFormulaBox(ctx, x, y, title, formula, color, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = "rgba(37,99,235,.16)";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "rgba(255,255,255,.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 220, 64, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        ctx.font = "950 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(title, x + 110, y + 24);
+        ctx.fillStyle = "#31527f";
+        ctx.font = "900 14px sans-serif";
+        ctx.fillText(formula, x + 110, y + 47);
+        ctx.restore();
+    }
+
+    function drawFlipValue(ctx, cx, cy, label, value, color, progress) {
+        const scaleY = .25 + .75 * Math.max(0, Math.min(1, progress));
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(1, scaleY);
+        ctx.fillStyle = color;
+        ctx.shadowColor = `${color}88`;
+        ctx.shadowBlur = 18;
+        roundRect(ctx, -70, -37, 140, 74, 16);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(255,255,255,.78)";
+        ctx.font = "900 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(label, 0, -11);
+        ctx.fillStyle = "#fff";
+        ctx.font = "950 20px sans-serif";
+        ctx.fillText(formatCompact(value), 0, 15);
+        ctx.restore();
+    }
+
+    function drawHeatHalo(ctx, cx, cy, pulse, color) {
+        const radius = 35 + 25 * pulse;
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        glow.addColorStop(0, `${color}99`);
+        glow.addColorStop(1, `${color}00`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawBarNode(ctx, x, y, label, value, color, ratio, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = "#dbeafe";
+        roundRect(ctx, x, y - 23, 132, 46, 11);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = `${color}33`;
+        roundRect(ctx, x + 6, y + 10, 120 * Math.max(.05, ratio), 7, 4);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText(`${label}  ${formatCompact(value)}`, x + 10, y - 3);
+        ctx.restore();
+    }
+
+    function drawParticle(ctx, x, y, color, alpha = 1, radius = 4) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawNmsRadius(ctx, cx, cy, radius, color, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([7, 6]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawLocalPatchLens(ctx, x, y, color, pulse) {
+        const size = 138;
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, size, size, 18);
+        ctx.fill();
+        ctx.stroke();
+        const glow = ctx.createRadialGradient(x + size / 2, y + size / 2, 4, x + size / 2, y + size / 2, size / 2);
+        glow.addColorStop(0, `rgba(37,99,235,${.25 + .12 * pulse})`);
+        glow.addColorStop(1, "rgba(37,99,235,0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(x, y, size, size);
+        ctx.restore();
+    }
+
+    function drawCrossGlyph(ctx, x, y, color, size, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - size, y);
+        ctx.lineTo(x + size, y);
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x, y + size);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawRingGlyph(ctx, x, y, color, radius, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawTinyText(ctx, value, x, y, color, size = 10) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = `950 ${Math.max(12, size)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(String(value), x, y);
+        ctx.restore();
+    }
+
+    function formatCompact(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return String(value ?? "-");
+        if (Math.abs(number) >= 1000000) return number.toExponential(2);
+        if (Math.abs(number) >= 1000) return number.toFixed(0);
+        if (Math.abs(number) >= 10) return number.toFixed(1);
+        return number.toFixed(2);
+    }
+
+    function eigenValuesFromProbe(probe) {
+        const a = Number(probe.M?.[0]?.[0]) || 0;
+        const b = Number(probe.M?.[0]?.[1]) || 0;
+        const d = Number(probe.M?.[1]?.[1]) || 0;
+        const trace = a + d;
+        const delta = Math.sqrt(Math.max(0, (a - d) * (a - d) + 4 * b * b));
+        const l1 = (trace + delta) / 2;
+        const l2 = (trace - delta) / 2;
+        return { l1, l2, min: Math.min(l1, l2) };
+    }
+
+    function fastArcInfo(point) {
+        if (!point || !currentGray) return { states: [], active: new Set(), bright: 0, dark: 0, score: 0, pass: false };
+        const center = Number(fastCenterValue(point)) || 0;
+        const threshold = fastOptions().threshold;
+        const states = V.fastCircle.map(([dx, dy]) => {
+            const value = Number(currentGray.gray[(point.y + dy) * currentGray.width + point.x + dx]) || 0;
+            if (value > center + threshold) return "bright";
+            if (value < center - threshold) return "dark";
+            return "similar";
+        });
+        const longest = target => {
+            let best = 0;
+            let start = -1;
+            let run = 0;
+            for (let index = 0; index < 32; index++) {
+                if (states[index % 16] === target) {
+                    run++;
+                    if (run > best && run <= 16) {
+                        best = run;
+                        start = index - run + 1;
+                    }
+                } else {
+                    run = 0;
+                }
+            }
+            return { length: Math.min(16, best), start: start < 0 ? -1 : start % 16 };
+        };
+        const bright = longest("bright");
+        const dark = longest("dark");
+        const winner = bright.length >= dark.length ? bright : dark;
+        const active = new Set();
+        if (winner.start >= 0) {
+            for (let index = 0; index < winner.length; index++) active.add((winner.start + index) % 16);
+        }
+        return {
+            states,
+            active,
+            bright: bright.length,
+            dark: dark.length,
+            score: formatCompact(point.response || Math.max(bright.length, dark.length)),
+            pass: Math.max(bright.length, dark.length) >= fastOptions().contiguous,
+            winner
+        };
+    }
+
+    function drawFastArc(ctx, cx, cy, radius, info, alpha) {
+        if (!info.winner || info.winner.start < 0 || !info.winner.length) return;
+        const start = -Math.PI / 2 + info.winner.start * Math.PI * 2 / 16;
+        const end = start + info.winner.length * Math.PI * 2 / 16;
+        const brightWins = info.bright >= info.dark;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = brightWins ? "#facc15" : "#7c3aed";
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function currentProbeData() {
+        if (selectedAlgorithm() === "fast") return null;
+        const raw = harrisRawData();
+        const fallback = currentData?.probe || {};
+        const x = Math.max(0, Math.min((raw?.width || currentData?.meta?.width || 1) - 1, Math.round(selectedProbe?.x ?? fallback.x ?? 0)));
+        const y = Math.max(0, Math.min((raw?.height || currentData?.meta?.height || 1) - 1, Math.round(selectedProbe?.y ?? fallback.y ?? 0)));
+        if (!raw) {
+            return {
+                x,
+                y,
+                gray: centerOf(fallback.gray_patch),
+                ix: Number(centerOf(fallback.ix_patch)) || 0,
+                iy: Number(centerOf(fallback.iy_patch)) || 0,
+                ix2: Number(centerOf(fallback.ix2_patch)) || 0,
+                iy2: Number(centerOf(fallback.iy2_patch)) || 0,
+                ixiy: Number(centerOf(fallback.ixiy_patch)) || 0,
+                sxx: Number(fallback.M?.[0]?.[0]) || 0,
+                syy: Number(fallback.M?.[1]?.[1]) || 0,
+                sxy: Number(fallback.M?.[0]?.[1]) || 0,
+                det: Number(fallback.det) || 0,
+                trace: Number(fallback.trace) || 0,
+                responseRaw: Number(fallback.r) || 0,
+                responseDisplay: packedValueAtSource(currentResponsePacked(), x, y),
+                thresholdRaw: 0,
+                isCandidate: false,
+                nmsMaxRaw: 0,
+                nmsResult: false,
+                dx: 0,
+                dy: 0,
+                offset: 0,
+                refineValid: false,
+                gray_patch: fallback.gray_patch || [],
+                ix_patch: fallback.ix_patch || [],
+                iy_patch: fallback.iy_patch || [],
+                ix2_patch: fallback.ix2_patch || [],
+                iy2_patch: fallback.iy2_patch || [],
+                ixiy_patch: fallback.ixiy_patch || [],
+                gaussian_weight: fallback.gaussian_weight || [],
+                M: fallback.M || [[0, 0], [0, 0]]
+            };
+        }
+
+        const index = y * raw.width + x;
+        const ix = raw.ix[index] || 0;
+        const iy = raw.iy[index] || 0;
+        const ix2 = ix * ix;
+        const iy2 = iy * iy;
+        const ixiy = ix * iy;
+        const sxx = raw.sxx[index] || 0;
+        const syy = raw.syy[index] || 0;
+        const sxy = raw.sxy[index] || 0;
+        const det = sxx * syy - sxy * sxy;
+        const trace = sxx + syy;
+        const responseRaw = raw.response[index] || 0;
+        const nms = rawNmsDecision(raw, x, y);
+        const refine = rawRefineAt(raw, x, y);
+        return {
+            x,
+            y,
+            gray: raw.gray[index] || 0,
+            ix,
+            iy,
+            ix2,
+            iy2,
+            ixiy,
+            sxx,
+            syy,
+            sxy,
+            det,
+            trace,
+            responseRaw,
+            responseDisplay: packedValueAtSource(currentResponsePacked(), x, y),
+            thresholdRaw: raw.thresholdRaw,
+            isCandidate: responseRaw > raw.thresholdRaw,
+            nmsMaxRaw: nms.localMaxRaw,
+            nmsResult: nms.kept,
+            nmsReason: nms.reason,
+            nmsSuppressor: nms.suppressor,
+            dx: refine.dx,
+            dy: refine.dy,
+            offset: refine.offset,
+            refineValid: refine.valid,
+            gray_patch: rawPatch(raw.gray, raw.width, raw.height, x, y, 2),
+            ix_patch: rawPatch(raw.ix, raw.width, raw.height, x, y, 2),
+            iy_patch: rawPatch(raw.iy, raw.width, raw.height, x, y, 2),
+            ix2_patch: rawPatchDerived(raw, x, y, 2, (item) => item.ix * item.ix),
+            iy2_patch: rawPatchDerived(raw, x, y, 2, (item) => item.iy * item.iy),
+            ixiy_patch: rawPatchDerived(raw, x, y, 2, (item) => item.ix * item.iy),
+            gaussian_weight: gaussianKernel2d(3, harrisSigma()).map(row => row.map(value => Number(value.toFixed(4)))),
+            M: [[sxx, sxy], [sxy, syy]]
+        };
+    }
+
+    function harrisRawData() {
+        if (!currentGray?.gray?.length) return null;
+        const key = [
+            imageFingerprint(),
+            selectedAlgorithm(),
+            harrisSigma(),
+            harrisK(),
+            responseThresholdRatio(),
+            nmsRadiusForCurrentAlgorithm(),
+            maxCornersForCurrentAlgorithm()
+        ].join(":");
+        if (rawHarrisCache.key === key && rawHarrisCache.data) return rawHarrisCache.data;
+        const width = currentGray.width;
+        const height = currentGray.height;
+        const gray = new Float32Array(currentGray.gray.length);
+        for (let i = 0; i < currentGray.gray.length; i++) {
+            gray[i] = Math.max(0, Math.min(255, Math.round(currentGray.gray[i] || 0)));
+        }
+        const ix = convolve3x3(gray, width, height, [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]);
+        const iy = convolve3x3(gray, width, height, [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]);
+        const ix2 = new Float32Array(width * height);
+        const iy2 = new Float32Array(width * height);
+        const ixiy = new Float32Array(width * height);
+        for (let i = 0; i < ix.length; i++) {
+            ix2[i] = ix[i] * ix[i];
+            iy2[i] = iy[i] * iy[i];
+            ixiy[i] = ix[i] * iy[i];
+        }
+        const sigma = harrisSigma();
+        const sxx = gaussianBlur3x3(ix2, width, height, sigma);
+        const syy = gaussianBlur3x3(iy2, width, height, sigma);
+        const sxy = gaussianBlur3x3(ixiy, width, height, sigma);
+        const det = new Float32Array(width * height);
+        const trace = new Float32Array(width * height);
+        const response = new Float32Array(width * height);
+        const useShi = selectedAlgorithm() === "shi-tomasi";
+        const k = harrisK();
+        let responseMax = 0;
+        for (let i = 0; i < response.length; i++) {
+            det[i] = sxx[i] * syy[i] - sxy[i] * sxy[i];
+            trace[i] = sxx[i] + syy[i];
+            let value;
+            if (useShi) {
+                value = trace[i] - Math.sqrt(Math.max(0, trace[i] * trace[i] - 4 * det[i]));
+            } else {
+                value = det[i] - k * trace[i] * trace[i];
+                if (value < 0) value = 0;
+            }
+            response[i] = value;
+            if (value > responseMax) responseMax = value;
+        }
+        const thresholdRaw = responseMax * responseThresholdRatio();
+        const nms = buildRawNms(response, width, height, thresholdRaw, nmsRadiusForCurrentAlgorithm(), maxCornersForCurrentAlgorithm());
+        const data = { width, height, gray, ix, iy, ix2, iy2, ixiy, sxx, syy, sxy, det, trace, response, responseMax, thresholdRaw, ...nms };
+        rawHarrisCache = { key, data };
+        return data;
+    }
+
+    function harrisSigma() {
+        return Number(document.querySelector('[name="harris_sigma"]')?.value) || 1.2;
+    }
+
+    function harrisK() {
+        return Number(document.querySelector('[name="harris_k"]')?.value) || 0.04;
+    }
+
+    function maxCornersForCurrentAlgorithm() {
+        return Number(document.querySelector('[name="max_corners"]')?.value) || 500;
+    }
+
+    function convolve3x3(source, width, height, kernel) {
+        const out = new Float32Array(width * height);
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let sum = 0;
+                for (let ky = -1; ky <= 1; ky++) {
+                    const sy = Math.max(0, Math.min(height - 1, y + ky));
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const sx = Math.max(0, Math.min(width - 1, x + kx));
+                        sum += source[sy * width + sx] * kernel[ky + 1][kx + 1];
+                    }
+                }
+                out[y * width + x] = sum;
+            }
+        }
+        return out;
+    }
+
+    function gaussianKernel2d(size, sigma) {
+        const half = Math.floor(size / 2);
+        const kernel = [];
+        let total = 0;
+        for (let y = -half; y <= half; y++) {
+            const row = [];
+            for (let x = -half; x <= half; x++) {
+                const value = Math.exp(-(x * x + y * y) / (2 * sigma * sigma));
+                row.push(value);
+                total += value;
+            }
+            kernel.push(row);
+        }
+        return kernel.map(row => row.map(value => value / total));
+    }
+
+    function gaussianBlur3x3(source, width, height, sigma) {
+        return convolve3x3(source, width, height, gaussianKernel2d(3, sigma));
+    }
+
+    function buildRawNms(response, width, height, thresholdRaw, radius, maxCorners) {
+        const candidates = [];
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const value = response[y * width + x];
+                if (value > thresholdRaw) candidates.push({ response: value, x, y });
+            }
+        }
+        candidates.sort((a, b) => b.response - a.response);
+        const occupied = new Uint8Array(width * height);
+        const kept = [];
+        const keptKeys = new Set();
+        for (const candidate of candidates) {
+            let blocked = false;
+            for (let yy = Math.max(0, candidate.y - radius); yy <= Math.min(height - 1, candidate.y + radius) && !blocked; yy++) {
+                for (let xx = Math.max(0, candidate.x - radius); xx <= Math.min(width - 1, candidate.x + radius); xx++) {
+                    if (occupied[yy * width + xx]) {
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+            if (blocked) continue;
+            kept.push(candidate);
+            keptKeys.add(`${candidate.x},${candidate.y}`);
+            occupied[candidate.y * width + candidate.x] = 1;
+            if (kept.length >= maxCorners) break;
+        }
+        return { candidatesRaw: candidates, keptRaw: kept, keptKeysRaw: keptKeys };
+    }
+
+    function rawNmsDecision(raw, x, y) {
+        const radius = nmsRadiusForCurrentAlgorithm();
+        const current = raw.response[y * raw.width + x] || 0;
+        let localMaxRaw = current;
+        let localMaxPoint = { x, y };
+        for (let yy = Math.max(0, y - radius); yy <= Math.min(raw.height - 1, y + radius); yy++) {
+            for (let xx = Math.max(0, x - radius); xx <= Math.min(raw.width - 1, x + radius); xx++) {
+                const value = raw.response[yy * raw.width + xx] || 0;
+                if (value > localMaxRaw) {
+                    localMaxRaw = value;
+                    localMaxPoint = { x: xx, y: yy };
+                }
+            }
+        }
+        const aboveThreshold = current > raw.thresholdRaw;
+        const localMaximum = current >= localMaxRaw - 1e-6;
+        const kept = raw.keptKeysRaw.has(`${x},${y}`);
+        let reason = "raw R 超过阈值且进入 NMS 保留集合";
+        if (!aboveThreshold) reason = "raw R 低于阈值";
+        else if (!localMaximum) reason = "邻域内存在更大 raw R";
+        else if (!kept) reason = "候选点被更早保留点的 NMS 半径覆盖";
+        return {
+            current,
+            threshold: raw.thresholdRaw,
+            localMaxRaw,
+            localMaxPoint,
+            aboveThreshold,
+            localMaximum,
+            kept,
+            suppressor: kept ? null : localMaxPoint,
+            reason
+        };
+    }
+
+    function rawRefineAt(raw, x, y) {
+        if (selectedAlgorithm() !== "harris" || x < 1 || y < 1 || x >= raw.width - 1 || y >= raw.height - 1) {
+            return { dx: 0, dy: 0, offset: 0, valid: false };
+        }
+        const at = (xx, yy) => raw.response[yy * raw.width + xx] || 0;
+        const center = at(x, y);
+        const gx = (at(x + 1, y) - at(x - 1, y)) / 2;
+        const gy = (at(x, y + 1) - at(x, y - 1)) / 2;
+        const hxx = at(x + 1, y) - 2 * center + at(x - 1, y);
+        const hyy = at(x, y + 1) - 2 * center + at(x, y - 1);
+        const hxy = (at(x + 1, y + 1) - at(x + 1, y - 1) - at(x - 1, y + 1) + at(x - 1, y - 1)) / 4;
+        const determinant = hxx * hyy - hxy * hxy;
+        if (!Number.isFinite(determinant) || Math.abs(determinant) < 1e-12) return { dx: 0, dy: 0, offset: 0, valid: false };
+        const dx = -(hyy * gx - hxy * gy) / determinant;
+        const dy = -(-hxy * gx + hxx * gy) / determinant;
+        const valid = Number.isFinite(dx) && Number.isFinite(dy) && Math.abs(dx) <= 1.5 && Math.abs(dy) <= 1.5;
+        return { dx: valid ? dx : 0, dy: valid ? dy : 0, offset: valid ? Math.hypot(dx, dy) : 0, valid };
+    }
+
+    function rawPatch(source, width, height, x, y, radius = 2) {
+        const rows = [];
+        for (let yy = y - radius; yy <= y + radius; yy++) {
+            const row = [];
+            for (let xx = x - radius; xx <= x + radius; xx++) {
+                const safeX = Math.max(0, Math.min(width - 1, xx));
+                const safeY = Math.max(0, Math.min(height - 1, yy));
+                row.push(source[safeY * width + safeX] || 0);
+            }
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    function rawPatchDerived(raw, x, y, radius, fn) {
+        const rows = [];
+        for (let yy = y - radius; yy <= y + radius; yy++) {
+            const row = [];
+            for (let xx = x - radius; xx <= x + radius; xx++) {
+                const safeX = Math.max(0, Math.min(raw.width - 1, xx));
+                const safeY = Math.max(0, Math.min(raw.height - 1, yy));
+                const index = safeY * raw.width + safeX;
+                row.push(fn({ ix: raw.ix[index] || 0, iy: raw.iy[index] || 0 }));
+            }
+            rows.push(row);
+        }
+        return rows;
     }
 
     function centerOf(matrix) {
@@ -374,6 +1983,68 @@
     function nearestPointDistance(x, y, points) {
         if (!points?.length) return Infinity;
         return Math.min(...points.map(point => Math.hypot(point.x - x, point.y - y)));
+    }
+
+    function packedValueAtSource(packed, sourceX, sourceY) {
+        if (!packed?.values?.length) return 0;
+        const px = Math.max(0, Math.min(packed.width - 1, Math.round(sourceX / Math.max(1, packed.source_width || currentData.meta.width) * packed.width)));
+        const py = Math.max(0, Math.min(packed.height - 1, Math.round(sourceY / Math.max(1, packed.source_height || currentData.meta.height) * packed.height)));
+        return Number(packed.values[py * packed.width + px]) || 0;
+    }
+
+    function nmsProbeDecision(probe) {
+        const data = probe?.responseRaw !== undefined ? probe : currentProbeData();
+        const x = Math.round(data?.x ?? 0);
+        const y = Math.round(data?.y ?? 0);
+        const currentR = Number(data?.responseRaw) || 0;
+        const displayR = Number(data?.responseDisplay) || 0;
+        const threshold = Number(data?.thresholdRaw) || 0;
+        const localMax = Number(data?.nmsMaxRaw) || currentR;
+        const aboveThreshold = Boolean(data?.isCandidate);
+        const localMaximum = currentR >= localMax - 1e-6;
+        const kept = Boolean(data?.nmsResult);
+        const reason = data?.nmsReason || (kept ? "raw R 通过 NMS" : "raw R 未进入保留集合");
+        return {
+            x,
+            y,
+            currentR,
+            displayR,
+            threshold,
+            localMax,
+            localMaxPoint: data?.nmsSuppressor || { x, y },
+            aboveThreshold,
+            localMaximum,
+            kept,
+            suppressor: data?.nmsSuppressor || null,
+            reason
+        };
+    }
+
+    function nmsRadiusForCurrentAlgorithm() {
+        return Number(selectedAlgorithm() === "shi-tomasi"
+            ? document.querySelector('[name="shi_nms_radius"]')?.value
+            : document.querySelector('[name="nms_radius"]')?.value) || 8;
+    }
+
+    function responseThresholdRatio() {
+        return Number(selectedAlgorithm() === "shi-tomasi"
+            ? document.querySelector('[name="shi_threshold"]')?.value
+            : document.querySelector('[name="harris_threshold"]')?.value) || (selectedAlgorithm() === "shi-tomasi" ? 0.08 : 0.01);
+    }
+
+    function responseThresholdValue(packed) {
+        const values = packed?.values?.map(value => Number(value) || 0) || [];
+        const maxValue = values.length ? Math.max(...values) : 0;
+        return maxValue * responseThresholdRatio();
+    }
+
+    function nearestPointWithDistance(x, y, points) {
+        let best = { point: null, distance: Infinity };
+        (points || []).forEach(point => {
+            const distance = Math.hypot(point.x - x, point.y - y);
+            if (distance < best.distance) best = { point, distance };
+        });
+        return best;
     }
 
     function nearestRefinedProbe(x, y) {
@@ -405,38 +2076,41 @@
     }
 
     function probeForCurrentSelection() {
-        const fallback = currentData?.probe || {};
-        if (!selectedProbe || !currentData?.arrays) return fallback;
-        const arrays = currentData.arrays;
-        const x = selectedProbe.x;
-        const y = selectedProbe.y;
-        const ix = centerOf(patchFromPacked(arrays.ix, x, y));
-        const iy = centerOf(patchFromPacked(arrays.iy, x, y));
-        const sxx = centerOf(patchFromPacked(arrays.sxx, x, y, 1));
-        const syy = centerOf(patchFromPacked(arrays.syy, x, y, 1));
-        const sxy = centerOf(patchFromPacked(arrays.sxy, x, y, 1));
-        const det = Number(sxx) * Number(syy) - Number(sxy) * Number(sxy);
-        const trace = Number(sxx) + Number(syy);
+        const data = currentProbeData();
+        if (!data) return currentData?.probe || {};
         return {
-            x,
-            y,
-            gray_patch: patchFromPacked(arrays.gray, x, y),
-            ix_patch: patchFromPacked(arrays.ix, x, y),
-            iy_patch: patchFromPacked(arrays.iy, x, y),
-            ix2_patch: patchFromPacked(arrays.ix2, x, y),
-            iy2_patch: patchFromPacked(arrays.iy2, x, y),
-            ixiy_patch: patchFromPacked(arrays.ixiy, x, y),
-            gaussian_weight: fallback.gaussian_weight || [],
-            M: [[sxx, sxy], [sxy, syy]],
-            det: Number.isFinite(det) ? det.toFixed(3) : "-",
-            trace: Number.isFinite(trace) ? trace.toFixed(3) : "-",
-            r: selectedAlgorithm() === "harris" && Number.isFinite(det) ? (det - 0.04 * trace * trace).toFixed(3) : centerOf(patchFromPacked(arrays.shi_tomasi_response || arrays.harris_response, x, y, 1))
+            ...data,
+            det: data.det,
+            trace: data.trace,
+            r: data.responseRaw
         };
     }
 
     function fastCenterValue(point) {
         if (!point || !currentGray) return "-";
         return Math.round(currentGray.gray[point.y * currentGray.width + point.x]);
+    }
+
+    function fastProbePoint() {
+        if (!currentGray) return null;
+        const fallback = currentFast?.corners?.[0] || currentFast?.candidates?.[0] || {
+            x: Math.floor(currentGray.width / 2),
+            y: Math.floor(currentGray.height / 2),
+            response: 0,
+            start: -1,
+            polarity: "none"
+        };
+        if (!selectedProbe) return fallback;
+        const candidates = currentFast?.candidates || [];
+        const nearest = nearestPointWithDistance(selectedProbe.x, selectedProbe.y, candidates);
+        if (nearest.point && nearest.distance <= Math.max(6, fastOptions().nmsRadius * 1.5)) return nearest.point;
+        return {
+            x: Math.max(3, Math.min(currentGray.width - 4, Math.round(selectedProbe.x))),
+            y: Math.max(3, Math.min(currentGray.height - 4, Math.round(selectedProbe.y))),
+            response: 0,
+            start: -1,
+            polarity: "none"
+        };
     }
 
     function grayPacked() {
@@ -449,7 +2123,7 @@
     }
 
     function drawProbeMarker(canvas) {
-        if (!canvas || !selectedProbe || selectedAlgorithm() === "fast") return;
+        if (!canvas || !selectedProbe) return;
         const position = sourceToCanvasPoint(selectedProbe.x, selectedProbe.y, canvas);
         if (!position) return;
         const ctx = canvas.getContext("2d");
@@ -474,8 +2148,67 @@
         ctx.restore();
     }
 
+    async function renderPreviousStepOverlay(currentStepDef, original) {
+        const previous = previousStep();
+        const overlay = V.$("cornerPreviousCanvas");
+        const control = V.$("cornerCompareControl");
+        const divider = V.$("cornerCompareDivider");
+        const enabled = cornerDisplayMode() === "compare" && previous && overlay && currentStepDef;
+        if (!enabled) {
+            if (overlay) overlay.hidden = true;
+            if (control) control.hidden = true;
+            if (divider) divider.hidden = true;
+            return;
+        }
+        const temp = document.createElement("canvas");
+        if (selectedAlgorithm() === "fast") await drawFastStep(temp, previous.key, original);
+        else await drawHarrisStep(temp, previous.key, original);
+        overlay.width = Math.max(1, V.$("cornerStepCanvas").width);
+        overlay.height = Math.max(1, V.$("cornerStepCanvas").height);
+        const ctx = overlay.getContext("2d");
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, overlay.width, overlay.height);
+        drawImageCover(ctx, temp, 0, 0, overlay.width, overlay.height);
+        overlay.hidden = false;
+        control.hidden = false;
+        V.$("cornerPreviousLabel").textContent = previous.en;
+        V.$("cornerCurrentLabel").textContent = currentStepDef.en;
+        syncCompareOverlayLayout();
+        updateCompareClip();
+    }
+
+    function syncCompareOverlayLayout() {
+        const frame = V.$("cornerMainFrame");
+        const canvas = V.$("cornerStepCanvas");
+        const overlay = V.$("cornerPreviousCanvas");
+        if (!frame || !canvas || !overlay || overlay.hidden) return;
+        const frameBox = frame.getBoundingClientRect();
+        const canvasBox = canvas.getBoundingClientRect();
+        overlay.style.left = `${canvasBox.left - frameBox.left}px`;
+        overlay.style.top = `${canvasBox.top - frameBox.top}px`;
+        overlay.style.width = `${canvasBox.width}px`;
+        overlay.style.height = `${canvasBox.height}px`;
+        updateCompareClip();
+    }
+
+    function updateCompareClip() {
+        const overlay = V.$("cornerPreviousCanvas");
+        const divider = V.$("cornerCompareDivider");
+        const frame = V.$("cornerMainFrame");
+        const canvas = V.$("cornerStepCanvas");
+        const range = Number(V.$("cornerCompareRange")?.value || 50);
+        if (!overlay || !divider || !frame || !canvas || overlay.hidden) return;
+        const ratio = Math.max(0, Math.min(100, range));
+        overlay.style.clipPath = `inset(0 ${100 - ratio}% 0 0)`;
+        const frameBox = frame.getBoundingClientRect();
+        const canvasBox = canvas.getBoundingClientRect();
+        divider.hidden = false;
+        divider.style.left = `${canvasBox.left - frameBox.left + canvasBox.width * ratio / 100}px`;
+    }
+
     function handleProbePick(event) {
-        if (!currentData || selectedAlgorithm() === "fast") return;
+        if (!currentData) return;
         const canvas = V.$("cornerStepCanvas");
         const visible = displayedCanvasRect(canvas);
         if (!visible) return;
@@ -491,31 +2224,54 @@
         };
         const mapped = canvasPointToSource(canvasPoint.x, canvasPoint.y);
         if (!mapped) return;
-        selectedProbe = mapped;
-        drawCurrentStep();
+        if (selectedAlgorithm() === "fast") {
+            selectedProbe = mapped;
+            const selected = fastProbePoint();
+            selectedProbe = selected ? { x: selected.x, y: selected.y } : mapped;
+        } else {
+            selectedProbe = currentStepKey() === "nms" ? nearestNmsProbePoint(mapped) : mapped;
+        }
+        drawCurrentStep({ animate: false });
+    }
+
+    function nearestNmsProbePoint(point) {
+        if (!point || selectedAlgorithm() === "fast") return point;
+        const kept = pointsForAlgorithm();
+        const candidates = [
+            ...(kept || []).map(item => ({ ...item, kept: true })),
+            ...responseCandidatesForNms(kept, 5000).map(item => ({ ...item, kept: false }))
+        ];
+        let best = { point: null, distance: Infinity };
+        candidates.forEach(item => {
+            const distance = Math.hypot(item.x - point.x, item.y - point.y);
+            if (distance < best.distance) best = { point: item, distance };
+        });
+        return best.point && best.distance <= Math.max(10, nmsRadiusForCurrentAlgorithm() * 1.8)
+            ? clampSourcePoint(best.point.x, best.point.y)
+            : point;
     }
 
     function displayedCanvasRect(canvas) {
         if (!canvas?.width || !canvas?.height) return null;
         const box = canvas.getBoundingClientRect();
-        const canvasRatio = canvas.width / canvas.height;
-        const boxRatio = box.width / box.height;
-        let width = box.width;
-        let height = box.height;
-        let left = box.left;
-        let top = box.top;
-        if (boxRatio > canvasRatio) {
-            width = box.height * canvasRatio;
-            left = box.left + (box.width - width) / 2;
-        } else {
-            height = box.width / canvasRatio;
-            top = box.top + (box.height - height) / 2;
-        }
-        return { left, top, width, height, right: left + width, bottom: top + height };
+        return {
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+            right: box.right,
+            bottom: box.bottom
+        };
     }
 
     function currentStepKey() {
         return harrisSteps()[Math.min(currentStep, harrisSteps().length - 1)]?.key || "input";
+    }
+
+    function previousStep() {
+        const steps = harrisSteps();
+        if (currentStep <= 0) return null;
+        return steps[currentStep - 1] || null;
     }
 
     function packedForStepPanel(stepKey, panelIndex = 0) {
@@ -530,6 +2286,12 @@
 
     function canvasPointToSource(x, y) {
         const stepKey = currentStepKey();
+        if (selectedAlgorithm() === "fast") {
+            return clampSourcePoint(
+                x / Math.max(1, V.$("cornerStepCanvas").width) * currentData.meta.width,
+                y / Math.max(1, V.$("cornerStepCanvas").height) * currentData.meta.height
+            );
+        }
         if (["input", "response", "nms", "refine"].includes(stepKey)) {
             return clampSourcePoint(x / Math.max(1, V.$("cornerStepCanvas").width) * currentData.meta.width, y / Math.max(1, V.$("cornerStepCanvas").height) * currentData.meta.height);
         }
@@ -547,6 +2309,12 @@
 
     function sourceToCanvasPoint(sourceX, sourceY, canvas) {
         const stepKey = currentStepKey();
+        if (selectedAlgorithm() === "fast") {
+            return {
+                x: sourceX / Math.max(1, currentData.meta.width) * canvas.width,
+                y: sourceY / Math.max(1, currentData.meta.height) * canvas.height
+            };
+        }
         if (["input", "response", "nms", "refine"].includes(stepKey)) {
             return {
                 x: sourceX / Math.max(1, currentData.meta.width) * canvas.width,
@@ -616,17 +2384,14 @@
     }
 
     function cancelCanvasAnimation() {
+        if (animationStartTimer) {
+            window.clearTimeout(animationStartTimer);
+            animationStartTimer = 0;
+        }
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
             animationFrameId = 0;
         }
-    }
-
-    function captureCanvasDisplaySize(canvas) {
-        if (!canvas) return null;
-        const rect = canvas.getBoundingClientRect();
-        if (!rect.width || !rect.height) return null;
-        return { width: rect.width, height: rect.height };
     }
 
     function clearCanvasDisplayTransition(canvas) {
@@ -637,50 +2402,72 @@
         canvas.style.height = "";
     }
 
-    function animateCanvasDisplaySize(canvas, fromSize, duration = 380) {
-        if (!canvas || !fromSize) return;
-        window.clearTimeout(canvasSizeTransitionTimer);
-        const target = canvas.getBoundingClientRect();
-        if (!target.width || Math.abs(target.width - fromSize.width) < 1 && Math.abs(target.height - fromSize.height) < 1) return;
-        canvas.style.transition = "none";
-        canvas.style.width = `${fromSize.width}px`;
-        canvas.style.height = `${fromSize.height}px`;
-        canvas.offsetWidth;
-        window.requestAnimationFrame(() => {
-            canvas.style.transition = `width ${duration}ms cubic-bezier(.22,1,.36,1), height ${duration}ms cubic-bezier(.22,1,.36,1), opacity .34s ease, transform .34s ease, filter .34s ease`;
-            canvas.style.width = `${target.width}px`;
-            canvas.style.height = `${target.height}px`;
-            canvasSizeTransitionTimer = window.setTimeout(() => {
-                clearCanvasDisplayTransition(canvas);
-            }, duration + 80);
-        });
+    function cloneCanvas(canvas) {
+        if (!canvas?.width || !canvas?.height) return null;
+        const copy = document.createElement("canvas");
+        copy.width = canvas.width;
+        copy.height = canvas.height;
+        copy.getContext("2d").drawImage(canvas, 0, 0);
+        return copy;
     }
 
-    function animateCanvas(canvas, drawFrame, duration = 1500) {
+    function prepareCanvasResizeTransition(canvas, previousFrame) {
+        if (!canvas || !previousFrame) return null;
+        const targetFrame = cloneCanvas(canvas);
+        if (!targetFrame || previousFrame.width === targetFrame.width && previousFrame.height === targetFrame.height) return null;
+        canvas.width = previousFrame.width;
+        canvas.height = previousFrame.height;
+        canvas.getContext("2d").drawImage(previousFrame, 0, 0);
+        clearCanvasDisplayTransition(canvas);
+        return {
+            fromWidth: previousFrame.width,
+            fromHeight: previousFrame.height,
+            targetWidth: targetFrame.width,
+            targetHeight: targetFrame.height,
+            targetFrame
+        };
+    }
+
+    function animateCanvas(canvas, drawFrame, duration = 1500, options = {}) {
         if (!canvas) return;
         cancelCanvasAnimation();
-        const ctx = canvas.getContext("2d");
-        const base = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const fixedBase = options.resize ? null : canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
         const started = performance.now();
         const frame = now => {
             const t = Math.min(1, (now - started) / duration);
-            ctx.putImageData(base, 0, 0);
+            if (options.resize) {
+                const ease = easeInOutCubic(t);
+                const width = Math.max(1, Math.round(options.resize.fromWidth + (options.resize.targetWidth - options.resize.fromWidth) * ease));
+                const height = Math.max(1, Math.round(options.resize.fromHeight + (options.resize.targetHeight - options.resize.fromHeight) * ease));
+                if (canvas.width !== width || canvas.height !== height) {
+                    canvas.width = width;
+                    canvas.height = height;
+                }
+            }
+            const ctx = canvas.getContext("2d");
+            if (fixedBase) ctx.putImageData(fixedBase, 0, 0);
             drawFrame(ctx, t, canvas);
-            if (t < 1) animationFrameId = requestAnimationFrame(frame);
+            if (t < 1) {
+                animationFrameId = requestAnimationFrame(frame);
+            } else if (options.resize) {
+                canvas.width = options.resize.targetWidth;
+                canvas.height = options.resize.targetHeight;
+                canvas.getContext("2d").drawImage(options.resize.targetFrame, 0, 0);
+            }
         };
         animationFrameId = requestAnimationFrame(frame);
     }
 
-    function animateCurrentStep(canvas, stepKey) {
+    function animateCurrentStep(canvas, stepKey, options = {}) {
         if (!canvas) return;
         if (selectedAlgorithm() === "fast") {
             animateFastStep(canvas, stepKey);
             return;
         }
-        if (stepKey === "gradient") animateGradientSplit(canvas);
-        else if (stepKey === "second") animateSecondMoment(canvas);
+        if (stepKey === "gradient") animateGradientSplit(canvas, options);
+        else if (stepKey === "second") animateSecondMoment(canvas, options);
         else if (stepKey === "tensor") animateTensorBuild(canvas);
-        else if (stepKey === "response") animateResponseBuild(canvas);
+        else if (stepKey === "response") animateResponseBuild(canvas, options);
         else if (stepKey === "nms") animateNms(canvas);
         else if (stepKey === "refine") animateRefine(canvas);
         else animateImageReveal(canvas, 900);
@@ -696,7 +2483,7 @@
         }, duration);
     }
 
-    function animateGradientSplit(canvas) {
+    function animateGradientSplit(canvas, options = {}) {
         const gray = renderPackedToCanvas(currentData?.arrays?.gray);
         const ix = renderPackedToCanvas(currentData?.arrays?.ix);
         const iy = renderPackedToCanvas(currentData?.arrays?.iy);
@@ -706,10 +2493,10 @@
             const split = easeInOutCubic(Math.max(0, Math.min(1, (t - 0.06) / 0.76)));
             const morph = easeOutCubic(Math.max(0, Math.min(1, (t - 0.28) / 0.58)));
             const full = {
-                x: (c.width - currentData.meta.width) / 2,
-                y: (c.height - currentData.meta.height) / 2,
-                width: currentData.meta.width,
-                height: currentData.meta.height
+                x: 0,
+                y: 0,
+                width: c.width,
+                height: c.height
             };
             const leftTarget = { x: 0, y: layout.top, width: layout.panelWidth, height: layout.panelHeight };
             const rightTarget = {
@@ -733,10 +2520,10 @@
             drawSobelWindow(ctx, scan * layout.panelWidth, layout.top + layout.panelHeight * 0.36, Math.min(46, layout.panelWidth * 0.2), "x", 0.78);
             drawSobelWindow(ctx, layout.panelWidth + layout.gap + scan * layout.panelWidth, layout.top + layout.panelHeight * 0.62, Math.min(46, layout.panelWidth * 0.2), "y", 0.78);
             ctx.restore();
-        }, 1500);
+        }, 1500, options);
     }
 
-    function animateSecondMoment(canvas) {
+    function animateSecondMoment(canvas, options = {}) {
         const ix = renderPackedToCanvas(currentData?.arrays?.ix);
         const iy = renderPackedToCanvas(currentData?.arrays?.iy);
         const ix2 = renderPackedToCanvas(currentData?.arrays?.ix2);
@@ -775,7 +2562,7 @@
             const probe = sourceToPanelCanvasPoint(c, 3, Math.min(2, Math.floor(t * 3)), probeForCurrentSelection().x || 0, probeForCurrentSelection().y || 0);
             drawMultiplyWindow(ctx, probe.x, probe.y, Math.min(54, layout3.panelWidth * 0.3), morph);
             ctx.restore();
-        }, 1700);
+        }, 1700, options);
     }
 
     function animateTensorBuild(canvas) {
@@ -808,15 +2595,13 @@
         }, 1800);
     }
 
-    function animateResponseBuild(canvas) {
+    function animateResponseBuild(canvas, options = {}) {
         const tensors = [currentData?.arrays?.sxx, currentData?.arrays?.sxy, currentData?.arrays?.syy].map(item => renderPackedToCanvas(item));
-        const finalCanvas = document.createElement("canvas");
-        finalCanvas.width = canvas.width;
-        finalCanvas.height = canvas.height;
-        finalCanvas.getContext("2d").drawImage(canvas, 0, 0);
+        const finalCanvas = options.resize?.targetFrame || cloneCanvas(canvas);
         animateCanvas(canvas, (ctx, t, c) => {
-            if (tensors.some(item => !item)) return;
-            const layout = panelLayout(c, 3);
+            if (tensors.some(item => !item) || !finalCanvas) return;
+            const gap = Math.max(8, Math.round(c.width * 0.025));
+            const startPanelWidth = (c.width - gap * 2) / 3;
             const merge = easeInOutCubic(Math.max(0, Math.min(1, (t - 0.04) / 0.76)));
             const reveal = easeOutCubic(Math.max(0, Math.min(1, (t - 0.32) / 0.58)));
             const target = { x: 0, y: 0, width: c.width, height: c.height };
@@ -825,24 +2610,24 @@
             ctx.fillRect(0, 0, c.width, c.height);
             tensors.forEach((img, index) => {
                 const start = {
-                    x: index * (layout.panelWidth + layout.gap),
-                    y: layout.top,
-                    width: layout.panelWidth,
-                    height: layout.panelHeight
+                    x: index * (startPanelWidth + gap),
+                    y: 0,
+                    width: startPanelWidth,
+                    height: c.height
                 };
                 const rect = interpolateRect(start, target, merge);
                 ctx.globalAlpha = Math.max(0, 1 - reveal * 0.92);
-                ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height);
+                drawImageCover(ctx, img, rect.x, rect.y, rect.width, rect.height);
             });
             ctx.globalAlpha = reveal;
-            ctx.drawImage(finalCanvas, 0, 0, c.width, c.height);
+            drawImageCover(ctx, finalCanvas, 0, 0, c.width, c.height);
             ctx.globalAlpha = 1;
             const probe = probeForCurrentSelection();
             const point = sourceToCanvasPoint(probe.x || 0, probe.y || 0, c) || { x: c.width / 2, y: c.height / 2 };
             drawResponseGlow(ctx, point.x, point.y, reveal);
             drawMatrixCells(ctx, Math.min(c.width - 68, point.x + 76), Math.max(54, point.y - 64), Math.max(0, 1 - merge * 1.2));
             ctx.restore();
-        }, 1600);
+        }, 1600, options);
     }
 
     function animateNms(canvas) {
@@ -851,7 +2636,7 @@
         const ctx = canvas.getContext("2d");
         const kept = pointsForAlgorithm();
         const rippleKept = kept.slice(0, 250);
-        const suppressed = responseCandidatesForNms(kept, 5000);
+        const suppressed = responseCandidatesForNms(kept, 800);
         const started = performance.now();
         const duration = 2500;
         const frame = now => {
@@ -917,19 +2702,61 @@
     function animateFastStep(canvas, stepKey) {
         if (stepKey === "circle" || stepKey === "threshold") {
             animateFastWindow(canvas, stepKey);
-        } else if (stepKey === "nms" || stepKey === "corners") {
-            animateCanvas(canvas, (ctx, t) => {
-                (currentFast?.corners || []).slice(0, 35).forEach(point => {
-                    ctx.strokeStyle = `rgba(234,179,8,${0.7 * (1 - t)})`;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 8 + 24 * t, 0, Math.PI * 2);
-                    ctx.stroke();
-                });
-            }, 1700);
+        } else if (stepKey === "nms") {
+            animateFastNms(canvas);
+        } else if (stepKey === "corners") {
+            animateFastCorners(canvas);
         } else {
             animateImageReveal(canvas, 900);
         }
+    }
+
+    function animateFastNms(canvas) {
+        const candidates = (currentFast?.candidates || []).slice(0, 900);
+        const kept = currentFast?.corners || [];
+        const keptKeys = new Set(kept.map(point => `${point.x},${point.y}`));
+        animateCanvas(canvas, (ctx, t) => {
+            const erase = easeInOutCubic(Math.max(0, Math.min(1, (t - 0.12) / 0.72)));
+            candidates.forEach((point, index) => {
+                const isKept = keptKeys.has(`${point.x},${point.y}`);
+                if (!isKept && index / Math.max(1, candidates.length) < erase) return;
+                if (isKept) {
+                    const pulse = 1 + 0.18 * Math.sin(t * Math.PI * 8);
+                    V.drawDiamond(ctx, point.x, point.y, "#facc15", 4.5 * pulse);
+                } else {
+                    ctx.globalAlpha = Math.max(0.12, 0.82 - erase * 0.7);
+                    V.drawCircle(ctx, point.x, point.y, "#94a3b8", 2.8);
+                    ctx.globalAlpha = 1;
+                }
+            });
+            kept.slice(0, 80).forEach((point, index) => {
+                const local = Math.max(0, Math.min(1, erase * kept.length - index));
+                if (!local) return;
+                ctx.strokeStyle = `rgba(250,204,21,${0.55 * (1 - local)})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6 + fastOptions().nmsRadius * 2.4 * local, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+        }, 2400);
+    }
+
+    function animateFastCorners(canvas) {
+        const points = currentFast?.corners || [];
+        animateCanvas(canvas, (ctx, t) => {
+            const visible = Math.ceil(points.length * easeOutCubic(t));
+            points.slice(0, visible).forEach((point, index) => {
+                const age = Math.max(0, Math.min(1, visible - index));
+                V.drawDiamond(ctx, point.x, point.y, "#facc15", 4 + age * 1.4);
+            });
+            const sweepX = canvas.width * easeInOutCubic(t);
+            const gradient = ctx.createLinearGradient(sweepX - 45, 0, sweepX + 20, 0);
+            gradient.addColorStop(0, "rgba(250,204,21,0)");
+            gradient.addColorStop(0.75, "rgba(250,204,21,.16)");
+            gradient.addColorStop(1, "rgba(250,204,21,0)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(sweepX - 45, 0, 65, canvas.height);
+        }, 1800);
     }
 
     function easeOutCubic(t) {
@@ -952,9 +2779,24 @@
     function drawMorphingPanel(ctx, fromImage, toImage, rect, progress) {
         ctx.save();
         ctx.globalAlpha = 1;
-        ctx.drawImage(fromImage, rect.x, rect.y, rect.width, rect.height);
+        drawImageCover(ctx, fromImage, rect.x, rect.y, rect.width, rect.height);
         ctx.globalAlpha = progress;
-        ctx.drawImage(toImage, rect.x, rect.y, rect.width, rect.height);
+        drawImageCover(ctx, toImage, rect.x, rect.y, rect.width, rect.height);
+        ctx.restore();
+    }
+
+    function drawImageCover(ctx, image, x, y, width, height) {
+        if (!image || width <= 0 || height <= 0) return;
+        const sourceWidth = image.width || image.naturalWidth;
+        const sourceHeight = image.height || image.naturalHeight;
+        const scale = Math.max(width / sourceWidth, height / sourceHeight);
+        const drawWidth = sourceWidth * scale;
+        const drawHeight = sourceHeight * scale;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.clip();
+        ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
         ctx.restore();
     }
 
@@ -1239,7 +3081,7 @@
         const keptSet = new Set((kept || []).map(point => `${Math.round(point.x)},${Math.round(point.y)}`));
         const candidates = [];
         const stride = Math.max(1, Math.floor(Math.min(packed.width, packed.height) / 180));
-        const threshold = maxValue * 0.38;
+        const threshold = responseThresholdValue(packed);
         for (let y = 0; y < packed.height; y += stride) {
             for (let x = 0; x < packed.width; x += stride) {
                 const response = values[y * packed.width + x];
@@ -1265,35 +3107,155 @@
     }
 
     function animateFastWindow(canvas, stepKey) {
-        const points = (currentFast?.candidates || currentFast?.corners || []).slice(0, 20);
+        const selected = fastProbePoint();
+        const scanPoints = fastScanPath(selected);
+        const points = scanPoints.length ? scanPoints : (selected ? [selected] : []);
         if (!points.length) return;
+        const contiguous = Math.max(1, currentFast?.contiguous || fastOptions().contiguous);
         animateCanvas(canvas, (ctx, t) => {
-            const idx = Math.min(points.length - 1, Math.floor(t * points.length));
+            const travel = easeInOutCubic(Math.min(1, t * 1.08));
+            const idx = Math.min(points.length - 1, Math.floor(travel * points.length));
             const point = points[idx];
-            const radius = 18;
+            const phase = travel * points.length - idx;
+            points.slice(Math.max(0, idx - 9), idx).forEach((visited, trailIndex) => drawFastScanWindow(ctx, visited, 0.12 + trailIndex * 0.06, true));
             ctx.save();
-            ctx.strokeStyle = "#eab308";
-            ctx.lineWidth = 2.5;
-            ctx.fillStyle = "rgba(234,179,8,.10)";
+            drawFastScanWindow(ctx, point, 1, false, phase);
+            drawFastMagnifier(ctx, canvas, point, stepKey, contiguous, phase);
+            ctx.restore();
+        }, stepKey === "circle" ? 2600 : 3000);
+    }
+
+    function fastScanPath(selected) {
+        if (!selected || !currentGray) return [];
+        const path = [];
+        const step = Math.max(8, Math.round(Math.min(currentGray.width, currentGray.height) / 24));
+        const startY = Math.max(3, selected.y - step * 2);
+        for (let row = 0; row < 5; row++) {
+            const y = Math.max(3, Math.min(currentGray.height - 4, startY + row * step));
+            const direction = row % 2 === 0 ? 1 : -1;
+            for (let col = -4; col <= 4; col++) {
+                const offset = direction > 0 ? col : -col;
+                const x = Math.max(3, Math.min(currentGray.width - 4, selected.x + offset * step));
+                path.push({ x, y, start: -1, polarity: "none", response: 0 });
+            }
+        }
+        path.push(selected);
+        return path;
+    }
+
+    function drawFastScanWindow(ctx, point, alpha = 1, compact = false, phase = 0) {
+        const size = compact ? 14 : 28;
+        const pulse = compact ? 0 : 4 * Math.sin(phase * Math.PI);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = compact ? "rgba(37,99,235,.08)" : "rgba(37,99,235,.18)";
+        ctx.strokeStyle = compact ? "#93c5fd" : "#2563eb";
+        ctx.lineWidth = compact ? 1.2 : 3;
+        ctx.fillRect(point.x - size / 2, point.y - size / 2, size, size);
+        ctx.strokeRect(point.x - size / 2, point.y - size / 2, size, size);
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = compact ? 1 : 2.5;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 18 + pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        V.fastCircle.forEach(([dx, dy], index) => {
+            const dotX = point.x + dx * 4;
+            const dotY = point.y + dy * 4;
+            ctx.fillStyle = index % 4 === 0 ? "#f97316" : "#facc15";
             ctx.beginPath();
-            ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+            ctx.arc(dotX, dotY, compact ? 1.6 : 2.6, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+
+    function drawFastMagnifier(ctx, canvas, point, stepKey, contiguous, phase) {
+        const size = Math.max(210, Math.min(300, canvas.width * 0.46));
+        const panelWidth = size * 1.08;
+        const panelHeight = size * 0.92;
+        const left = Math.max(12, canvas.width - panelWidth - 18);
+        const top = 18;
+        const cx = left + panelWidth * 0.43;
+        const cy = top + panelHeight * 0.54;
+        const radius = size * 0.30;
+        const center = fastCenterValue(point);
+        const activeIndices = point.start >= 0
+            ? Array.from({ length: contiguous }, (_, offset) => (point.start + offset) % 16)
+            : [];
+        ctx.save();
+        ctx.fillStyle = "rgba(248,251,255,.96)";
+        ctx.strokeStyle = "rgba(37,99,235,.9)";
+        ctx.lineWidth = 2.4;
+        roundRect(ctx, left, top, panelWidth, panelHeight, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "900 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(stepKey === "circle" ? "FAST 16 点圆周采样" : `FAST-${contiguous} 连续段判定`, left + 16, top + 24);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "800 11px sans-serif";
+        ctx.fillText(`C=${center}  t=${fastOptions().threshold}`, left + 16, top + panelHeight - 16);
+        const beam = ctx.createLinearGradient(point.x, point.y, left, top);
+        beam.addColorStop(0, "rgba(250,204,21,.32)");
+        beam.addColorStop(1, "rgba(37,99,235,.04)");
+        ctx.strokeStyle = beam;
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(point.x + 10, point.y - 10);
+        ctx.lineTo(left + 18, top + panelHeight - 22);
+        ctx.stroke();
+        V.fastCircle.forEach((offset, index) => {
+            const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius;
+            const value = currentGray?.gray?.[(point.y + offset[1]) * currentGray.width + point.x + offset[0]] ?? center;
+            const bright = value > center + fastOptions().threshold;
+            const dark = value < center - fastOptions().threshold;
+            const active = activeIndices.includes(index);
+            const reveal = stepKey === "circle" ? Math.max(0.18, Math.min(1, phase * 2.4 - index / 16 + 0.7)) : 1;
+            ctx.globalAlpha = reveal;
+            ctx.fillStyle = active ? (bright ? "#f97316" : "#2563eb") : bright ? "#fed7aa" : dark ? "#bfdbfe" : "#e2e8f0";
+            ctx.strokeStyle = active ? "#facc15" : "#94a3b8";
+            ctx.lineWidth = active ? 3 : 1.2;
+            ctx.beginPath();
+            ctx.arc(x, y, active ? 9 : 6.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
-            V.fastCircle.forEach(([dx, dy], i) => {
-                const x = point.x + dx * 4;
-                const y = point.y + dy * 4;
-                const active = point.start >= 0 && Array.from({ length: currentFast.contiguous }, (_, step) => (point.start + step) % 16).includes(i);
-                ctx.fillStyle = active ? "#f97316" : "#facc15";
-                ctx.beginPath();
-                ctx.arc(x, y, active ? 4 : 3, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.restore();
-        }, 1900);
+            if (active) {
+                ctx.fillStyle = "#0f172a";
+                ctx.font = "900 9px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(bright ? "+" : dark ? "-" : "=", x, y + 3);
+            }
+        });
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = point.start >= 0 && stepKey === "threshold" ? "#16a34a" : "#2563eb";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 17, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "900 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("C", cx, cy + 3);
+        if (stepKey === "threshold" && activeIndices.length) {
+            const startAngle = -Math.PI / 2 + point.start * Math.PI * 2 / 16;
+            const endAngle = startAngle + contiguous * Math.PI * 2 / 16;
+            ctx.strokeStyle = point.polarity === "bright" ? "#f97316" : "#2563eb";
+            ctx.lineWidth = 9;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 12, startAngle, endAngle);
+            ctx.stroke();
+            ctx.fillStyle = point.polarity === "bright" ? "#f97316" : "#2563eb";
+            ctx.font = "900 13px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(point.polarity === "bright" ? "连续亮点通过" : "连续暗点通过", left + panelWidth - 16, top + panelHeight - 16);
+        }
+        ctx.restore();
     }
 
     async function drawFastProbe(canvas) {
-        const point = currentFast?.corners?.[0] || currentFast?.candidates?.[0];
+        const point = fastProbePoint();
         if (!canvas || !currentGray || !point) return;
         V.setCanvasSize(canvas, 620, 430);
         const ctx = canvas.getContext("2d");
@@ -1329,41 +3291,37 @@
         });
     }
 
-    async function drawCurrentStep() {
+    async function drawCurrentStep(options = {}) {
         if (!currentData) return;
+        const shouldAnimate = options.animate !== false && cornerDisplayMode() !== "compare";
         cancelCanvasAnimation();
         const steps = harrisSteps();
         if (currentStep >= steps.length) currentStep = steps.length - 1;
         const step = steps[currentStep];
         const canvas = V.$("cornerStepCanvas");
-        const shouldAnimateSize = selectedAlgorithm() !== "fast" && ["gradient", "second", "response"].includes(step.key);
-        const previousDisplaySize = shouldAnimateSize ? captureCanvasDisplaySize(canvas) : null;
+        const shouldAnimateSize = shouldAnimate && selectedAlgorithm() !== "fast" && ["gradient", "second", "response"].includes(step.key);
+        const previousFrame = shouldAnimateSize ? cloneCanvas(canvas) : null;
         clearCanvasDisplayTransition(canvas);
         const original = currentData.images.original;
         V.$("cornerStageTitle").textContent = `${algorithmLabel()} · ${step.en}`;
         V.$("cornerStepStatus").textContent = step.zh;
         V.$("cornerFlowTitle").textContent = `${algorithmLabel()} 角点检测计算流程`;
-        V.$("cornerChainTitle").textContent = selectedAlgorithm() === "fast"
-            ? "Gray Center → 16-Circle → Threshold → Run → Score → NMS"
-            : "Gray Patch → Ix/Iy → Ix²/IxIy/Iy² → Gaussian Window → Sxx/Sxy/Syy → M → det/trace/R → NMS → Refine";
-        const probe = probeForCurrentSelection();
-        V.$("cornerPointBadge").textContent = selectedAlgorithm() === "fast"
-            ? `FAST-${currentFast?.contiguous || fastOptions().contiguous}`
-            : `当前点 (${probe.x ?? "-"}, ${probe.y ?? "-"})`;
 
         if (selectedAlgorithm() === "fast") {
             await drawFastStep(canvas, step.key, original);
-            renderFastChain(step.key);
         } else {
             await drawHarrisStep(canvas, step.key, original);
-            renderHarrisChain(step.key);
         }
-        if (shouldAnimateSize) animateCanvasDisplaySize(canvas, previousDisplaySize);
+        const resize = shouldAnimateSize ? prepareCanvasResizeTransition(canvas, previousFrame) : null;
         drawProbeMarker(canvas);
-        window.setTimeout(() => {
-            animateCurrentStep(canvas, step.key);
-        }, 20);
-        renderCurrentProbe(step.key);
+        renderMotionProbe(step.key);
+        await renderPreviousStepOverlay(step, original);
+        if (shouldAnimate) {
+            animationStartTimer = window.setTimeout(() => {
+                animationStartTimer = 0;
+                animateCurrentStep(canvas, step.key, { resize });
+            }, 20);
+        }
         const finalVisible = step.key === "refine" || step.key === "nms" && selectedAlgorithm() === "shi-tomasi" || step.key === "corners";
         V.$("cornerFinalSection").hidden = !finalVisible;
         if (finalVisible) await renderFinalCompare();
@@ -1467,9 +3425,21 @@
     async function drawFastStep(canvas, stepKey, original) {
         if (stepKey === "input") await V.drawBaseImage(canvas, original);
         else if (stepKey === "gray") drawPackedSourceSize(canvas, grayPacked());
-        else if (stepKey === "circle" || stepKey === "threshold") await V.drawBaseImage(canvas, original, "#f8fbff");
-        else if (stepKey === "nms") await V.drawFastKeypoints(canvas, original, currentFast?.candidates || [], { max: 1200, color: "#facc15", size: 3 });
+        else if (stepKey === "circle" || stepKey === "threshold") {
+            await V.drawBaseImage(canvas, original, "#f8fbff");
+            drawFastStaticExplanation(canvas, stepKey);
+        }
+        else if (stepKey === "nms") await V.drawBaseImage(canvas, original, "#f8fbff");
         else await V.drawFastKeypoints(canvas, original, currentFast?.corners || []);
+    }
+
+    function drawFastStaticExplanation(canvas, stepKey) {
+        const point = fastProbePoint();
+        if (!canvas || !point) return;
+        const ctx = canvas.getContext("2d");
+        const contiguous = Math.max(1, currentFast?.contiguous || fastOptions().contiguous);
+        drawFastScanWindow(ctx, point, 1);
+        drawFastMagnifier(ctx, canvas, point, stepKey, contiguous, 1);
     }
 
     async function drawSplitArrays(canvas, left, right, leftLabel, rightLabel) {
@@ -1624,36 +3594,29 @@
             : (algorithm === "shi-tomasi" ? currentData?.shi_tomasi?.candidate_count || 0 : currentData?.harris?.candidate_count || 0);
         const refined = refinedPoints();
         const offsets = subpixelOffsetStats(refined);
-        V.renderStatList(V.$("cornerStepStats"), [
-            ["当前算法", algorithmLabel()],
-            ["当前步骤", stepKey],
-            ["候选点数", candidates],
-            ["保留点数", points.length]
-        ]);
         V.renderStatList(V.$("harrisSummary"), [
             ["候选点数", candidates],
             ["NMS 保留数", points.length],
             ["亚像素有效数", algorithm === "harris" ? refined.length : "-"],
             ["亚像素平均偏移", algorithm === "harris" ? offsets.avg : "-"],
             ["亚像素最大偏移", algorithm === "harris" ? offsets.max : "-"],
-            ["处理耗时", algorithm === "fast" ? "浏览器计算" : `${currentData.meta.elapsed_ms} ms`],
-            ["图像尺寸", `${currentData.meta.width}×${currentData.meta.height}`]
+            ["处理耗时", algorithm === "fast" ? "浏览器计算" : `${currentData.meta.elapsed_ms} ms`]
         ]);
     }
 
     function renderFlow() {
         const steps = harrisSteps();
-        V.$("cornerFlowLine").innerHTML = steps.map((step, index) => `
-            <button type="button" class="flow-step ${index === currentStep ? "is-active" : ""}" data-corner-step="${index}">
-                <i>${index + 1}</i><b>${step.en}</b><small>${step.zh}</small>
-            </button>
-        `).join("");
+        V.$("cornerFlowLine").innerHTML = "";
+        V.$("cornerFlowLine").hidden = true;
         V.$("cornerFlowThumbs").innerHTML = steps.map((step, index) => `
             <button type="button" class="${index === currentStep ? "is-active" : ""}" data-corner-step="${index}">
-                <canvas id="cornerThumb${index}"></canvas><span>${step.en}</span>
+                <span class="corner-flow-card-head">
+                    <i>${index + 1}</i>
+                    <span><b>${step.en}</b><small>${step.zh}</small></span>
+                </span>
+                <canvas id="cornerThumb${index}"></canvas>
             </button>
         `).join("");
-        V.$("cornerFlowLine").querySelectorAll("[data-corner-step]").forEach(bindStepButton);
         V.$("cornerFlowThumbs").querySelectorAll("[data-corner-step]").forEach(bindStepButton);
         drawThumbs(steps);
     }
@@ -1711,6 +3674,29 @@
     });
     V.$("showSubpixel").addEventListener("change", drawCurrentStep);
     V.$("cornerStepCanvas")?.addEventListener("click", handleProbePick);
+    V.$("cornerDisplayMode")?.addEventListener("change", () => drawCurrentStep({ animate: false }));
+    V.$("cornerCompareRange")?.addEventListener("input", updateCompareClip);
+    window.addEventListener("resize", syncCompareOverlayLayout);
+    V.$("motionProbePlay")?.addEventListener("click", () => {
+        motionProbeState.playing = true;
+        motionProbeState.lastTime = 0;
+    });
+    V.$("motionProbePause")?.addEventListener("click", () => {
+        motionProbeState.playing = false;
+    });
+    V.$("motionProbeStep")?.addEventListener("click", () => {
+        const actions = motionActions(currentStepKey());
+        motionProbeState.playing = false;
+        motionProbeState.progress = (motionProbeState.progress + 1 / Math.max(1, actions.length)) % 1;
+        const canvas = V.$("cornerMotionCanvas");
+        if (canvas) drawMotionProbeFrame(canvas, currentStepKey(), motionProbeState.progress);
+    });
+    document.querySelectorAll("[data-motion-speed]").forEach(button => {
+        button.addEventListener("click", () => {
+            motionProbeState.speed = Number(button.dataset.motionSpeed) || 1;
+            document.querySelectorAll("[data-motion-speed]").forEach(item => item.classList.toggle("is-active", item === button));
+        });
+    });
     ["fastThreshold", "fastNmsRadius", "fastMaxCorners"].forEach(id => {
         V.$(id)?.addEventListener("input", () => {
             if (selectedAlgorithm() === "fast") form.requestSubmit();
@@ -1731,6 +3717,7 @@
     V.bindAutoSubmit(form, {
         excludeIds: [
             "cornerAlgorithm",
+            "cornerDisplayMode",
             "showSubpixel",
             "fastThreshold",
             "fastContiguous",
