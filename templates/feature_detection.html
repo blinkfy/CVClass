@@ -19,9 +19,8 @@
 
     <nav class="feature-tabs" aria-label="特征检测子页面">
         <a class="{{ 'active' if feature_mode == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
-        <a class="{{ 'active' if feature_mode == 'harris' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='harris') }}">Harris 角点过程</a>
-        <a class="{{ 'active' if feature_mode == 'sift_scale' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_scale') }}">SIFT 尺度空间</a>
-        <a class="{{ 'active' if feature_mode == 'sift_descriptor' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_descriptor') }}">SIFT 描述子</a>
+        <a class="{{ 'active' if feature_mode == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
+        <a class="{{ 'active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征检测</a>
         <a class="{{ 'active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配应用</a>
     </nav>
 
@@ -110,7 +109,7 @@
                     <label class="param-row">k 值 <input name="harris_k" type="number" value="0.04" step="0.01"></label>
                     <label class="param-row">高斯 σ <input name="harris_sigma" type="number" value="1.0" step="0.2"></label>
                     <label class="param-row">响应阈值 <input name="harris_threshold" type="number" value="0.01" step="0.005"></label>
-                    <label class="param-row">NMS 半径 <input name="nms_radius" type="number" value="4"></label>
+                    <label class="param-row">NMS 半径 <input name="nms_radius" type="number" value="8"></label>
                     <label class="param-row">最大角点 <input name="max_corners" type="number" value="500"></label>
                 </section>
 
@@ -141,7 +140,7 @@
                 <div class="card"><h3>SIFT</h3><img id="siftOverlay"><p id="siftStats">-</p></div>
                 <div class="card"><h3>Harris + SIFT</h3><img id="comboOverlay"><p id="comboStats">-</p></div>
             </div>
-            {% elif feature_mode == 'harris' %}
+            {% elif feature_mode == 'corner' %}
             <div class="card">
                 <div class="card-title"><h2>Harris 角点检测流程</h2><span id="elapsedLabel">等待运行</span></div>
                 <div class="step-thumbs">

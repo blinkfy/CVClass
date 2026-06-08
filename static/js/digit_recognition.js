@@ -293,13 +293,13 @@
     function updateModeBadge() {
         if (!els.inferenceModeBadge) return;
         els.inferenceModeBadge.textContent = state.inferenceMode === "client"
-            ? "当前模式：浏览器本地推理"
-            : "当前模式：Flask 后端推理";
+            ? "当前模式：本地推理"
+            : "当前模式：后端推理";
     }
 
     async function recognizeWithClient(preprocessed) {
         if (!window.loadClientDigitModel || !window.clientDigitModel) {
-            throw new Error("前端模型脚本未加载");
+            throw new Error("模型脚本未加载");
         }
 
         await window.loadClientDigitModel();

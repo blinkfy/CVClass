@@ -6,6 +6,7 @@
     if (!form) return;
     V.setupSamples(form);
     V.bindFileNames(form);
+    let requestId = 0;
 
     function renderPyramid(container, rows, dog) {
         if (!container) return;
@@ -38,26 +39,31 @@
         renderPyramid(V.$("gaussianPyramid"), data.pyramid?.gaussian || [], false);
         renderPyramid(V.$("dogPyramid"), data.pyramid?.dog || [], true);
         renderDogProbe(data.pyramid?.probe);
-        await V.drawSiftKeypoints(V.$("scaleSiftCanvas"), data.images.original, data.sift?.keypoints || [], { max: 350 });
+        const sift = data.sift || {};
+        await V.drawKeypoints(V.$("scaleExtremaCanvas"), data.images.original, sift.points_extrema || [], { color: "#94a3b8", max: 800, size: 3 });
+        await V.drawKeypoints(V.$("scaleEdgeCanvas"), data.images.original, sift.points_edge || [], { color: "#f97316", type: "circle", max: 600, radius: 3 });
+        await V.drawSiftKeypoints(V.$("scaleSiftCanvas"), data.images.original, sift.points_keypoints || sift.keypoints || [], { max: 350 });
         const c = data.sift?.counts || {};
         V.renderStatList(V.$("scaleStats"), [
             ["原始极值点", c.raw_extrema || 0],
-            ["低对比度过滤后", c.contrast_survivors || 0],
-            ["边缘过滤后", c.edge_survivors || 0],
-            ["最终保留", c.kept || data.sift?.count || 0]
+            ["对比度与边缘过滤后", c.edge_survivors || 0],
+            ["最终 NMS 保留", c.kept || data.sift?.count || 0]
         ]);
         V.$("scaleElapsed").textContent = `${data.meta.elapsed_ms} ms`;
     }
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        const currentRequest = ++requestId;
         const btn = form.querySelector("button[type=submit]");
         if (btn) btn.textContent = "构建中...";
         try {
             const data = await V.postForm(form, "/api/feature-detect");
+            if (currentRequest !== requestId) return;
             await render(data);
-        } catch (err) { alert(err.message || err); }
-        finally { if (btn) btn.textContent = "构建尺度空间"; }
+        } catch (err) { }
+        finally { if (currentRequest === requestId && btn) btn.textContent = "构建尺度空间"; }
     });
+    V.bindAutoSubmit(form);
     form.requestSubmit();
 })();

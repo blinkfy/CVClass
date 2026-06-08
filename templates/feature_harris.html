@@ -2,42 +2,90 @@
 {% block feature_content %}
 <section class="feature-layout">
     <aside class="feature-panel feature-controls">
-        <div><span class="section-label">Input & Params</span><h2>Harris 参数</h2></div>
+        <div><span class="section-label">Input & Params</span><h2>角点算法参数</h2></div>
         <form id="featureHarrisForm" data-feature-form>
-            <input type="hidden" name="mode" value="harris">
+            <input type="hidden" name="mode" value="corner">
             <input type="hidden" name="example" data-example-input value="building">
             <label class="feature-upload"><input type="file" name="image" accept="image/*"><span>上传图片</span><small data-file-name>当前使用示例图</small></label>
             <div class="feature-samples" data-samples></div>
             <div class="feature-control-group">
-                <label>窗口 σ <input name="harris_sigma" value="1.0" type="number" step="0.2"></label>
-                <label>k 值 <input name="harris_k" value="0.04" type="number" step="0.01"></label>
-                <label>响应阈值 <input name="harris_threshold" value="0.01" type="number" step="0.005"></label>
-                <label>NMS 半径 <input name="nms_radius" value="4" type="number"></label>
-                <label>最大角点 <input name="max_corners" value="500" type="number"></label>
-                <button class="feature-primary" type="submit">运行 Harris</button>
+                <label>算法选择<select id="cornerAlgorithm" name="corner_algorithm"><option value="harris">Harris</option><option value="shi-tomasi">Shi-Tomasi</option><option value="fast">FAST</option></select></label>
+                <div id="harrisControls" class="feature-control-group">
+                    <label>窗口 σ <input name="harris_sigma" value="1.0" type="number" step="0.2"></label>
+                    <label id="harrisKControl">k 值 <input name="harris_k" value="0.04" type="number" step="0.01"></label>
+                    <label id="harrisThresholdControl">Harris 响应阈值 <input name="harris_threshold" value="0.01" type="number" step="0.005"></label>
+                    <label id="harrisNmsControl">Harris NMS 半径 <input name="nms_radius" value="8" type="number"></label>
+                    <label id="shiThresholdControl" hidden>Shi-Tomasi 最小特征值阈值 <input name="shi_threshold" value="0.08" type="number" step="0.005"></label>
+                    <label id="shiNmsControl" hidden>Shi-Tomasi NMS 半径 <input name="shi_nms_radius" value="8" type="number" min="1" max="16"></label>
+                    <label>最多角点 <input name="max_corners" value="500" type="number"></label>
+                </div>
+                <div id="fastControls" class="feature-control-group" hidden>
+                    <label>FAST threshold<input id="fastThreshold" value="30" type="number" min="1" max="255"></label>
+                    <label>连续圆周点<select id="fastContiguous"><option value="9">FAST-9</option><option value="12">FAST-12</option></select></label>
+                    <label>FAST NMS 半径<input id="fastNmsRadius" value="8" type="number" min="1" max="16"></label>
+                    <label>FAST 最多角点<input id="fastMaxCorners" value="500" type="number" min="20" max="2000"></label>
+                </div>
+                <label class="feature-switch"><input id="showSubpixel" type="checkbox" checked><span>显示亚像素定位</span></label>
+                <button class="feature-primary" type="submit">运行角点检测</button>
             </div>
         </form>
     </aside>
     <main class="feature-workspace">
-        <section class="feature-panel feature-stage">
-            <div class="feature-stage-head"><div><span class="section-label">Harris Pipeline</span><h2>角点检测流程</h2></div><span id="harrisElapsed" class="status-pill">等待运行</span></div>
-            <div class="feature-step-canvases">
-                <figure><canvas id="hOriginal"></canvas><figcaption>Original</figcaption></figure><figure><canvas id="hGray"></canvas><figcaption>Gray</figcaption></figure><figure><canvas id="hIx"></canvas><figcaption>Ix</figcaption></figure><figure><canvas id="hIy"></canvas><figcaption>Iy</figcaption></figure><figure><canvas id="hIx2"></canvas><figcaption>Ix²</figcaption></figure><figure><canvas id="hIy2"></canvas><figcaption>Iy²</figcaption></figure><figure><canvas id="hIxIy"></canvas><figcaption>IxIy</figcaption></figure><figure class="is-active"><canvas id="hResponse"></canvas><figcaption>R Response</figcaption></figure><figure><canvas id="hNms"></canvas><figcaption>NMS</figcaption></figure><figure><canvas id="hCorners"></canvas><figcaption>Corners</figcaption></figure>
+        <section class="feature-panel feature-stage feature-corner-stage">
+            <div class="feature-stage-head">
+                <div><span class="section-label">Corner Pipeline</span><h2 id="cornerStageTitle">当前步骤</h2></div>
+                <span id="harrisElapsed" class="status-pill">等待运行</span>
             </div>
-            <div class="feature-harris-lower">
-                <div><h3>局部计算探针</h3><div id="harrisProbe" class="feature-probe-grid"></div></div>
-                <div><h3>最终角点叠加</h3><div class="feature-canvas-frame"><canvas id="harrisFinalCanvas"></canvas></div><div id="harrisSummary" class="feature-stat-list"></div></div>
+            <div class="feature-compare-status" id="cornerStepStatus">正在加载示例图...</div>
+            <div>
+                <div class="feature-canvas-frame feature-corner-main-frame">
+                    <canvas id="cornerStepCanvas" aria-label="当前步骤主图，点击图像选择局部探针位置"></canvas>
+                </div>
+                <p class="feature-corner-click-hint">点击主图任意位置切换局部计算探针；当前步骤将围绕该位置展开。</p>
+                <div id="cornerStepStats" class="feature-stat-list feature-stat-grid"></div>
             </div>
+
+            <section class="feature-flow feature-corner-flow">
+                <strong id="cornerFlowTitle">角点检测计算流程</strong>
+                <div id="cornerFlowLine" class="feature-flow-line feature-corner-flow-line"></div>
+                <div id="cornerFlowThumbs" class="feature-corner-thumbs"></div>
+            </section>
+
+            <div class="feature-corner-current">
+                <section class="feature-chain-card">
+                    <div class="feature-chain-head">
+                        <div><span class="section-label">Local Probe Chain</span><h3 id="cornerChainTitle">当前步骤局部计算</h3></div>
+                        <span id="cornerPointBadge" class="status-pill">当前点 -</span>
+                    </div>
+                    <div id="cornerChainProbe" class="feature-chain-grid"></div>
+                </section>
+                <aside class="feature-current-kernel">
+                    <span class="section-label">Current Probe</span>
+                    <h3 id="cornerProbeTitle">当前步骤明细</h3>
+                    <div id="cornerProbeSummary" class="feature-stat-list"></div>
+                </aside>
+            </div>
+
+            <section id="cornerFinalSection" class="feature-chain-card" hidden>
+                <div class="feature-chain-head">
+                    <div><span class="section-label">Final Compare</span><h3 id="cornerFinalTitle">整数角点 vs 亚像素角点</h3></div>
+                    <span id="cornerFinalBadge" class="status-pill">等待结果</span>
+                </div>
+                <div class="feature-corner-compare">
+                    <figure><canvas id="cornerIntegerCanvas"></canvas><figcaption id="cornerIntegerCaption">整数角点</figcaption></figure>
+                    <figure><canvas id="cornerRefineCanvas"></canvas><figcaption id="cornerRefineCaption">亚像素角点</figcaption></figure>
+                </div>
+                <div id="harrisSummary" class="feature-stat-list feature-stat-grid"></div>
+            </section>
         </section>
     </main>
     <aside class="feature-panel feature-info">
-        <div><span class="section-label">Process Notes</span><h2>Harris 角点过程</h2></div>
-        <div class="feature-note blue"><b>1 梯度计算</b><p>使用手写 Sobel 卷积计算 Ix、Iy。</p></div>
-        <div class="feature-note green"><b>2 结构张量 M</b><p>统计 Ix²、Iy²、IxIy 的局部加权和。</p></div>
-        <div class="feature-note orange"><b>3 Harris 响应</b><p>R = det(M) - k·trace(M)²。</p></div>
-        <div class="feature-boundary"><b>代码边界</b><p>后端只做梯度、M、R、NMS 计算；缩略图、热力图和角点叠加由前端 Canvas 完成。</p></div>
+        <div><span class="section-label">Process Notes</span><h2 id="cornerNoteTitle">当前步骤说明</h2></div>
+        <div id="cornerNotePrimary" class="feature-note blue"></div>
+        <div id="cornerNoteFormula" class="feature-note orange feature-latex-note"></div>
+        <div id="cornerNoteValues" class="feature-stat-list"></div>
+        <div class="feature-boundary"><b>实现说明</b><p id="cornerNoteBoundary">后端返回核心数组和角点结果；前端负责步骤切换、链式探针、亚像素拟合与 Canvas 绘制。</p></div>
     </aside>
 </section>
-{{ feature_timeline('harris') }}
 {% endblock %}
 {% block feature_js %}<script src="{{ url_for('static', filename='js/feature_harris.js') }}"></script>{% endblock %}

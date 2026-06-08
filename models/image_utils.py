@@ -457,16 +457,17 @@ def canny(image,threshold1=50,threshold2=150,apertureSize=5,L2gradient=False,pre
     rgb_result=np.stack([edges]*3,axis=-1)
     return img,blurred,(grad,angle),nmsret,edges,rgba_array_to_image(rgb_result)
 
-def harris(image,sigma=1.2,k=0.004,threshold_ratio=0.01,nms_radius=4,max_corners=500,method="harris"):
+def harris(image,sigma=1.2,k=0.04,threshold_ratio=0.01,nms_radius=8,max_corners=500,method="harris"):
     img=image_to_gray(image)[0]
     Ix=fliter(img,"sobel_x")
     Iy=fliter(img,"sobel_y")
     Ix2=Ix*Ix
     Iy2=Iy*Iy
     Ixy=Ix*Iy
-    sxx=gaussian_blur(Ix2,kernel_size=3,sigma=sigma)
-    syy=gaussian_blur(Iy2,kernel_size=3,sigma=sigma)
-    sxy=gaussian_blur(Ixy,kernel_size=3,sigma=sigma)
+    ksize=max(3,int(3*sigma)*2+1)
+    sxx=gaussian_blur(Ix2,3,sigma)
+    syy=gaussian_blur(Iy2,3,sigma)
+    sxy=gaussian_blur(Ixy,3,sigma)
     det=sxx*syy-sxy**2
     trace=sxx+syy
     if method=="harris":

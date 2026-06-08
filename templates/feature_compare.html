@@ -1,6 +1,6 @@
 {% extends "feature_base.html" %}
 {% block feature_content %}
-<section class="feature-layout">
+<section class="feature-layout feature-compare-layout">
     <aside class="feature-panel feature-controls">
         <div><span class="section-label">Input & Params</span><h2>参数面板</h2></div>
         <form id="featureCompareForm" data-feature-form>
@@ -10,36 +10,95 @@
             <div class="feature-samples" data-samples></div>
             <div class="feature-control-group">
                 <button class="feature-primary" type="submit">一键生成对比</button>
+                <label>叠加方法 A
+                    <select id="featureCompareLeft">
+                        <option value="harris">Harris</option>
+                        <option value="shi">Shi-Tomasi</option>
+                        <option value="fast">FAST</option>
+                        <option value="sift">SIFT</option>
+                    </select>
+                </label>
+                <label>叠加方法 B
+                    <select id="featureCompareRight">
+                        <option value="fast">FAST</option>
+                        <option value="sift">SIFT</option>
+                        <option value="harris">Harris</option>
+                        <option value="shi">Shi-Tomasi</option>
+                    </select>
+                </label>
                 <label>最大边长<input name="max_side" type="number" min="160" max="768" value="512"></label>
             </div>
             <div class="feature-compare-params">
-                <div class="feature-param-card"><strong>Harris</strong><label>k <input name="harris_k" value="0.04" type="number" step="0.01"></label><label>阈值 <input name="harris_threshold" value="0.01" type="number" step="0.005"></label><label>NMS 半径 <input name="nms_radius" value="4" type="number"></label></div>
-                <div class="feature-param-card"><strong>SIFT</strong><label>Octave <input name="sift_octaves" value="3" type="number"></label><label>DoG 阈值 <input name="contrast_threshold" value="0.03" type="number" step="0.005"></label><label>边缘阈值 <input name="edge_threshold" value="10" type="number"></label></div>
+                <details class="feature-param-card feature-param-fold" data-param-method="harris" open>
+                    <summary><strong>Harris</strong><span>k / 阈值 / NMS</span></summary>
+                    <label>k <input name="harris_k" value="0.04" type="number" step="0.01"></label>
+                    <label>响应阈值 <input name="harris_threshold" value="0.01" type="number" step="0.005"></label>
+                    <label>NMS 半径 <input name="nms_radius" value="8" type="number"></label>
+                </details>
+                <details class="feature-param-card feature-param-fold" data-param-method="shi">
+                    <summary><strong>Shi-Tomasi</strong><span>独立阈值 / NMS</span></summary>
+                    <label>最小特征值阈值 <input name="shi_threshold" value="0.05" type="number" step="0.005"></label>
+                    <label>NMS 半径 <input name="shi_nms_radius" value="8" type="number" min="1" max="16"></label>
+                </details>
+                <details class="feature-param-card feature-param-fold" data-param-method="sift">
+                    <summary><strong>SIFT</strong><span>尺度空间参数</span></summary>
+                    <label>Octave <input name="sift_octaves" value="3" type="number"></label>
+                    <label>DoG 阈值 <input name="contrast_threshold" value="0.03" type="number" step="0.005"></label>
+                    <label>边缘阈值 <input name="edge_threshold" value="10" type="number"></label>
+                </details>
+                <details class="feature-param-card feature-param-fold" data-param-method="fast" open>
+                    <summary><strong>FAST</strong><span>圆周检测参数</span></summary>
+                    <label>Threshold <input id="compareFastThreshold" value="30" type="number" min="1" max="255"></label>
+                    <label>连续点数 <select id="compareFastContiguous"><option value="9">FAST-9</option><option value="12">FAST-12</option></select></label>
+                    <label>NMS 半径 <input id="compareFastNms" value="8" type="number" min="1" max="16"></label>
+                </details>
             </div>
         </form>
     </aside>
 
     <main class="feature-workspace">
-        <section class="feature-panel feature-stage">
-            <div class="feature-stage-head"><div><span class="section-label">Compare</span><h2>方法对比</h2></div><span id="compareElapsed" class="status-pill">等待运行</span></div>
-            <div class="feature-canvas-frame feature-large-canvas"><canvas id="compareMainCanvas"></canvas></div>
-            <div class="feature-result-grid feature-result-grid-4">
-                <article><h3>Harris</h3><canvas id="harrisCanvas"></canvas><p id="harrisStats">-</p></article>
-                <article><h3>Shi-Tomasi</h3><canvas id="shiCanvas"></canvas><p id="shiStats">-</p></article>
-                <article><h3>SIFT</h3><canvas id="siftCanvas"></canvas><p id="siftStats">-</p></article>
-                <article><h3>Harris + SIFT</h3><canvas id="comboCanvas"></canvas><p id="comboStats">-</p></article>
+        <section class="feature-panel feature-stage feature-compare-stage">
+            <div class="feature-stage-head"><div><span class="section-label">Compare</span><h2>算法对比</h2></div></div>
+            <div id="featureCompareStatus" class="feature-compare-status">正在加载示例图...</div>
+            <div class="feature-compare-overlay">
+                <canvas id="featureCompareOverlayCanvas" aria-label="选中方法叠加结果"></canvas>
+                <div class="feature-compare-overlay-legend">
+                    <span id="featureOverlayMethodA">A · Harris</span>
+                    <span id="featureOverlayMethodB">B · FAST</span>
+                </div>
             </div>
+            <div class="feature-compare-strip-head">
+                <strong>结果速览</strong>
+                <span>点击卡片左半区设为方法 A，右半区设为方法 B</span>
+            </div>
+            <div class="feature-result-grid feature-result-grid-4 feature-compare-results">
+                <button type="button" data-feature-method="harris"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="harrisCanvas"></canvas><div><h3>Harris</h3><span class="feature-method-tag">响应函数</span><p id="harrisStats">-</p></div></button>
+                <button type="button" data-feature-method="shi"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="shiCanvas"></canvas><div><h3>Shi-Tomasi</h3><span class="feature-method-tag">特征值</span><p id="shiStats">-</p></div></button>
+                <button type="button" data-feature-method="fast"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="fastCanvas"></canvas><div><h3>FAST</h3><span class="feature-method-tag">圆周检测</span><p id="fastStats">-</p></div></button>
+                <button type="button" data-feature-method="sift"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="siftCanvas"></canvas><div><h3>SIFT</h3><span class="feature-method-tag">尺度特征</span><p id="siftStats">-</p></div></button>
+            </div>
+            <section class="feature-compare-insights-card">
+                <div class="feature-compare-insights-head"><strong>当前叠加方法说明</strong><span>跟随方法 A / B 同步更新</span></div>
+                <div id="featureCompareInsights" class="feature-compare-insights"></div>
+            </section>
         </section>
     </main>
 
     <aside class="feature-panel feature-info">
-        <div><span class="section-label">Process Notes</span><h2>方法对比</h2></div>
-        <div class="feature-note cyan"><b>Harris 角点</b><p>基于局部梯度结构张量，使用 R = det(M) - k·trace(M)² 评分。</p></div>
-        <div class="feature-note green"><b>Shi-Tomasi 角点</b><p>使用 min(λ1, λ2) 作为角点评分，更直接衡量两个方向的灰度变化。</p></div>
-        <div class="feature-note orange"><b>SIFT 特征</b><p>在尺度空间中检测稳定关键点，并为每个点分配尺度、方向和描述子。</p></div>
-        <div class="feature-boundary"><b>算法实现边界</b><p>后端只返回角点、关键点和核心数组；所有点位叠加、热力图、方向箭头在前端 Canvas 绘制。</p></div>
+        <div><span class="section-label">Process Notes</span><h2>当前选中算法说明</h2></div>
+        <article class="feature-method-guide">
+            <header><h3 id="featureInfoMethod">SIFT</h3><span id="featureInfoCategory">尺度不变特征</span></header>
+            <div><b>核心思想</b><p id="featureInfoSummary">在尺度空间中检测稳定关键点，并分配尺度、方向和描述子。</p></div>
+            <div><b>特点</b><p id="featureInfoPros">具备尺度和旋转鲁棒性，适合匹配任务。</p></div>
+            <div><b>适用场景</b><p id="featureInfoBestFor">图像匹配、目标识别和拼接。</p></div>
+            <dl>
+                <div><dt>点数</dt><dd id="featureInfoCount">-</dd></div>
+                <div><dt>标记</dt><dd id="featureInfoMarker">圆环 + 方向</dd></div>
+            </dl>
+        </article>
+        <div id="featureCompareMeta" class="feature-stat-list"></div>
+        <div class="feature-boundary"><b>算法实现边界</b><p>算法模块返回角点、关键点和核心数组；所有点位叠加、热力图、方向箭头在页面 Canvas 绘制。</p></div>
     </aside>
 </section>
-{{ feature_timeline('compare') }}
 {% endblock %}
 {% block feature_js %}<script src="{{ url_for('static', filename='js/feature_compare.js') }}"></script>{% endblock %}

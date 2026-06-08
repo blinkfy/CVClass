@@ -46,9 +46,8 @@
             <a class="{{ 'active' if active_page == 'feature' else '' }}" href="{{ url_for('feature_detection_page') }}">第五节：角点与 SIFT 特征检测</a>
             <div class="sidebar-subnav" aria-label="第五节子页面">
                 <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'harris' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='harris') }}">Harris 角点过程</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'sift_scale' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_scale') }}">SIFT 尺度空间</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'sift_descriptor' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift_descriptor') }}">SIFT 描述子</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征检测</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配应用</a>
             </div>
             <span class="disabled">第六节：</span>

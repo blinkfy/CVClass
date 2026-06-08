@@ -1,0 +1,115 @@
+{% extends "feature_base.html" %}
+{% block feature_content %}
+<section class="feature-layout feature-sift-layout">
+    <aside class="feature-panel feature-controls">
+        <div><span class="section-label">Input & Params</span><h2>SIFT 参数</h2></div>
+        <form id="featureSiftForm" data-feature-form>
+            <input type="hidden" name="mode" value="sift">
+            <input id="siftDescriptorFlag" type="hidden" name="descriptor" value="false">
+            <input type="hidden" name="example" data-example-input value="building">
+            <label class="feature-upload">
+                <input type="file" name="image" accept="image/*">
+                <span>上传图片</span>
+                <small data-file-name>当前使用示例图</small>
+            </label>
+            <div class="feature-samples" data-samples></div>
+            <div class="feature-control-group">
+                <div class="feature-param-card">
+                    <strong>尺度空间</strong>
+                    <label>Octave 数<input name="sift_octaves" value="3" type="number" min="1" max="5"></label>
+                    <label>每组尺度数<input name="sift_scales" value="3" type="number" min="1" max="6"></label>
+                    <label>初始 σ<input name="sift_sigma" value="1.6" type="number" step="0.1" min="0.4"></label>
+                    <label>DoG 阈值<input name="contrast_threshold" value="0.03" type="number" step="0.005" min="0"></label>
+                    <label>边缘阈值<input name="edge_threshold" value="10" type="number" min="1"></label>
+                </div>
+                <div class="feature-param-card">
+                    <strong>方向与描述子</strong>
+                    <label>方向 bins<input value="36" type="number" disabled></label>
+                    <label>描述子网格<input value="4 × 4" disabled></label>
+                    <label>每 cell bins<input value="8" type="number" disabled></label>
+                    <label>局部窗口<input value="16 × 16" disabled></label>
+                </div>
+                <button class="feature-primary" type="submit">重新计算</button>
+            </div>
+        </form>
+    </aside>
+
+    <main class="feature-workspace">
+        <section class="feature-panel feature-stage">
+            <div class="feature-stage-head">
+                <div><span class="section-label">SIFT Pipeline</span><h2 id="siftStageTitle">预处理</h2></div>
+                <span id="siftElapsed" class="status-pill">等待运行</span>
+            </div>
+
+            <nav class="feature-sift-steps" aria-label="SIFT 步骤总览">
+                <button class="is-active" type="button" data-sift-step="0"><i>1</i><span>预处理</span></button>
+                <button type="button" data-sift-step="1"><i>2</i><span>Gaussian Pyramid</span></button>
+                <button type="button" data-sift-step="2"><i>3</i><span>DoG Pyramid</span></button>
+                <button type="button" data-sift-step="3"><i>4</i><span>3×3×3 极值与过滤</span></button>
+                <button type="button" data-sift-step="4"><i>5</i><span>主方向分配</span></button>
+                <button type="button" data-sift-step="5"><i>6</i><span>128 维描述子</span></button>
+            </nav>
+
+            <section class="feature-sift-panel" data-sift-panel="0">
+                <div class="feature-preprocess-grid">
+                    <figure><div class="feature-canvas-frame"><canvas id="siftOriginalCanvas"></canvas></div><figcaption>输入图像</figcaption></figure>
+                    <figure><div class="feature-canvas-frame"><canvas id="siftGrayCanvas"></canvas></div><figcaption>灰度图</figcaption></figure>
+                </div>
+                <div id="siftInputStats" class="feature-stat-list feature-stat-grid"></div>
+            </section>
+
+            <section class="feature-sift-panel" data-sift-panel="1" hidden>
+                <h3>Gaussian Pyramid</h3>
+                <div id="gaussianPyramid" class="feature-pyramid"></div>
+            </section>
+
+            <section class="feature-sift-panel" data-sift-panel="2" hidden>
+                <h3>DoG Pyramid</h3>
+                <div id="dogPyramid" class="feature-pyramid feature-dog-pyramid"></div>
+            </section>
+
+            <section class="feature-sift-panel" data-sift-panel="3" hidden>
+                <div class="feature-scale-lower">
+                    <div><h3>3×3×3 极值检测</h3><div id="dogProbe" class="feature-dog-probe"></div></div>
+                    <div>
+                        <h3>关键点筛选结果</h3>
+                        <div class="feature-filter-canvases">
+                            <figure><canvas id="scaleExtremaCanvas"></canvas><figcaption>Extrema</figcaption></figure>
+                            <figure><canvas id="scaleEdgeCanvas"></canvas><figcaption>Edge Filtered</figcaption></figure>
+                            <figure><canvas id="scaleSiftCanvas"></canvas><figcaption>Final Keypoints</figcaption></figure>
+                        </div>
+                        <div id="scaleStats" class="feature-stat-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="feature-sift-panel" data-sift-panel="4" hidden>
+                <div class="feature-lazy-status" data-descriptor-status>进入本步骤后加载方向与描述子数据。</div>
+                <div class="feature-descriptor-top">
+                    <div><h3>Oriented Keypoint</h3><div class="feature-canvas-frame"><canvas id="descriptorKeypointCanvas"></canvas></div></div>
+                    <div><h3>16×16 局部梯度</h3><div class="feature-canvas-frame"><canvas id="descriptorPatchCanvas"></canvas></div></div>
+                    <div><h3>Keypoint 信息</h3><div id="keypointInfo" class="feature-stat-list"></div></div>
+                </div>
+                <h3>36-bin 主方向直方图</h3>
+                <canvas id="orientationHist" class="feature-chart"></canvas>
+            </section>
+
+            <section class="feature-sift-panel" data-sift-panel="5" hidden>
+                <div class="feature-lazy-status" data-descriptor-status>进入本步骤后加载方向与描述子数据。</div>
+                <div class="feature-descriptor-bottom">
+                    <div><h3>4×4 Cells × 8 bins</h3><canvas id="cellHistCanvas" class="feature-chart"></canvas></div>
+                    <div><h3>128 维 Descriptor</h3><canvas id="descriptor128Canvas" class="feature-chart"></canvas></div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <aside class="feature-panel feature-info">
+        <div><span class="section-label">Process Notes</span><h2 id="siftNoteTitle">预处理</h2></div>
+        <div id="siftNotePrimary" class="feature-note blue"></div>
+        <div id="siftNoteSecondary" class="feature-note green"></div>
+        <div class="feature-boundary"><b>代码边界</b><p id="siftNoteBoundary">课程核心 SIFT 算法负责关键点计算，页面负责步骤切换与可视化绘制。</p></div>
+    </aside>
+</section>
+{% endblock %}
+{% block feature_js %}<script src="{{ url_for('static', filename='js/feature_sift.js') }}"></script>{% endblock %}

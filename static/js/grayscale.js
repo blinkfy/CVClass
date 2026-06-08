@@ -456,7 +456,7 @@ async function processImage() {
             if (requestId !== latestRequestId) {
                 return;
             }
-            applyProcessResult(data, "前端");
+            applyProcessResult(data, "本地");
             return;
         }
 

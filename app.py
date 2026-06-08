@@ -66,7 +66,7 @@ def compute_mode(feature):
 
 def frontend_only_response(feature_name):
     return jsonify({
-        "error": f"{feature_name} 当前配置为前端计算，后端计算接口已关闭",
+        "error": f"{feature_name} 当前配置仅提供页面演示，接口调用已关闭",
         "compute_mode": "frontend",
     }), 409
 
@@ -157,11 +157,14 @@ def feature_detection_page():
 
 @app.route("/feature-detection/<mode>", methods=["GET"])
 def feature_detection_mode_page(mode):
+    if mode == "harris":
+        return redirect(url_for("feature_detection_mode_page", mode="corner"))
+    if mode in {"sift_scale", "sift_descriptor"}:
+        return redirect(url_for("feature_detection_mode_page", mode="sift"))
     feature_templates = {
         "compare": "feature_compare.html",
-        "harris": "feature_harris.html",
-        "sift_scale": "feature_sift_scale.html",
-        "sift_descriptor": "feature_sift_descriptor.html",
+        "corner": "feature_harris.html",
+        "sift": "feature_sift.html",
         "matching": "feature_matching.html",
     }
     if mode not in feature_templates:

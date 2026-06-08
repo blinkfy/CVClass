@@ -1340,7 +1340,7 @@
         els.overlay.hidden = true;
         try {
             if (!window.loadClientDigitModel || !window.clientDigitModel?.predictDetailed) {
-                throw new Error("手写数字前端模型脚本未加载");
+                throw new Error("手写数字模型脚本未加载");
             }
             const canvas28 = preprocessDigitCanvas();
             els.hoverPill.textContent = "正在运行手写数字模型...";

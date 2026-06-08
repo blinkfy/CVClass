@@ -1761,7 +1761,7 @@
                     state.comparePreview = null;
                     state.compareLoadingMethods = [];
                     render();
-                    setReady(error.message || "浏览器边缘检测失败");
+                    setReady(error.message || "边缘检测失败");
                 }
             }
             return;

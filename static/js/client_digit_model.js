@@ -56,7 +56,7 @@
         state.loadingPromise = fetch(modelUrl(), { cache: "force-cache" })
             .then((response) => {
                 if (!response.ok) {
-                    throw new Error("前端模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json");
+                    throw new Error("模型权重加载失败，请检查 static/assets/data/mnist_cnn_weights.json");
                 }
                 return response.json();
             })
@@ -81,13 +81,13 @@
         for (let y = 0; y < 28; y += 1) {
             const row = canvas28x28[y];
             if (!row || row.length !== 28) {
-                throw new Error("前端推理输入必须是 28×28 数组");
+                throw new Error("推理输入必须是 28×28 数组");
             }
 
             for (let x = 0; x < 28; x += 1) {
                 const value = Number(row[x]);
                 if (!Number.isFinite(value) || value < 0 || value > 1) {
-                    throw new Error("前端推理输入像素必须在 0 到 1 之间");
+                    throw new Error("推理输入像素必须在 0 到 1 之间");
                 }
                 input[index] = value;
                 index += 1;
@@ -200,7 +200,7 @@
 
     function predict(canvas28x28) {
         if (!state.loaded || !state.weights) {
-            throw new Error("前端模型尚未加载");
+            throw new Error("模型尚未加载");
         }
 
         const start = performance.now();
@@ -219,7 +219,7 @@
 
     function predictDetailed(canvas28x28) {
         if (!state.loaded || !state.weights) {
-            throw new Error("前端模型尚未加载");
+            throw new Error("模型尚未加载");
         }
 
         const start = performance.now();

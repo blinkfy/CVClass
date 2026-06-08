@@ -364,7 +364,7 @@
         if (!state.hasInk) return;
         try {
             if (!window.loadClientDigitModel || !window.clientDigitModel?.predictDetailed) {
-                throw new Error("前端手写模型脚本未加载");
+                throw new Error("手写模型脚本未加载");
             }
             if (els.digitStatus) els.digitStatus.textContent = "正在推理并更新 3D 热力图...";
             const canvas28 = preprocessDigitCanvas();

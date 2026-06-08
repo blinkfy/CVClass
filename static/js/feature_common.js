@@ -45,6 +45,37 @@
         });
     }
 
+    function bindAutoSubmit(form, options = {}) {
+        if (!form) return () => {};
+        const delay = Number(options.delay) || 420;
+        const excludedIds = new Set(options.excludeIds || []);
+        let timer = null;
+
+        const schedule = (wait = delay) => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => form.requestSubmit(), wait);
+        };
+
+        form.querySelectorAll("input, select").forEach(control => {
+            if (control.type === "hidden" || control.type === "submit" || control.disabled || excludedIds.has(control.id)) return;
+            if (control.type === "file") {
+                control.addEventListener("change", () => schedule(60));
+                return;
+            }
+            control.addEventListener(control.tagName === "SELECT" || control.type === "checkbox" ? "change" : "input", () => schedule());
+        });
+
+        form.querySelector("[data-samples]")?.addEventListener("click", event => {
+            if (!event.target.closest("[data-example]")) return;
+            form.querySelectorAll('input[type="file"]').forEach(input => {
+                input.value = "";
+            });
+            schedule(60);
+        });
+
+        return schedule;
+    }
+
     async function postForm(form, endpoint) {
         const fd = new FormData(form);
         const res = await fetch(`${basePath}${endpoint}`, { method: "POST", body: fd });
@@ -181,6 +212,166 @@
         ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
     }
 
+    function drawDiamond(ctx, x, y, color = "#eab308", size = 5) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y);
+        ctx.lineTo(x, y + size);
+        ctx.lineTo(x - size, y);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    async function imageToGray(src) {
+        const image = await loadImage(src);
+        const canvas = document.createElement("canvas");
+        setCanvasSize(canvas, image.naturalWidth || image.width, image.naturalHeight || image.height);
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const gray = new Float32Array(canvas.width * canvas.height);
+        for (let i = 0; i < gray.length; i++) {
+            const offset = i * 4;
+            gray[i] = 0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
+        }
+        return { gray, width: canvas.width, height: canvas.height };
+    }
+
+    const fastCircle = [
+        [0, -3], [1, -3], [2, -2], [3, -1],
+        [3, 0], [3, 1], [2, 2], [1, 3],
+        [0, 3], [-1, 3], [-2, 2], [-3, 1],
+        [-3, 0], [-3, -1], [-2, -2], [-1, -3]
+    ];
+
+    function fastScore(gray, width, x, y, threshold, contiguous) {
+        const center = gray[y * width + x];
+        const differences = fastCircle.map(([dx, dy]) => gray[(y + dy) * width + x + dx] - center);
+        let bestScore = 0;
+        let bestStart = -1;
+        let bestPolarity = "";
+        for (const polarity of [1, -1]) {
+            for (let start = 0; start < 16; start++) {
+                let minimum = Infinity;
+                let valid = true;
+                for (let step = 0; step < contiguous; step++) {
+                    const difference = differences[(start + step) % 16] * polarity;
+                    if (difference <= threshold) {
+                        valid = false;
+                        break;
+                    }
+                    minimum = Math.min(minimum, difference);
+                }
+                if (valid && minimum > bestScore) {
+                    bestScore = minimum;
+                    bestStart = start;
+                    bestPolarity = polarity > 0 ? "bright" : "dark";
+                }
+            }
+        }
+        return { score: bestScore, start: bestStart, polarity: bestPolarity, differences };
+    }
+
+    function detectFast(gray, width, height, options = {}) {
+        const threshold = Math.max(1, Number(options.threshold) || 30);
+        const contiguous = Number(options.contiguous) === 12 ? 12 : 9;
+        const radius = Math.max(1, Number(options.nmsRadius) || 4);
+        const maxCorners = Math.max(1, Number(options.maxCorners) || 500);
+        const candidates = [];
+        for (let y = 3; y < height - 3; y++) {
+            for (let x = 3; x < width - 3; x++) {
+                const result = fastScore(gray, width, x, y, threshold, contiguous);
+                if (result.score > 0) candidates.push({ x, y, response: result.score, ...result });
+            }
+        }
+        candidates.sort((a, b) => b.response - a.response);
+        const occupied = new Uint8Array(width * height);
+        const corners = [];
+        for (const point of candidates) {
+            let blocked = false;
+            for (let yy = Math.max(0, point.y - radius); yy <= Math.min(height - 1, point.y + radius) && !blocked; yy++) {
+                for (let xx = Math.max(0, point.x - radius); xx <= Math.min(width - 1, point.x + radius); xx++) {
+                    if (occupied[yy * width + xx]) {
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+            if (blocked) continue;
+            occupied[point.y * width + point.x] = 1;
+            corners.push(point);
+            if (corners.length >= maxCorners) break;
+        }
+        return { candidates, corners, threshold, contiguous };
+    }
+
+    function refineSubpixel(surface, corners) {
+        if (!surface?.values || !surface.width || !surface.height) return [];
+        const width = surface.width;
+        const height = surface.height;
+        const values = surface.values;
+        const at = (x, y) => Number(values[y * width + x]) || 0;
+        const refined = [];
+        (corners || []).forEach(point => {
+            const x = Math.round(point.x);
+            const y = Math.round(point.y);
+            if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) return;
+            const center = at(x, y);
+            const gx = (at(x + 1, y) - at(x - 1, y)) / 2;
+            const gy = (at(x, y + 1) - at(x, y - 1)) / 2;
+            const hxx = at(x + 1, y) - 2 * center + at(x - 1, y);
+            const hyy = at(x, y + 1) - 2 * center + at(x, y - 1);
+            const hxy = (at(x + 1, y + 1) - at(x + 1, y - 1) - at(x - 1, y + 1) + at(x - 1, y - 1)) / 4;
+            const determinant = hxx * hyy - hxy * hxy;
+            if (!Number.isFinite(determinant) || Math.abs(determinant) < 1e-12) return;
+            const dx = -(hyy * gx - hxy * gy) / determinant;
+            const dy = -(-hxy * gx + hxx * gy) / determinant;
+            if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) > 1.5 || Math.abs(dy) > 1.5) return;
+            refined.push({ ...point, x_sub: x + dx, y_sub: y + dy, offset_x: dx, offset_y: dy });
+        });
+        return refined;
+    }
+
+    async function drawFastKeypoints(canvas, src, points = [], options = {}) {
+        const result = await drawBaseImage(canvas, src);
+        if (!result) return;
+        points.slice(0, options.max || 800).forEach(point => {
+            drawDiamond(result.ctx, point.x, point.y, options.color || "#eab308", options.size || 5);
+        });
+    }
+
+    async function drawSubpixelKeypoints(canvas, src, corners = [], refined = [], showSubpixel = true) {
+        const result = await drawBaseImage(canvas, src);
+        if (!result) return;
+        corners.forEach(point => drawCircle(result.ctx, point.x, point.y, "#f97316", 4.5));
+        if (!showSubpixel) return;
+        refined.forEach(point => {
+            result.ctx.strokeStyle = "#06b6d4";
+            result.ctx.lineWidth = 1.5;
+            result.ctx.beginPath();
+            result.ctx.moveTo(point.x, point.y);
+            result.ctx.lineTo(point.x_sub, point.y_sub);
+            result.ctx.stroke();
+            const angle = Math.atan2(point.offset_y, point.offset_x);
+            const arrowSize = 3;
+            result.ctx.beginPath();
+            result.ctx.moveTo(point.x_sub, point.y_sub);
+            result.ctx.lineTo(
+                point.x_sub - Math.cos(angle - Math.PI / 6) * arrowSize,
+                point.y_sub - Math.sin(angle - Math.PI / 6) * arrowSize
+            );
+            result.ctx.moveTo(point.x_sub, point.y_sub);
+            result.ctx.lineTo(
+                point.x_sub - Math.cos(angle + Math.PI / 6) * arrowSize,
+                point.y_sub - Math.sin(angle + Math.PI / 6) * arrowSize
+            );
+            result.ctx.stroke();
+            drawCross(result.ctx, point.x_sub, point.y_sub, "#06b6d4", 4.5);
+        });
+    }
+
     function drawSiftSymbol(ctx, kp) {
         const x = kp.x, y = kp.y;
         const r = Math.max(4, Math.min(24, (kp.sigma || 2) * 2.2));
@@ -229,5 +420,5 @@
         }
     }
 
-    window.FeatureViz = { $, root, basePath, assetsBase, setupSamples, bindFileNames, postForm, loadImage, drawBaseImage, drawArray, drawKeypoints, drawSiftKeypoints, drawCombined, drawCross, drawCircle, drawSiftSymbol, renderMatrix, renderStatList, drawBarChart, setCanvasSize };
+    window.FeatureViz = { $, root, basePath, assetsBase, setupSamples, bindFileNames, bindAutoSubmit, postForm, loadImage, drawBaseImage, drawArray, drawKeypoints, drawSiftKeypoints, drawCombined, drawCross, drawCircle, drawDiamond, drawSiftSymbol, renderMatrix, renderStatList, drawBarChart, setCanvasSize, imageToGray, detectFast, fastCircle, refineSubpixel, drawFastKeypoints, drawSubpixelKeypoints };
 })();

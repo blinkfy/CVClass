@@ -1277,7 +1277,7 @@
         if (els.modePill) els.modePill.textContent = `当前模式：${modeTitle(mode)}`;
         renderProcessSteps();
         updateStats();
-        setStatus("已生成前端边缘图，等待播放", "ready");
+        setStatus("已生成边缘图，等待播放", "ready");
     }
 
     function updateStats() {
