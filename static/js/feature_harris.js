@@ -721,66 +721,220 @@
 
     function drawMotionHarrisResponse(ctx, phase, w, h) {
         const probe = currentProbeData();
-        drawMatrixMotion(ctx, 48, 54, probe.M, 1, "#2563eb");
-        drawValueNode(ctx, 280, 70, "det(M)", probe.det, "#2563eb", phase.index >= 1 ? 1 : phase.local);
-        drawValueNode(ctx, 280, 154, "trace(M)", probe.trace, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
-        drawMotionFlow(ctx, 360, 70, 520, 92, "#2563eb", phase.index >= 2 ? 1 : phase.local);
-        drawMotionFlow(ctx, 360, 154, 520, 128, "#7c3aed", phase.index >= 2 ? 1 : phase.local);
-        drawFormulaBox(ctx, 510, 74, "R = det(M) - k · trace(M)²", "#f97316", phase.index >= 2 ? 1 : .45);
-        drawFlipValue(ctx, 660, 150, "raw R", probe.responseRaw, "#f97316", phase.index >= 3 ? phase.local : 0);
-        drawValueNode(ctx, 760, 168, "display R", probe.responseDisplay, "#2563eb", phase.index >= 3 ? 1 : .35);
-        drawHeatHalo(ctx, 735, 90, phase.pulse, "#f97316");
+        const penalty = harrisK() * probe.trace * probe.trace;
+        drawMatrixMotion(ctx, 34, 54, probe.M, 1, "#2563eb");
+        drawMotionFlow(ctx, 180, 88, 258, 68, "#2563eb", phase.index >= 1 ? 1 : phase.local);
+        drawMotionFlow(ctx, 180, 124, 258, 148, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
+        drawValueNode(ctx, 314, 68, "det(M)", probe.det, "#2563eb", phase.index >= 1 ? 1 : phase.local);
+        drawValueNode(ctx, 314, 148, "trace(M)", probe.trace, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
+        drawMotionFlow(ctx, 370, 148, 458, 148, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawValueNode(ctx, 514, 148, "k·trace²", penalty, "#7c3aed", phase.index >= 2 ? 1 : .35);
+        drawMotionFlow(ctx, 370, 68, 610, 92, "#2563eb", phase.index >= 2 ? 1 : .25);
+        drawMotionFlow(ctx, 570, 148, 610, 124, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawOperatorNode(ctx, 620, 108, "−", "#f97316", phase.index >= 2 ? 1 : .35);
+        drawFlipValue(ctx, 704, 108, "raw R", probe.responseRaw, "#f97316", phase.index >= 3 ? phase.local : .2);
+        drawMotionFlow(ctx, 760, 108, 810, 154, "#f97316", phase.index >= 3 ? phase.local : .15);
+        drawValueNode(ctx, 810, 178, "display R", probe.responseDisplay, "#2563eb", phase.index >= 3 ? 1 : .35);
+        drawHeatHalo(ctx, 810, 112, phase.pulse, "#f97316");
+    }
+
+    function drawEigenEllipse(ctx, cx, cy, eig, phase) {
+        const maxValue = Math.max(1, eig.l1, eig.l2);
+        const major = 58;
+        const minor = Math.max(18, 58 * Math.sqrt(Math.max(0.02, eig.l2 / maxValue)));
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.82)";
+        ctx.strokeStyle = "rgba(22,163,74,.35)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, major, minor, -0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - major * .78, cy + major * .22);
+        ctx.lineTo(cx + major * .78, cy - major * .22);
+        ctx.stroke();
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - minor * .16, cy - minor * .9);
+        ctx.lineTo(cx + minor * .16, cy + minor * .9);
+        ctx.stroke();
+        drawParticle(ctx, cx + major * .78, cy - major * .22, "#2563eb", .78 + .2 * phase.pulse, 5.5);
+        drawParticle(ctx, cx + minor * .16, cy + minor * .9, "#16a34a", .78 + .2 * phase.pulse, 5.5);
+        drawTinyText(ctx, "gradient ellipse", cx, cy - minor - 20, "#166534", 15);
+        drawTinyText(ctx, "short axis = λmin", cx, cy + minor + 28, "#16a34a", 15);
+        ctx.restore();
     }
 
     function drawMotionShiResponse(ctx, phase, w, h) {
         const probe = currentProbeData();
         const eig = eigenValuesFromProbe(probe);
-        drawMatrixMotion(ctx, 56, 54, probe.M, 1, "#16a34a");
-        drawMotionFlow(ctx, 220, 118, 360, 82, "#16a34a", phase.index >= 1 ? 1 : phase.local);
-        drawMotionFlow(ctx, 220, 118, 360, 158, "#16a34a", phase.index >= 1 ? 1 : phase.local);
-        drawBarNode(ctx, 410, 82, "λ1", eig.l1, "#2563eb", eig.l1 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
-        drawBarNode(ctx, 410, 158, "λ2", eig.l2, "#16a34a", eig.l2 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
-        drawFormulaBox(ctx, 560, 83, "R = min(λ1, λ2)", "#16a34a", phase.index >= 2 ? 1 : .42);
-        drawFlipValue(ctx, 675, 150, "λmin", eig.min, "#16a34a", phase.index >= 3 ? phase.local : 0);
+        drawMatrixMotion(ctx, 38, 54, probe.M, 1, "#16a34a");
+        drawMotionFlow(ctx, 190, 118, 288, 118, "#16a34a", phase.index >= 1 ? phase.local : .2);
+        drawEigenEllipse(ctx, 360, 118, eig, phase);
+        drawMotionFlow(ctx, 430, 94, 500, 76, "#2563eb", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 430, 142, 500, 156, "#16a34a", phase.index >= 1 ? phase.local : .2);
+        drawBarNode(ctx, 520, 76, "λmax", eig.l1, "#2563eb", eig.l1 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
+        drawBarNode(ctx, 520, 156, "λmin", eig.l2, "#16a34a", eig.l2 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
+        drawMotionFlow(ctx, 652, 156, 705, 126, "#16a34a", phase.index >= 2 ? phase.local : .2);
+        drawFlipValue(ctx, 760, 118, "R = λmin", eig.min, "#16a34a", phase.index >= 3 ? phase.local : .35);
     }
 
     function drawMotionNms(ctx, phase, w, h) {
         const probe = currentProbeData();
         const nms = nmsProbeDecision(probe);
-        const kept = pointsForAlgorithm();
-        const candidates = responseCandidatesForNms(kept, 130);
-        const selected = { x: 430, y: 110 };
-        const fade = phase.index >= 1 ? phase.local : 0;
-        candidates.slice(0, 70).forEach((point, index) => {
-            const px = 50 + (index % 14) * 28;
-            const py = 40 + Math.floor(index / 14) * 30;
-            const pass = index % 5 !== 0;
-            drawParticle(ctx, px, py, pass ? "#60a5fa" : "#cbd5e1", pass ? .55 : Math.max(.08, 1 - fade), 3.2);
-        });
-        drawValueNode(ctx, selected.x, selected.y, "raw R", nms.currentR, nms.kept ? "#f97316" : "#94a3b8", 1);
-        drawNmsRadius(ctx, selected.x, selected.y, 54 + 16 * phase.pulse, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 2 ? 1 : .25);
-        drawMotionFlow(ctx, selected.x + 62, selected.y, 620, selected.y, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
-        drawFlipValue(ctx, 650, 62, "threshold", nms.threshold, "#2563eb", 1);
-        drawFlipValue(ctx, 650, 134, "neighbor max", nms.localMax, "#7c3aed", phase.index >= 2 ? 1 : .35);
-        drawValueNode(ctx, 790, 76, "display R", nms.displayR, "#2563eb", 1);
-        drawValueNode(ctx, 790, 158, nms.kept ? "KEEP" : "SUPPRESS", nms.kept ? "raw" : "raw", nms.kept ? "#f97316" : "#94a3b8", phase.index >= 3 ? 1 : .35);
+        const decisionColor = nms.kept ? "#f97316" : "#94a3b8";
+        drawNmsResponseField(ctx, 46, 42, 270, 138, phase, nms);
+        drawMotionFlow(ctx, 318, 110, 392, 110, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawValueNode(ctx, 450, 84, "raw R", nms.currentR, decisionColor, 1);
+        drawValueNode(ctx, 450, 154, "display R", nms.displayR, "#2563eb", 1);
+        drawNmsRadius(ctx, 450, 118, 62 + 10 * phase.pulse, decisionColor, phase.index >= 1 ? .75 : .25);
+        drawMotionFlow(ctx, 508, 84, 590, 74, "#2563eb", phase.index >= 2 ? phase.local : .2);
+        drawMotionFlow(ctx, 508, 154, 590, 154, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawValueNode(ctx, 646, 74, "threshold", nms.threshold, "#2563eb", 1);
+        drawValueNode(ctx, 646, 154, "max in r", nms.localMax, "#7c3aed", phase.index >= 2 ? 1 : .35);
+        drawNmsDecisionCard(ctx, 780, 118, nms, phase.index >= 3 ? phase.local : .25);
     }
 
     function drawMotionRefine(ctx, phase, w, h) {
         const probe = currentProbeData();
         const dx = probe.dx || 0;
         const dy = probe.dy || 0;
-        const start = { x: 290, y: 118 };
-        const scale = 70;
-        const t = phase.index >= 2 ? Math.max(.25, phase.local) : .2;
+        const start = { x: 330, y: 118 };
+        const scale = 95;
+        const t = phase.index >= 2 ? Math.max(.25, phase.local) : .15;
         const end = { x: start.x + dx * scale * t, y: start.y + dy * scale * t };
-        drawLocalPatchLens(ctx, 70, 44, "#2563eb", phase.pulse);
-        drawCrossGlyph(ctx, start.x, start.y, "#06b6d4", 16, 1 - t * .45);
+        drawRefineSurface(ctx, 62, 44, 170, 148, probe, phase);
+        drawMotionFlow(ctx, 238, 118, start.x - 28, start.y, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawSubpixelStage(ctx, start, end, dx, dy, t, phase);
+        drawMotionFlow(ctx, 390, 118, 500, 118, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawValueNode(ctx, 555, 72, "dx", dx.toFixed(3), "#7c3aed", 1);
+        drawValueNode(ctx, 555, 148, "dy", dy.toFixed(3), "#7c3aed", 1);
+        drawMotionFlow(ctx, 610, 110, 690, 118, "#f97316", phase.index >= 3 ? phase.local : .2);
+        drawFlipValue(ctx, 750, 118, "offset", Math.hypot(dx, dy).toFixed(3), "#f97316", phase.index >= 3 ? phase.local : .45);
+    }
+
+    function drawNmsResponseField(ctx, x, y, width, height, phase, nms) {
+        const cols = 13;
+        const rows = 6;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Response candidates", x, y - 12);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const px = x + col * cellW + cellW / 2;
+                const py = y + row * cellH + cellH / 2;
+                const wave = 0.45 + 0.55 * Math.sin((row * 2.1 + col * 1.3 + phase.pulse * 4));
+                const strong = (row === 2 && col === 7) || (row === 3 && col === 6);
+                const current = row === 2 && col === 6;
+                const suppressed = phase.index >= 2 && !strong && !current && (row + col) % 3 === 0;
+                const color = current ? "#f97316" : strong ? "#7c3aed" : "#60a5fa";
+                const alpha = suppressed ? .12 : strong ? .82 : .22 + .35 * wave;
+                drawParticle(ctx, px, py, color, alpha, current ? 6.5 : strong ? 5.5 : 3.2);
+            }
+        }
+        const cx = x + 6.5 * cellW;
+        const cy = y + 2.5 * cellH;
+        drawNmsRadius(ctx, cx, cy, 46 + 8 * phase.pulse, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 1 ? .65 : .2);
+        drawLabelPill(ctx, cx - 34, cy + 32, "current", "#ea580c");
+        drawLabelPill(ctx, x + 7.5 * cellW + 18, y + 2.5 * cellH - 34, "stronger", "#7c3aed");
+        ctx.restore();
+    }
+
+    function drawNmsDecisionCard(ctx, cx, cy, nms, alpha) {
+        const color = nms.kept ? "#f97316" : "#94a3b8";
+        ctx.save();
+        ctx.globalAlpha = Math.max(.2, Math.min(1, alpha));
+        ctx.fillStyle = "rgba(255,255,255,.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = `${color}55`;
+        ctx.shadowBlur = 16;
+        roundRect(ctx, cx - 68, cy - 54, 136, 108, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        ctx.font = "950 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(nms.kept ? "KEEP" : "SUPPRESS", cx, cy - 18);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText(nms.aboveThreshold ? "R > threshold" : "R <= threshold", cx, cy + 8);
+        ctx.fillText(nms.localMaximum ? "local max" : "neighbor wins", cx, cy + 28);
+        ctx.restore();
+    }
+
+    function drawLabelPill(ctx, x, y, text, color) {
+        ctx.save();
+        ctx.font = "950 13px sans-serif";
+        ctx.textAlign = "center";
+        const width = Math.max(62, ctx.measureText(text).width + 22);
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = `${color}99`;
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, x - width / 2, y - 14, width, 28, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.fillText(text, x, y + 5);
+        ctx.restore();
+    }
+
+    function drawRefineSurface(ctx, x, y, width, height, probe, phase) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.strokeStyle = "#93c5fd";
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, width, height, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("3×3 response surface", x + 12, y + 20);
+        const cx = x + width / 2;
+        const cy = y + height / 2 + 10;
+        [56, 40, 25].forEach((radius, index) => {
+            ctx.strokeStyle = index === 0 ? "rgba(96,165,250,.35)" : index === 1 ? "rgba(124,58,237,.38)" : "rgba(249,115,22,.5)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, radius, radius * 0.62, -0.35, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 58);
+        gradient.addColorStop(0, `rgba(249,115,22,${.36 + .16 * phase.pulse})`);
+        gradient.addColorStop(.45, "rgba(96,165,250,.22)");
+        gradient.addColorStop(1, "rgba(96,165,250,0)");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 58, 0, Math.PI * 2);
+        ctx.fill();
+        drawTinyText(ctx, "fit paraboloid", cx, y + height - 16, "#7c3aed", 12);
+        ctx.restore();
+    }
+
+    function drawSubpixelStage(ctx, start, end, dx, dy, t, phase) {
+        ctx.save();
+        drawNmsRadius(ctx, start.x, start.y, 46, "#dbeafe", .65);
+        drawCrossGlyph(ctx, start.x, start.y, "#f97316", 17, 1);
+        drawTinyText(ctx, "integer", start.x, start.y - 28, "#ea580c", 12);
         drawMotionFlow(ctx, start.x, start.y, end.x, end.y, "#7c3aed", t);
-        drawRingGlyph(ctx, end.x, end.y, "#f97316", 18 + 3 * phase.pulse, phase.index >= 2 ? 1 : .35);
-        drawValueNode(ctx, 510, 80, "dx", dx.toFixed(3), "#7c3aed", 1);
-        drawValueNode(ctx, 510, 150, "dy", dy.toFixed(3), "#7c3aed", 1);
-        drawFlipValue(ctx, 675, 118, "offset", Math.hypot(dx, dy).toFixed(3), "#f97316", phase.index >= 3 ? phase.local : .45);
+        drawRingGlyph(ctx, end.x, end.y, "#06b6d4", 18 + 3 * phase.pulse, phase.index >= 2 ? 1 : .35);
+        drawCrossGlyph(ctx, end.x, end.y, "#06b6d4", 10, phase.index >= 2 ? .9 : .25);
+        drawTinyText(ctx, "sub-pixel", end.x + 42, end.y + 5, "#0891b2", 12);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "900 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`Δ=(${dx.toFixed(3)}, ${dy.toFixed(3)})`, start.x, start.y + 58);
+        ctx.restore();
     }
 
     function drawMotionFast(ctx, stepKey, phase, w, h) {
@@ -850,42 +1004,143 @@
 
     function drawMotionFastGray(ctx, point, phase, w, h) {
         const patch = fastGrayPatch(point, 2);
-        drawMotionGrid(ctx, 42, 46, 138, patch.rgb, Math.min(24, Math.floor((phase.index + phase.local) / 4 * 25)), "#2563eb", "RGB intensity");
-        drawMotionFlow(ctx, 184, 116, 298, 116, "#60a5fa", phase.index >= 1 ? phase.local : .2);
-        drawFormulaBox(ctx, 282, 82, "G = .299R + .587G + .114B", "#2563eb", phase.index >= 1 ? 1 : .4);
-        drawMotionFlow(ctx, 526, 116, 605, 116, "#f97316", phase.index >= 2 ? phase.local : .18);
-        drawMotionGrid(ctx, 626, 46, 138, patch.gray, Math.min(24, Math.floor((phase.index + phase.local) / 4 * 25)), "#f97316", "Gray Patch");
-        drawValueNode(ctx, 520, 172, "Center G", fastCenterValue(point), "#f97316", phase.index >= 2 ? 1 : .35);
+        const center = Number(fastCenterValue(point)) || 0;
+        drawFastChannelMixer(ctx, 52, 50, center, phase);
+        drawMotionFlow(ctx, 230, 118, 318, 118, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawCompactFormulaBox(ctx, 306, 84, "FAST 灰度输入", "G = 0.299R + 0.587G + 0.114B", "#2563eb", phase.index >= 1 ? 1 : .4);
+        drawMotionFlow(ctx, 528, 118, 610, 118, "#f97316", phase.index >= 2 ? phase.local : .18);
+        drawCompactPatch(ctx, 640, 56, 112, centerMatrix(patch.gray, 3), 4, "#f97316", "Gray Patch");
+        drawValueNode(ctx, 555, 178, "Center G", center, "#f97316", phase.index >= 2 ? 1 : .35);
     }
 
     function drawMotionFastCircle(ctx, point, info, phase, w, h) {
-        const cx = 250;
+        const cx = 270;
         const cy = 118;
-        const radius = 70;
-        drawValueNode(ctx, 78, 118, "P", fastCenterValue(point), "#2563eb", 1);
+        const radius = 72;
+        const scanIndex = Math.min(15, Math.floor((phase.index + phase.local) / 4 * 16));
+        drawValueNode(ctx, 76, 118, "center P", fastCenterValue(point), "#2563eb", 1);
+        drawMotionFlow(ctx, 128, 118, cx - radius, cy, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawNmsRadius(ctx, cx, cy, radius, "#2563eb", phase.index >= 1 ? .55 + .25 * phase.pulse : .24);
+        drawRadiusArrow(ctx, cx, cy, radius, "#f97316", phase.index >= 1 ? 1 : .35);
         V.fastCircle.forEach((offset, index) => {
             const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
             const x = cx + Math.cos(angle) * radius;
             const y = cy + Math.sin(angle) * radius;
             const state = info.states[index] || "similar";
             const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
-            const appear = Math.max(.18, Math.min(1, phase.index / 3 + phase.local - index / 18));
-            drawParticle(ctx, x, y, color, appear, info.active.has(index) ? 8 : 6);
-            if (appear > .7) drawTinyText(ctx, index, x, y + 3, "#0f172a", 8);
+            const visited = index <= scanIndex || phase.index >= 3;
+            const appear = visited ? 1 : .22;
+            drawParticle(ctx, x, y, color, appear, index === scanIndex ? 9 : info.active.has(index) ? 8 : 6);
+            if (visited) drawTinyText(ctx, index, x, y + 4, "#0f172a", 9);
         });
-        drawNmsRadius(ctx, cx, cy, radius, "#2563eb", phase.index >= 1 ? .55 + .25 * phase.pulse : .24);
-        drawMotionFlow(ctx, 330, 118, 485, 118, "#60a5fa", phase.index >= 2 ? phase.local : .2);
-        drawFlipValue(ctx, 540, 82, "samples", "16", "#2563eb", phase.index >= 2 ? phase.local : .35);
-        drawFlipValue(ctx, 690, 142, "radius", "3 px", "#f97316", phase.index >= 3 ? phase.local : .35);
+        drawScanArc(ctx, cx, cy, radius + 17, scanIndex, "#f97316", phase.index >= 2 ? 1 : .35);
+        drawMotionFlow(ctx, cx + radius + 24, cy, 520, 118, "#60a5fa", phase.index >= 2 ? phase.local : .2);
+        drawSampleStrip(ctx, 540, 72, scanIndex, phase);
+        drawFlipValue(ctx, 724, 138, "radius", "3 px", "#f97316", phase.index >= 3 ? phase.local : .35);
+    }
+
+    function drawFastChannelMixer(ctx, x, y, center, phase) {
+        const channels = [
+            { label: "R", weight: "0.299", color: "#ef4444", value: center },
+            { label: "G", weight: "0.587", color: "#16a34a", value: center },
+            { label: "B", weight: "0.114", color: "#2563eb", value: center }
+        ];
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Center pixel channels", x, y - 14);
+        channels.forEach((item, index) => {
+            const yy = y + index * 48;
+            drawChannelPill(ctx, x + 42, yy + 20, item.label, item.value, item.color);
+            drawMotionFlow(ctx, x + 86, yy + 20, x + 178, y + 68, item.color, phase.index >= 1 ? phase.local : .2);
+            ctx.fillStyle = item.color;
+            ctx.font = "950 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`× ${item.weight}`, x + 132, yy + 12);
+        });
+        drawOperatorNode(ctx, x + 190, y + 68, "+", "#f97316", phase.index >= 1 ? 1 : .35);
+        ctx.restore();
+    }
+
+    function drawChannelPill(ctx, cx, cy, label, value, color) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        roundRect(ctx, cx - 36, cy - 18, 72, 36, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(label, cx - 18, cy + 5);
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText(formatCompact(value), cx + 14, cy + 5);
+        ctx.restore();
+    }
+
+    function drawRadiusArrow(ctx, cx, cy, radius, color, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + radius, cy);
+        ctx.stroke();
+        drawParticle(ctx, cx + radius, cy, color, alpha, 4.5);
+        drawTinyText(ctx, "r = 3", cx + radius / 2, cy - 12, color, 14);
+        ctx.restore();
+    }
+
+    function drawScanArc(ctx, cx, cy, radius, index, color, alpha) {
+        const start = -Math.PI / 2;
+        const end = start + (index + 1) / 16 * Math.PI * 2;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawSampleStrip(ctx, x, y, scanIndex, phase) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = "#bfdbfe";
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 150, 72, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("16 samples", x + 75, y + 22);
+        for (let i = 0; i < 16; i++) {
+            const px = x + 15 + (i % 8) * 17;
+            const py = y + 42 + Math.floor(i / 8) * 17;
+            drawParticle(ctx, px, py, i <= scanIndex ? "#2563eb" : "#cbd5e1", i <= scanIndex ? .9 : .35, i === scanIndex ? 4.5 + phase.pulse * 1.5 : 3.2);
+        }
+        ctx.restore();
     }
 
     function drawMotionFastThreshold(ctx, point, info, phase, w, h) {
-        const cx = 230;
+        const cx = 250;
         const cy = 118;
         const radius = 66;
         const center = Number(fastCenterValue(point)) || 0;
-        drawValueNode(ctx, 70, 72, "C+t", center + fastOptions().threshold, "#ca8a04", 1);
-        drawValueNode(ctx, 70, 164, "C-t", center - fastOptions().threshold, "#7c3aed", 1);
+        const threshold = fastOptions().threshold;
+        const contiguous = fastOptions().contiguous;
+        drawValueNode(ctx, 74, 64, "bright if >", center + threshold, "#ca8a04", 1);
+        drawValueNode(ctx, 74, 170, "dark if <", center - threshold, "#7c3aed", 1);
+        drawMotionFlow(ctx, 126, 64, cx - radius, cy - 20, "#ca8a04", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 126, 170, cx - radius, cy + 20, "#7c3aed", phase.index >= 1 ? phase.local : .2);
         V.fastCircle.forEach((offset, index) => {
             const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
             const x = cx + Math.cos(angle) * radius;
@@ -898,28 +1153,104 @@
         });
         drawValueNode(ctx, cx, cy, "C", center, "#2563eb", 1);
         drawFastArc(ctx, cx, cy, radius + 16, info, phase.index >= 2 ? 1 : phase.local);
-        drawMotionFlow(ctx, 318, 118, 470, 118, info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
-        drawFlipValue(ctx, 525, 72, "Bright Arc", info.bright, "#ca8a04", phase.index >= 2 ? 1 : .35);
-        drawFlipValue(ctx, 525, 148, "Dark Arc", info.dark, "#7c3aed", phase.index >= 2 ? 1 : .35);
-        drawFlipValue(ctx, 700, 110, `FAST-${fastOptions().contiguous}`, info.pass ? "PASS" : "FAIL", info.pass ? "#facc15" : "#94a3b8", phase.index >= 3 ? phase.local : .3);
+        drawMotionFlow(ctx, cx + radius + 18, cy, 446, 118, info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
+        drawFastStateStrip(ctx, 470, 52, info, contiguous, phase);
+        drawFlipValue(ctx, 710, 84, "best run", Math.max(info.bright, info.dark), info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? 1 : .35);
+        drawFlipValue(ctx, 710, 156, `FAST-${contiguous}`, info.pass ? "PASS" : "FAIL", info.pass ? "#facc15" : "#94a3b8", phase.index >= 3 ? phase.local : .3);
     }
 
     function drawMotionFastCorners(ctx, point, phase, w, h) {
         const candidates = (currentFast?.candidates || []).slice(0, 90);
         const kept = currentFast?.corners || [];
         const keptKeys = new Set(kept.map(item => `${item.x},${item.y}`));
-        candidates.forEach((item, index) => {
-            const x = 54 + (index % 15) * 25;
-            const y = 36 + Math.floor(index / 15) * 27;
-            const isKept = keptKeys.has(`${item.x},${item.y}`);
-            const alpha = phase.index < 1 ? .24 + (index % 5) * .08 : (isKept ? 1 : .12);
-            drawParticle(ctx, x, y, isKept ? "#facc15" : "#cbd5e1", alpha, isKept ? 5 : 3);
-        });
         const selected = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
-        drawMotionFlow(ctx, 450, 118, 560, 118, "#facc15", phase.index >= 1 ? phase.local : .2);
-        drawDiamondGlyph(ctx, 610, 118, "#facc15", 22 + 4 * phase.pulse, phase.index >= 2 ? 1 : .35);
-        drawFlipValue(ctx, 705, 80, "Kept", kept.length, "#facc15", phase.index >= 1 ? 1 : .35);
-        drawFlipValue(ctx, 705, 158, "nearest", selected.point ? `${selected.point.x},${selected.point.y}` : "-", "#2563eb", phase.index >= 3 ? phase.local : .35);
+        drawFastCornerLayers(ctx, 44, 38, candidates, keptKeys, phase);
+        drawMotionFlow(ctx, 318, 118, 408, 118, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawCornerFunnel(ctx, 460, 118, phase);
+        drawMotionFlow(ctx, 512, 118, 600, 118, "#facc15", phase.index >= 2 ? phase.local : .2);
+        drawDiamondGlyph(ctx, 650, 118, "#facc15", 26 + 4 * phase.pulse, phase.index >= 2 ? 1 : .35);
+        drawTinyText(ctx, "final corner", 650, 162, "#ca8a04", 15);
+        drawFlipValue(ctx, 760, 76, "candidates", currentFast?.candidates?.length || candidates.length, "#2563eb", 1);
+        drawFlipValue(ctx, 760, 158, "final kept", kept.length, "#facc15", phase.index >= 3 ? phase.local : .35);
+    }
+
+    function drawFastStateStrip(ctx, x, y, info, contiguous, phase) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = "#bfdbfe";
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 168, 126, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("circle classification", x + 84, y + 22);
+        const active = info.active || new Set();
+        for (let i = 0; i < 16; i++) {
+            const state = info.states?.[i] || "similar";
+            const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
+            const px = x + 18 + (i % 8) * 19;
+            const py = y + 48 + Math.floor(i / 8) * 24;
+            const isActive = active.has(i);
+            drawParticle(ctx, px, py, color, .9, isActive ? 5.8 : 4);
+            drawTinyText(ctx, state === "bright" ? "+" : state === "dark" ? "-" : "=", px, py + 19, color, 12);
+        }
+        const windowWidth = Math.min(142, contiguous / 16 * 142);
+        ctx.strokeStyle = info.pass ? "#facc15" : "#94a3b8";
+        ctx.lineWidth = 2.5;
+        roundRect(ctx, x + 13, y + 100, windowWidth, 12, 6);
+        ctx.stroke();
+        ctx.fillStyle = info.pass ? "#ca8a04" : "#64748b";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText(`${contiguous} contiguous required`, x + 84, y + 94);
+        ctx.restore();
+    }
+
+    function drawFastCornerLayers(ctx, x, y, candidates, keptKeys, phase) {
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("candidate layer → kept layer", x, y - 12);
+        candidates.forEach((item, index) => {
+            const col = index % 14;
+            const row = Math.floor(index / 14);
+            const px = x + 12 + col * 20;
+            const py = y + 14 + row * 22;
+            const isKept = keptKeys.has(`${item.x},${item.y}`);
+            const dim = phase.index >= 1 && !isKept;
+            drawParticle(ctx, px, py, isKept ? "#facc15" : "#60a5fa", dim ? .10 : isKept ? .9 : .28, isKept ? 5.2 : 3);
+            if (isKept && phase.index >= 2) {
+                drawDiamondGlyph(ctx, px, py, "#facc15", 6 + phase.pulse * 1.8, .8);
+            }
+        });
+        ctx.restore();
+    }
+
+    function drawCornerFunnel(ctx, cx, cy, phase) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = "#93c5fd";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 40, cy - 46);
+        ctx.lineTo(cx + 40, cy - 46);
+        ctx.lineTo(cx + 18, cy + 8);
+        ctx.lineTo(cx + 18, cy + 44);
+        ctx.lineTo(cx - 18, cy + 44);
+        ctx.lineTo(cx - 18, cy + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        const glow = ctx.createLinearGradient(cx, cy - 44, cx, cy + 44);
+        glow.addColorStop(0, "rgba(96,165,250,.05)");
+        glow.addColorStop(1, `rgba(250,204,21,${.22 + .18 * phase.pulse})`);
+        ctx.fillStyle = glow;
+        ctx.fill();
+        drawTinyText(ctx, "NMS filter", cx, cy - 12, "#2563eb", 14);
+        drawTinyText(ctx, "keep local max", cx, cy + 20, "#ca8a04", 13);
+        ctx.restore();
     }
 
     function fastGrayPatch(point, radius = 2) {
@@ -970,21 +1301,14 @@
         const candidates = (currentFast?.candidates || []).slice(0, 110);
         const kept = currentFast?.corners || [];
         const keptKeys = new Set(kept.map(item => `${item.x},${item.y}`));
-        const fade = phase.index >= 2 ? phase.local : 0;
-        candidates.forEach((item, index) => {
-            const x = 48 + (index % 18) * 24;
-            const y = 36 + Math.floor(index / 18) * 25;
-            const isKept = keptKeys.has(`${item.x},${item.y}`);
-            const alpha = isKept ? 1 : Math.max(.08, 1 - fade - (index % 4) * .08);
-            drawParticle(ctx, x, y, isKept ? "#facc15" : "#cbd5e1", alpha, isKept ? 5 : 3);
-        });
         const selectedKept = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
         const keep = selectedKept.distance <= Math.max(4, fastOptions().nmsRadius);
-        drawValueNode(ctx, 560, 74, "FAST score", point?.response || 0, keep ? "#facc15" : "#94a3b8", 1);
-        drawNmsRadius(ctx, 560, 74, 42 + 18 * phase.pulse, keep ? "#facc15" : "#94a3b8", phase.index >= 1 ? 1 : .35);
-        drawMotionFlow(ctx, 560, 118, 660, 118, keep ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .3);
-        drawFlipValue(ctx, 710, 78, "Candidates", candidates.length, "#2563eb", 1);
-        drawFlipValue(ctx, 710, 160, keep ? "KEEP" : "SUPPRESS", kept.length, keep ? "#facc15" : "#7c3aed", phase.index >= 3 ? phase.local : .4);
+        const field = drawFastNmsField(ctx, 42, 38, 350, 160, candidates, keptKeys, point, selectedKept.point, phase);
+        drawMotionFlow(ctx, 398, 118, 470, 118, keep ? "#facc15" : "#94a3b8", phase.index >= 1 ? phase.local : .2);
+        drawValueNode(ctx, 526, 78, "current score", point?.response || 0, keep ? "#facc15" : "#94a3b8", 1);
+        drawValueNode(ctx, 526, 158, "winner score", selectedKept.point?.response || 0, "#facc15", phase.index >= 2 ? 1 : .35);
+        drawMotionFlow(ctx, 584, 118, 660, 118, keep ? "#facc15" : "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawFastNmsDecisionCard(ctx, 742, 118, keep, candidates.length, kept.length, phase.index >= 3 ? phase.local : .35);
     }
 
     function drawMotionGeneric(ctx, stepKey, phase, w, h) {
@@ -993,6 +1317,59 @@
         drawValueNode(ctx, 390, 92, harrisSteps().find(item => item.key === stepKey)?.en || stepKey, `(${probe?.x ?? "-"}, ${probe?.y ?? "-"})`, "#2563eb", 1);
         drawMotionFlow(ctx, 210, 118, 350, 118, "#60a5fa", phase.local);
         drawFlipValue(ctx, 610, 118, "ready", "probe", "#f97316", phase.local);
+    }
+
+    function drawFastNmsField(ctx, x, y, width, height, candidates, keptKeys, currentPoint, winnerPoint, phase) {
+        const maxScore = Math.max(1, ...candidates.map(item => Number(item.response) || 0));
+        ctx.save();
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("FAST candidates ranked by score", x, y - 12);
+        candidates.forEach((item, index) => {
+            const col = index % 16;
+            const row = Math.floor(index / 16);
+            const px = x + 12 + col * 20;
+            const py = y + 14 + row * 22;
+            const isKept = keptKeys.has(`${item.x},${item.y}`);
+            const isCurrent = currentPoint && item.x === currentPoint.x && item.y === currentPoint.y;
+            const isWinner = winnerPoint && item.x === winnerPoint.x && item.y === winnerPoint.y;
+            const scoreRatio = Math.sqrt((Number(item.response) || 0) / maxScore);
+            const suppressed = phase.index >= 2 && !isKept;
+            const color = isCurrent ? "#7c3aed" : isWinner || isKept ? "#facc15" : "#60a5fa";
+            const alpha = suppressed ? .12 : .25 + scoreRatio * .7;
+            drawParticle(ctx, px, py, color, alpha, isCurrent ? 7 : isWinner ? 6.5 : 2.5 + scoreRatio * 3.5);
+            if (isCurrent) {
+                drawNmsRadius(ctx, px, py, 38 + 8 * phase.pulse, "#7c3aed", phase.index >= 1 ? .78 : .25);
+                drawLabelPill(ctx, px, py + 44, "current", "#7c3aed");
+            }
+            if (isWinner && !isCurrent) drawLabelPill(ctx, px + 34, py - 22, "winner", "#ca8a04");
+        });
+        ctx.restore();
+    }
+
+    function drawFastNmsDecisionCard(ctx, cx, cy, keep, candidateCountValue, keptCountValue, alpha) {
+        const color = keep ? "#facc15" : "#7c3aed";
+        ctx.save();
+        ctx.globalAlpha = Math.max(.2, Math.min(1, alpha));
+        ctx.fillStyle = "rgba(255,255,255,.94)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = `${color}66`;
+        ctx.shadowBlur = 16;
+        roundRect(ctx, cx - 76, cy - 62, 152, 124, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        ctx.font = "950 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(keep ? "KEEP" : "SUPPRESS", cx, cy - 26);
+        ctx.fillStyle = "#31527f";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(`${candidateCountValue} candidates`, cx, cy + 4);
+        ctx.fillText(`${keptCountValue} kept after NMS`, cx, cy + 28);
+        ctx.restore();
     }
 
     function renderMotionMetrics(stepKey) {
@@ -1208,7 +1585,7 @@
             }
         });
         ctx.fillStyle = "#64748b";
-        ctx.font = "850 10px sans-serif";
+        ctx.font = "900 12px sans-serif";
         ctx.textAlign = "left";
         ctx.fillText("中心值 + 扫描值", x, y + size + 16);
         ctx.restore();
@@ -1224,7 +1601,7 @@
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.fillStyle = "#31527f";
-        ctx.font = "950 11px sans-serif";
+        ctx.font = "950 13px sans-serif";
         ctx.textAlign = "left";
         ctx.fillText(label, x, y - 10);
         values.forEach((value, index) => {
@@ -1242,7 +1619,7 @@
         });
         const center = Number(matrix?.[1]?.[1]) || 0;
         ctx.fillStyle = "#0f172a";
-        ctx.font = "950 11px sans-serif";
+        ctx.font = "950 12px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(formatCompact(center), x + size / 2, y + size / 2 + 4);
         ctx.restore();
@@ -1286,7 +1663,7 @@
         drawMotionFlow(ctx, x1, y1, x2, y2, color, t);
         ctx.save();
         ctx.fillStyle = color;
-        ctx.font = "900 12px sans-serif";
+        ctx.font = "950 14px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(formatCompact(value), x1 + (x2 - x1) * t, y1 + (y2 - y1) * t - 8);
         ctx.restore();
@@ -1489,8 +1866,28 @@
         roundRect(ctx, x + 6, y + 10, 120 * Math.max(.05, ratio), 7, 4);
         ctx.fill();
         ctx.fillStyle = color;
-        ctx.font = "900 11px sans-serif";
+        ctx.font = "950 13px sans-serif";
         ctx.fillText(`${label}  ${formatCompact(value)}`, x + 10, y - 3);
+        ctx.restore();
+    }
+
+    function drawOperatorNode(ctx, x, y, operator, color, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = `${color}66`;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+        ctx.font = "950 24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(operator, x, y + 8);
         ctx.restore();
     }
 
@@ -1565,7 +1962,7 @@
     function drawTinyText(ctx, value, x, y, color, size = 10) {
         ctx.save();
         ctx.fillStyle = color;
-        ctx.font = `950 ${Math.max(12, size)}px sans-serif`;
+        ctx.font = `950 ${Math.max(14, size)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(String(value), x, y);
         ctx.restore();
