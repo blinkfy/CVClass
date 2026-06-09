@@ -236,7 +236,7 @@
             const offset = i * 4;
             gray[i] = 0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
         }
-        return { gray, width: canvas.width, height: canvas.height };
+        return { gray, rgba, width: canvas.width, height: canvas.height };
     }
 
     const fastCircle = [

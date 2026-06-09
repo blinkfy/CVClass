@@ -543,8 +543,8 @@
 
 .corner-motion-probe {
     gap: 9px;
-    min-height: 250px;
-    max-height: 280px;
+    min-height: 292px;
+    max-height: 330px;
     overflow: hidden;
     padding: 11px 12px;
 }
@@ -595,12 +595,12 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
     gap: 10px;
-    min-height: 202px;
+    min-height: 236px;
 }
 .corner-motion-stage {
     position: relative;
     min-width: 0;
-    height: 202px;
+    height: 236px;
     overflow: hidden;
     border: 1px solid #cfe1ff;
     border-radius: 15px;
@@ -631,7 +631,7 @@
     background: rgba(255,255,255,.68);
     box-shadow: 0 5px 14px rgba(37,99,235,.08);
     backdrop-filter: blur(10px);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 900;
     pointer-events: none;
 }
@@ -645,10 +645,10 @@
     display: grid;
     place-items: center;
     min-width: 19px;
-    height: 17px;
+    height: 19px;
     border-radius: 999px;
     color: #fff;
-    font-size: 8px;
+    font-size: 10px;
     background: #2563eb;
 }
 .corner-motion-steps {
@@ -666,11 +666,11 @@
     overflow: hidden;
     border: 1px solid rgba(147,197,253,.55);
     border-radius: 999px;
-    padding: 4px 7px;
+    padding: 5px 8px;
     color: #64748b;
     background: rgba(255,255,255,.68);
     box-shadow: 0 5px 14px rgba(37,99,235,.06);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 950;
     text-align: center;
     text-overflow: ellipsis;
@@ -699,7 +699,7 @@
 }
 .corner-motion-result {
     min-width: 0;
-    height: 202px;
+    height: 236px;
     overflow: hidden;
     border: 1px solid #dbeafe;
     border-radius: 15px;
@@ -726,13 +726,13 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
-    min-height: 27px;
+    min-height: 30px;
     border: 1px solid #e2e8f0;
     border-radius: 9px;
     padding: 4px 7px;
     color: #52657f;
     background: rgba(255,255,255,.88);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 850;
 }
 .corner-motion-metric span,
@@ -746,7 +746,7 @@
     color: #1d4ed8;
     max-width: 130px;
     text-align: right;
-    font-size: 11px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     animation: motion-value-flip .38s cubic-bezier(.22,1,.36,1);
 }

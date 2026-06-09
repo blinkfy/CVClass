@@ -662,30 +662,355 @@
         }
     }
 
+    function sampleRgbAtSource(sourceX, sourceY, fallbackGray = 0) {
+        const fallback = Math.max(0, Math.min(255, Math.round(Number(fallbackGray) || 0)));
+        if (!currentGray?.rgba?.length || !currentGray.width || !currentGray.height) {
+            return { r: fallback, g: fallback, b: fallback, gray: fallback };
+        }
+        const sourceWidth = currentData?.meta?.width || currentGray.width;
+        const sourceHeight = currentData?.meta?.height || currentGray.height;
+        const px = Math.max(0, Math.min(currentGray.width - 1, Math.round(Number(sourceX || 0) / Math.max(1, sourceWidth - 1) * (currentGray.width - 1))));
+        const py = Math.max(0, Math.min(currentGray.height - 1, Math.round(Number(sourceY || 0) / Math.max(1, sourceHeight - 1) * (currentGray.height - 1))));
+        const offset = (py * currentGray.width + px) * 4;
+        const r = currentGray.rgba[offset] ?? fallback;
+        const g = currentGray.rgba[offset + 1] ?? fallback;
+        const b = currentGray.rgba[offset + 2] ?? fallback;
+        return { r, g, b, gray: 0.299 * r + 0.587 * g + 0.114 * b };
+    }
+
+    function rgbText(sample) {
+        if (!sample) return "-";
+        return `${Math.round(sample.r)}/${Math.round(sample.g)}/${Math.round(sample.b)}`;
+    }
+
+    function drawMotionPanel(ctx, x, y, width, height, color = "#2563eb") {
+        ctx.save();
+        ctx.shadowColor = "rgba(37,99,235,.12)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 8;
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = `${color}4f`;
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, x, y, width, height, 16);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+        const gloss = ctx.createLinearGradient(x, y, x + width, y + height);
+        gloss.addColorStop(0, `${color}12`);
+        gloss.addColorStop(.55, "rgba(255,255,255,0)");
+        gloss.addColorStop(1, "rgba(255,255,255,.4)");
+        ctx.fillStyle = gloss;
+        roundRect(ctx, x + 1, y + 1, width - 2, height - 2, 15);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawParticleFlow(ctx, x1, y1, x2, y2, color, phase, count = 4) {
+        ctx.save();
+        ctx.strokeStyle = `${color}42`;
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        for (let i = 0; i < count; i++) {
+            const t = (motionProgress(phase) + i / count) % 1;
+            const x = x1 + (x2 - x1) * t;
+            const y = y1 + (y2 - y1) * t;
+            ctx.globalAlpha = .28 + .72 * Math.sin(t * Math.PI);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(x, y, 4.5 + Math.sin(t * Math.PI) * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawRgbPatch(ctx, x, y, size, matrix, sample, active, color, phase, label = "Pixel Patch") {
+        const patch = centerMatrix(matrix, 5);
+        const rows = patch.length || 5;
+        const cols = patch[0]?.length || 5;
+        const cell = size / cols;
+        const centerIndex = Math.floor(rows * cols / 2);
+        ctx.save();
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x, y - 11);
+        flattenMatrix(patch).forEach((value, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const px = x + col * cell;
+            const py = y + row * cell;
+            const isCenter = index === centerIndex;
+            const isActive = index === active;
+            const v = Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+            const fill = isCenter
+                ? `rgb(${Math.round(sample.r)},${Math.round(sample.g)},${Math.round(sample.b)})`
+                : `rgb(${Math.round((v + sample.r) / 2)},${Math.round((v + sample.g) / 2)},${Math.round((v + sample.b) / 2)})`;
+            ctx.fillStyle = fill;
+            ctx.strokeStyle = isCenter ? "#f97316" : isActive ? color : "rgba(147,197,253,.58)";
+            ctx.lineWidth = isCenter ? 2.7 : isActive ? 2 : 1;
+            roundRect(ctx, px + 2, py + 2, cell - 4, cell - 4, 6);
+            ctx.fill();
+            ctx.stroke();
+        });
+        const center = {
+            x: x + (Math.floor(cols / 2) + .5) * cell,
+            y: y + (Math.floor(rows / 2) + .5) * cell
+        };
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 14 + 4 * phase.pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawGrayPatchOutput(ctx, x, y, size, matrix, active, color, label = "Gray Patch") {
+        const patch = centerMatrix(matrix, 5);
+        const rows = patch.length || 5;
+        const cols = patch[0]?.length || 5;
+        const cell = size / cols;
+        const centerIndex = Math.floor(rows * cols / 2);
+        ctx.save();
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x, y - 11);
+        flattenMatrix(patch).forEach((value, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const px = x + col * cell;
+            const py = y + row * cell;
+            const v = Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+            const isCenter = index === centerIndex;
+            const isActive = index === active;
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.strokeStyle = isCenter ? "#f97316" : isActive ? color : "rgba(147,197,253,.58)";
+            ctx.lineWidth = isCenter ? 2.5 : isActive ? 1.8 : 1;
+            roundRect(ctx, px + 2, py + 2, cell - 4, cell - 4, 6);
+            ctx.fill();
+            ctx.stroke();
+            if (isCenter) {
+                ctx.fillStyle = v > 135 ? "#7c2d12" : "#fff7ed";
+                ctx.font = "950 10px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(formatCompact(value), px + cell / 2, py + cell / 2 + 4);
+            }
+        });
+        ctx.restore();
+    }
+
+    function drawChannelWeightRow(ctx, x, y, width, label, value, weight, color, progress) {
+        const t = Math.max(0, Math.min(1, progress));
+        const contribution = Number(value || 0) * Number(weight);
+        ctx.save();
+        ctx.fillStyle = `${color}18`;
+        roundRect(ctx, x, y, width, 19, 9);
+        ctx.fill();
+        ctx.fillStyle = color;
+        roundRect(ctx, x, y, Math.max(8, width * t), 19, 9);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "950 11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, x + 9, y + 13);
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(`${Math.round(value)} × ${weight} = ${formatCompact(contribution)}`, x + width - 8, y + 13);
+        ctx.restore();
+    }
+
+    function drawCornerGrayComputation(ctx, phase, data, options = {}) {
+        const sample = sampleRgbAtSource(data.x, data.y, data.gray);
+        const gray = sample.gray;
+        const patch = data.gray_patch || [];
+        const scan = Math.min(24, Math.floor(motionEase(phase, .05, .55) * 25));
+        const rProgress = motionEase(phase, .18, .42, .1);
+        const gProgress = motionEase(phase, .28, .56, .08);
+        const bProgress = motionEase(phase, .38, .70, .06);
+        const outProgress = motionEase(phase, .58, .92, .14);
+        const accent = options.accent || "#2563eb";
+
+        drawMotionPanel(ctx, 30, 36, 222, 150, accent);
+        drawMotionPanel(ctx, 304, 36, 254, 150, "#06b6d4");
+        drawMotionPanel(ctx, 610, 36, 210, 150, "#f97316");
+        drawParticleFlow(ctx, 252, 112, 304, 112, "#06b6d4", phase, 3);
+        drawParticleFlow(ctx, 558, 112, 610, 112, "#f97316", phase, 3);
+
+        ctx.save();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText(options.sourceTitle || "原图像素采样", 50, 65);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText(`中心 (${data.x}, ${data.y}) · RGB ${rgbText(sample)}`, 50, 84);
+        drawRgbPatch(ctx, 54, 107, 74, patch, sample, scan, accent, phase, "");
+        [
+            ["R", sample.r, "#ef4444", 0],
+            ["G", sample.g, "#22c55e", 1],
+            ["B", sample.b, "#2563eb", 2]
+        ].forEach(([label, value, color, index]) => {
+            const x = 146 + index * 27;
+            const maxH = 42;
+            const barH = Math.max(4, maxH * (Number(value) / 255) * motionEase(phase, .08 + index * .07, .38 + index * .07));
+            ctx.fillStyle = `${color}1d`;
+            roundRect(ctx, x, 141 - maxH, 18, maxH, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, x, 141 - barH, 18, barH, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.font = "950 11px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(label, x + 9, 158);
+            ctx.fillStyle = "#334155";
+            ctx.font = "900 11px sans-serif";
+            ctx.fillText(String(Math.round(value)), x + 9, 173);
+        });
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = "#0891b2";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText(options.mixTitle || "RGB 加权融合", 326, 65);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("按亮度感知权重写入灰度数组", 326, 84);
+        drawChannelWeightRow(ctx, 326, 99, 200, "R", sample.r, "0.299", "#ef4444", rProgress);
+        drawChannelWeightRow(ctx, 326, 126, 200, "G", sample.g, "0.587", "#22c55e", gProgress);
+        drawChannelWeightRow(ctx, 326, 153, 200, "B", sample.b, "0.114", "#2563eb", bProgress);
+        const grayValue = Math.round(gray);
+        ctx.fillStyle = `rgb(${grayValue},${grayValue},${grayValue})`;
+        ctx.shadowColor = "rgba(6,182,212,.45)";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(528, 72, 14 + 2 * phase.pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#06b6d4";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(528, 72, 21 + 6 * outProgress, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = .34 + outProgress * .66;
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText(options.outputTitle || "Gray 输出", 630, 65);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText(options.outputSub || "供后续梯度 / 圆周检测读取", 630, 84);
+        drawGrayPatchOutput(ctx, 632, 110, 74, patch, 12, "#f97316", "");
+        ctx.fillStyle = "#fff7ed";
+        ctx.strokeStyle = "rgba(249,115,22,.5)";
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, 726, 106, 66, 52, 13);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#9a3412";
+        ctx.font = "950 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Gray", 759, 126);
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 18px sans-serif";
+        ctx.fillText(formatCompact(gray), 759, 148);
+        ctx.restore();
+    }
+
     function drawMotionInput(ctx, phase, w, h) {
         const data = currentProbeData();
-        const patch = centerMatrix(data.gray_patch, 3);
-        const active = Math.min(8, Math.floor(motionEase(phase, .04, .58) * 9));
-        drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Local Patch");
-        const marker = activeCellPoint(54, 48, 116, 4);
-        drawNmsRadius(ctx, marker.x, marker.y, 18 + 7 * phase.pulse, "#facc15", .85);
-        drawMotionFlow(ctx, 182, 108, 318, 108, "#60a5fa", motionEase(phase, .15, .45, .18));
-        drawValueNode(ctx, 374, 78, "x, y", `(${data.x},${data.y})`, "#2563eb", 1);
-        drawValueNode(ctx, 374, 152, "Gray", data.gray, "#f97316", motionEase(phase, .32, .56, .35));
-        drawMotionFlow(ctx, 430, 118, 548, 118, "#f97316", motionEase(phase, .48, .78, .18));
-        drawFlipValue(ctx, 622, 118, "probe", "ready", "#2563eb", motionEase(phase, .72, .96, .35));
+        const patch = centerMatrix(data.gray_patch, 5);
+        const sample = sampleRgbAtSource(data.x, data.y, data.gray);
+        const scan = Math.min(24, Math.floor(motionEase(phase, .05, .56) * 25));
+        const extractProgress = motionEase(phase, .18, .50, .14);
+        const packProgress = motionEase(phase, .48, .84, .16);
+
+        drawMotionPanel(ctx, 34, 38, 226, 148, "#2563eb");
+        drawMotionPanel(ctx, 318, 42, 208, 140, "#06b6d4");
+        drawMotionPanel(ctx, 590, 38, 226, 148, "#f97316");
+        drawParticleFlow(ctx, 260, 112, 318, 112, "#06b6d4", phase, 3);
+        drawParticleFlow(ctx, 526, 112, 590, 112, "#f97316", phase, 3);
+
+        ctx.save();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText("原图局部窗口", 54, 67);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText(`点击点 (${data.x}, ${data.y})`, 54, 86);
+        drawRgbPatch(ctx, 58, 113, 78, patch, sample, scan, "#2563eb", phase, "");
+        const center = { x: 58 + 78 / 2, y: 113 + 78 / 2 };
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 2.6;
+        ctx.setLineDash([6, 5]);
+        roundRect(ctx, center.x - 36 - 8 * extractProgress, center.y - 36 - 8 * extractProgress, 72 + 16 * extractProgress, 72 + 16 * extractProgress, 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText(`RGB ${rgbText(sample)}`, 152, 122);
+        ctx.fillText(`Gray ${formatCompact(sample.gray)}`, 152, 145);
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = .28 + extractProgress * .72;
+        ctx.fillStyle = "#0891b2";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText("探针包", 346, 72);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("坐标、灰度、局部 patch", 346, 94);
+        [
+            ["x", data.x, "#2563eb"],
+            ["y", data.y, "#7c3aed"],
+            ["G", formatCompact(sample.gray), "#f97316"]
+        ].forEach(([label, value, color], index) => {
+            ctx.fillStyle = "rgba(255,255,255,.9)";
+            ctx.strokeStyle = `${color}88`;
+            ctx.lineWidth = 1.6;
+            roundRect(ctx, 346, 108 + index * 22, 126, 17, 8);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.font = "950 11px sans-serif";
+            ctx.fillText(label, 357, 121 + index * 22);
+            ctx.fillStyle = "#334155";
+            ctx.font = "900 11px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(String(value), 462, 121 + index * 22);
+            ctx.textAlign = "left";
+        });
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = .32 + packProgress * .68;
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText("统一输入", 612, 67);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("后续步骤读取同一中心点", 612, 86);
+        drawGrayPatchOutput(ctx, 616, 112, 78, patch, 12, "#f97316", "");
+        drawFlipValue(ctx, 750, 132, "READY", "probe", "#f97316", packProgress);
+        ctx.restore();
     }
 
     function drawMotionGray(ctx, phase, w, h) {
         const data = currentProbeData();
-        const patch = centerMatrix(data.gray_patch, 3);
-        const active = Math.min(8, Math.floor(motionEase(phase, .05, .56) * 9));
-        drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Pixel Patch");
-        drawMotionFlow(ctx, 182, 108, 286, 108, "#60a5fa", motionEase(phase, .14, .42, .22));
-        drawCompactFormulaBox(ctx, 298, 80, "RGB 加权融合", "0.299 R   +   0.587 G   +   0.114 B", "#2563eb", motionEase(phase, .24, .52, .42));
-        drawMotionFlow(ctx, 516, 108, 592, 108, "#f97316", motionEase(phase, .48, .76, .2));
-        drawFlipValue(ctx, 662, 108, "Gray", data.gray, "#f97316", motionEase(phase, .62, .9, .35));
-        drawValueNode(ctx, 662, 176, "source", "center", "#2563eb", motionEase(phase, .72, .96, .35));
+        drawCornerGrayComputation(ctx, phase, data, {
+            sourceTitle: "中心像素采样",
+            mixTitle: "RGB 加权融合",
+            outputTitle: "Gray 写入",
+            outputSub: "结构张量从这里开始读取"
+        });
     }
 
     function drawMotionGradient(ctx, phase, w, h) {
@@ -1130,12 +1455,18 @@
     function drawMotionFastGray(ctx, point, phase, w, h) {
         const patch = fastGrayPatch(point, 2);
         const center = Number(fastCenterValue(point)) || 0;
-        drawFastChannelMixer(ctx, 52, 50, center, phase);
-        drawMotionFlow(ctx, 230, 118, 318, 118, "#60a5fa", motionEase(phase, .18, .42, .2));
-        drawCompactFormulaBox(ctx, 306, 84, "FAST 灰度输入", "G = 0.299R + 0.587G + 0.114B", "#2563eb", motionEase(phase, .24, .52, .4));
-        drawMotionFlow(ctx, 528, 118, 610, 118, "#f97316", motionEase(phase, .50, .76, .18));
-        drawCompactPatch(ctx, 640, 56, 112, centerMatrix(patch.gray, 3), 4, "#f97316", "Gray Patch");
-        drawValueNode(ctx, 555, 178, "Center G", center, "#f97316", motionEase(phase, .62, .88, .35));
+        drawCornerGrayComputation(ctx, phase, {
+            x: point?.x ?? Math.floor((currentGray?.width || 1) / 2),
+            y: point?.y ?? Math.floor((currentGray?.height || 1) / 2),
+            gray: center,
+            gray_patch: patch.gray
+        }, {
+            accent: "#eab308",
+            sourceTitle: "FAST 中心采样",
+            mixTitle: "FAST 灰度输入",
+            outputTitle: "Circle Test 输入",
+            outputSub: "中心 P 与 16 个圆周点同尺度比较"
+        });
     }
 
     function drawMotionFastCircle(ctx, point, info, phase, w, h) {
@@ -1529,17 +1860,23 @@
             const point = fastProbePoint();
             const info = fastArcInfo(point);
             if (stepKey === "input") {
+                const sample = sampleRgbAtSource(point?.x || 0, point?.y || 0, fastCenterValue(point));
                 return [
                     { label: "探针坐标", value: point ? `(${point.x}, ${point.y})` : "-" },
                     { label: "图像尺寸", value: currentGray ? `${currentGray.width}×${currentGray.height}` : "-" },
+                    { label: "中心 RGB", value: rgbText(sample), tone: "purple" },
+                    { label: "中心 Gray", value: formatNumber(sample.gray), tone: "orange" },
                     { label: "窗口半径", value: "r=3", tone: "orange" }
                 ];
             }
             if (stepKey === "gray") {
+                const sample = sampleRgbAtSource(point?.x || 0, point?.y || 0, fastCenterValue(point));
                 return [
-                    { label: "中心灰度", value: fastCenterValue(point), tone: "orange" },
+                    { label: "中心 RGB", value: rgbText(sample), tone: "purple" },
+                    { label: "Gray", value: formatNumber(sample.gray), tone: "orange" },
                     { label: "灰度公式", value: "0.299/0.587/0.114" },
-                    { label: "Patch", value: "5×5" }
+                    { label: "Patch", value: "5×5" },
+                    { label: "FAST 输入", value: "Circle Test", tone: "yellow" }
                 ];
             }
             if (stepKey === "circle") {
@@ -1586,6 +1923,26 @@
         const probe = currentProbeData();
         const ix = Number(probe.ix) || 0;
         const iy = Number(probe.iy) || 0;
+        if (stepKey === "input") {
+            const sample = sampleRgbAtSource(probe.x, probe.y, probe.gray);
+            return [
+                { label: "坐标", value: `(${probe.x}, ${probe.y})` },
+                { label: "图像尺寸", value: currentGray ? `${currentGray.width}×${currentGray.height}` : "-" },
+                { label: "中心 RGB", value: rgbText(sample), tone: "purple" },
+                { label: "中心 Gray", value: formatNumber(sample.gray), tone: "orange" },
+                { label: "探针包", value: "READY", tone: "orange" }
+            ];
+        }
+        if (stepKey === "gray") {
+            const sample = sampleRgbAtSource(probe.x, probe.y, probe.gray);
+            return [
+                { label: "中心 RGB", value: rgbText(sample), tone: "purple" },
+                { label: "Gray", value: formatNumber(sample.gray), tone: "orange" },
+                { label: "权重", value: "0.299/0.587/0.114" },
+                { label: "Patch", value: "5×5" },
+                { label: "输出", value: "Gray array", tone: "orange" }
+            ];
+        }
         if (stepKey === "gradient") return [
             { label: "Ix", value: formatNumber(ix) },
             { label: "Iy", value: formatNumber(iy) },
@@ -2829,11 +3186,8 @@
                 y / Math.max(1, V.$("cornerStepCanvas").height) * currentData.meta.height
             );
         }
-        if (["input", "response", "nms", "refine"].includes(stepKey)) {
+        if (["input", "gray", "response", "nms", "refine"].includes(stepKey)) {
             return clampSourcePoint(x / Math.max(1, V.$("cornerStepCanvas").width) * currentData.meta.width, y / Math.max(1, V.$("cornerStepCanvas").height) * currentData.meta.height);
-        }
-        if (stepKey === "gray") {
-            return packedCanvasPointToSource(packedForStepPanel(stepKey), x, y, 0, 0);
         }
         if (stepKey === "gradient") {
             return panelCanvasPointToSource(2, x, y);
@@ -2852,13 +3206,12 @@
                 y: sourceY / Math.max(1, currentData.meta.height) * canvas.height
             };
         }
-        if (["input", "response", "nms", "refine"].includes(stepKey)) {
+        if (["input", "gray", "response", "nms", "refine"].includes(stepKey)) {
             return {
                 x: sourceX / Math.max(1, currentData.meta.width) * canvas.width,
                 y: sourceY / Math.max(1, currentData.meta.height) * canvas.height
             };
         }
-        if (stepKey === "gray") return sourceToPackedCanvasPoint(packedForStepPanel(stepKey), sourceX, sourceY, 0, 0);
         if (stepKey === "gradient") return sourceToPanelCanvasPoint(canvas, 2, 0, sourceX, sourceY);
         if (stepKey === "second" || stepKey === "tensor") return sourceToPanelCanvasPoint(canvas, 3, 0, sourceX, sourceY);
         return null;
