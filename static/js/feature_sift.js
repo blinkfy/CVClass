@@ -661,14 +661,17 @@
                 ]
             ][step] || [];
         }
-        const data = analogData.get(algorithm);
-        if (!data) return [["状态", "等待基础数据"]];
+        const fallbackAnalog = {
+            surf: { keypoints: "demo", descriptorType: "float", descriptorDim: "64 float", distanceType: "L2", elapsedMs: 0 },
+            "fast-brief": { keypoints: "demo", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming", elapsedMs: 0 },
+            "orb-lite": { keypoints: "demo", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming", elapsedMs: 0 }
+        };
+        const data = analogData.get(algorithm) || fallbackAnalog[algorithm];
         const common = [
             ["keypoints", data.keypoints],
             ["descriptor", data.descriptorType],
             ["dimension", data.descriptorDim],
-            ["distance", data.distanceType],
-            ["time", `${compactNumber(data.elapsedMs)} ms`]
+            ["distance", data.distanceType]
         ];
         if (algorithm === "surf") {
             return [
@@ -686,7 +689,7 @@
             ][step] || common;
         }
         return [
-            [["检测器", "FAST-9"], ["NMS", "enabled"], ...common.slice(0, 3)],
+            [["检测器", "FAST-9"], ["圆周采样", "16"], ["排序", "response"], ["NMS", "local max"], ...common.slice(0, 2)],
             [["方向", "Intensity centroid"], ["矩", "m10 / m01"], ...common.slice(0, 3)],
             [["描述子", "rotated BRIEF"], ["距离", "Hamming"], ...common.slice(0, 3)]
         ][step] || common;
@@ -790,15 +793,266 @@
         return ctx;
     }
 
-    function drawPseudoPyramid(ctx, rows, palette, width, height, thumb) {
+    function drawPseudoPyramidMotion(ctx, rectRows, phase, seedPoint) {
+        if (!rectRows.length) return;
+        const segments = [];
+        if (seedPoint && rectRows[0]?.[0]) {
+            const first = rectRows[0][0];
+            segments.push({
+                from: seedPoint,
+                to: { x: first.x + first.w / 2, y: first.y + first.h / 2 },
+                fromSize: seedPoint,
+                target: first,
+                type: "double"
+            });
+        }
+        rectRows.forEach((row, octave) => {
+            row.forEach((rect, layer) => {
+                if (layer < row.length - 1) {
+                    const next = row[layer + 1];
+                    segments.push({
+                        from: { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 },
+                        to: { x: next.x + next.w / 2, y: next.y + next.h / 2 },
+                        fromSize: rect,
+                        target: next,
+                        type: "blur"
+                    });
+                }
+            });
+            if (octave < rectRows.length - 1 && rectRows[octave + 1]?.[0]) {
+                const sourceIndex = Math.max(0, row.length - 3);
+                const fromRect = row[sourceIndex] || row[row.length - 1];
+                const toRect = rectRows[octave + 1][0];
+                segments.push({
+                    from: { x: fromRect.x + fromRect.w / 2, y: fromRect.y + fromRect.h / 2 },
+                    to: { x: toRect.x + toRect.w / 2, y: toRect.y + toRect.h / 2 },
+                    fromSize: fromRect,
+                    target: toRect,
+                    type: "down"
+                });
+            }
+        });
+        if (!segments.length) return;
+        const total = segments.length;
+        const raw = (phase || 0) * total;
+        const activeIndex = Math.min(total - 1, Math.floor(raw));
+        const activeT = motionEase(raw - activeIndex);
+        const active = segments[activeIndex];
+        const arrivalOrder = new Map();
+        segments.forEach((segment, index) => {
+            if (segment.target?.key) arrivalOrder.set(segment.target.key, index);
+        });
+
+        ctx.save();
+        rectRows.forEach(row => {
+            row.forEach(rect => {
+                const order = arrivalOrder.get(rect.key);
+                if (order === undefined || order < activeIndex) return;
+                ctx.fillStyle = "rgba(248,251,255,.94)";
+                ctx.strokeStyle = "rgba(191,219,254,.62)";
+                ctx.setLineDash([4, 4]);
+                roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
+                ctx.fill();
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = "#93a4bd";
+                ctx.font = "900 11px sans-serif";
+                ctx.fillText(`L${rect.layer}`, rect.x + 10, rect.y + 18);
+            });
+        });
+
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        segments.forEach((segment, index) => {
+            const done = index < activeIndex;
+            const live = index === activeIndex;
+            ctx.globalAlpha = live ? .9 : done ? .34 : .12;
+            ctx.strokeStyle = segment.type === "down" ? "#06b6d4" : segment.type === "double" ? "#7c3aed" : "#2563eb";
+            ctx.lineWidth = live ? 3 : 1.6;
+            ctx.beginPath();
+            ctx.moveTo(segment.from.x, segment.from.y);
+            if (segment.type === "down") {
+                const midY = (segment.from.y + segment.to.y) / 2;
+                ctx.bezierCurveTo(segment.from.x + 34, midY, segment.to.x - 34, midY, segment.to.x, segment.to.y);
+            } else {
+                ctx.lineTo(segment.to.x, segment.to.y);
+            }
+            ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+
+        const x = active.from.x + (active.to.x - active.from.x) * activeT;
+        const y = active.from.y + (active.to.y - active.from.y) * activeT;
+        const target = active.target;
+        const fromSize = active.fromSize || target;
+        const movingW = Math.max(24, fromSize.w + (target.w - fromSize.w) * activeT);
+        const movingH = Math.max(20, fromSize.h + (target.h - fromSize.h) * activeT);
+        ctx.shadowColor = active.type === "down" ? "rgba(6,182,212,.22)" : "rgba(37,99,235,.24)";
+        ctx.shadowBlur = 16;
+        ctx.save();
+        roundRect(ctx, x - movingW / 2, y - movingH / 2, movingW, movingH, 7);
+        ctx.clip();
+        const fitted = coverRect(target.cell.array.width, target.cell.array.height, movingW, movingH, false);
+        fitted.x += x - movingW / 2;
+        fitted.y += y - movingH / 2;
+        drawPackedImage(ctx, target.cell.array, fitted, "gray");
+        ctx.restore();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = active.type === "down" ? "#06b6d4" : active.type === "double" ? "#7c3aed" : "#2563eb";
+        ctx.lineWidth = 2.5;
+        roundRect(ctx, x - movingW / 2, y - movingH / 2, movingW, movingH, 7);
+        ctx.stroke();
+        ctx.fillStyle = active.type === "down" ? "#0891b2" : active.type === "double" ? "#7c3aed" : "#1d4ed8";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText(active.type === "down" ? "scale down" : active.type === "double" ? "2× base enters" : "blur to next layer", x - movingW / 2, y - movingH / 2 - 8);
+        ctx.restore();
+    }
+
+    function drawDogDifferenceMotion(ctx, rectRows, gaussianRows, phase, gaussianRectRows = []) {
+        const targets = [];
+        rectRows.forEach((row, octave) => {
+            row.forEach((rect, layer) => {
+                const gaussianRow = gaussianRows?.[octave] || [];
+                if (gaussianRow[layer] && gaussianRow[layer + 1]) {
+                    targets.push({
+                        rect,
+                        previous: gaussianRow[layer],
+                        next: gaussianRow[layer + 1],
+                        previousRect: gaussianRectRows?.[octave]?.[layer] || rect,
+                        nextRect: gaussianRectRows?.[octave]?.[layer + 1] || rect
+                    });
+                }
+            });
+        });
+        if (!targets.length) return;
+
+        const maxLayer = Math.max(1, ...targets.map(item => Number(item.rect.layer) + 1 || 1));
+        const raw = (phase || 0) * maxLayer;
+        const activeLayer = Math.min(maxLayer - 1, Math.floor(raw));
+        const activeT = motionEase(raw - activeLayer);
+        const activeTargets = targets.filter(item => Number(item.rect.layer) === activeLayer);
+
+        ctx.save();
+        targets.forEach(item => {
+            const rect = item.rect;
+            const layer = Number(rect.layer) || 0;
+            if (layer < activeLayer) return;
+            const gaussianCell = item.next || item.previous;
+            ctx.save();
+            roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
+            ctx.clip();
+            if (gaussianCell?.array) {
+                const fitted = coverRect(gaussianCell.array.width, gaussianCell.array.height, rect.w, rect.h, false);
+                fitted.x += rect.x;
+                fitted.y += rect.y;
+                drawPackedImage(ctx, gaussianCell.array, fitted, "gray");
+            } else {
+                ctx.fillStyle = "rgba(248,251,255,.95)";
+                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+            }
+            ctx.restore();
+            ctx.fillStyle = "rgba(255,255,255,.58)";
+            roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(191,219,254,.7)";
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "#64748b";
+            ctx.font = "900 11px sans-serif";
+            ctx.fillText(layer === activeLayer ? `D${rect.layer}` : `G${rect.layer + 1}`, rect.x + 10, rect.y + 18);
+        });
+
+        activeTargets.forEach(active => {
+            const rect = active.rect;
+            const targetCenter = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+            const mergeGap = Math.max(5, rect.w * 0.12 * (1 - activeT));
+            const drawSource = (cell, sourceRect, side, label, tone) => {
+                const sourceCenter = { x: sourceRect.x + sourceRect.w / 2, y: sourceRect.y + sourceRect.h / 2 };
+                const targetX = targetCenter.x + side * mergeGap;
+                const targetY = targetCenter.y;
+                const cx = sourceCenter.x + (targetX - sourceCenter.x) * activeT;
+                const cy = sourceCenter.y + (targetY - sourceCenter.y) * activeT;
+                const w = sourceRect.w + (rect.w * 0.52 - sourceRect.w) * activeT;
+                const h = sourceRect.h + (rect.h * 0.72 - sourceRect.h) * activeT;
+                ctx.save();
+                ctx.shadowColor = `${tone}44`;
+                ctx.shadowBlur = 10;
+                roundRect(ctx, cx - w / 2, cy - h / 2, w, h, 6);
+                ctx.clip();
+                const fitted = coverRect(cell.array.width, cell.array.height, w, h, false);
+                fitted.x += cx - w / 2;
+                fitted.y += cy - h / 2;
+                drawPackedImage(ctx, cell.array, fitted, "gray");
+                ctx.restore();
+                ctx.strokeStyle = tone;
+                ctx.lineWidth = 1.8;
+                roundRect(ctx, cx - w / 2, cy - h / 2, w, h, 6);
+                ctx.stroke();
+                ctx.fillStyle = tone;
+                ctx.font = "950 10px sans-serif";
+                ctx.fillText(label, cx - w / 2 + 5, cy - h / 2 - 4);
+            };
+
+            drawSource(active.previous, active.previousRect, -1, `G${active.rect.layer}`, "#7c3aed");
+            drawSource(active.next, active.nextRect, 1, `G${active.rect.layer + 1}`, "#2563eb");
+
+            ctx.fillStyle = "#f97316";
+            ctx.font = "950 20px sans-serif";
+            ctx.textAlign = "center";
+            ctx.globalAlpha = Math.min(1, activeT * 1.8);
+            ctx.fillText("-", targetCenter.x, targetCenter.y + 7);
+            ctx.globalAlpha = 1;
+            ctx.textAlign = "left";
+
+            if (activeT > 0.38) {
+                const resultT = motionEase((activeT - 0.38) / 0.62);
+                ctx.save();
+                ctx.globalAlpha = resultT;
+                ctx.shadowColor = "rgba(249,115,22,.32)";
+                ctx.shadowBlur = 14;
+                roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
+                ctx.clip();
+                const fitted = coverRect(rect.cell.array.width, rect.cell.array.height, rect.w, rect.h, false);
+                fitted.x += rect.x;
+                fitted.y += rect.y;
+                drawPackedImage(ctx, rect.cell.array, fitted, "heat");
+                ctx.restore();
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = "#f97316";
+                ctx.lineWidth = 2.4;
+                roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
+                ctx.stroke();
+            }
+        });
+
+        if (activeTargets[0]) {
+            const first = activeTargets[0].rect;
+            const last = activeTargets[activeTargets.length - 1].rect;
+            ctx.fillStyle = "#475569";
+            ctx.font = "900 12px sans-serif";
+            ctx.fillText(`Layer D${activeLayer}:  G${activeLayer + 1} - G${activeLayer}`, first.x, Math.max(18, first.y - 18));
+            ctx.strokeStyle = "rgba(249,115,22,.48)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(first.x, first.y - 10);
+            ctx.lineTo(last.x + last.w, first.y - 10);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawPseudoPyramid(ctx, rows, palette, width, height, thumb, phase = 0, sourceRows = null) {
         const octaveRows = (rows || []).filter(row => row?.length);
         if (!octaveRows.length) return;
 
         const rowCount = octaveRows.length;
         const maxColumns = Math.max(1, ...octaveRows.map(row => row.length));
+        const showInitialDouble = !thumb && palette !== "heat";
         const left = thumb ? 13 : 108;
         const right = thumb ? 6 : 24;
-        const top = thumb ? 7 : 36;
+        const top = thumb ? 7 : (showInitialDouble ? 64 : 36);
         const bottom = thumb ? 7 : 28;
         const columnGap = thumb ? 3 : 8;
         const rowGap = thumb ? 5 : 22;
@@ -808,7 +1062,92 @@
         const baseHeight = Math.max(12, (height - top - bottom - rowGap * (rowCount - 1)) / scaleSum);
         const baseWidth = Math.max(12, (width - left - right - columnGap * (maxColumns - 1)) / maxColumns);
         const centers = [];
+        const rectRows = [];
+        let seedPoint = null;
         let y = top;
+        const buildSourceRectRows = rowsForLayout => {
+            const sourceRows = (rowsForLayout || []).filter(row => row?.length);
+            if (!sourceRows.length) return [];
+            const sourceMaxColumns = Math.max(1, ...sourceRows.map(row => row.length));
+            const sourceTop = palette === "heat" ? 64 : top;
+            const sourceScales = sourceRows.map((row, index) => Math.max(0.58, 1 - index * (thumb ? 0.14 : 0.15)));
+            const sourceScaleSum = sourceScales.reduce((sum, scale) => sum + scale, 0);
+            const sourceBaseHeight = Math.max(12, (height - sourceTop - bottom - rowGap * (sourceRows.length - 1)) / sourceScaleSum);
+            const sourceBaseWidth = Math.max(12, (width - left - right - columnGap * (sourceMaxColumns - 1)) / sourceMaxColumns);
+            let sourceY = sourceTop;
+            return sourceRows.map((row, octaveIndex) => {
+                const scale = sourceScales[octaveIndex];
+                const cellWidth = sourceBaseWidth * scale;
+                const cellHeight = sourceBaseHeight * scale;
+                const rowX = left + octaveIndex * indentStep;
+                const rects = row.map((cell, layerIndex) => ({
+                    x: rowX + layerIndex * (cellWidth + columnGap),
+                    y: sourceY,
+                    w: cellWidth,
+                    h: cellHeight,
+                    cell,
+                    octave: octaveIndex,
+                    layer: cell.layer ?? layerIndex,
+                    key: `${octaveIndex}:${layerIndex}`
+                }));
+                sourceY += cellHeight + rowGap;
+                return rects;
+            });
+        };
+
+        if (showInitialDouble) {
+            const meta = scaleData?.meta || {};
+            const inputSize = meta.width && meta.height ? `${meta.width}×${meta.height}` : "input";
+            const baseSize = meta.width && meta.height ? `${meta.width * 2}×${meta.height * 2}` : "2× base";
+            ctx.save();
+            const drawSeed = (x, y, title, sub, tone) => {
+                ctx.fillStyle = "rgba(255,255,255,.9)";
+                ctx.strokeStyle = `${tone}88`;
+                ctx.lineWidth = 1.3;
+                roundRect(ctx, x, y, 72, 34, 9);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = tone;
+                ctx.font = "950 12px sans-serif";
+                ctx.fillText(title, x + 9, y + 14);
+                ctx.fillStyle = "#64748b";
+                ctx.font = "850 10px sans-serif";
+                ctx.fillText(sub, x + 9, y + 28);
+            };
+            drawSeed(14, 10, "Input", inputSize, "#64748b");
+            drawSeed(14, 52, "2× base", baseSize, "#2563eb");
+            ctx.strokeStyle = "#2563eb";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, 44);
+            ctx.lineTo(50, 54);
+            ctx.stroke();
+            ctx.fillStyle = "#2563eb";
+            ctx.beginPath();
+            ctx.moveTo(50, 56);
+            ctx.lineTo(45, 48);
+            ctx.lineTo(55, 48);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "rgba(37,99,235,.55)";
+            ctx.lineWidth = 2;
+            const targetY = top + baseHeight / 2;
+            ctx.beginPath();
+            ctx.moveTo(86, 69);
+            ctx.lineTo(96, 69);
+            ctx.lineTo(96, targetY);
+            ctx.lineTo(left - 14, targetY);
+            ctx.stroke();
+            ctx.fillStyle = "#2563eb";
+            ctx.beginPath();
+            ctx.moveTo(left - 4, targetY);
+            ctx.lineTo(left - 14, targetY - 5);
+            ctx.lineTo(left - 14, targetY + 5);
+            ctx.closePath();
+            ctx.fill();
+            seedPoint = { x: 50, y: 69, w: 72, h: 34 };
+            ctx.restore();
+        }
 
         octaveRows.forEach((row, octaveIndex) => {
             const scale = scales[octaveIndex];
@@ -818,6 +1157,7 @@
             const rowWidth = row.length * cellWidth + Math.max(0, row.length - 1) * columnGap;
             const centerY = y + cellHeight / 2;
             centers.push({ x: rowX, y: centerY });
+            rectRows[octaveIndex] = [];
 
             ctx.save();
             ctx.fillStyle = thumb ? "rgba(239,246,255,.5)" : "rgba(239,246,255,.72)";
@@ -833,17 +1173,22 @@
                     x: rowX + layerIndex * (cellWidth + columnGap),
                     y,
                     w: cellWidth,
-                    h: cellHeight
+                    h: cellHeight,
+                    cell,
+                    octave: octaveIndex,
+                    layer: cell.layer ?? layerIndex,
+                    key: `${octaveIndex}:${layerIndex}`
                 };
+                rectRows[octaveIndex][layerIndex] = rect;
                 ctx.save();
                 ctx.shadowColor = "rgba(15,23,42,.14)";
                 ctx.shadowBlur = thumb ? 2 : 7;
                 ctx.shadowOffsetY = thumb ? 1 : 3;
-                ctx.fillStyle = palette === "heat" ? "#24104f" : "#0f172a";
+                ctx.fillStyle = palette === "heat" ? "#f5f3ff" : "#f8fbff";
                 roundRect(ctx, rect.x, rect.y, rect.w, rect.h, thumb ? 2 : 7);
                 ctx.fill();
                 ctx.clip();
-                const fitted = coverRect(cell.array.width, cell.array.height, rect.w, rect.h);
+                const fitted = coverRect(cell.array.width, cell.array.height, rect.w, rect.h, false);
                 fitted.x += rect.x;
                 fitted.y += rect.y;
                 drawPackedImage(ctx, cell.array, fitted, palette);
@@ -878,7 +1223,8 @@
                 ctx.fillText(`Octave ${octaveIndex}`, 29, centerY - 4);
                 ctx.fillStyle = "#64748b";
                 ctx.font = "850 10px sans-serif";
-                ctx.fillText(`1/${2 ** octaveIndex} 尺寸`, 29, centerY + 13);
+                const originalScale = octaveIndex === 0 ? "2× 原图" : octaveIndex === 1 ? "1× 原图" : `1/${2 ** (octaveIndex - 1)} 原图`;
+                ctx.fillText(showInitialDouble ? originalScale : `1/${2 ** octaveIndex} 尺寸`, 29, centerY + 13);
 
                 ctx.strokeStyle = "rgba(37,99,235,.55)";
                 ctx.lineWidth = 2;
@@ -936,6 +1282,11 @@
             ctx.restore();
         }
         ctx.restore();
+        if (!thumb && palette !== "heat") {
+            drawPseudoPyramidMotion(ctx, rectRows, phase, seedPoint);
+        } else if (!thumb && palette === "heat") {
+            drawDogDifferenceMotion(ctx, rectRows, sourceRows, phase, buildSourceRectRows(sourceRows));
+        }
     }
 
     async function drawSiftStepCanvas(canvas, stepIndex, options = {}) {
@@ -978,7 +1329,9 @@
         if (stepIndex === 1 || stepIndex === 2) {
             const rows = stepIndex === 1 ? scaleData.pyramid?.gaussian || [] : scaleData.pyramid?.dog || [];
             const palette = stepIndex === 1 ? "gray" : "heat";
-            drawPseudoPyramid(ctx, rows, palette, width, height, thumb);
+            const sourceRows = stepIndex === 2 ? scaleData.pyramid?.gaussian || [] : null;
+            const animationPhase = thumb ? 0 : replayWithHold(options.animationPhase || 0);
+            drawPseudoPyramid(ctx, rows, palette, width, height, thumb, animationPhase, sourceRows);
             return;
         }
 
@@ -1264,6 +1617,11 @@
 
     function motionEase(t) {
         return 0.5 - Math.cos(Math.max(0, Math.min(1, t)) * Math.PI) / 2;
+    }
+
+    function replayWithHold(progress, activePortion = 0.78) {
+        const p = ((Number(progress) || 0) % 1 + 1) % 1;
+        return p < activePortion ? p / activePortion : 1;
     }
 
     function drawMotionPill(ctx, x, y, w, h, title, value, color = "#2563eb") {
@@ -2487,6 +2845,228 @@
         ctx.restore();
     }
 
+    function drawBriefPairSamplingMotion(ctx, phase, data) {
+        const active = Math.floor(phase * 18) % 18;
+        const pairA = { x: 328 + Math.cos(active * 2.14) * (20 + active % 5 * 8), y: 126 + Math.sin(active * 2.14) * (18 + active % 4 * 9) };
+        const pairB = { x: 328 + Math.cos(active * 1.37 + 1.2) * (28 + active % 6 * 6), y: 126 + Math.sin(active * 1.37 + 1.2) * (24 + active % 5 * 7) };
+        const valueA = 88 + (active * 17) % 120;
+        const valueB = 76 + (active * 29) % 132;
+        const bit = valueA < valueB ? 1 : 0;
+
+        ctx.save();
+        ctx.fillStyle = "#eab308";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("FAST corner", 54, 62);
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText(data ? `${data.keypoints} corners` : "corner", 54, 82);
+        drawPatchTiles(ctx, 54, 102, 5, 4, 22, phase, "#eab308");
+        ctx.strokeStyle = "#eab308";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(108, 146, 23 + 4 * Math.sin(phase * Math.PI * 2), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(108, 146, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        drawFlowParticles(ctx, 178, 136, 238, 136, "#eab308", phase, 4);
+
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("fixed sampling pairs", 246, 52);
+        ctx.strokeStyle = "rgba(37,99,235,.16)";
+        ctx.lineWidth = 1.2;
+        for (let r = 26; r <= 78; r += 26) {
+            ctx.beginPath();
+            ctx.arc(328, 126, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(255,255,255,.55)";
+        ctx.strokeStyle = "rgba(147,197,253,.48)";
+        roundRect(ctx, 250, 62, 156, 132, 18);
+        ctx.fill();
+        ctx.stroke();
+        for (let i = 0; i < 36; i++) {
+            const a = i * 2.399;
+            const r = 18 + (i % 7) * 8;
+            const px = 328 + Math.cos(a) * r;
+            const py = 126 + Math.sin(a) * r;
+            ctx.fillStyle = i % 2 ? "rgba(37,99,235,.7)" : "rgba(14,165,233,.65)";
+            ctx.beginPath();
+            ctx.arc(px, py, 2.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(pairA.x, pairA.y);
+        ctx.lineTo(pairB.x, pairB.y);
+        ctx.stroke();
+        [["a", pairA, "#0ea5e9"], ["b", pairB, "#f97316"]].forEach(([label, point, color]) => {
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, point.x + 8, point.y - 7);
+        });
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("no rotation", 292, 212);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 414, 136, 494, 136, "#2563eb", (phase + .14) % 1, 5);
+
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("compare", 516, 72);
+        const rows = [
+            ["I(a)", valueA, "#0ea5e9"],
+            ["I(b)", valueB, "#f97316"]
+        ];
+        rows.forEach(([label, value, color], index) => {
+            const y = 94 + index * 38;
+            ctx.fillStyle = `${color}1f`;
+            roundRect(ctx, 518, y, 128, 14, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, 518, y, 128 * (value / 220), 14, 7);
+            ctx.fill();
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, 518, y + 31);
+            ctx.textAlign = "right";
+            ctx.fillText(String(value), 646, y + 31);
+            ctx.textAlign = "left";
+        });
+        ctx.fillStyle = bit ? "#16a34a" : "#f97316";
+        ctx.font = "950 20px sans-serif";
+        ctx.fillText(valueA < valueB ? "I(a) < I(b)" : "I(a) ≥ I(b)", 518, 184);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 654, 136, 710, 136, bit ? "#16a34a" : "#f97316", (phase + .3) % 1, 4);
+
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("write bit", 724, 72);
+        for (let i = 0; i < 18; i++) {
+            const on = i <= active;
+            ctx.fillStyle = on ? (i === active ? "#f97316" : i % 2 ? "#2563eb" : "#16a34a") : "rgba(203,213,225,.55)";
+            roundRect(ctx, 724 + (i % 9) * 13, 96 + Math.floor(i / 9) * 36, 9, 28, 3);
+            ctx.fill();
+        }
+        ctx.fillStyle = "#334155";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(`bit = ${bit}`, 724, 184);
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("256 comparisons", 724, 204);
+        ctx.restore();
+    }
+
+    function drawBriefDescriptorMatchMotion(ctx, phase) {
+        const write = Math.floor(phase * 32) % 32;
+        const scan = Math.floor(phase * 24) % 24;
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("256 comparisons", 56, 62);
+        for (let i = 0; i < 24; i++) {
+            const x = 58 + (i % 8) * 14;
+            const y = 88 + Math.floor(i / 8) * 28;
+            const on = i <= scan;
+            ctx.strokeStyle = on ? "#2563eb" : "rgba(147,197,253,.62)";
+            ctx.lineWidth = on ? 2 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 10, y - 6 + (i % 3) * 6);
+            ctx.stroke();
+            ctx.fillStyle = on ? (i % 2 ? "#f97316" : "#2563eb") : "#cbd5e1";
+            ctx.beginPath();
+            ctx.arc(x, y, on ? 3.3 : 2.2, 0, Math.PI * 2);
+            ctx.arc(x + 10, y - 6 + (i % 3) * 6, on ? 3.3 : 2.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("each pair writes one bit", 56, 196);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 188, 126, 246, 126, "#2563eb", phase, 4);
+
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("descriptor A", 264, 64);
+        ctx.fillStyle = "#7c3aed";
+        ctx.fillText("descriptor B", 264, 118);
+        for (let i = 0; i < 32; i++) {
+            const x = 266 + i * 10;
+            const aBit = (i * 7 + 3) % 5 > 1;
+            const bBit = (i * 11 + 1) % 6 > 2;
+            const on = i <= write;
+            ctx.fillStyle = on ? (aBit ? "#2563eb" : "#cbd5e1") : "rgba(203,213,225,.35)";
+            roundRect(ctx, x, 78, 7, 26, 3);
+            ctx.fill();
+            ctx.fillStyle = on ? (bBit ? "#7c3aed" : "#cbd5e1") : "rgba(203,213,225,.35)";
+            roundRect(ctx, x, 132, 7, 26, 3);
+            ctx.fill();
+            if (on && aBit !== bBit) {
+                ctx.strokeStyle = "#f97316";
+                ctx.lineWidth = 1.7;
+                ctx.beginPath();
+                ctx.moveTo(x + 3.5, 108);
+                ctx.lineTo(x + 3.5, 128);
+                ctx.stroke();
+            }
+        }
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("visible window of 256 bits", 264, 196);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 596, 126, 648, 126, "#f97316", (phase + .2) % 1, 4);
+
+        ctx.save();
+        ctx.fillStyle = "#f97316";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("XOR", 666, 64);
+        let diffCount = 0;
+        for (let i = 0; i < 24; i++) {
+            const aBit = (i * 7 + 3) % 5 > 1;
+            const bBit = (i * 11 + 1) % 6 > 2;
+            const diff = aBit !== bBit;
+            if (diff && i <= scan) diffCount += 1;
+            const x = 668 + (i % 12) * 12;
+            const y = 84 + Math.floor(i / 12) * 28;
+            ctx.fillStyle = i <= scan ? (diff ? "#f97316" : "#cbd5e1") : "rgba(203,213,225,.35)";
+            roundRect(ctx, x, y, 8, 20, 3);
+            ctx.fill();
+        }
+        ctx.strokeStyle = "rgba(249,115,22,.45)";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(730, 148, 32 + 8 * phase, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("popcount", 666, 180);
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "950 22px sans-serif";
+        ctx.fillText(`d = ${diffCount}`, 756, 180);
+        ctx.restore();
+    }
+
     function drawFastCircleTest(ctx, cx, cy, phase, color = "#eab308", rotated = false) {
         ctx.save();
         const radius = 58;
@@ -2551,6 +3131,205 @@
         ctx.arc(x + 4 * 24, y + 22, ripple, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
+    }
+
+    function drawFastScanSweep(ctx, x, y, phase, color, label) {
+        const cols = 6;
+        const rows = 5;
+        const cell = 21;
+        const active = Math.floor(phase * cols * rows) % (cols * rows);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText(label, x, y - 16);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const index = row * cols + col;
+                const value = (Math.sin(row * 1.5 + col * 1.1) + 1) / 2;
+                ctx.fillStyle = `rgba(37,99,235,${.06 + value * .2})`;
+                ctx.strokeStyle = "rgba(147,197,253,.62)";
+                roundRect(ctx, x + col * cell, y + row * cell, cell - 2, cell - 2, 5);
+                ctx.fill();
+                ctx.stroke();
+                if (index === active) {
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2.4;
+                    roundRect(ctx, x + col * cell - 2, y + row * cell - 2, cell + 2, cell + 2, 7);
+                    ctx.stroke();
+                }
+            }
+        }
+        const cx = x + (active % cols) * cell + cell / 2;
+        const cy = y + Math.floor(active / cols) * cell + cell / 2;
+        ctx.fillStyle = "#0f172a";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("slide center pixel", x + 4, y + rows * cell + 24);
+        ctx.restore();
+    }
+
+    function drawFastDecisionRing(ctx, cx, cy, phase, color) {
+        const radius = 58;
+        const active = Math.floor(phase * 16) % 16;
+        const start = 1;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("16-point circle test", cx, cy - 84);
+        ctx.textAlign = "left";
+        ctx.strokeStyle = "rgba(37,99,235,.18)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("Ip", cx + 15, cy + 5);
+
+        for (let i = 0; i < 16; i++) {
+            const angle = -Math.PI / 2 + i / 16 * Math.PI * 2;
+            const px = cx + Math.cos(angle) * radius;
+            const py = cy + Math.sin(angle) * radius;
+            const contiguous = ((i - start + 16) % 16) < 9;
+            const dim = i % 5 === 0;
+            const fill = dim ? "#cbd5e1" : contiguous ? color : "#7c3aed";
+            ctx.fillStyle = i === active ? "#f97316" : fill;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = i === active || contiguous ? 12 : 4;
+            ctx.beginPath();
+            ctx.arc(px, py, i === active ? 7 : contiguous ? 5.4 : 4.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius + 10, -Math.PI / 2 + start / 16 * Math.PI * 2, -Math.PI / 2 + (start + 9) / 16 * Math.PI * 2);
+        ctx.stroke();
+
+        const bars = [
+            ["+T", color, .8],
+            ["-T", "#7c3aed", .46],
+            ["~", "#cbd5e1", .25]
+        ];
+        bars.forEach(([label, barColor, level], index) => {
+            const bx = cx + 96;
+            const by = cy - 34 + index * 19;
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 12px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(label, bx - 8, by + 9);
+            ctx.fillStyle = `${barColor}24`;
+            roundRect(ctx, bx, by, 64, 9, 5);
+            ctx.fill();
+            ctx.fillStyle = barColor;
+            roundRect(ctx, bx, by, 64 * level * motionEase(phase), 9, 5);
+            ctx.fill();
+        });
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText("threshold gate", cx + 96, cy + 45);
+        ctx.fillStyle = "#7c2d12";
+        ctx.font = "950 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("9 continuous pass", cx, cy + 82);
+        ctx.textAlign = "left";
+        ctx.restore();
+    }
+
+    function drawFastNmsCompetition(ctx, x, y, phase, color, label) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText(label, x, y - 16);
+        const winner = 14;
+        for (let i = 0; i < 35; i++) {
+            const px = x + (i % 7) * 23 + Math.sin(i * 1.7) * 3;
+            const py = y + Math.floor(i / 7) * 20 + Math.cos(i * 1.1) * 3;
+            const strong = i === winner || i === 25 || i === 31;
+            const active = i === Math.floor(phase * 35) % 35;
+            const score = strong ? 1 : .25 + ((i * 7) % 8) / 14;
+            ctx.globalAlpha = i === winner ? 1 : active ? .9 : .28 + score * .35;
+            ctx.strokeStyle = i === winner ? color : active ? "#f97316" : "#94a3b8";
+            ctx.lineWidth = i === winner ? 3 : active ? 2.2 : 1.2;
+            ctx.beginPath();
+            ctx.arc(px, py, i === winner ? 7 : active ? 5.2 : 3.8, 0, Math.PI * 2);
+            ctx.stroke();
+            if (strong) {
+                ctx.fillStyle = `${color}22`;
+                ctx.beginPath();
+                ctx.arc(px, py, 12 * score, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+        const wx = x + (winner % 7) * 23 + Math.sin(winner * 1.7) * 3;
+        const wy = y + Math.floor(winner / 7) * 20 + Math.cos(winner * 1.1) * 3;
+        ctx.strokeStyle = `${color}78`;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(wx, wy, 30 + 14 * phase, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#166534";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("keep local max", x + 26, y + 126);
+        ctx.restore();
+    }
+
+    function drawOrbResponseRank(ctx, x, y, phase, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("response rank", x, y - 12);
+        for (let i = 0; i < 7; i++) {
+            const h = 18 + ((i * 17) % 42);
+            const active = i === Math.floor(phase * 7) % 7;
+            ctx.fillStyle = active ? "#f97316" : `${color}${i < 3 ? "cc" : "55"}`;
+            ctx.shadowColor = active ? "#f97316" : color;
+            ctx.shadowBlur = active ? 12 : 0;
+            roundRect(ctx, x + i * 15, y + 58 - h, 10, h, 5);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = `${color}88`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y + 66);
+        ctx.lineTo(x + 104, y + 66);
+        ctx.stroke();
+        ctx.fillStyle = "#166534";
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText("top scores survive", x, y + 84);
+        ctx.restore();
+    }
+
+    function drawFastDetectorMotion(ctx, phase, color, data, mode = "brief") {
+        const name = mode === "orb" ? "FAST detector" : "scan window";
+        const nmsLabel = mode === "orb" ? "rank by response" : "NMS candidates";
+        drawFastScanSweep(ctx, 54, 76, phase, color, name);
+        drawFlowParticles(ctx, 190, 126, 270, 126, color, phase, 5);
+        drawFastDecisionRing(ctx, 360, 126, phase, color);
+        if (mode === "orb") {
+            drawFlowParticles(ctx, 542, 126, 576, 126, "#f97316", (phase + .16) % 1, 4);
+            drawOrbResponseRank(ctx, 590, 94, phase, color);
+            drawFlowParticles(ctx, 694, 126, 714, 126, color, (phase + .32) % 1, 3);
+            drawFastNmsCompetition(ctx, 718, 80, phase, color, "NMS");
+        } else {
+            drawFlowParticles(ctx, 542, 126, 638, 126, "#f97316", (phase + .16) % 1, 5);
+            drawFastNmsCompetition(ctx, 666, 80, phase, color, nmsLabel);
+        }
     }
 
     function drawIntegralGrid(ctx, x, y, phase) {
@@ -2708,18 +3487,18 @@
     function drawSurfIntegralAccess(ctx, x, y, phase) {
         const cols = 6;
         const rows = 5;
-        const cell = 20;
+        const cell = 19;
         const active = Math.floor(phase * 12) % 12;
         ctx.save();
         ctx.fillStyle = "#2563eb";
-        ctx.font = "950 15px sans-serif";
-        ctx.fillText("Integral access", x, y - 14);
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("Integral image", x, y - 14);
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const px = x + col * cell;
                 const py = y + row * cell;
                 const hot = (row + col * 2) % 12 === active;
-                ctx.fillStyle = hot ? "rgba(249,115,22,.18)" : `rgba(37,99,235,${.07 + (row + col) / 70})`;
+                ctx.fillStyle = hot ? "rgba(249,115,22,.2)" : `rgba(37,99,235,${.07 + (row + col) / 70})`;
                 ctx.strokeStyle = hot ? "#f97316" : "rgba(147,197,253,.55)";
                 ctx.lineWidth = hot ? 2 : 1;
                 roundRect(ctx, px, py, cell - 2, cell - 2, 5);
@@ -2727,24 +3506,31 @@
                 ctx.stroke();
                 if (hot) {
                     ctx.fillStyle = "#ea580c";
-                    ctx.font = "850 8px sans-serif";
+                    ctx.font = "900 9px sans-serif";
                     ctx.fillText(String(20 + row * 8 + col * 5), px + 4, py + 13);
                 }
             }
         }
-        ctx.fillStyle = "#64748b";
-        ctx.font = "850 11px sans-serif";
-        ctx.fillText("4 corner reads per box", x, y + rows * cell + 18);
+        const t = motionEase(phase);
+        ctx.strokeStyle = "rgba(249,115,22,.72)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + rows * cell + 15);
+        ctx.lineTo(x + 10 + 92 * t, y + rows * cell + 15);
+        ctx.stroke();
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("4 corner reads / box", x, y + rows * cell + 34);
         ctx.restore();
     }
 
     function drawSurfHessianKernel(ctx, cx, cy, label, color, phase, kind) {
         ctx.save();
         ctx.fillStyle = color;
-        ctx.font = "950 14px sans-serif";
+        ctx.font = "950 15px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(label, cx, cy - 56);
-        const scale = 18;
+        ctx.fillText(label, cx, cy - 48);
+        const scale = 15;
         const lobes = kind === "xy"
             ? [[-1, -1, 1, 1, "#0ea5e944"], [0, -1, 1, 1, "#f9731648"], [-1, 0, 1, 1, "#f9731648"], [0, 0, 1, 1, "#0ea5e944"]]
             : kind === "yy"
@@ -2762,12 +3548,12 @@
         ctx.fillStyle = "rgba(255,255,255,.86)";
         ctx.strokeStyle = `${color}80`;
         ctx.lineWidth = 1.5;
-        roundRect(ctx, cx - 40, cy + 42, 80, 28, 12);
+        roundRect(ctx, cx - 40, cy + 32, 80, 24, 12);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = color;
         ctx.font = "950 12px sans-serif";
-        ctx.fillText("box sum", cx, cy + 60);
+        ctx.fillText(`${label} sum`, cx, cy + 49);
         ctx.restore();
     }
 
@@ -2776,21 +3562,21 @@
         ctx.fillStyle = "rgba(255,247,237,.82)";
         ctx.strokeStyle = "rgba(249,115,22,.58)";
         ctx.lineWidth = 1.8;
-        roundRect(ctx, x, y, 164, 86, 18);
+        roundRect(ctx, x, y, 150, 88, 18);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = "#ea580c";
         ctx.font = "950 16px sans-serif";
-        ctx.fillText("det(H)", x + 20, y + 28);
+        ctx.fillText("det(H)", x + 18, y + 28);
         ctx.fillStyle = "#7c2d12";
-        ctx.font = "950 13px sans-serif";
-        ctx.fillText("Dxx·Dyy - .81Dxy²", x + 20, y + 52);
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText("Dxx × Dyy - 0.81Dxy²", x + 18, y + 52);
         const t = motionEase(phase);
         ctx.strokeStyle = "#f97316";
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(x + 20, y + 70);
-        ctx.lineTo(x + 20 + 122 * t, y + 70);
+        ctx.moveTo(x + 18, y + 70);
+        ctx.lineTo(x + 18 + 112 * t, y + 70);
         ctx.stroke();
         ctx.restore();
     }
@@ -2798,11 +3584,12 @@
     function drawSurfPeakField(ctx, x, y, phase) {
         ctx.save();
         ctx.fillStyle = "#16a34a";
-        ctx.font = "950 15px sans-serif";
-        ctx.fillText("local max field", x, y - 14);
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("local max", x, y - 14);
+        const gap = 19;
         for (let i = 0; i < 42; i++) {
-            const px = x + (i % 7) * 23 + Math.sin(i * 1.7) * 4;
-            const py = y + Math.floor(i / 7) * 21 + Math.cos(i * 1.2) * 4;
+            const px = x + (i % 7) * gap + Math.sin(i * 1.7) * 3;
+            const py = y + Math.floor(i / 7) * gap + Math.cos(i * 1.2) * 3;
             const strong = i === 17 || i === 31 || i === 38;
             const active = i === Math.floor(phase * 42) % 42;
             ctx.strokeStyle = strong ? "#16a34a" : active ? "#f97316" : "rgba(148,163,184,.55)";
@@ -2816,8 +3603,57 @@
         ctx.strokeStyle = "rgba(22,163,74,.45)";
         ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.arc(x + 3 * 23, y + 2 * 21, 42 + 8 * phase, 0, Math.PI * 2);
+        ctx.arc(x + 3 * gap, y + 2 * gap, 34 + 7 * phase, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawSurfHessianWires(ctx, phase) {
+        const t = motionEase(phase);
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "rgba(37,99,235,.34)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(160, 112);
+        ctx.lineTo(238, 112);
+        ctx.lineTo(278, 76);
+        ctx.moveTo(238, 112);
+        ctx.lineTo(278, 154);
+        ctx.moveTo(238, 112);
+        ctx.lineTo(390, 116);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(249,115,22,.36)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(308, 132);
+        ctx.bezierCurveTo(382, 132, 458, 78, 536, 92);
+        ctx.moveTo(308, 210);
+        ctx.bezierCurveTo(382, 198, 454, 156, 536, 128);
+        ctx.moveTo(420, 172);
+        ctx.bezierCurveTo(466, 166, 500, 138, 536, 120);
+        ctx.stroke();
+
+        for (let i = 0; i < 5; i++) {
+            const p = (phase + i / 5) % 1;
+            const x = 166 + (354 * p);
+            const y = 112 + Math.sin(p * Math.PI * 2) * 6;
+            ctx.globalAlpha = .22 + .7 * Math.sin(p * Math.PI);
+            ctx.fillStyle = i % 2 ? "#2563eb" : "#f97316";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(x, y, 3.5 + 1.5 * t, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.arc(536, 112, 5.5 + 2 * Math.sin(phase * Math.PI), 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 
@@ -2848,31 +3684,344 @@
         ctx.restore();
     }
 
-    function drawSurfDescriptorCells(ctx, x, y, phase) {
+    function drawSurfKeypointSeed(ctx, x, y, data, phase) {
+        const cell = 18;
         ctx.save();
-        const cell = 26;
-        const active = Math.floor(phase * 16);
+        ctx.fillStyle = "rgba(255,255,255,.55)";
+        ctx.strokeStyle = "rgba(14,165,233,.24)";
+        ctx.lineWidth = 1.2;
+        roundRect(ctx, x, y, 128, 116, 14);
+        ctx.fill();
+        ctx.stroke();
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const v = (Math.sin(row * 1.1 + col * 1.7) + 1) / 2;
+                ctx.fillStyle = `rgba(14,165,233,${.07 + v * .18})`;
+                roundRect(ctx, x + 18 + col * cell, y + 18 + row * cell, cell - 2, cell - 2, 4);
+                ctx.fill();
+            }
+        }
+        const pulse = 1 + .18 * Math.sin(phase * Math.PI * 2);
+        const cx = x + 62;
+        const cy = y + 62;
+        ctx.strokeStyle = "#0ea5e9";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 20 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#0ea5e9";
+        ctx.shadowColor = "#0ea5e9";
+        ctx.shadowBlur = 13;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#0ea5e9";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("SURF point", x + 14, y - 12);
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText(data ? `${data.keypoints} pts` : "keypoint", x + 14, y + 132);
+        ctx.restore();
+    }
+
+    function drawSurfHaarSectorWindow(ctx, cx, cy, phase) {
+        const sector = Math.PI / 3;
+        const angle = -1.15 + phase * Math.PI * 2;
+        const samples = [];
+        for (let ring = 1; ring <= 4; ring++) {
+            const count = 6 + ring * 3;
+            for (let i = 0; i < count; i++) {
+                const a = i / count * Math.PI * 2 + ring * .23;
+                const r = 16 + ring * 15 + ((i * 7) % 5);
+                samples.push({ a, r, amp: .45 + ((i * 11 + ring * 3) % 9) / 12 });
+            }
+        }
+        ctx.save();
+        ctx.fillStyle = "#0ea5e9";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("Haar wavelets", cx - 70, cy - 88);
+
+        ctx.fillStyle = "rgba(14,165,233,.07)";
+        ctx.strokeStyle = "rgba(14,165,233,.3)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 78, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(37,99,235,.12)";
+        for (let r = 24; r <= 72; r += 24) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(249,115,22,.16)";
+        ctx.strokeStyle = "rgba(249,115,22,.62)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, 78, angle - sector / 2, angle + sector / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        samples.forEach((sample, index) => {
+            const diff = Math.atan2(Math.sin(sample.a - angle), Math.cos(sample.a - angle));
+            const inside = Math.abs(diff) < sector / 2;
+            const sx = cx + Math.cos(sample.a) * sample.r;
+            const sy = cy + Math.sin(sample.a) * sample.r;
+            const dir = sample.a + Math.PI / 2 + Math.sin(index) * .45;
+            const len = 10 + sample.amp * 12;
+            ctx.strokeStyle = inside ? "#f97316" : "rgba(14,165,233,.48)";
+            ctx.lineWidth = inside ? 2.6 : 1.6;
+            ctx.globalAlpha = inside ? .96 : .54;
+            ctx.beginPath();
+            ctx.moveTo(sx - Math.cos(dir) * len * .35, sy - Math.sin(dir) * len * .35);
+            ctx.lineTo(sx + Math.cos(dir) * len * .65, sy + Math.sin(dir) * len * .65);
+            ctx.stroke();
+            ctx.fillStyle = inside ? "#f97316" : "#60a5fa";
+            ctx.beginPath();
+            ctx.arc(sx, sy, inside ? 3.3 : 2.4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * 84, cy + Math.sin(angle) * 84);
+        ctx.stroke();
+        ctx.fillStyle = "#7c2d12";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("60° sector sum", cx - 58, cy + 103);
+        ctx.restore();
+    }
+
+    function drawSurfSectorAccumulator(ctx, cx, cy, phase) {
+        const mainAngle = -0.58;
+        const sweep = -1.15 + phase * Math.PI * 2;
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("vector sum", cx - 46, cy - 82);
+        ctx.strokeStyle = "rgba(22,163,74,.22)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 64, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 18; i++) {
+            const a = i / 18 * Math.PI * 2;
+            const len = 18 + ((i * 7) % 16);
+            const hot = Math.abs(Math.atan2(Math.sin(a - sweep), Math.cos(a - sweep))) < .35;
+            ctx.strokeStyle = hot ? "#f97316" : "rgba(14,165,233,.45)";
+            ctx.lineWidth = hot ? 3 : 1.6;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * 22, cy + Math.sin(a) * 22);
+            ctx.lineTo(cx + Math.cos(a) * (22 + len), cy + Math.sin(a) * (22 + len));
+            ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(249,115,22,.55)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 52, sweep - .35, sweep + .35);
+        ctx.stroke();
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(mainAngle) * 82, cy + Math.sin(mainAngle) * 82);
+        ctx.stroke();
+        ctx.fillStyle = "#16a34a";
+        ctx.shadowColor = "#16a34a";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(mainAngle) * 82, cy + Math.sin(mainAngle) * 82, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#166534";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("max Σ(dx,dy)", cx - 42, cy + 92);
+        ctx.restore();
+    }
+
+    function drawSurfOrientationOutput(ctx, x, y, phase) {
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 18px sans-serif";
+        ctx.fillText("main θ", x, y);
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 13px sans-serif";
+        ctx.fillText("atan2(Σdy, Σdx)", x, y + 24);
+        const cx = x + 58;
+        const cy = y + 74;
+        const angle = -0.58;
+        ctx.strokeStyle = "rgba(124,58,237,.28)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle + .08 * Math.sin(phase * Math.PI * 2));
+        ctx.strokeStyle = "#7c3aed";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-34, 0);
+        ctx.lineTo(34, 0);
+        ctx.moveTo(0, -34);
+        ctx.lineTo(0, 34);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(124,58,237,.13)";
+        roundRect(ctx, -28, -28, 56, 56, 8);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("rotate frame", x + 8, y + 132);
+        ctx.restore();
+    }
+
+    function drawSurfHaarOrientationWires(ctx, phase) {
+        ctx.save();
+        drawFlowParticles(ctx, 184, 126, 248, 126, "#0ea5e9", phase, 4);
+        drawFlowParticles(ctx, 436, 126, 492, 126, "#f97316", (phase + .14) % 1, 4);
+        drawFlowParticles(ctx, 626, 126, 682, 126, "#16a34a", (phase + .3) % 1, 3);
+        ctx.restore();
+    }
+
+    function drawSurfDescriptorPatch(ctx, x, y, phase) {
+        const size = 128;
+        const cell = size / 4;
+        const active = Math.floor(phase * 16) % 16;
+        ctx.save();
+        ctx.fillStyle = "#0ea5e9";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("aligned patch", x, y - 16);
+        ctx.save();
+        ctx.translate(x + size / 2, y + size / 2);
+        ctx.rotate(-0.32 + .04 * Math.sin(phase * Math.PI * 2));
+        ctx.fillStyle = "rgba(255,255,255,.58)";
+        ctx.strokeStyle = "rgba(14,165,233,.34)";
+        ctx.lineWidth = 1.3;
+        roundRect(ctx, -size / 2, -size / 2, size, size, 12);
+        ctx.fill();
+        ctx.stroke();
         for (let row = 0; row < 4; row++) {
             for (let col = 0; col < 4; col++) {
                 const index = row * 4 + col;
-                const on = index <= active;
-                ctx.fillStyle = on ? "rgba(14,165,233,.18)" : "rgba(255,255,255,.85)";
-                ctx.strokeStyle = on ? "#0ea5e9" : "#bfdbfe";
-                roundRect(ctx, x + col * cell, y + row * cell, cell - 3, cell - 3, 7);
+                const hot = index === active;
+                const px = -size / 2 + col * cell;
+                const py = -size / 2 + row * cell;
+                const tone = (Math.sin(index * 1.8) + 1) / 2;
+                ctx.fillStyle = hot ? "rgba(249,115,22,.2)" : `rgba(14,165,233,${.07 + tone * .16})`;
+                ctx.strokeStyle = hot ? "#f97316" : "rgba(147,197,253,.58)";
+                ctx.lineWidth = hot ? 2.3 : 1;
+                roundRect(ctx, px + 2, py + 2, cell - 4, cell - 4, 7);
                 ctx.fill();
                 ctx.stroke();
-                if (on) {
-                    ctx.strokeStyle = "#f97316";
-                    ctx.lineWidth = 1.5;
+                for (let k = 0; k < 3; k++) {
+                    const yy = py + 10 + k * 8;
+                    ctx.strokeStyle = hot ? (k % 2 ? "#0ea5e9" : "#f97316") : "rgba(96,165,250,.42)";
+                    ctx.lineWidth = hot ? 2 : 1.2;
                     ctx.beginPath();
-                    ctx.moveTo(x + col * cell + 7, y + row * cell + 13);
-                    ctx.lineTo(x + col * cell + 19, y + row * cell + 7);
-                    ctx.moveTo(x + col * cell + 7, y + row * cell + 19);
-                    ctx.lineTo(x + col * cell + 19, y + row * cell + 19);
+                    ctx.moveTo(px + 8, yy);
+                    ctx.lineTo(px + cell - 10, yy - 5 + k * 3);
                     ctx.stroke();
                 }
             }
         }
+        ctx.restore();
+        const activeCol = active % 4;
+        const activeRow = Math.floor(active / 4);
+        const ax = x + 16 + activeCol * cell + cell / 2;
+        const ay = y + 2 + activeRow * cell + cell / 2;
+        ctx.fillStyle = "#f97316";
+        ctx.shadowColor = "#f97316";
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("4×4 spatial cells", x + 6, y + size + 26);
+        ctx.restore();
+    }
+
+    function drawSurfDescriptorStats(ctx, x, y, phase) {
+        const labels = ["dx", "dy", "|dx|", "|dy|"];
+        const colors = ["#0ea5e9", "#2563eb", "#f97316", "#16a34a"];
+        const active = Math.floor(phase * 16) % 16;
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("cell statistics", x, y - 18);
+        labels.forEach((label, index) => {
+            const cx = x + index * 48;
+            ctx.strokeStyle = `${colors[index]}66`;
+            ctx.lineWidth = 1.4;
+            roundRect(ctx, cx, y, 34, 106, 15);
+            ctx.stroke();
+            const fillH = 22 + ((active * 5 + index * 13) % 58);
+            ctx.fillStyle = `${colors[index]}26`;
+            roundRect(ctx, cx + 5, y + 96 - fillH, 24, fillH, 11);
+            ctx.fill();
+            ctx.fillStyle = colors[index];
+            ctx.globalAlpha = .88;
+            roundRect(ctx, cx + 9, y + 96 - fillH, 16, Math.max(10, fillH * motionEase(phase)), 8);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(label, cx + 17, y + 126);
+        });
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText(`cell ${String(active + 1).padStart(2, "0")} writes 4 values`, x + 4, y + 148);
+        ctx.restore();
+    }
+
+    function drawSurfDescriptorVector(ctx, x, y, phase) {
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("16 × 4 = 64 float", x, y - 16);
+        const write = Math.floor(phase * 64) % 64;
+        for (let group = 0; group < 16; group++) {
+            const gx = x + (group % 8) * 24;
+            const gy = y + Math.floor(group / 8) * 48;
+            for (let k = 0; k < 4; k++) {
+                const index = group * 4 + k;
+                const on = index <= write || group < Math.floor(write / 4);
+                const h = 7 + ((group * 5 + k * 9) % 18);
+                const color = ["#0ea5e9", "#2563eb", "#f97316", "#16a34a"][k];
+                ctx.fillStyle = on ? color : "#cbd5e1";
+                ctx.globalAlpha = on ? .88 : .28;
+                roundRect(ctx, gx + k * 5, gy + 30 - h, 4, h, 3);
+                ctx.fill();
+            }
+            if (group === Math.floor(write / 4)) {
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = "#f97316";
+                ctx.lineWidth = 2;
+                roundRect(ctx, gx - 4, gy + 3, 28, 32, 8);
+                ctx.stroke();
+            }
+        }
+        ctx.globalAlpha = 1;
+        const t = motionEase(phase);
+        ctx.strokeStyle = "rgba(22,163,74,.78)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, y + 118);
+        ctx.lineTo(x + 188 * t, y + 118);
+        ctx.stroke();
+        ctx.fillStyle = "#166534";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText("L2 normalize", x, y + 140);
         ctx.restore();
     }
 
@@ -2884,125 +4033,340 @@
             drawFlowParticles(ctx, 448, 122, 548, 122, "#f97316", (phase + .18) % 1, 5);
             drawSurfRectSum(ctx, 572, 62, phase);
         } else if (step?.key === "hessian") {
-            drawSurfIntegralAccess(ctx, 48, 72, phase);
-            drawFlowParticles(ctx, 178, 126, 256, 126, "#2563eb", phase, 4);
-            drawSurfHessianKernel(ctx, 318, 88, "Dxx", "#0ea5e9", phase, "xx");
-            drawSurfHessianKernel(ctx, 430, 126, "Dxy", "#7c3aed", phase, "xy");
-            drawSurfHessianKernel(ctx, 318, 174, "Dyy", "#0ea5e9", phase, "yy");
-            drawFlowParticles(ctx, 478, 126, 548, 126, "#f97316", (phase + .15) % 1, 4);
-            drawSurfDetMixer(ctx, 560, 78, phase);
-            drawFlowParticles(ctx, 638, 170, 686, 170, "#16a34a", (phase + .32) % 1, 3);
-            drawSurfPeakField(ctx, 692, 118, phase);
+            drawSurfHessianWires(ctx, phase);
+            drawSurfIntegralAccess(ctx, 42, 58, phase);
+            drawSurfHessianKernel(ctx, 308, 76, "Dxx", "#0ea5e9", phase, "xx");
+            drawSurfHessianKernel(ctx, 420, 116, "Dxy", "#7c3aed", phase, "xy");
+            drawSurfHessianKernel(ctx, 308, 154, "Dyy", "#0ea5e9", phase, "yy");
+            drawSurfDetMixer(ctx, 546, 58, phase);
+            drawFlowParticles(ctx, 696, 146, 726, 146, "#16a34a", (phase + .32) % 1, 3);
+            drawSurfPeakField(ctx, 732, 88, phase);
         } else if (step?.key === "orientation") {
-            drawMotionPill(ctx, 42, 44, 142, 48, "SURF point", data ? `${data.keypoints} pts` : "keypoint", "#0ea5e9");
-            drawMotionFlow(ctx, 196, 106, 288, 106, "#0ea5e9", phase);
-            drawHaarCompass(ctx, 384, 124, phase, "#0ea5e9");
-            drawMotionPill(ctx, 318, 188, 170, 42, "Haar window", "Σdx / Σdy", "#0ea5e9");
-            drawMotionFlow(ctx, 506, 122, 620, 122, "#16a34a", phase);
-            drawMotionPill(ctx, 638, 74, 172, 58, "Main angle", "atan2(Σdy, Σdx)", "#16a34a");
-            drawMotionPill(ctx, 638, 158, 172, 42, "Align", "rotate descriptor frame", "#7c3aed");
+            drawSurfHaarOrientationWires(ctx, phase);
+            drawSurfKeypointSeed(ctx, 52, 72, data, phase);
+            drawSurfHaarSectorWindow(ctx, 342, 126, phase);
+            drawSurfSectorAccumulator(ctx, 556, 126, phase);
+            drawSurfOrientationOutput(ctx, 704, 82, phase);
         } else {
-            drawMotionPill(ctx, 42, 42, 140, 44, "oriented patch", "Haar samples", "#0ea5e9");
-            drawSurfDescriptorCells(ctx, 70, 96, phase);
-            drawMotionFlow(ctx, 200, 132, 304, 132, "#0ea5e9", phase);
-            drawMotionPill(ctx, 322, 64, 176, 54, "cell sums", "dx dy |dx| |dy|", "#2563eb");
-            drawMotionFlow(ctx, 514, 118, 610, 118, "#2563eb", phase);
-            drawHistogramBars(ctx, 628, 58, 180, 112, Array.from({ length: 64 }, (_, i) => ((i * 11) % 23) + 4), -1, "#0ea5e9");
-            drawMotionPill(ctx, 632, 184, 170, 36, "64 float", "L2 descriptor", "#16a34a");
-        }
-        if (step?.key !== "integral") {
-            ctx.fillStyle = "#475569";
-            ctx.font = "900 15px sans-serif";
-            ctx.fillText("SURF 用积分图和盒式滤波把尺度响应、方向和 64 维描述子串成快速浮点流程。", 64, 238);
+            drawSurfDescriptorPatch(ctx, 70, 64, phase);
+            drawFlowParticles(ctx, 210, 126, 288, 126, "#0ea5e9", phase, 5);
+            drawSurfDescriptorStats(ctx, 314, 62, phase);
+            drawFlowParticles(ctx, 514, 126, 594, 126, "#2563eb", (phase + .18) % 1, 5);
+            drawSurfDescriptorVector(ctx, 620, 72, phase);
         }
     }
 
     function drawBriefMotion(ctx, phase, w, h, data, step) {
         if (step?.key === "fast") {
-            drawMotionPill(ctx, 38, 42, 138, 46, "scan window", "slide over image", "#eab308");
-            drawPatchTiles(ctx, 54, 112, 5, 4, 22, phase, "#eab308");
-            drawMotionFlow(ctx, 188, 128, 292, 128, "#eab308", phase);
-            drawFastCircleTest(ctx, 386, 126, phase, "#eab308");
-            drawMotionFlow(ctx, 470, 126, 570, 126, "#f97316", phase);
-            drawMotionPill(ctx, 586, 72, 174, 52, "FAST-9", "9 continuous pass", "#f97316");
-            drawNmsCloud(ctx, 590, 150, phase, "#eab308");
+            drawFastDetectorMotion(ctx, phase, "#eab308", data, "brief");
         } else if (step?.key === "pairs") {
-            drawMotionPill(ctx, 44, 44, 140, 44, "FAST point", data ? `${data.keypoints} corners` : "corner", "#eab308");
-            drawMotionFlow(ctx, 196, 118, 272, 118, "#eab308", phase);
-            drawBriefPairs(ctx, 356, 126, phase, false);
-            drawMotionPill(ctx, 270, 198, 186, 34, "fixed BRIEF pairs", "no rotation", "#2563eb");
-            drawMotionFlow(ctx, 452, 126, 560, 126, "#2563eb", phase);
-            drawMotionPill(ctx, 576, 70, 166, 58, "compare", "I(a) < I(b)", "#2563eb");
-            drawMotionPill(ctx, 576, 154, 166, 44, "one pair", "one binary bit", "#f97316");
+            drawBriefPairSamplingMotion(ctx, phase, data);
         } else {
-            drawMotionPill(ctx, 42, 52, 148, 52, "256 compares", "bit generator", "#2563eb");
-            drawMotionFlow(ctx, 204, 112, 300, 112, "#2563eb", phase);
-            drawBitStrip(ctx, 318, 62, 24, phase, "#2563eb");
-            drawMotionFlow(ctx, 640, 96, 708, 96, "#7c3aed", phase);
-            drawMotionPill(ctx, 704, 60, 138, 52, "Hamming", "XOR + popcount", "#7c3aed");
-            const active = Math.floor(phase * 18);
-            for (let i = 0; i < 18; i++) {
-                ctx.fillStyle = i <= active ? (i % 2 ? "#f97316" : "#2563eb") : "#cbd5e1";
-                ctx.font = "900 12px monospace";
-                ctx.fillText(i <= active ? String(i % 2) : "·", 328 + i * 18, 168);
+            drawBriefDescriptorMatchMotion(ctx, phase);
+        }
+    }
+
+    function drawOrbCentroidOrientationMotion(ctx, phase) {
+        const patchX = 58;
+        const patchY = 78;
+        const cell = 18;
+        const center = { x: patchX + cell * 3, y: patchY + cell * 2.5 };
+        const angle = -0.64 + .08 * Math.sin(phase * Math.PI * 2);
+        const centroid = {
+            x: center.x + Math.cos(angle) * 82,
+            y: center.y + Math.sin(angle) * 46
+        };
+
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("gray moment patch", patchX, 58);
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 6; col++) {
+                const value = .2 + ((Math.sin(row * 1.2 + col * 1.9) + 1) / 2) * .5;
+                const hot = (row + col * 2) % 7 === Math.floor(phase * 7);
+                ctx.fillStyle = hot ? "rgba(249,115,22,.22)" : `rgba(22,163,74,${.06 + value * .2})`;
+                ctx.strokeStyle = hot ? "#f97316" : "rgba(147,197,253,.58)";
+                ctx.lineWidth = hot ? 2 : 1;
+                roundRect(ctx, patchX + col * cell, patchY + row * cell, cell - 2, cell - 2, 4);
+                ctx.fill();
+                ctx.stroke();
+                if ((row + col) % 2 === 0) {
+                    const px = patchX + col * cell + cell / 2;
+                    const py = patchY + row * cell + cell / 2;
+                    ctx.strokeStyle = "rgba(22,163,74,.16)";
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(centroid.x, centroid.y);
+                    ctx.stroke();
+                }
             }
         }
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#16a34a";
+        ctx.shadowColor = "#16a34a";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(centroid.x, centroid.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(centroid.x, centroid.y);
+        ctx.stroke();
+        ctx.fillStyle = "#334155";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("keypoint", center.x - 28, center.y + 22);
+        ctx.fillStyle = "#166534";
+        ctx.fillText("centroid", centroid.x + 10, centroid.y - 10);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 224, 126, 288, 126, "#16a34a", phase, 4);
+
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("m10 / m01", 306, 66);
+        [["m10", "#16a34a", .78], ["m01", "#0ea5e9", .52]].forEach(([label, color, value], index) => {
+            const y = 92 + index * 42;
+            ctx.fillStyle = `${color}20`;
+            roundRect(ctx, 306, y, 138, 14, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, 306, y, 138 * value * motionEase(phase), 14, 7);
+            ctx.fill();
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, 306, y + 32);
+        });
         ctx.fillStyle = "#475569";
-        ctx.font = "900 15px sans-serif";
-        ctx.fillText("FAST+BRIEF 先用圆周阈值找点，再用固定点对把局部纹理压缩成 256 bit。", 74, 238);
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("weighted pixel offsets", 306, 188);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 454, 126, 520, 126, "#16a34a", (phase + .18) % 1, 4);
+
+        ctx.save();
+        const dial = { x: 574, y: 126 };
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("θ = atan2(m01,m10)", 508, 66);
+        ctx.strokeStyle = "rgba(22,163,74,.24)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(dial.x, dial.y, 54, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 16; i++) {
+            const a = i / 16 * Math.PI * 2;
+            ctx.strokeStyle = "rgba(14,165,233,.32)";
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.moveTo(dial.x + Math.cos(a) * 42, dial.y + Math.sin(a) * 42);
+            ctx.lineTo(dial.x + Math.cos(a) * 54, dial.y + Math.sin(a) * 54);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(dial.x, dial.y);
+        ctx.lineTo(dial.x + Math.cos(angle) * 68, dial.y + Math.sin(angle) * 68);
+        ctx.stroke();
+        ctx.fillStyle = "#16a34a";
+        ctx.beginPath();
+        ctx.arc(dial.x + Math.cos(angle) * 68, dial.y + Math.sin(angle) * 68, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#166534";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("main direction", 526, 202);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 650, 126, 704, 126, "#7c3aed", (phase + .32) % 1, 3);
+
+        ctx.save();
+        const frame = { x: 756, y: 126 };
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("rotate BRIEF frame", 690, 66);
+        ctx.save();
+        ctx.translate(frame.x, frame.y);
+        ctx.rotate(angle);
+        ctx.strokeStyle = "#7c3aed";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-46, 0);
+        ctx.lineTo(46, 0);
+        ctx.moveTo(0, -40);
+        ctx.lineTo(0, 40);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(124,58,237,.12)";
+        roundRect(ctx, -34, -34, 68, 68, 9);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("pairs follow θ", 714, 202);
+        ctx.restore();
+    }
+
+    function drawOrbRotatedBriefMotion(ctx, phase) {
+        const angle = -0.62 + .08 * Math.sin(phase * Math.PI * 2);
+        const active = Math.floor(phase * 18) % 18;
+        ctx.save();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("θ-aligned frame", 54, 64);
+        const frame = { x: 116, y: 134 };
+        ctx.save();
+        ctx.translate(frame.x, frame.y);
+        ctx.rotate(angle);
+        ctx.strokeStyle = "#7c3aed";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-48, 0);
+        ctx.lineTo(48, 0);
+        ctx.moveTo(0, -42);
+        ctx.lineTo(0, 42);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(124,58,237,.1)";
+        roundRect(ctx, -38, -38, 76, 76, 10);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(124,58,237,.38)";
+        ctx.lineWidth = 1.2;
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-38, i * 19);
+            ctx.lineTo(38, i * 19);
+            ctx.moveTo(i * 19, -38);
+            ctx.lineTo(i * 19, 38);
+            ctx.stroke();
+        }
+        ctx.restore();
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("local axes rotate by θ", 62, 206);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 190, 134, 250, 134, "#7c3aed", phase, 4);
+
+        ctx.save();
+        const cx = 336;
+        const cy = 132;
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("Rθ sampling pairs", 258, 62);
+        ctx.fillStyle = "rgba(255,255,255,.5)";
+        ctx.strokeStyle = "rgba(147,197,253,.5)";
+        roundRect(ctx, 252, 74, 168, 132, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.strokeStyle = "rgba(37,99,235,.16)";
+        ctx.lineWidth = 1.2;
+        for (let r = 24; r <= 66; r += 21) {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 28; i++) {
+            const a = i * 2.399;
+            const b = i * 1.317 + 1.1;
+            const r1 = 18 + (i % 5) * 8;
+            const r2 = 24 + ((i * 3) % 6) * 6;
+            const ax = Math.cos(a) * r1;
+            const ay = Math.sin(a) * r1;
+            const bx = Math.cos(b) * r2;
+            const by = Math.sin(b) * r2;
+            const hot = i === active;
+            ctx.strokeStyle = hot ? "#f97316" : (i % 2 ? "rgba(37,99,235,.55)" : "rgba(22,163,74,.48)");
+            ctx.lineWidth = hot ? 3 : 1.2;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+            ctx.fillStyle = hot ? "#f97316" : "#2563eb";
+            ctx.beginPath();
+            ctx.arc(ax, ay, hot ? 4.5 : 2.4, 0, Math.PI * 2);
+            ctx.arc(bx, by, hot ? 4.5 : 2.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(0) * 62, Math.sin(0) * 62);
+        ctx.stroke();
+        ctx.fillStyle = "#16a34a";
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("pattern follows main direction", 266, 224);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 430, 134, 502, 134, "#16a34a", (phase + .16) % 1, 4);
+
+        ctx.save();
+        const valueA = 82 + (active * 23) % 128;
+        const valueB = 76 + (active * 31) % 136;
+        const bit = valueA < valueB ? 1 : 0;
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("rotated compare", 520, 74);
+        [["I(Rθa)", valueA, "#0ea5e9"], ["I(Rθb)", valueB, "#f97316"]].forEach(([label, value, color], index) => {
+            const y = 96 + index * 38;
+            ctx.fillStyle = `${color}20`;
+            roundRect(ctx, 520, y, 136, 14, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, 520, y, 136 * (value / 220), 14, 7);
+            ctx.fill();
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, 520, y + 31);
+        });
+        ctx.fillStyle = bit ? "#16a34a" : "#f97316";
+        ctx.font = "950 19px sans-serif";
+        ctx.fillText(bit ? "bit = 1" : "bit = 0", 520, 184);
+        ctx.restore();
+
+        drawFlowParticles(ctx, 664, 134, 710, 134, bit ? "#16a34a" : "#f97316", (phase + .3) % 1, 3);
+
+        ctx.save();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("ORB bits", 728, 74);
+        for (let i = 0; i < 24; i++) {
+            const on = i <= active + 5;
+            const x = 728 + (i % 12) * 10;
+            const y = 94 + Math.floor(i / 12) * 38;
+            ctx.fillStyle = on ? (i === active ? "#f97316" : i % 3 ? "#16a34a" : "#2563eb") : "rgba(203,213,225,.5)";
+            roundRect(ctx, x, y, 7, 28, 3);
+            ctx.fill();
+        }
+        ctx.fillStyle = "#475569";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("256 bit · Hamming", 728, 186);
+        ctx.restore();
     }
 
     function drawOrbMotion(ctx, phase, w, h, data, step) {
         if (step?.key === "fast") {
-            drawMotionPill(ctx, 38, 42, 138, 46, "FAST detector", data ? `${data.keypoints} corners` : "corners", "#16a34a");
-            drawPatchTiles(ctx, 54, 112, 5, 4, 22, phase, "#16a34a");
-            drawMotionFlow(ctx, 188, 128, 292, 128, "#16a34a", phase);
-            drawFastCircleTest(ctx, 386, 126, phase, "#16a34a");
-            drawMotionFlow(ctx, 470, 126, 570, 126, "#16a34a", phase);
-            drawNmsCloud(ctx, 590, 98, phase, "#16a34a");
-            drawMotionPill(ctx, 600, 180, 162, 38, "ORB seed", "FAST + ranking", "#16a34a");
+            drawFastDetectorMotion(ctx, phase, "#16a34a", data, "orb");
         } else if (step?.key === "orientation") {
-            drawMotionPill(ctx, 42, 38, 138, 44, "local patch", "gray moments", "#16a34a");
-            const cx = 260, cy = 126;
-            drawPatchTiles(ctx, 122, 88, 6, 5, 20, phase, "#16a34a");
-            const angle = -0.8 + phase * 0.7;
-            const mx = cx + Math.cos(angle) * 76;
-            const my = cy + Math.sin(angle) * 46;
-            ctx.strokeStyle = "rgba(22,163,74,.24)";
-            ctx.lineWidth = 1.4;
-            for (let i = 0; i < 18; i++) {
-                const px = 142 + (i % 6) * 20;
-                const py = 96 + Math.floor(i / 6) * 20;
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.lineTo(px, py);
-                ctx.stroke();
-            }
-            ctx.strokeStyle = "#16a34a";
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(mx, my);
-            ctx.stroke();
-            ctx.fillStyle = "#16a34a";
-            ctx.beginPath();
-            ctx.arc(mx, my, 8, 0, Math.PI * 2);
-            ctx.fill();
-            drawMotionFlow(ctx, 360, 126, 478, 126, "#16a34a", phase);
-            drawMotionPill(ctx, 496, 72, 170, 58, "θ = atan2", "m01 / m10", "#16a34a");
-            drawMotionPill(ctx, 496, 154, 170, 44, "rotate frame", "BRIEF follows θ", "#7c3aed");
+            drawOrbCentroidOrientationMotion(ctx, phase);
         } else {
-            drawMotionPill(ctx, 42, 48, 138, 46, "θ aligned", "rotate pairs", "#7c3aed");
-            drawMotionFlow(ctx, 194, 124, 274, 124, "#7c3aed", phase);
-            drawBriefPairs(ctx, 360, 126, phase, true);
-            drawMotionFlow(ctx, 448, 126, 548, 126, "#16a34a", phase);
-            drawMotionPill(ctx, 564, 70, 168, 56, "rotated BRIEF", "I(Rθa)<I(Rθb)", "#16a34a");
-            drawBitStrip(ctx, 570, 154, 16, phase, "#16a34a");
-            drawMotionPill(ctx, 742, 82, 92, 54, "ORB-lite", "256 bit", "#f97316");
+            drawOrbRotatedBriefMotion(ctx, phase);
         }
-        ctx.fillStyle = "#475569";
-        ctx.font = "900 15px sans-serif";
-        ctx.fillText("ORB-lite 在 FAST 点上估计灰度质心方向，再把 BRIEF 点对旋转到局部主方向。", 74, 238);
     }
 
     function drawAnalogMotion(ctx, phase, w, h) {
@@ -3068,6 +4432,9 @@
             if (siftMotion.playing) {
                 siftMotion.progress = (siftMotion.progress + delta / 3600) % 1;
                 renderSiftMotionProbe();
+                if (selectedAlgorithm() === "sift" && (currentStep === 1 || currentStep === 2) && scaleData) {
+                    drawSiftStepCanvas(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
+                }
             }
             siftMotion.raf = requestAnimationFrame(tick);
         };
