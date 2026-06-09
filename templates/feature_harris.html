@@ -108,13 +108,7 @@
             </section>
         </section>
     </main>
-    <aside class="feature-panel feature-info">
-        <div><span class="section-label">Process Notes</span><h2 id="cornerNoteTitle">当前步骤说明</h2></div>
-        <div id="cornerNotePrimary" class="feature-note blue"></div>
-        <div id="cornerNoteFormula" class="feature-note orange feature-latex-note"></div>
-        <div id="cornerNoteValues" class="feature-stat-list"></div>
-        <div class="feature-boundary"><b>实现说明</b><p id="cornerNoteBoundary">后端返回核心数组和角点结果；前端负责步骤切换、链式探针、亚像素拟合与 Canvas 绘制。</p></div>
-    </aside>
+    {{ feature_info_panel('corner') }}
 </section>
 {% endblock %}
 {% block feature_js %}<script src="{{ url_for('static', filename='js/feature_harris.js') }}"></script>{% endblock %}

@@ -119,6 +119,16 @@
             ["通过匹配", s.good_matches || s.passed_matches || 0],
             ["处理耗时", `${data.meta?.elapsed_ms || 0} ms`]
         ]);
+        if (V.$("matchInfoResult")) {
+            V.renderStatList(V.$("matchInfoResult"), [
+                ["算法", info.name],
+                ["左图特征", s.left_keypoints || 0],
+                ["右图特征", s.right_keypoints || 0],
+                ["原始匹配", s.raw_matches || 0],
+                ["通过匹配", s.good_matches || s.passed_matches || 0],
+                ["处理耗时", `${data.meta?.elapsed_ms || 0} ms`]
+            ]);
+        }
         renderTable(data);
         V.$("matchElapsed").textContent = `${data.meta.elapsed_ms} ms`;
     }
@@ -160,6 +170,44 @@
         const info = V.featureAlgorithmInfo(algorithm);
         const distance = V.$("matchDistanceLabel");
         if (distance) distance.value = info.distanceType === "Hamming" ? "Hamming 汉明距离" : "L2 欧氏距离";
+        
+        if (V.$("matchInfoTitle")) {
+            V.$("matchInfoTitle").textContent = "特征匹配应用";
+            V.$("matchInfoGoal").textContent = "在两张图像中建立特征点的对应关系，找出相似度高的描述子对。";
+            V.$("matchInfoIO").textContent = "输入：两组特征点描述子 → 输出：匹配对与连线";
+            
+            const formulaBox = V.$("matchInfoLogic");
+            if (formulaBox) {
+                const distanceFormula = info.distanceType === "Hamming" 
+                    ? "d_H(A,B)=\\operatorname{popcount}(A\\oplus B)" 
+                    : "d_E(A,B)=\\sqrt{\\sum(A_i-B_i)^2}";
+                formulaBox.innerHTML = `
+                    <p class="latex-formula"></p>
+                    <ul class="feature-note-detail">
+                        <li><b>距离类型</b>: ${info.distanceType === "Hamming" ? "FAST+BRIEF、ORB-lite 使用 Hamming 距离。" : "SIFT、SURF 使用 L2 距离。"}</li>
+                        <li><b>Ratio Test</b>: d1 / d2 &lt; ratio，满足时保留，减少模糊匹配。</li>
+                    </ul>
+                `;
+                const target = formulaBox.querySelector(".latex-formula");
+                if (window.katex && target) {
+                    try { window.katex.render(distanceFormula, target, { throwOnError: false }); } 
+                    catch (e) { target.textContent = distanceFormula; }
+                } else if (target) {
+                    target.textContent = distanceFormula;
+                }
+            }
+            V.$("matchInfoNext").textContent = "本页只展示描述子匹配，不做 RANSAC 或 Homography 几何验证。";
+            
+            const params = [
+                ["Ratio Test", form.elements["ratio_threshold"]?.value || "-"],
+                ["最大匹配数", form.elements["max_matches"]?.value || "-"]
+            ];
+            const paramsContainer = V.$("matchInfoParams");
+            if (paramsContainer) {
+                paramsContainer.parentElement.hidden = params.length === 0;
+                V.renderStatList(paramsContainer, params);
+            }
+        }
     }
 
     form.addEventListener("submit", async (event) => {

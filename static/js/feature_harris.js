@@ -167,34 +167,30 @@
         const fast = fastOptions();
         if (algorithm === "fast") {
             const map = {
-                input: ["输入与灰度采样", "FAST 通过页面读取 Canvas 像素并生成灰度数组。", ["I(x,y)", "Gray=0.299R+0.587G+0.114B"], ["换图时重新生成灰度数组。", "后续判断全部基于单通道强度。"], "FAST 作为页面扩展，不影响 Harris/SIFT 主流程."],
-                gray: ["灰度图", "把彩色输入压缩为亮度图，减少 RGB 通道差异对圆周比较的干扰。", ["G(x,y)=0.299R+0.587G+0.114B"], ["中心像素 C 与 16 个圆周像素都从 G 中读取。"], "灰度化在页面 Canvas ImageData 中手写完成."],
-                circle: ["FAST 16 点圆周", "以候选中心 C 为圆心，检查半径 3 的 Bresenham 圆周 16 个离散点。", ["P_i=G(x+dx_i,y+dy_i),\\ i=0\\ldots15", "r=3"], ["滑动窗口表示逐像素移动候选中心。", "黄色圆周点对应 16 个比较位置。"], "不调用 OpenCV FAST，圆周点偏移由固定数组实现."],
-                threshold: ["连续阈值判定", `判断是否存在连续 ${fast.contiguous} 个圆周点同时明显亮于或暗于中心。`, [`P_i>C+${fast.threshold}`, `P_i<C-${fast.threshold}`, `\\exists\\ ${fast.contiguous}\\ \\text{contiguous points}`], ["同一段必须全部为 bright 或全部为 dark。", "阈值越大，角点更少但更稳定。"], "FAST-9 与 FAST-12 只改变连续点数 N。"],
-                nms: ["FAST 非极大值抑制", "对候选点按 FAST 响应分数排序，在局部半径内只保留响应最大的点。", ["score=\\max\\sum |P_i-C|", "keep(p)=score(p)=\\max_{q\\in\\Omega_r(p)}score(q)"], ["灰色候选点被黄色保留点的邻域擦除。", "NMS 半径越大，最终点越稀疏。"], "最终 FAST 点用黄色菱形绘制。"],
-                corners: ["FAST 最终角点", "展示通过连续阈值和 NMS 后的最终 FAST 角点集合。", ["Corners=NMS(FAST(G,t,N))"], ["FAST 不计算结构张量，也不做亚像素二次曲面拟合。"], "FAST 只作为第 5 实验补充方法。"]
+                input: { title: "输入与灰度采样", goal: "FAST 通过页面读取 Canvas 像素并生成灰度数组。", io: "输入：RGB 图像 → 输出：Gray 灰度图", formulas: ["I(x,y)", "Gray=0.299R+0.587G+0.114B"], details: ["换图时重新生成灰度数组。", "后续判断全部基于单通道强度。"], next: "FAST 作为页面扩展，不影响 Harris/SIFT 主流程." },
+                gray: { title: "灰度图", goal: "把彩色输入压缩为亮度图，减少 RGB 通道差异对圆周比较的干扰。", io: "输入：RGB → 输出：单通道灰度数组", formulas: ["G(x,y)=0.299R+0.587G+0.114B"], details: ["中心像素 C 与 16 个圆周像素都从 G 中读取。"], next: "灰度化在页面 Canvas ImageData 中手写完成." },
+                circle: { title: "FAST 16 点圆周", goal: "以候选中心 C 为圆心，检查半径 3 的 Bresenham 圆周 16 个离散点。", io: "输入：灰度中心点及周围像素 → 输出：16 个圆周像素值", formulas: ["P_i=G(x+dx_i,y+dy_i),\\ i=0\\ldots15", "r=3"], details: ["滑动窗口表示逐像素移动候选中心。", "黄色圆周点对应 16 个比较位置。"], next: "不调用 OpenCV FAST，圆周点偏移由固定数组实现." },
+                threshold: { title: "连续阈值判定", goal: `判断是否存在连续 ${fast.contiguous} 个圆周点同时明显亮于或暗于中心。`, io: "输入：16 个圆周点像素值与中心差值 → 输出：候选点", formulas: [`P_i>C+${fast.threshold}`, `P_i<C-${fast.threshold}`, `\\exists\\ ${fast.contiguous}\\ \\text{contiguous points}`], details: ["同一段必须全部为 bright 或全部为 dark。", "阈值越大，角点更少但更稳定。"], next: "FAST-9 与 FAST-12 只改变连续点数 N。" },
+                nms: { title: "FAST 非极大值抑制", goal: "对候选点按 FAST 响应分数排序，在局部半径内只保留响应最大的点。", io: "输入：FAST 候选点集合 → 输出：NMS 后的稀疏角点", formulas: ["score=\\max\\sum |P_i-C|", "keep(p)=score(p)=\\max_{q\\in\\Omega_r(p)}score(q)"], details: ["灰色候选点被黄色保留点的邻域擦除。", "NMS 半径越大，最终点越稀疏。"], next: "最终 FAST 点用黄色菱形绘制。" },
+                corners: { title: "FAST 最终角点", goal: "展示通过连续阈值和 NMS 后的最终 FAST 角点集合。", io: "输入：NMS 保留点 → 输出：页面绘制坐标", formulas: ["Corners=NMS(FAST(G,t,N))"], details: ["FAST 不计算结构张量，也不做亚像素二次曲面拟合。"], next: "FAST 只作为第 5 实验补充方法。" }
             };
-            return normalizeRichNote(map[stepKey] || map.corners);
+            return map[stepKey] || map.corners;
         }
         const isShi = algorithm === "shi-tomasi";
         const map = {
-            input: ["输入图像", "读取当前图片并保持统一计算尺寸，后续梯度、张量和响应都基于同一输入。", ["I(x,y)"], ["切换样例或上传图片会重新生成结果。"], "算法模块只返回数组与角点数据，所有可视标记由页面 Canvas 绘制。"],
-            gray: ["灰度化", "将 RGB 图像转换成单通道灰度图，作为 Sobel 梯度的输入。", ["G=0.299R+0.587G+0.114B"], ["灰度中心值会同步显示在局部探针中。"], "此处展示的是算法模块返回的灰度数组。"],
-            gradient: ["Sobel 梯度计算", "分别用水平和垂直 Sobel 核卷积灰度图，得到局部亮度变化方向。", ["I_x=G*S_x,\\quad S_x=\\begin{bmatrix}-1&0&1\\\\-2&0&2\\\\-1&0&1\\end{bmatrix}", "I_y=G*S_y,\\quad S_y=\\begin{bmatrix}-1&-2&-1\\\\0&0&0\\\\1&2&1\\end{bmatrix}"], ["Ix 强表示左右方向灰度变化明显。", "Iy 强表示上下方向灰度变化明显。"], "动画中的 3×3 Sobel 窗口表示卷积核在图像上滑动。"],
-            second: ["Second Moment 原始项", "把梯度转换为二阶乘积项，记录 x/y 方向能量和方向相关性。", ["E_{xx}=I_x^2", "E_{yy}=I_y^2", "E_{xy}=I_xI_y"], ["平方项只保留强度大小。", "交叉项描述两个方向梯度是否同时变化。"], "这些还是未经过高斯窗口统计的逐像素原始项。"],
-            tensor: ["结构张量 M", "对二阶项做高斯加权求和，得到描述局部窗口梯度分布的 2×2 矩阵。", ["S_{xx}=G_\\sigma * I_x^2,\\quad S_{yy}=G_\\sigma * I_y^2,\\quad S_{xy}=G_\\sigma * I_xI_y", "M=\\begin{bmatrix}S_{xx}&S_{xy}\\\\S_{xy}&S_{yy}\\end{bmatrix}"], ["两个特征值都大通常表示角点。", "只有一个方向大通常表示边缘。"], "动画中的同心高斯窗表示中心权重大、远处权重小。"],
+            input: { title: "输入图像", goal: "读取当前图片并保持统一计算尺寸，后续梯度、张量和响应都基于同一输入。", io: "输入：RGB 图像 → 输出：标准化图片矩阵", formulas: ["I(x,y)"], details: ["切换样例或上传图片会重新生成结果。"], next: "算法模块只返回数组与角点数据，所有可视标记由页面 Canvas 绘制。" },
+            gray: { title: "灰度化", goal: "将 RGB 图像转换成单通道灰度图，作为 Sobel 梯度的输入。", io: "输入：RGB 矩阵 → 输出：单通道 Gray 矩阵", formulas: ["G=0.299R+0.587G+0.114B"], details: ["灰度中心值会同步显示在局部探针中。"], next: "此处展示的是算法模块返回的灰度数组。" },
+            gradient: { title: "Sobel 梯度计算", goal: "分别用水平和垂直 Sobel 核卷积灰度图，得到局部亮度变化方向。", io: "输入：Gray 矩阵 → 输出：Ix、Iy 梯度矩阵", formulas: ["I_x=G*S_x,\\quad S_x=\\begin{bmatrix}-1&0&1\\\\-2&0&2\\\\-1&0&1\\end{bmatrix}", "I_y=G*S_y,\\quad S_y=\\begin{bmatrix}-1&-2&-1\\\\0&0&0\\\\1&2&1\\end{bmatrix}"], details: ["Ix 强表示左右方向灰度变化明显。", "Iy 强表示上下方向灰度变化明显。"], next: "动画中的 3×3 Sobel 窗口表示卷积核在图像上滑动。" },
+            second: { title: "Second Moment 原始项", goal: "把梯度转换为二阶乘积项，记录 x/y 方向能量和方向相关性。", io: "输入：Ix、Iy 矩阵 → 输出：Ix²、Iy²、IxIy 矩阵", formulas: ["E_{xx}=I_x^2", "E_{yy}=I_y^2", "E_{xy}=I_xI_y"], details: ["平方项只保留强度大小。", "交叉项描述两个方向梯度是否同时变化。"], next: "这些还是未经过高斯窗口统计的逐像素原始项。" },
+            tensor: { title: "结构张量 M", goal: "对二阶项做高斯加权求和，得到描述局部窗口梯度分布的 2×2 矩阵。", io: "输入：二阶原始项 → 输出：2×2 张量 M (Sxx, Syy, Sxy)", formulas: ["S_{xx}=G_\\sigma * I_x^2,\\quad S_{yy}=G_\\sigma * I_y^2,\\quad S_{xy}=G_\\sigma * I_xI_y", "M=\\begin{bmatrix}S_{xx}&S_{xy}\\\\S_{xy}&S_{yy}\\end{bmatrix}"], details: ["两个特征值都大通常表示角点。", "只有一个方向大通常表示边缘。"], next: "动画中的同心高斯窗表示中心权重大、远处权重小。" },
             response: isShi
-                ? ["Shi-Tomasi 响应", "Shi-Tomasi 直接取结构张量较小特征值作为角点强度。", ["\\lambda_{1,2}=\\frac{trace(M)\\pm\\sqrt{trace(M)^2-4det(M)}}{2}", "R=\\min(\\lambda_1,\\lambda_2)"], ["R 大说明两个主方向变化都足够强。", "阈值比 Harris 默认更高，减少弱纹理误检。"], "响应图以半透明热力叠加到淡化原图上。"]
-                : ["Harris R 响应", "Harris 用行列式和迹构造响应，抑制单方向强边缘，突出双方向变化。", ["det(M)=S_{xx}S_{yy}-S_{xy}^2", "trace(M)=S_{xx}+S_{yy}", "R=det(M)-k\\cdot trace(M)^2"], ["R 大且为正更像角点。", "R 为负常对应边缘，接近 0 常对应平坦区域。"], "响应显示使用百分位裁剪和原图淡化叠加，避免单色淹没细节。"],
-            nms: ["阈值与 NMS", "先过滤低响应候选点，再在局部邻域中只保留响应最大的角点。", ["candidate=R(x,y)>\\tau\\cdot \\max(R)", "keep(p)=R(p)=\\max_{q\\in\\Omega_r(p)}R(q)"], ["保留点向周围发出抑制邻域。", "灰色多余候选点会逐步消失。"], isShi ? "Shi-Tomasi 最终点用绿色绘制。" : "Harris 整数角点用橙色圆圈绘制。"],
-            refine: ["亚像素二次曲面拟合", "在 3×3 响应邻域上估计局部二次曲面，求极值点相对整数角点的偏移。", ["R(p+\\Delta p)\\approx R(p)+g^T\\Delta p+\\frac12\\Delta p^TH\\Delta p", "\\Delta p=-H^{-1}g", "p_{sub}=p+\\Delta p"], ["橙色圆圈表示整数角点。", "青色十字滑动到亚像素位置后闪烁。"], "亚像素定位完全基于 Harris response surface 计算。"],
-            final: ["最终对比", "对比整数角点与亚像素角点，观察二次拟合带来的细微定位偏移。", ["Final=\\{p_{sub}\\mid |\\Delta p|\\ \\text{valid}\\}"], ["统计区给出平均偏移和最大偏移。"], "Final Compare 只在最终步骤显示。"]
+                ? { title: "Shi-Tomasi 响应", goal: "Shi-Tomasi 直接取结构张量较小特征值作为角点强度。", io: "输入：张量 M → 输出：角点响应值 R", formulas: ["\\lambda_{1,2}=\\frac{trace(M)\\pm\\sqrt{trace(M)^2-4det(M)}}{2}", "R=\\min(\\lambda_1,\\lambda_2)"], details: ["R 大说明两个主方向变化都足够强。", "阈值比 Harris 默认更高，减少弱纹理误检。"], next: "响应图以半透明热力叠加到淡化原图上。" }
+                : { title: "Harris R 响应", goal: "Harris 用行列式和迹构造响应，抑制单方向强边缘，突出双方向变化。", io: "输入：张量 M → 输出：角点响应值 R", formulas: ["det(M)=S_{xx}S_{yy}-S_{xy}^2", "trace(M)=S_{xx}+S_{yy}", "R=det(M)-k\\cdot trace(M)^2"], details: ["R 大且为正更像角点。", "R 为负常对应边缘，接近 0 常对应平坦区域。"], next: "响应显示使用百分位裁剪和原图淡化叠加，避免单色淹没细节。" },
+            nms: { title: "阈值与 NMS", goal: "先过滤低响应候选点，再在局部邻域中只保留响应最大的角点。", io: "输入：响应图 R → 输出：整数角点坐标集合", formulas: ["candidate=R(x,y)>\\tau\\cdot \\max(R)", "keep(p)=R(p)=\\max_{q\\in\\Omega_r(p)}R(q)"], details: ["保留点向周围发出抑制邻域。", "灰色多余候选点会逐步消失。"], next: isShi ? "Shi-Tomasi 最终点用绿色绘制。" : "Harris 整数角点用橙色圆圈绘制。" },
+            refine: { title: "亚像素二次曲面拟合", goal: "在 3×3 响应邻域上估计局部二次曲面，求极值点相对整数角点的偏移。", io: "输入：整数角点周围响应 → 输出：亚像素级角点坐标", formulas: ["R(p+\\Delta p)\\approx R(p)+g^T\\Delta p+\\frac12\\Delta p^TH\\Delta p", "\\Delta p=-H^{-1}g", "p_{sub}=p+\\Delta p"], details: ["橙色圆圈表示整数角点。", "青色十字滑动到亚像素位置后闪烁。"], next: "亚像素定位完全基于 Harris response surface 计算。" },
+            final: { title: "最终对比", goal: "对比整数角点与亚像素角点，观察二次拟合带来的细微定位偏移。", io: "输入：整数角点与亚像素点 → 输出：页面 Canvas 绘制", formulas: ["Final=\\{p_{sub}\\mid |\\Delta p|\\ \\text{valid}\\}"], details: ["统计区给出平均偏移和最大偏移。"], next: "Final Compare 只在最终步骤显示。" }
         };
-        return normalizeRichNote(map[stepKey] || map.final);
-    }
-
-    function normalizeRichNote(note) {
-        return { title: note[0], desc: note[1], formulas: note[2], details: note[3], boundary: note[4] };
+        return map[stepKey] || map.final;
     }
 
     function renderKatexFormula(target, tex) {
@@ -217,15 +213,40 @@
         target.textContent = source;
     }
 
+    function cornerNoteParams(stepKey) {
+        const algorithm = selectedAlgorithm();
+        if (algorithm === "fast") {
+            const map = {
+                circle: [["圆周半径", 3], ["圆周点数", 16]],
+                threshold: [["亮度阈值", form.elements["fast_threshold"]?.value || "-"], ["连续点数 N", form.elements["fast_contiguous"]?.value || "-"]],
+                nms: [["NMS 半径", form.elements["fast_nms_radius"]?.value || "-"]]
+            };
+            return map[stepKey] || [];
+        }
+        const isShi = algorithm === "shi-tomasi";
+        const map = {
+            tensor: [["高斯窗口 σ", form.elements["window_sigma"]?.value || "-"]],
+            response: [
+                isShi ? ["阈值因子", form.elements["shi_threshold"]?.value || "-"] : ["阈值因子", form.elements["threshold_factor"]?.value || "-"],
+                isShi ? null : ["Harris k", form.elements["harris_k"]?.value || "-"]
+            ].filter(Boolean),
+            nms: [
+                isShi ? ["NMS 窗口", form.elements["shi_nms_radius"]?.value || "-"] : ["NMS 窗口", form.elements["nms_radius"]?.value || "-"]
+            ]
+        };
+        return map[stepKey] || [];
+    }
+
     function renderNotes(stepKey) {
         const note = richNoteForStep(stepKey);
-        V.$("cornerNoteTitle").textContent = `${algorithmLabel()} · ${note.title}`;
-        V.$("cornerNotePrimary").innerHTML = `<b>${note.title}</b><p>${note.desc}</p>`;
-        const formulaBox = V.$("cornerNoteFormula");
+        V.$("cornerInfoTitle").textContent = `${algorithmLabel()} · ${note.title}`;
+        V.$("cornerInfoGoal").textContent = note.goal || note.desc || "";
+        V.$("cornerInfoIO").textContent = note.io || "";
+        
+        const formulaBox = V.$("cornerInfoLogic");
         if (formulaBox) {
             const formulas = Array.isArray(note.formulas) ? note.formulas : [note.formulas].filter(Boolean);
             formulaBox.innerHTML = `
-                <b>公式与判断</b>
                 ${formulas.map(() => `<p class="latex-formula"></p>`).join("")}
                 <ul class="feature-note-detail">${(note.details || []).map(item => `<li>${item}</li>`).join("")}</ul>
             `;
@@ -233,8 +254,20 @@
                 renderKatexFormula(target, formulas[index]);
             });
         }
-        V.$("cornerNoteBoundary").textContent = note.boundary || "";
-        V.renderStatList(V.$("cornerNoteValues"), noteValuesForStep(stepKey));
+        V.$("cornerInfoNext").textContent = note.next || note.boundary || "";
+        
+        const params = cornerNoteParams(stepKey);
+        const results = noteValuesForStep(stepKey); // use existing noteValuesForStep for results
+        
+        const paramsContainer = V.$("cornerInfoParams");
+        if (paramsContainer) {
+            paramsContainer.parentElement.hidden = params.length === 0;
+            V.renderStatList(paramsContainer, params);
+        }
+        const resultsContainer = V.$("cornerInfoResult");
+        if (resultsContainer) {
+            V.renderStatList(resultsContainer, results);
+        }
     }
 
     function noteValuesForStep(stepKey) {

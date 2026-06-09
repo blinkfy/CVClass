@@ -26,6 +26,18 @@
 </section>
 {%- endmacro %}
 
+{% macro feature_info_panel(id_prefix='feature') -%}
+<aside class="feature-panel feature-info" id="{{ id_prefix }}InfoPanel">
+    <div><span class="section-label" id="{{ id_prefix }}InfoLabel">Process Notes</span><h2 id="{{ id_prefix }}InfoTitle">当前步骤说明</h2></div>
+    <div class="feature-note blue"><b>本步目标</b><p id="{{ id_prefix }}InfoGoal"></p></div>
+    <div class="feature-note green"><b>输入 → 输出</b><p id="{{ id_prefix }}InfoIO"></p></div>
+    <div class="feature-note orange"><b>核心计算 / 判定逻辑</b><div id="{{ id_prefix }}InfoLogic" class="feature-latex-note"></div></div>
+    <div class="feature-boundary"><b>关键参数</b><div id="{{ id_prefix }}InfoParams" class="feature-stat-list"></div></div>
+    <div class="feature-boundary"><b>当前结果</b><div id="{{ id_prefix }}InfoResult" class="feature-stat-list"></div></div>
+    <div class="feature-note gray"><b>传递到下一步</b><p id="{{ id_prefix }}InfoNext"></p></div>
+</aside>
+{%- endmacro %}
+
 {% block title %}第五节 图像角点检测与 SIFT 特征点检测{% endblock %}
 
 {% block extra_css %}

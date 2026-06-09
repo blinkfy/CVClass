@@ -159,14 +159,7 @@
         </section>
     </main>
 
-    <aside class="feature-panel feature-info">
-        <div><span class="section-label">Process Notes</span><h2 id="siftNoteTitle">预处理</h2></div>
-        <div id="siftNotePrimary" class="feature-note blue"></div>
-        <div id="siftNoteSecondary" class="feature-note green"></div>
-        <div id="siftNoteFormula" class="feature-note orange feature-latex-note"></div>
-        <div id="siftNoteValues" class="feature-stat-list"></div>
-        <div class="feature-boundary"><b>说明</b><p id="siftNoteBoundary">SIFT 与类比方法用于观察关键点、方向和描述子的不同设计取舍。</p></div>
-    </aside>
+    {{ feature_info_panel('sift') }}
 </section>
 {% endblock %}
 {% block feature_js %}<script src="{{ url_for('static', filename='js/feature_sift.js') }}"></script>{% endblock %}

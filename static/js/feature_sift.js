@@ -18,56 +18,56 @@
     const stepContentMap = {
         sift: [{
             title: "预处理",
-            primary: ["灰度化", "将彩色输入转换为单通道强度图，为后续高斯平滑和梯度计算提供统一输入。"],
-            secondary: ["统一尺寸", "按最大边长约束计算尺寸，保证不同方法在同一尺度下对照。"],
-            boundary: "本步骤关注输入图、灰度图和后续尺度空间的统一基础。",
+            goal: "将彩色输入转换为单通道强度图，为后续高斯平滑和梯度计算提供统一输入。",
+            io: "输入：RGB 图像 → 输出：Gray 灰度图",
+            next: "灰度图将作为构建 Gaussian Pyramid 的基底（Layer 0）。",
             panel: "0"
         }, {
             title: "Gaussian Pyramid",
-            primary: ["Octave", "每进入下一组，图像宽高下采样为上一组的一半，覆盖更大的特征尺度。"],
-            secondary: ["尺度层", "同一 octave 内逐层增加高斯 σ，得到连续的尺度空间表示。"],
-            boundary: "观察同一图像在不同 σ 与 octave 下的平滑变化。",
+            goal: "通过连续的高斯平滑与下采样，构建图像的多尺度连续表示空间。",
+            io: "输入：上一尺度图像 → 输出：不同分辨率和模糊程度的图像序列",
+            next: "同一 Octave 的相邻 Gaussian 层相减，用于生成 DoG 响应。",
             panel: "1"
         }, {
             title: "DoG Pyramid",
-            primary: ["Difference of Gaussian", "同一 octave 内相邻高斯层相减，近似尺度归一化 LoG 响应。"],
-            secondary: ["尺度响应", "亮暗区域表示不同符号和幅值的 DoG 响应，用于寻找稳定尺度极值。"],
-            boundary: "DoG 响应用于突出跨尺度稳定结构。",
+            goal: "利用相邻高斯层的差分近似尺度归一化的 LoG 算子，突出尺度稳定的边缘与斑点。",
+            io: "输入：Gaussian Pyramid → 输出：DoG 差分金字塔",
+            next: "在 DoG 空间中进行 3×3×3 的局部极值检测。",
             panel: "2"
         }, {
-            title: "3×3×3 极值检测与过滤",
-            primary: ["26 邻域比较", "候选点同时与当前层 8 个邻居及上下尺度层各 9 个邻居比较。"],
-            secondary: ["候选过滤", "依次剔除低对比度响应、边缘响应，再保留稳定的最终关键点。"],
-            boundary: "本步骤对比原始极值、边缘过滤后点和最终关键点。",
+            title: "极值检测与过滤",
+            goal: "在空间与尺度维度上寻找局部极值，剔除低对比度点和边缘响应点，保留稳定关键点。",
+            io: "输入：DoG Pyramid → 输出：稳定的尺度空间极值点 (x, y, octave, layer)",
+            next: "保留的极值点进入局部方向分配阶段。",
             panel: "3"
         }, {
             title: "主方向分配",
-            primary: ["36-bin 方向直方图", "在关键点尺度对应的邻域内统计梯度方向，直方图主峰确定关键点主方向。"],
-            secondary: ["旋转不变性", "后续局部坐标和梯度方向都相对主方向旋转，降低图像旋转的影响。"],
-            boundary: "方向分配让关键点在旋转图像中保持更稳定的描述。",
+            goal: "在关键点对应的尺度邻域内统计 36-bin 梯度方向直方图，确定主方向以实现旋转不变性。",
+            io: "输入：尺度极值点及周围梯度 → 输出：定向关键点 (含 orientation)",
+            next: "生成以主方向为基准对齐的局部特征描述子。",
             panel: "4"
         }, {
             title: "128 维描述子",
-            primary: ["4×4×8", "16×16 邻域划分为 4×4 个 cell，每个 cell 统计 8 个方向，组成 128 维向量。"],
-            secondary: ["归一化", "描述子经 L2 归一化与幅值截断，减弱整体亮度和局部强梯度的影响。"],
-            boundary: "128 维向量用于后续 L2 距离匹配和 ratio test。",
+            goal: "将局部 16×16 的网格分为 4×4 的 Cells，每个 Cell 统计 8 个梯度方向，组成 128 维特征向量。",
+            io: "输入：定向关键点及局部梯度 → 输出：128 维浮点描述子",
+            next: "使用该描述子向量和 L2 距离即可在多张图像间进行比率测试与特征匹配。",
             panel: "5"
         }],
         surf: [
-            { title: "积分图", primary: ["Integral Image", "把矩形区域求和转化为四次数组访问，为盒式滤波提供快速基础。"], secondary: ["尺度近似", "SURF 用盒式滤波近似二阶高斯导数。"], boundary: "本步骤展示积分图思想与响应计算入口。", key: "integral", panel: "analog" },
-            { title: "Hessian 近似", primary: ["det(H)", "通过 Dxx、Dyy、Dxy 的盒式响应估计 Hessian 行列式，选出稳定候选点。"], secondary: ["NMS", "保留局部范围内响应更强的点。"], boundary: "Hessian 响应强调局部结构的二维变化。", key: "hessian", panel: "analog" },
-            { title: "Haar 小波方向", primary: ["方向估计", "在关键点邻域计算 Haar X/Y 响应，并用主响应方向归一化局部坐标。"], secondary: ["旋转稳定", "方向箭头表示该关键点的主方向。"], boundary: "方向用于后续 64 维描述子坐标对齐。", key: "orientation", panel: "analog" },
-            { title: "64 维描述子", primary: ["4×4×4", "每个 cell 统计 dx、dy、|dx|、|dy|，组成 64 维浮点向量。"], secondary: ["L2 匹配", "SURF 描述子使用浮点距离进行匹配。"], boundary: "维度低于 SIFT，便于和 128 维描述子对照。", key: "descriptor", panel: "analog" }
+            { title: "积分图", goal: "快速计算图像中任意矩形区域的像素和，把复杂度降到 O(1)。", io: "输入：Gray → 输出：Integral Image", next: "后续所有盒式滤波均通过积分图极速完成。", key: "integral", panel: "analog" },
+            { title: "Hessian 近似", goal: "使用大尺度盒式滤波器近似二阶高斯偏导数，快速计算 Hessian 行列式。", io: "输入：积分图 → 输出：Hessian 极值候选点", next: "通过 NMS 提取局部最强点后分配主方向。", key: "hessian", panel: "analog" },
+            { title: "Haar 小波方向", goal: "在圆形邻域内通过 Haar X/Y 滤波器计算并累加梯度响应，寻找主峰方向。", io: "输入：候选关键点 → 输出：定向关键点", next: "按主方向对齐网格，计算 64 维描述子。", key: "orientation", panel: "analog" },
+            { title: "64 维描述子", goal: "在 4×4 的网格中累计 4 个 Haar 特征（dx, dy, |dx|, |dy|），组合成 64 维向量。", io: "输入：定向关键点 → 输出：64 维 float 描述子", next: "降维的同时仍具备良好区分度，用于 L2 距离匹配。", key: "descriptor", panel: "analog" }
         ],
         "fast-brief": [
-            { title: "FAST 关键点", primary: ["圆周连续检测", "用半径 3 的 16 点圆周判断中心像素是否为角点。"], secondary: ["NMS", "根据响应分数保留局部最强角点。"], boundary: "FAST 负责给 BRIEF 提供关键点位置。", key: "fast", panel: "analog" },
-            { title: "BRIEF 采样对", primary: ["固定点对", "在关键点邻域使用固定 256 对采样点进行灰度比较。"], secondary: ["局部 Patch", "采样点对围绕关键点分布，描述局部纹理差异。"], boundary: "BRIEF 不估计方向，旋转鲁棒性较弱。", key: "pairs", panel: "analog" },
-            { title: "256 bit 描述子", primary: ["二进制向量", "每个灰度比较产生 1 bit，256 对比较组成 256 bit 描述子。"], secondary: ["Hamming", "二进制描述子使用汉明距离匹配。"], boundary: "速度快，适合说明二进制描述子的设计。", key: "descriptor", panel: "analog" }
+            { title: "FAST 关键点", goal: "仅比较中心像素与半径为 3 的 16 个圆周像素亮度，极速检测角点。", io: "输入：Gray → 输出：FAST 候选角点", next: "保留响应最强的点进入 BRIEF 描述子提取。", key: "fast", panel: "analog" },
+            { title: "BRIEF 采样对", goal: "以关键点为中心，用预先固定的 256 对像素坐标读取亮度差异。", io: "输入：FAST 角点 + 图像 Patch → 输出：256 个亮度比较结果 (True/False)", next: "将布尔结果打包为 256 维的二进制向量。", key: "pairs", panel: "analog" },
+            { title: "256 bit 描述子", goal: "将成对亮度比较的结果转为 0/1 位向量，大幅降低存储开销。", io: "输入：256 个亮度比较结果 → 输出：256 bit 二进制描述子", next: "在匹配时使用极其快速的 Hamming 距离计算异或即可。", key: "descriptor", panel: "analog" }
         ],
         "orb-lite": [
-            { title: "FAST 关键点", primary: ["关键点检测", "沿用 FAST 圆周连续检测和 NMS 得到候选角点。"], secondary: ["响应排序", "优先保留局部响应更强的点。"], boundary: "ORB-lite 从 FAST 角点开始。", key: "fast", panel: "analog" },
-            { title: "灰度矩方向", primary: ["Intensity Centroid", "用关键点邻域的灰度矩估计主方向。"], secondary: ["方向箭头", "绿色箭头表示局部灰度质心方向。"], boundary: "方向估计让 BRIEF 采样坐标可旋转。", key: "orientation", panel: "analog" },
-            { title: "旋转 BRIEF", primary: ["Rotated BRIEF", "把固定采样点对按主方向旋转后再比较灰度。"], secondary: ["旋转稳定", "降低图像旋转对二进制描述子的影响。"], boundary: "ORB-lite 使用 Hamming 距离进行匹配。", key: "descriptor", panel: "analog" }
+            { title: "FAST 关键点", goal: "利用 FAST-9 加速寻找角点，并通过响应分数阈值进行初步筛选。", io: "输入：Gray → 输出：带分数的 FAST 候选点", next: "通过 NMS 筛选后交由灰度矩计算方向。", key: "fast", panel: "analog" },
+            { title: "灰度矩方向", goal: "计算关键点周围圆形区域的一阶与零阶灰度矩，根据重心位置确定特征方向。", io: "输入：FAST 候选点 + 图像 Patch → 输出：具备方向信息的关键点", next: "按此方向旋转固定的 BRIEF 采样点对。", key: "orientation", panel: "analog" },
+            { title: "旋转 BRIEF", goal: "通过方向角对 BRIEF 采样点对进行预旋转，赋予二进制描述子抗旋转能力。", io: "输入：定向关键点 → 输出：256 bit 二进制描述子", next: "输出支持旋转不变的二进制特征，进行 Hamming 距离匹配。", key: "descriptor", panel: "analog" }
         ]
     };
 
@@ -619,11 +619,25 @@
         ][step];
     }
 
-    function noteValues(algorithm, step) {
+    function noteParams(algorithm, step) {
+        const field = name => form.elements[name]?.value || "-";
+        if (algorithm === "sift") {
+            return [
+                [],
+                [["每组尺度", field("sift_scales")], ["初始 σ", field("sift_sigma")]],
+                [["DoG 阈值", field("contrast_threshold")]],
+                [["DoG 阈值", field("contrast_threshold")], ["边缘阈值", field("edge_threshold")]],
+                [["方向 bins", 36]],
+                [["描述子网格", "4×4"], ["每 cell bins", 8]]
+            ][step] || [];
+        }
+        return [];
+    }
+
+    function noteResults(algorithm, step) {
         const meta = scaleData?.meta || {};
         const sift = (descriptorData || scaleData)?.sift || scaleData?.sift || {};
         const counts = sift.counts || {};
-        const field = name => form.elements[name]?.value || "-";
         if (algorithm === "sift") {
             const selected = descriptorData?.sift?.selected;
             const oriented = descriptorData?.sift?.oriented_keypoints || descriptorData?.sift?.extended_points || [];
@@ -635,13 +649,11 @@
                 ],
                 [
                     ["Octave", (scaleData?.pyramid?.gaussian || []).length],
-                    ["每组尺度", field("sift_scales")],
-                    ["初始 σ", field("sift_sigma")]
+                    ["高斯层总数", (scaleData?.pyramid?.gaussian || []).reduce((sum, oct) => sum + oct.length, 0)]
                 ],
                 [
                     ["DoG 组数", (scaleData?.pyramid?.dog || []).length],
-                    ["原始极值", counts.raw_extrema || 0],
-                    ["DoG 阈值", field("contrast_threshold")]
+                    ["原始极值探测", counts.raw_extrema || 0]
                 ],
                 [
                     ["原始极值", counts.raw_extrema || 0],
@@ -650,57 +662,34 @@
                 ],
                 [
                     ["方向关键点", oriented.length || "懒加载"],
-                    ["方向 bins", 36],
                     ["当前方向", selected ? `${compactNumber(selected.orientation_deg)}°` : "-"]
                 ],
                 [
                     ["描述子类型", "float"],
                     ["描述子维度", "128"],
-                    ["距离类型", "L2"],
                     ["当前响应", selected ? compactNumber(selected.response) : "-"]
                 ]
             ][step] || [];
         }
         const fallbackAnalog = {
-            surf: { keypoints: "demo", descriptorType: "float", descriptorDim: "64 float", distanceType: "L2", elapsedMs: 0 },
-            "fast-brief": { keypoints: "demo", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming", elapsedMs: 0 },
-            "orb-lite": { keypoints: "demo", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming", elapsedMs: 0 }
+            surf: { keypoints: "-", descriptorType: "float", descriptorDim: "64 float", distanceType: "L2" },
+            "fast-brief": { keypoints: "-", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming" },
+            "orb-lite": { keypoints: "-", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming" }
         };
         const data = analogData.get(algorithm) || fallbackAnalog[algorithm];
-        const common = [
+        return [
             ["keypoints", data.keypoints],
             ["descriptor", data.descriptorType],
             ["dimension", data.descriptorDim],
             ["distance", data.distanceType]
         ];
-        if (algorithm === "surf") {
-            return [
-                [["积分图", "rect sum"], ["输入", "Gray"], ...common.slice(0, 3)],
-                [["响应", "Hessian"], ["NMS", "local max"], ...common.slice(0, 3)],
-                [["方向", "Haar"], ["旋转", "enabled"], ...common.slice(0, 3)],
-                [["描述子", "64 float"], ["距离", "L2"], ...common.slice(0, 3)]
-            ][step] || common;
-        }
-        if (algorithm === "fast-brief") {
-            return [
-                [["检测器", "FAST-9"], ["圆周采样", "16"], ...common.slice(0, 3)],
-                [["采样对", "256"], ["方向", "none"], ...common.slice(0, 3)],
-                [["描述子", "256 bit"], ["距离", "Hamming"], ...common.slice(0, 3)]
-            ][step] || common;
-        }
-        return [
-            [["检测器", "FAST-9"], ["圆周采样", "16"], ["排序", "response"], ["NMS", "local max"], ...common.slice(0, 2)],
-            [["方向", "Intensity centroid"], ["矩", "m10 / m01"], ...common.slice(0, 3)],
-            [["描述子", "rotated BRIEF"], ["距离", "Hamming"], ...common.slice(0, 3)]
-        ][step] || common;
     }
 
     function renderFormulaBox(algorithm, step) {
-        const box = V.$("siftNoteFormula");
+        const box = V.$("siftInfoLogic");
         if (!box) return;
         const info = stepFormula(algorithm, step) || { formula: "-", details: [] };
         box.innerHTML = `
-            <b>公式与判断</b>
             <div class="latex-formula" data-sift-formula></div>
             <ul class="feature-note-detail">${(info.details || []).map(item => `<li>${item}</li>`).join("")}</ul>
         `;
@@ -722,12 +711,16 @@
         const algorithm = selectedAlgorithm();
         V.$("siftPipelineLabel").textContent = info.label;
         V.$("siftStageTitle").textContent = `${info.name} · ${content.title}`;
-        V.$("siftNoteTitle").textContent = `${info.name} · ${content.title}`;
-        V.$("siftNotePrimary").innerHTML = `<b>${content.primary[0]}</b><p>${content.primary[1]}</p>`;
-        V.$("siftNoteSecondary").innerHTML = `<b>${content.secondary[0]}</b><p>${content.secondary[1]}</p>`;
-        V.$("siftNoteBoundary").textContent = content.boundary;
+        V.$("siftInfoTitle").textContent = `${info.name} · ${content.title}`;
+        V.$("siftInfoGoal").textContent = content.goal;
+        V.$("siftInfoIO").textContent = content.io;
+        V.$("siftInfoNext").textContent = content.next;
         renderFormulaBox(algorithm, step);
-        V.renderStatList(V.$("siftNoteValues"), noteValues(algorithm, step));
+        const params = noteParams(algorithm, step);
+        const results = noteResults(algorithm, step);
+        V.$("siftInfoParams").parentElement.hidden = params.length === 0;
+        V.renderStatList(V.$("siftInfoParams"), params);
+        V.renderStatList(V.$("siftInfoResult"), results);
     }
 
     function cloneToCanvas(packed, palette = "gray") {
