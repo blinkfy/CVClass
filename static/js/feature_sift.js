@@ -1645,8 +1645,8 @@
     function patchVectorPosition(rect, vector) {
         const radius = Math.min(rect.w, rect.h) * .34;
         return {
-            x: rect.x + rect.w / 2 + (Number(vector.dx) || 0) / 6.5 * radius,
-            y: rect.y + rect.h / 2 + (Number(vector.dy) || 0) / 6.5 * radius
+            x: rect.x + rect.w / 2 + (Number(vector.dx) || 0) / 8.0 * radius,
+            y: rect.y + rect.h / 2 + (Number(vector.dy) || 0) / 8.0 * radius
         };
     }
 
@@ -1697,21 +1697,33 @@
         ctx.beginPath();
         ctx.arc(center.x, center.y, 5.5 + 2 * Math.sin(phase * Math.PI * 2) ** 2, 0, Math.PI * 2);
         ctx.fill();
+        
         const maxMag = Math.max(1e-6, ...payload.vectors.map(vector => (Number(vector.mag) || 0) * (Number(vector.weight) || 1)));
         const visibleCount = Math.floor(payload.vectors.length * gradientProgress);
+        
         payload.vectors.slice(0, visibleCount).forEach((vector, index) => {
+            const dx = Number(vector.dx) || 0;
+            const dy = Number(vector.dy) || 0;
+            
+            // Geometrically cull the corners of the 16x16 square to form a perfect circular patch!
+            // This prevents the grid from sticking out of the Gaussian circle boundary.
+            if (Math.hypot(dx, dy) > 8.2) return;
+            
             const pos = patchVectorPosition(rect, vector);
             const magnitude = (Number(vector.mag) || 0) * (Number(vector.weight) || 1);
-            const length = 5 + 13 * magnitude / maxMag;
-            const alpha = .22 + .72 * magnitude / maxMag;
+            
+            // Limit maximum arrow length to 14 so edge arrows don't violently poke out
+            const length = Math.max(1.5, Math.min(14, 18 * (magnitude / maxMag)));
+            const alpha = .15 + .85 * (magnitude / maxMag);
             const active = index === Math.floor(phase * payload.vectors.length) % Math.max(1, payload.vectors.length);
             drawOrientationArrow(ctx, pos.x, pos.y, vector.angle, length, active ? "#f97316" : "#2563eb", alpha, active ? 2.2 : 1.3);
         });
+        
         if (peakProgress > 0) {
-            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.mainAngle, radius * (.55 + .45 * peakProgress), "#f97316", peakProgress, 4.5);
+            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.mainAngle, radius * (.55 + .40 * peakProgress), "#f97316", peakProgress, 4.5);
         }
         if (duplicateProgress > 0) {
-            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.secondaryAngle, radius * (.5 + .38 * duplicateProgress), "#7c3aed", duplicateProgress, 3.2);
+            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.secondaryAngle, radius * (.5 + .35 * duplicateProgress), "#7c3aed", duplicateProgress, 3.2);
         }
         ctx.restore();
     }
@@ -2342,30 +2354,45 @@
         const leftImage = drawLoadedImageInRect(ctx, image, left, "#f1f5f9");
         const rightImage = drawLoadedImageInRect(ctx, image, right, "#f1f5f9");
 
-        const drawRaw = (image, alpha) => {
-            if (!image) return;
+        // Draw the right image (filtering result) normally with faint raw points as context
+        if (rightImage) {
             ctx.save();
             ctx.fillStyle = `rgba(248,251,255,${thumb ? .42 : .56})`;
-            ctx.fillRect(image.rect.x, image.rect.y, image.rect.w, image.rect.h);
+            ctx.fillRect(rightImage.rect.x, rightImage.rect.y, rightImage.rect.w, rightImage.rect.h);
             evenlySamplePoints(raw, thumb ? 70 : 340).forEach(point => {
-                const mapped = mapPointToImageRect(point, image.rect, scaleData.meta?.width || image.img.width, scaleData.meta?.height || image.img.height);
-                drawCandidateCross(ctx, mapped.x, mapped.y, thumb ? 2.3 : 3.6, "#64748b", alpha);
+                const mapped = mapPointToImageRect(point, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                drawCandidateCross(ctx, mapped.x, mapped.y, thumb ? 2.3 : 3.6, "#64748b", thumb ? .18 : .20);
             });
             ctx.restore();
-        };
-        drawRaw(leftImage, thumb ? .38 : .46);
-        drawRaw(rightImage, thumb ? .18 : .20);
+        }
+
+        // Draw the left image as an Edge Response Heatmap!
+        // We use the raw extrema points (which naturally cluster on edges) to form the map.
+        if (leftImage) {
+            ctx.save();
+            // Darken the background slightly to make the glowing edges pop without hiding the image
+            ctx.fillStyle = `rgba(15, 23, 42, ${thumb ? .55 : .45})`; 
+            ctx.fillRect(leftImage.rect.x, leftImage.rect.y, leftImage.rect.w, leftImage.rect.h);
+            
+            ctx.globalCompositeOperation = "screen";
+            // Make dots brighter and clearer in both views
+            ctx.fillStyle = thumb ? "rgba(56, 189, 248, 0.45)" : "rgba(56, 189, 248, 0.35)";
+            
+            // Plot all points to form the edge response lines
+            const edgePoints = raw.length > 8000 ? evenlySamplePoints(raw, 8000) : raw;
+            const r = thumb ? 1 : 1.5;
+            
+            ctx.beginPath();
+            edgePoints.forEach(point => {
+                const mapped = mapPointToImageRect(point, leftImage.rect, scaleData.meta?.width || leftImage.img.width, scaleData.meta?.height || leftImage.img.height);
+                ctx.fillRect(mapped.x - r, mapped.y - r, r * 2, r * 2);
+            });
+            ctx.restore();
+        }
 
         const sampledRaw = evenlySamplePoints(raw, 12);
         const candidate = sampledRaw.length ? sampledRaw[Math.floor(phase * sampledRaw.length) % sampledRaw.length] : null;
-        if (candidate && leftImage) {
-            const mapped = mapPointToImageRect(candidate, leftImage.rect, scaleData.meta?.width || leftImage.img.width, scaleData.meta?.height || leftImage.img.height);
-            const alpha = state.edgeLike ? .92 - .62 * motionEase((phase * 2) % 1) : .92;
-            drawCandidateCircle(ctx, mapped.x, mapped.y, thumb ? 4.2 : 8, state.edgeLike ? "#f97316" : "#16a34a", alpha);
-            if (state.edgeLike && !thumb) {
-                drawCandidateCross(ctx, mapped.x, mapped.y, 10, "#ef4444", .72);
-            }
-        }
+        const localPhase = (phase * sampledRaw.length) % 1;
 
         if (rightImage) {
             filtered.slice(0, thumb ? 80 : 360).forEach(point => {
@@ -2376,9 +2403,110 @@
                 const mapped = mapPointToImageRect(point, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
                 V.drawCircle(ctx, mapped.x, mapped.y, "#ea580c", thumb ? 3 : 5.2);
             });
-            if (candidate && !state.edgeLike) {
-                const mapped = mapPointToImageRect(candidate, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
-                drawCandidateCircle(ctx, mapped.x, mapped.y, thumb ? 5 : 9 + 2 * Math.sin(phase * Math.PI * 2) ** 2, "#16a34a", .95);
+        }
+
+        if (candidate && leftImage) {
+            const mapped = mapPointToImageRect(candidate, leftImage.rect, scaleData.meta?.width || leftImage.img.width, scaleData.meta?.height || leftImage.img.height);
+            
+            if (!thumb) {
+                ctx.save();
+                ctx.strokeStyle = `rgba(59,130,246,${1 - localPhase})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mapped.x, mapped.y, 8 + 24 * localPhase, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                const maxLen = 46;
+                // Exaggerate the length difference for edge points to create a dramatic "long strip"
+                const len1 = state.edgeLike ? 8 : (maxLen * 0.85); // Along edge (small for edge, large for corner)
+                const len2 = state.edgeLike ? maxLen : (maxLen * 0.95); // Perpendicular to edge (large)
+                
+                ctx.translate(mapped.x, mapped.y);
+                const angle = (mapped.x * 3 + mapped.y * 7) * 0.01; 
+                ctx.rotate(angle);
+                
+                // Draw the response ellipse (long strip for edges, fat circle for corners)
+                ctx.fillStyle = state.edgeLike ? "rgba(239, 68, 68, 0.25)" : "rgba(34, 197, 94, 0.25)";
+                ctx.beginPath();
+                ctx.ellipse(0, 0, len1/2, len2/2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw responsive outward arrows for principal directions
+                const drawOutwardArrow = (dx, dy, color) => {
+                    const length = Math.hypot(dx, dy);
+                    ctx.strokeStyle = color;
+                    ctx.fillStyle = color;
+                    ctx.lineWidth = 2.2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(dx, dy);
+                    ctx.stroke();
+                    
+                    const a = Math.atan2(dy, dx);
+                    const headSize = Math.min(6, length * 0.75); // Scale down head for tiny arrows
+                    ctx.beginPath();
+                    ctx.moveTo(dx, dy);
+                    ctx.lineTo(dx - headSize * Math.cos(a - 0.5), dy - headSize * Math.sin(a - 0.5));
+                    ctx.lineTo(dx - headSize * Math.cos(a + 0.5), dy - headSize * Math.sin(a + 0.5));
+                    ctx.fill();
+                };
+                
+                // Perpendicular direction (gradient/large response)
+                drawOutwardArrow(0, len2/2, "#3b82f6");
+                drawOutwardArrow(0, -len2/2, "#3b82f6");
+                
+                // Along edge direction (small response for edges)
+                drawOutwardArrow(len1/2, 0, "#f97316");
+                drawOutwardArrow(-len1/2, 0, "#f97316");
+                
+                ctx.rotate(-angle);
+                
+                ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+                ctx.fillRect(16, -10, 114, 18);
+                
+                ctx.fillStyle = state.edgeLike ? "#ef4444" : "#16a34a";
+                ctx.font = "800 11px sans-serif";
+                ctx.fillText(`Ratio: ${state.edgeRatio.toFixed(1)} ${state.edgeLike ? '>' : '<'} ${state.threshold.toFixed(1)}`, 20, 3);
+                
+                ctx.restore();
+            }
+
+            const alpha = state.edgeLike ? .92 - .62 * localPhase : .92;
+            drawCandidateCircle(ctx, mapped.x, mapped.y, thumb ? 4.2 : 8, state.edgeLike ? "#f97316" : "#16a34a", alpha);
+            
+            if (state.edgeLike && !thumb) {
+                const rejectScale = 1 + localPhase * 0.5;
+                drawCandidateCross(ctx, mapped.x, mapped.y, 10 * rejectScale, "#ef4444", 1 - localPhase);
+                ctx.fillStyle = `rgba(239,68,68,${1 - localPhase})`;
+                ctx.font = "900 12px sans-serif";
+                ctx.fillText("REJECT (Edge)", mapped.x + 12, mapped.y - 12 - 15 * localPhase);
+            } else if (!state.edgeLike && !thumb && rightImage) {
+                const rightMapped = mapPointToImageRect(candidate, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                ctx.save();
+                ctx.strokeStyle = "rgba(34,197,94,0.3)";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(mapped.x, mapped.y);
+                const cpX = (mapped.x + rightMapped.x) / 2;
+                const cpY = mapped.y - 60;
+                ctx.bezierCurveTo(cpX, cpY, cpX, cpY, rightMapped.x, rightMapped.y);
+                ctx.stroke();
+                
+                const t = Math.pow(localPhase, 1.5);
+                const mx = mapped.x * (1 - t) * (1 - t) + 2 * cpX * (1 - t) * t + rightMapped.x * t * t;
+                const my = mapped.y * (1 - t) * (1 - t) + 2 * cpY * (1 - t) * t + rightMapped.y * t * t;
+                drawCandidateCircle(ctx, mx, my, 6, "#22c55e", 1);
+                
+                ctx.fillStyle = `rgba(34,197,94,${1 - localPhase})`;
+                ctx.font = "900 12px sans-serif";
+                ctx.fillText("KEEP (Corner)", mapped.x + 12, mapped.y - 12 - 10 * localPhase);
+                ctx.restore();
+            }
+
+            if (rightImage && !state.edgeLike) {
+                const rightMapped = mapPointToImageRect(candidate, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                drawCandidateCircle(ctx, rightMapped.x, rightMapped.y, thumb ? 5 : 9 + 2 * Math.sin(localPhase * Math.PI * 2) ** 2, "#16a34a", Math.min(1, localPhase * 1.5));
             }
         }
 
@@ -2478,22 +2606,201 @@
         const descriptorCtx = canvas.getContext("2d");
         descriptorCtx.fillStyle = "#f8fbff";
         descriptorCtx.fillRect(0, 0, width, height);
+        
+        const phase = thumb ? 1 : replayWithHold(options.animationPhase || 0, 0.75);
+
         if (selected) {
             const chartValues = selected.descriptor128 || [];
             const max = Math.max(1e-6, ...chartValues);
-            const left = thumb ? 10 : 38;
+            
+            // Layout parameters
+            const gridLeft = thumb ? 0 : 50;
+            const gridTop = 110;
+            const cellSize = 75;
+            const chartLeft = thumb ? 10 : 410;
+            const chartWidth = thumb ? (width - 20) : (width - chartLeft - 40);
+            const cellGap = thumb ? 1 : 8;
+            const barW = Math.max(0.5, (chartWidth - cellGap * 15) / 128);
             const bottom = height - (thumb ? 18 : 52);
-            const barW = (width - left * 2) / chartValues.length;
+            const maxBarH = height - (thumb ? 38 : 155);
+
+            if (!thumb) {
+                // 1. Draw 4x4 Spatial Grid of Orientation Stars (Classic SIFT visualization)
+                descriptorCtx.fillStyle = "#64748b";
+                descriptorCtx.font = "950 15px sans-serif";
+                descriptorCtx.fillText("4×4 空间网格 (Spatial Grid)", gridLeft + 50, gridTop - 25);
+                
+                descriptorCtx.strokeStyle = "rgba(100, 116, 139, 0.2)";
+                descriptorCtx.lineWidth = 1;
+                for (let i = 0; i <= 4; i++) {
+                    descriptorCtx.beginPath();
+                    descriptorCtx.moveTo(gridLeft + i * cellSize, gridTop);
+                    descriptorCtx.lineTo(gridLeft + i * cellSize, gridTop + 4 * cellSize);
+                    descriptorCtx.stroke();
+                    descriptorCtx.beginPath();
+                    descriptorCtx.moveTo(gridLeft, gridTop + i * cellSize);
+                    descriptorCtx.lineTo(gridLeft + 4 * cellSize, gridTop + i * cellSize);
+                    descriptorCtx.stroke();
+                }
+                
+                const rawVectors = selected.patch_vectors || [];
+                
+                // Draw Raw Patch Vectors accumulating into Stars
+                rawVectors.forEach(v => {
+                    const cx_center = gridLeft + 2 * cellSize;
+                    const cy_center = gridTop + 2 * cellSize;
+                    const x = cx_center + (v.dx / 8.0) * (2 * cellSize);
+                    const y = cy_center + (v.dy / 8.0) * (2 * cellSize);
+                    
+                    const cell_x = Math.min(3, Math.max(0, Math.floor((v.dx + 8) / 4)));
+                    const cell_y = Math.min(3, Math.max(0, Math.floor((v.dy + 8) / 4)));
+                    const c = cell_y * 4 + cell_x;
+                    
+                    const cellPhase = Math.max(0, Math.min(1, (phase - c / 16 * 0.6) / 0.15));
+                    const mag = (v.mag || 0) * (v.weight || 1);
+                    if (mag < 1e-4) return;
+                    
+                    if (cellPhase < 1) {
+                        const alpha = cellPhase > 0 ? (1 - cellPhase) : 0.18;
+                        const len = Math.max(1.5, Math.min(10, mag * 65)); 
+                        const color = cellPhase > 0 ? "#f97316" : "#94a3b8";
+                        
+                        const ax = x + Math.cos(v.angle) * len;
+                        const ay = y - Math.sin(v.angle) * len;
+                        
+                        descriptorCtx.strokeStyle = color;
+                        descriptorCtx.globalAlpha = alpha;
+                        descriptorCtx.lineWidth = 1;
+                        descriptorCtx.beginPath();
+                        descriptorCtx.moveTo(x, y);
+                        descriptorCtx.lineTo(ax, ay);
+                        descriptorCtx.stroke();
+                        descriptorCtx.globalAlpha = 1;
+                    }
+                });
+                
+                // Draw 8-directional stars inside each cell
+                for (let c = 0; c < 16; c++) {
+                    const cx = gridLeft + (c % 4) * cellSize + cellSize / 2;
+                    const cy = gridTop + Math.floor(c / 4) * cellSize + cellSize / 2;
+                    
+                    const cellPhase = Math.max(0, Math.min(1, (phase - c / 16 * 0.6) / 0.15));
+                    if (cellPhase <= 0) continue;
+                    
+                    const isCurrentCell = cellPhase < 1 && cellPhase > 0;
+                    
+                    if (isCurrentCell && !thumb) {
+                        descriptorCtx.fillStyle = "rgba(249, 115, 22, 0.08)";
+                        descriptorCtx.fillRect(cx - cellSize/2, cy - cellSize/2, cellSize, cellSize);
+                        
+                        const chartCx = chartLeft + c * (barW * 8 + cellGap) + (barW * 4);
+                        const chartCy = bottom - maxBarH - 25;
+                        
+                        descriptorCtx.strokeStyle = "rgba(249, 115, 22, 0.4)";
+                        descriptorCtx.setLineDash([4, 4]);
+                        descriptorCtx.lineWidth = 1.5;
+                        descriptorCtx.beginPath();
+                        descriptorCtx.moveTo(cx + cellSize/2, cy);
+                        descriptorCtx.bezierCurveTo(cx + cellSize, cy, chartCx, chartCy - 40, chartCx, chartCy + 10);
+                        descriptorCtx.stroke();
+                        descriptorCtx.setLineDash([]);
+                    }
+                    
+                    for (let i = 0; i < 8; i++) {
+                        const val = chartValues[c * 8 + i] || 0;
+                        if (val <= 1e-6) continue;
+                        const len = (val / max) * (cellSize / 2 * 0.85) * cellPhase;
+                        const angle = i * Math.PI / 4; 
+                        
+                        const ax = cx + Math.cos(angle) * len;
+                        const ay = cy - Math.sin(angle) * len; 
+                        
+                        const color = (isCurrentCell && !thumb) ? "#f97316" : "#3b82f6";
+                        
+                        descriptorCtx.strokeStyle = color;
+                        descriptorCtx.fillStyle = color;
+                        descriptorCtx.lineWidth = (isCurrentCell && !thumb) ? 2.5 : 1.8;
+                        descriptorCtx.beginPath();
+                        descriptorCtx.moveTo(cx, cy);
+                        descriptorCtx.lineTo(ax, ay);
+                        descriptorCtx.stroke();
+                        
+                        if (len > 4) {
+                            const head = Math.min(4, len * 0.6);
+                            descriptorCtx.beginPath();
+                            descriptorCtx.moveTo(ax, ay);
+                            descriptorCtx.lineTo(ax - head * Math.cos(angle - 0.5), ay + head * Math.sin(angle - 0.5));
+                            descriptorCtx.lineTo(ax - head * Math.cos(angle + 0.5), ay + head * Math.sin(angle + 0.5));
+                            descriptorCtx.fill();
+                        }
+                    }
+                }
+                
+                // 2. Draw 128-D Flattened Histogram
+                descriptorCtx.fillStyle = "#64748b";
+                descriptorCtx.font = "950 15px sans-serif";
+                descriptorCtx.fillText("128 维展开向量 (Flattened 128-D Vector)", chartLeft, gridTop - 25);
+                
+                // Clip threshold line
+                descriptorCtx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+                descriptorCtx.setLineDash([5, 5]);
+                descriptorCtx.beginPath();
+                descriptorCtx.moveTo(chartLeft, bottom - maxBarH);
+                descriptorCtx.lineTo(chartLeft + chartWidth, bottom - maxBarH);
+                descriptorCtx.stroke();
+                descriptorCtx.setLineDash([]);
+                descriptorCtx.fillStyle = "rgba(239, 68, 68, 0.7)";
+                descriptorCtx.font = "800 11px sans-serif";
+                descriptorCtx.fillText("Clip Threshold (0.2)", chartLeft + chartWidth - 110, bottom - maxBarH - 6);
+            }
+            
+            // Draw grouped bars
             chartValues.forEach((value, index) => {
-                const barH = (height - (thumb ? 38 : 115)) * (value / max);
-                descriptorCtx.fillStyle = index % 8 === 0 ? "#f97316" : "#2563eb";
-                descriptorCtx.fillRect(left + index * barW, bottom - barH, Math.max(1, barW - 1), barH);
+                const c = Math.floor(index / 8);
+                const b = index % 8;
+                
+                const cellPhase = Math.max(0, Math.min(1, (phase - c / 16 * 0.6) / 0.15));
+                const barPhase = Math.max(0, Math.min(1, (cellPhase - b / 8 * 0.3) / 0.7));
+                const ease = 1 - Math.pow(1 - barPhase, 3);
+                
+                if (ease <= 0) return;
+                
+                const barH = maxBarH * (value / max) * ease;
+                if (barH <= 0.5 && !thumb) return;
+                
+                const x = chartLeft + c * (barW * 8 + cellGap) + b * barW;
+                const isCurrentCell = cellPhase < 1 && cellPhase > 0;
+                
+                if (!thumb && barH > 5) {
+                    const grad = descriptorCtx.createLinearGradient(x, bottom - barH, x, bottom);
+                    if (isCurrentCell) {
+                        grad.addColorStop(0, "#fde047");
+                        grad.addColorStop(1, "#ea580c");
+                    } else {
+                        grad.addColorStop(0, b === 0 ? "#fdba74" : "#60a5fa");
+                        grad.addColorStop(1, b === 0 ? "#ea580c" : "#2563eb");
+                    }
+                    descriptorCtx.fillStyle = grad;
+                } else {
+                    descriptorCtx.fillStyle = isCurrentCell ? "#ea580c" : (b === 0 ? "#f97316" : "#2563eb");
+                }
+                
+                descriptorCtx.fillRect(x, bottom - barH, Math.max(1, barW - (thumb ? 0 : 0.8)), barH);
+                
+                // Draw cell group indicators on x-axis
+                if (!thumb && b === 4 && barPhase > 0.8) {
+                    descriptorCtx.fillStyle = "#94a3b8";
+                    descriptorCtx.font = "800 9px sans-serif";
+                    descriptorCtx.fillText(`C${c}`, x - 6, bottom + 16);
+                }
             });
-            if (!thumb) drawCanvasTitle(descriptorCtx, "128-dim descriptor", left, 34);
+            
+            if (!thumb) drawCanvasTitle(descriptorCtx, "128-dim descriptor computation", 34, 34);
+            
         } else {
             descriptorCtx.fillStyle = "#64748b";
             descriptorCtx.font = "900 16px sans-serif";
-            descriptorCtx.fillText("进入描述子步骤后加载 128 维向量", 30, height / 2);
+            descriptorCtx.fillText("进入描述子步骤后加载 128 维向量", width / 2 - 120, height / 2);
         }
     }
 
@@ -5853,7 +6160,7 @@
             if (siftMotion.playing) {
                 siftMotion.progress = (siftMotion.progress + delta / 3600) % 1;
                 renderSiftMotionProbe();
-                if (selectedAlgorithm() === "sift" && (currentStep === 1 || currentStep === 2 || currentStep === 3 || currentStep === 4 || currentStep === 5) && scaleData) {
+                if (selectedAlgorithm() === "sift" && (currentStep >= 1 && currentStep <= 6) && scaleData) {
                     drawSiftStepCanvas(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
                 }
             }
