@@ -18,37 +18,43 @@
     const stepContentMap = {
         sift: [{
             title: "预处理",
-            goal: "将彩色输入转换为单通道强度图，为后续高斯平滑和梯度计算提供统一输入。",
+            goal: "彩色图转灰度，建立统一输入。",
             io: "输入：RGB 图像 → 输出：Gray 灰度图",
             next: "灰度图将作为构建 Gaussian Pyramid 的基底（Layer 0）。",
             panel: "0"
         }, {
             title: "Gaussian Pyramid",
-            goal: "通过连续的高斯平滑与下采样，构建图像的多尺度连续表示空间。",
+            goal: "逐层高斯平滑，并跨 octave 下采样。",
             io: "输入：上一尺度图像 → 输出：不同分辨率和模糊程度的图像序列",
             next: "同一 Octave 的相邻 Gaussian 层相减，用于生成 DoG 响应。",
             panel: "1"
         }, {
             title: "DoG Pyramid",
-            goal: "利用相邻高斯层的差分近似尺度归一化的 LoG 算子，突出尺度稳定的边缘与斑点。",
+            goal: "相邻 Gaussian 层相减，得到尺度响应。",
             io: "输入：Gaussian Pyramid → 输出：DoG 差分金字塔",
             next: "在 DoG 空间中进行 3×3×3 的局部极值检测。",
             panel: "2"
         }, {
-            title: "极值检测与过滤",
-            goal: "在空间与尺度维度上寻找局部极值，剔除低对比度点和边缘响应点，保留稳定关键点。",
-            io: "输入：DoG Pyramid → 输出：稳定的尺度空间极值点 (x, y, octave, layer)",
-            next: "保留的极值点进入局部方向分配阶段。",
+            title: "DoG 极值定位",
+            goal: "在 3×3×3 邻域中寻找尺度极值。",
+            io: "输入：DoG Pyramid → 输出：候选极值点 (x, y, octave, layer)",
+            next: "候选极值点会进入低对比度过滤、Hessian 边缘响应过滤和 NMS。",
+            panel: "3"
+        }, {
+            title: "边缘抑制",
+            goal: "抑制边缘型响应，保留二维稳定点。",
+            io: "输入：候选极值点 → 输出：稳定关键点 (x, y, σ, response)",
+            next: "通过边缘抑制的点进入局部方向分配阶段。",
             panel: "3"
         }, {
             title: "主方向分配",
-            goal: "在关键点对应的尺度邻域内统计 36-bin 梯度方向直方图，确定主方向以实现旋转不变性。",
+            goal: "统计 36-bin 方向直方图，取主峰方向。",
             io: "输入：尺度极值点及周围梯度 → 输出：定向关键点 (含 orientation)",
             next: "生成以主方向为基准对齐的局部特征描述子。",
             panel: "4"
         }, {
             title: "128 维描述子",
-            goal: "将局部 16×16 的网格分为 4×4 的 Cells，每个 Cell 统计 8 个梯度方向，组成 128 维特征向量。",
+            goal: "4×4 网格内统计 8-bin 梯度，组成 128 维。",
             io: "输入：定向关键点及局部梯度 → 输出：128 维浮点描述子",
             next: "使用该描述子向量和 L2 距离即可在多张图像间进行比率测试与特征匹配。",
             panel: "5"
@@ -76,6 +82,9 @@
     let scaleData = null;
     let descriptorData = null;
     let descriptorPromise = null;
+    const imageCache = new Map();
+    let orientationDemoIndex = 0;
+    let orientationLayout = null;
     let analogData = new Map();
     let selectedAnalogMethod = V.$("siftAnalogMethod")?.value || "sift";
     const siftMotion = {
@@ -134,6 +143,31 @@
         });
     }
 
+    function preloadImage(src) {
+        if (!src) return Promise.resolve(null);
+        const cached = imageCache.get(src);
+        if (cached?.img) return Promise.resolve(cached.img);
+        if (cached?.promise) return cached.promise;
+        const promise = V.loadImage(src).then(img => {
+            imageCache.set(src, { img, promise: null });
+            return img;
+        });
+        imageCache.set(src, { img: null, promise });
+        return promise;
+    }
+
+    function cachedImage(src) {
+        return imageCache.get(src)?.img || null;
+    }
+
+    function ensureCanvasSize(canvas, width, height) {
+        const nextWidth = Math.max(1, Math.round(width));
+        const nextHeight = Math.max(1, Math.round(height));
+        if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+            V.setCanvasSize(canvas, nextWidth, nextHeight);
+        }
+    }
+
     function renderPyramid(container, rows, dog) {
         if (!container) return;
         container.innerHTML = "";
@@ -185,6 +219,7 @@
 
     async function renderScale(data) {
         scaleData = data;
+        preloadImage(data.images.original);
         await renderPreprocess(data);
         renderPyramid(V.$("gaussianPyramid"), data.pyramid?.gaussian || [], false);
         renderPyramid(V.$("dogPyramid"), data.pyramid?.dog || [], true);
@@ -538,6 +573,179 @@
         return Number.isInteger(number) ? String(number) : number.toFixed(3).replace(/\.?0+$/, "");
     }
 
+    function evenlySamplePoints(points, max) {
+        const list = Array.isArray(points) ? points : [];
+        const limit = Math.max(0, Number(max) || 0);
+        if (!limit || list.length <= limit) return list;
+        if (limit === 1) return [list[Math.floor(list.length / 2)]];
+        const step = (list.length - 1) / (limit - 1);
+        return Array.from({ length: limit }, (_, index) => list[Math.round(index * step)]);
+    }
+
+    function normalizeAngleDeg(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return 0;
+        return (number % 360 + 360) % 360;
+    }
+
+    function pointOrientationDeg(point) {
+        if (!point) return 0;
+        if (Number.isFinite(Number(point.orientation_deg))) return normalizeAngleDeg(point.orientation_deg);
+        if (Number.isFinite(Number(point.angle))) return normalizeAngleDeg(point.angle);
+        if (Number.isFinite(Number(point.orientation))) {
+            const value = Number(point.orientation);
+            return normalizeAngleDeg(Math.abs(value) <= Math.PI * 2 + .01 ? value * 180 / Math.PI : value);
+        }
+        return 0;
+    }
+
+    function angleDistanceDeg(a, b) {
+        const diff = Math.abs(normalizeAngleDeg(a) - normalizeAngleDeg(b));
+        return Math.min(diff, 360 - diff);
+    }
+
+    function orientationKeypoints() {
+        const descriptor = descriptorData?.sift || {};
+        const sift = scaleData?.sift || {};
+        const oriented = descriptor.oriented_keypoints || descriptor.extended_points || sift.oriented_keypoints || sift.extended_points || [];
+        const base = oriented.length ? oriented : (sift.points_keypoints || sift.keypoints || []);
+        if (base.length) return base;
+        return descriptor.selected ? [descriptor.selected] : [];
+    }
+
+    function sameLocationOrientations(point, keypoints) {
+        if (!point) return [];
+        const px = Math.round(Number(point.x) || 0);
+        const py = Math.round(Number(point.y) || 0);
+        const octave = Number(point.octave);
+        const layer = Number(point.layer ?? point.scale);
+        return (keypoints || []).filter(item => {
+            const sameXY = Math.abs((Number(item.x) || 0) - px) <= 1 && Math.abs((Number(item.y) || 0) - py) <= 1;
+            const sameOctave = !Number.isFinite(octave) || !Number.isFinite(Number(item.octave)) || Number(item.octave) === octave;
+            const sameLayer = !Number.isFinite(layer) || !Number.isFinite(Number(item.layer ?? item.scale)) || Number(item.layer ?? item.scale) === layer;
+            return sameXY && sameOctave && sameLayer;
+        });
+    }
+
+    function orientationSyntheticVectors(point, secondary) {
+        const mainAngle = pointOrientationDeg(point);
+        const secondaryAngle = secondary ? pointOrientationDeg(secondary) : null;
+        const secondaryRatio = secondary ? Math.max(.55, Math.min(1, Number(secondary.relative_peak) || .82)) : 0;
+        const seed = ((Number(point?.x) || 0) * 31 + (Number(point?.y) || 0) * 17 + (Number(point?.octave) || 0) * 13) % 360;
+        const vectors = [];
+        for (let row = -6; row <= 6; row++) {
+            for (let col = -6; col <= 6; col++) {
+                const radius = Math.hypot(col, row);
+                if (radius > 6.35) continue;
+                const index = vectors.length;
+                const chooseSecondary = secondaryAngle !== null && (index + Math.round(seed)) % 5 === 0;
+                const baseAngle = chooseSecondary ? secondaryAngle : mainAngle;
+                const swirl = 8 * Math.sin((col * 1.7 + row * 2.3 + seed) * Math.PI / 18);
+                const weight = Math.exp(-(radius * radius) / 18);
+                const lobe = chooseSecondary ? secondaryRatio : 1;
+                const mag = (4.5 + 7.5 * weight + ((index * 7 + seed) % 9) * .45) * lobe;
+                vectors.push({
+                    dx: col,
+                    dy: row,
+                    angle: normalizeAngleDeg(baseAngle + swirl),
+                    mag,
+                    weight
+                });
+            }
+        }
+        return vectors;
+    }
+
+    function orientationVectorsForPoint(point, keypoints) {
+        const selected = descriptorData?.sift?.selected;
+        const selectedVectors = selected?.patch_vectors || [];
+        const sameLocation = sameLocationOrientations(point, keypoints)
+            .filter(item => angleDistanceDeg(pointOrientationDeg(item), pointOrientationDeg(point)) > 12)
+            .sort((a, b) => (Number(b.orientation_peak) || Number(b.relative_peak) || 0) - (Number(a.orientation_peak) || Number(a.relative_peak) || 0));
+        const secondary = sameLocation[0] || null;
+        const isSelectedDescriptor = selected && Math.abs((Number(selected.x) || 0) - (Number(point?.x) || 0)) <= 1 &&
+            Math.abs((Number(selected.y) || 0) - (Number(point?.y) || 0)) <= 1;
+        if (isSelectedDescriptor && selectedVectors.length) return selectedVectors.slice(0, 140);
+        return orientationSyntheticVectors(point, secondary);
+    }
+
+    function smoothOrientationHistogram(histogram, passes = 2) {
+        let values = (histogram || new Array(36).fill(0)).slice(0, 36);
+        while (values.length < 36) values.push(0);
+        for (let pass = 0; pass < passes; pass++) {
+            values = values.map((value, index) => {
+                const prev = values[(index + values.length - 1) % values.length] || 0;
+                const next = values[(index + 1) % values.length] || 0;
+                return (prev + 2 * value + next) / 4;
+            });
+        }
+        return values;
+    }
+
+    function orientationPeakInfo(point, keypoints, rawHistogram, smoothHistogram) {
+        const values = smoothHistogram?.length ? smoothHistogram : rawHistogram || [];
+        const mainAngle = pointOrientationDeg(point);
+        const mainBin = Math.round(mainAngle / 10) % 36;
+        const maximum = Math.max(1e-6, ...values);
+        const histogramSecondary = values
+            .map((value, bin) => ({ bin, value, angle: bin * 10 }))
+            .filter(item => angleDistanceDeg(item.angle, mainAngle) >= 20)
+            .sort((a, b) => b.value - a.value)[0] || { bin: -1, value: 0, angle: 0 };
+        const same = sameLocationOrientations(point, keypoints)
+            .filter(item => angleDistanceDeg(pointOrientationDeg(item), mainAngle) >= 12)
+            .map(item => {
+                const angle = pointOrientationDeg(item);
+                const bin = Math.round(angle / 10) % 36;
+                const ratio = Number(item.relative_peak) || ((Number(item.orientation_peak) || 0) / Math.max(1e-6, Number(point?.orientation_peak) || values[mainBin] || maximum));
+                return { bin, angle, value: values[bin] || histogramSecondary.value, ratio };
+            })
+            .sort((a, b) => b.ratio - a.ratio);
+        const secondary = same[0] || {
+            bin: histogramSecondary.bin,
+            angle: histogramSecondary.angle,
+            value: histogramSecondary.value,
+            ratio: histogramSecondary.value / maximum
+        };
+        const secondaryRatio = Math.max(0, Math.min(1, Number(secondary.ratio) || 0));
+        return {
+            mainBin,
+            mainAngle,
+            mainValue: values[mainBin] || maximum,
+            secondaryBin: secondary.bin,
+            secondaryAngle: normalizeAngleDeg(secondary.angle),
+            secondaryValue: secondary.value || 0,
+            secondaryRatio,
+            hasSecondary: secondary.bin >= 0 && secondaryRatio >= .8,
+            outputCount: secondary.bin >= 0 && secondaryRatio >= .8 ? 2 : 1
+        };
+    }
+
+    function orientationDemoPayload() {
+        const keypoints = orientationKeypoints();
+        if (!keypoints.length) {
+            const fallbackPoint = descriptorData?.sift?.selected || { x: scaleData?.meta?.width ? scaleData.meta.width / 2 : 0, y: scaleData?.meta?.height ? scaleData.meta.height / 2 : 0, sigma: 1.6, octave: 0, layer: 0, orientation_deg: 0 };
+            const vectors = orientationSyntheticVectors(fallbackPoint, null);
+            const rawHistogram = orientationHistogram(vectors);
+            const smoothHistogram = smoothOrientationHistogram(rawHistogram);
+            return { point: fallbackPoint, keypoints: [], index: 0, vectors, rawHistogram, smoothHistogram, peaks: orientationPeakInfo(fallbackPoint, [], rawHistogram, smoothHistogram) };
+        }
+        orientationDemoIndex = Math.max(0, Math.min(keypoints.length - 1, orientationDemoIndex));
+        const point = keypoints[orientationDemoIndex] || keypoints[0];
+        const vectors = orientationVectorsForPoint(point, keypoints);
+        const rawHistogram = orientationHistogram(vectors);
+        const smoothHistogram = smoothOrientationHistogram(rawHistogram);
+        return {
+            point,
+            keypoints,
+            index: orientationDemoIndex,
+            vectors,
+            rawHistogram,
+            smoothHistogram,
+            peaks: orientationPeakInfo(point, keypoints, rawHistogram, smoothHistogram)
+        };
+    }
+
+
     function stepFormula(algorithm, step) {
         if (algorithm === "sift") {
             return [
@@ -554,8 +762,12 @@
                     details: ["相邻高斯层相减近似 LoG。", "DoG 响应越稳定，越可能成为尺度特征候选。"]
                 },
                 {
-                    formula: "D(x,y,\\sigma) \\gtrless N_{26},\\quad R_{edge}<T_e",
-                    details: ["每个点和 3×3×3 的 26 个邻居比较。", "低对比度点和边缘响应点会被过滤。"]
+                    formula: "D(x,y,\\sigma) \\gtrless N_{26}",
+                    details: ["当前点与本层 8 个邻居比较。", "同时与上一层和下一层各 9 个邻居比较，共 26 个邻居。"]
+                },
+                {
+                    formula: "|D(x,y,\\sigma)|\\ge T_c,\\quad \\frac{\\operatorname{Tr}(H)^2}{\\det(H)}<\\frac{(r+1)^2}{r}",
+                    details: ["低对比度响应先被剔除。", "Hessian 边缘响应过强的点会被过滤，最后再用 NMS 去掉局部重复点。"]
                 },
                 {
                     formula: "\\theta=\\arg\\max_b H_b,\\quad H_b=\\sum w(x,y)m(x,y)",
@@ -626,7 +838,8 @@
                 [],
                 [["每组尺度", field("sift_scales")], ["初始 σ", field("sift_sigma")]],
                 [["DoG 阈值", field("contrast_threshold")]],
-                [["DoG 阈值", field("contrast_threshold")], ["边缘阈值", field("edge_threshold")]],
+                [],
+                [["对比度阈值", field("contrast_threshold")], ["边缘阈值", field("edge_threshold")]],
                 [["方向 bins", 36]],
                 [["描述子网格", "4×4"], ["每 cell bins", 8]]
             ][step] || [];
@@ -641,6 +854,9 @@
         if (algorithm === "sift") {
             const selected = descriptorData?.sift?.selected;
             const oriented = descriptorData?.sift?.oriented_keypoints || descriptorData?.sift?.extended_points || [];
+            const orientation = step === 5 ? orientationDemoPayload() : null;
+            const orientationPoint = orientation?.point || selected;
+            const orientationPeaks = orientation?.peaks || null;
             return [
                 [
                     ["图像尺寸", meta.width && meta.height ? `${meta.width} × ${meta.height}` : "-"],
@@ -656,13 +872,20 @@
                     ["原始极值探测", counts.raw_extrema || 0]
                 ],
                 [
+                    ["原始极值点", counts.raw_extrema || 0]
+                ],
+                [
                     ["原始极值", counts.raw_extrema || 0],
-                    ["边缘过滤后", counts.edge_survivors || 0],
+                    ["过滤后点数", counts.edge_survivors || 0],
                     ["最终关键点", counts.kept || sift.count || 0]
                 ],
                 [
-                    ["方向关键点", oriented.length || "懒加载"],
-                    ["当前方向", selected ? `${compactNumber(selected.orientation_deg)}°` : "-"]
+                    ["当前关键点", orientationPoint?.x !== undefined ? `(${compactNumber(orientationPoint.x)}, ${compactNumber(orientationPoint.y)})` : "-"],
+                    ["octave / layer", orientationPoint ? `${orientationPoint.octave ?? "-"} / ${orientationPoint.layer ?? orientationPoint.scale ?? "-"}` : "-"],
+                    ["σ", orientationPoint?.sigma !== undefined ? compactNumber(orientationPoint.sigma) : "-"],
+                    ["主峰角度", orientationPeaks ? `${compactNumber(orientationPeaks.mainAngle)}°` : "-"],
+                    ["次峰比例", orientationPeaks ? compactNumber(orientationPeaks.secondaryRatio) : "-"],
+                    ["输出方向数", orientationPeaks ? orientationPeaks.outputCount : (oriented.length || "懒加载")]
                 ],
                 [
                     ["描述子类型", "float"],
@@ -1292,11 +1515,907 @@
         }
     }
 
+    function drawCandidateCross(ctx, x, y, size = 4, color = "#64748b", alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1.2, size * 0.32);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x - size, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.moveTo(x + size, y - size);
+        ctx.lineTo(x - size, y + size);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawCandidateCircle(ctx, x, y, radius = 4, color = "#64748b", alpha = 1, fill = false) {
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = Math.max(1.2, radius * 0.36);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        if (fill) ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    async function drawImageInRect(ctx, src, rect, background = "#f8fbff") {
+        if (!src) return null;
+        const img = await preloadImage(src);
+        return drawLoadedImageInRect(ctx, img, rect, background);
+    }
+
+    function drawLoadedImageInRect(ctx, img, rect, background = "#f8fbff") {
+        if (!img) return null;
+        ctx.save();
+        ctx.fillStyle = background;
+        roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 12);
+        ctx.fill();
+        ctx.clip();
+        const fitted = coverRect(img.naturalWidth || img.width, img.naturalHeight || img.height, rect.w, rect.h);
+        fitted.x += rect.x;
+        fitted.y += rect.y;
+        ctx.drawImage(img, fitted.x, fitted.y, fitted.w, fitted.h);
+        ctx.restore();
+        return { img, rect: fitted };
+    }
+
+    function mapPointToImageRect(point, imageRect, imageWidth, imageHeight) {
+        return {
+            x: imageRect.x + point.x * imageRect.w / Math.max(1, imageWidth),
+            y: imageRect.y + point.y * imageRect.h / Math.max(1, imageHeight)
+        };
+    }
+
+    const orientationStageNames = [
+        "select-keypoint",
+        "show-support-region",
+        "show-gradients",
+        "vote-histogram",
+        "smooth-histogram",
+        "pick-main-peak",
+        "duplicate-secondary-peak",
+        "write-back-orientation"
+    ];
+
+    function orientationStageInfo(phase = 0) {
+        const p = ((Number(phase) || 0) % 1 + 1) % 1;
+        const scaled = p * orientationStageNames.length;
+        const index = Math.min(orientationStageNames.length - 1, Math.floor(scaled));
+        const local = scaled - index;
+        return {
+            index,
+            name: orientationStageNames[index],
+            local,
+            progress(name) {
+                const target = orientationStageNames.indexOf(name);
+                if (target < 0) return 0;
+                if (index > target) return 1;
+                if (index < target) return 0;
+                return motionEase(local);
+            }
+        };
+    }
+
+    function drawOrientationArrow(ctx, x, y, angleDeg, length, color, alpha = 1, width = 2) {
+        const angle = normalizeAngleDeg(angleDeg) * Math.PI / 180;
+        const tipX = x + Math.cos(angle) * length;
+        const tipY = y + Math.sin(angle) * length;
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - Math.cos(angle - .55) * 8, tipY - Math.sin(angle - .55) * 8);
+        ctx.lineTo(tipX - Math.cos(angle + .55) * 8, tipY - Math.sin(angle + .55) * 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawOrientationKeypointSymbol(ctx, x, y, point, alpha, options = {}) {
+        const sigma = Math.max(4, Math.min(14, Number(point?.sigma) || 5));
+        const color = options.color || "#2563eb";
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = options.fill ? color : "rgba(255,255,255,.72)";
+        ctx.lineWidth = options.active ? 2.8 : 1.6;
+        ctx.beginPath();
+        ctx.arc(x, y, sigma, 0, Math.PI * 2);
+        if (options.fill) ctx.fill();
+        ctx.stroke();
+        if (options.arrow) {
+            drawOrientationArrow(ctx, x, y, pointOrientationDeg(point), sigma + 12, color, .95, options.active ? 2.6 : 1.6);
+        }
+        ctx.restore();
+    }
+
+    function patchVectorPosition(rect, vector) {
+        const radius = Math.min(rect.w, rect.h) * .34;
+        return {
+            x: rect.x + rect.w / 2 + (Number(vector.dx) || 0) / 6.5 * radius,
+            y: rect.y + rect.h / 2 + (Number(vector.dy) || 0) / 6.5 * radius
+        };
+    }
+
+    function histogramBarGeometry(rect, bin, value, maximum) {
+        const gap = 1.8;
+        const plot = { x: rect.x + 18, y: rect.y + 34, w: rect.w - 36, h: rect.h - 58 };
+        const barW = plot.w / 36;
+        const ratio = Math.max(0, Number(value) || 0) / Math.max(1e-6, maximum);
+        const h = Math.max(3, plot.h * ratio);
+        return {
+            x: plot.x + bin * barW + gap / 2,
+            y: plot.y + plot.h - h,
+            w: Math.max(2, barW - gap),
+            h,
+            cx: plot.x + (bin + .5) * barW,
+            top: plot.y + plot.h - h
+        };
+    }
+
+    function drawOrientationPatchPanel(ctx, rect, payload, stage, phase) {
+        const supportProgress = stage.progress("show-support-region");
+        const gradientProgress = stage.progress("show-gradients");
+        const peakProgress = stage.progress("pick-main-peak");
+        const duplicateProgress = payload.peaks.hasSecondary ? stage.progress("duplicate-secondary-peak") : 0;
+        const center = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 + 6 };
+        const radius = Math.min(rect.w, rect.h) * .34;
+        drawMotionPanel(ctx, rect.x, rect.y, rect.w, rect.h, "#2563eb");
+        ctx.save();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("局部 patch / Gaussian 权重", rect.x + 16, rect.y + 22);
+        const glow = ctx.createRadialGradient(center.x, center.y, 8, center.x, center.y, radius * 1.25);
+        glow.addColorStop(0, `rgba(249,115,22,${.2 + .28 * supportProgress})`);
+        glow.addColorStop(.45, `rgba(37,99,235,${.12 + .18 * supportProgress})`);
+        glow.addColorStop(1, "rgba(37,99,235,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius * 1.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(37,99,235,${.18 + .62 * supportProgress})`;
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 5.5 + 2 * Math.sin(phase * Math.PI * 2) ** 2, 0, Math.PI * 2);
+        ctx.fill();
+        const maxMag = Math.max(1e-6, ...payload.vectors.map(vector => (Number(vector.mag) || 0) * (Number(vector.weight) || 1)));
+        const visibleCount = Math.floor(payload.vectors.length * gradientProgress);
+        payload.vectors.slice(0, visibleCount).forEach((vector, index) => {
+            const pos = patchVectorPosition(rect, vector);
+            const magnitude = (Number(vector.mag) || 0) * (Number(vector.weight) || 1);
+            const length = 5 + 13 * magnitude / maxMag;
+            const alpha = .22 + .72 * magnitude / maxMag;
+            const active = index === Math.floor(phase * payload.vectors.length) % Math.max(1, payload.vectors.length);
+            drawOrientationArrow(ctx, pos.x, pos.y, vector.angle, length, active ? "#f97316" : "#2563eb", alpha, active ? 2.2 : 1.3);
+        });
+        if (peakProgress > 0) {
+            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.mainAngle, radius * (.55 + .45 * peakProgress), "#f97316", peakProgress, 4.5);
+        }
+        if (duplicateProgress > 0) {
+            drawOrientationArrow(ctx, center.x, center.y, payload.peaks.secondaryAngle, radius * (.5 + .38 * duplicateProgress), "#7c3aed", duplicateProgress, 3.2);
+        }
+        ctx.restore();
+    }
+
+    function drawOrientationHistogramPanel(ctx, rect, payload, stage) {
+        const voteProgress = stage.progress("vote-histogram");
+        const smoothProgress = stage.progress("smooth-histogram");
+        const peakProgress = stage.progress("pick-main-peak");
+        const raw = payload.rawHistogram;
+        const smooth = payload.smoothHistogram;
+        const maximum = Math.max(1e-6, ...raw, ...smooth);
+        drawMotionPanel(ctx, rect.x, rect.y, rect.w, rect.h, "#7c3aed");
+        ctx.save();
+        ctx.fillStyle = "#5b21b6";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("36-bin 方向直方图", rect.x + 16, rect.y + 23);
+        for (let bin = 0; bin < 36; bin++) {
+            const binGate = Math.min(1, Math.max(0, voteProgress * 40 - bin));
+            const value = (raw[bin] || 0) * binGate;
+            const display = value * (1 - smoothProgress) + (smooth[bin] || 0) * Math.max(binGate, smoothProgress) * smoothProgress;
+            const geo = histogramBarGeometry(rect, bin, display, maximum);
+            const isMain = bin === payload.peaks.mainBin;
+            const isSecondary = payload.peaks.hasSecondary && bin === payload.peaks.secondaryBin;
+            ctx.fillStyle = isMain && peakProgress > 0 ? "#f97316" : isSecondary ? "#7c3aed" : "#60a5fa";
+            ctx.globalAlpha = isMain ? .55 + .45 * peakProgress : .38 + .42 * binGate;
+            roundRect(ctx, geo.x, geo.y, geo.w, geo.h, 4);
+            ctx.fill();
+            if (isMain && peakProgress > 0) {
+                ctx.strokeStyle = "#fb923c";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(geo.x - 1.5, geo.y - 2, geo.w + 3, geo.h + 3);
+            }
+        }
+        ctx.globalAlpha = 1;
+        const baseline = rect.y + rect.h - 24;
+        ctx.strokeStyle = "rgba(100,116,139,.35)";
+        ctx.beginPath();
+        ctx.moveTo(rect.x + 18, baseline);
+        ctx.lineTo(rect.x + rect.w - 18, baseline);
+        ctx.stroke();
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 10px sans-serif";
+        ctx.fillText("0°", rect.x + 18, rect.y + rect.h - 9);
+        ctx.fillText("180°", rect.x + rect.w / 2 - 14, rect.y + rect.h - 9);
+        ctx.fillText("360°", rect.x + rect.w - 48, rect.y + rect.h - 9);
+        ctx.restore();
+    }
+
+    function drawOrientationVoteParticles(ctx, patchRect, histRect, payload, stage, phase) {
+        const voteProgress = stage.progress("vote-histogram");
+        if (voteProgress <= 0) return;
+        const maximum = Math.max(1e-6, ...payload.rawHistogram, ...payload.smoothHistogram);
+        const samples = evenlySamplePoints(payload.vectors, 18);
+        ctx.save();
+        samples.forEach((vector, index) => {
+            const start = patchVectorPosition(patchRect, vector);
+            const bin = Math.round(normalizeAngleDeg(vector.angle) / 10) % 36;
+            const geo = histogramBarGeometry(histRect, bin, payload.rawHistogram[bin] || 0, maximum);
+            const local = Math.max(0, Math.min(1, voteProgress * 1.35 - index / samples.length * .55));
+            if (local <= 0) return;
+            const t = motionEase(local);
+            const endX = geo.cx;
+            const endY = geo.top - 8;
+            const c1x = start.x + (endX - start.x) * .35;
+            const c1y = start.y - 52;
+            const c2x = start.x + (endX - start.x) * .72;
+            const c2y = endY - 34;
+            ctx.strokeStyle = "rgba(37,99,235,.18)";
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.bezierCurveTo(c1x, c1y, c2x, c2y, endX, endY);
+            ctx.stroke();
+            const ax = start.x * (1 - t) + endX * t;
+            const ay = start.y * (1 - t) + endY * t - Math.sin(t * Math.PI) * 42;
+            ctx.fillStyle = index % 3 ? "#2563eb" : "#f97316";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(ax, ay, 3.2 + 2.2 * Math.sin(t * Math.PI), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+        ctx.restore();
+    }
+
+    function drawOrientationResultStrip(ctx, rect, payload, stage) {
+        const duplicateProgress = payload.peaks.hasSecondary ? stage.progress("duplicate-secondary-peak") : 0;
+        const writeProgress = stage.progress("write-back-orientation");
+        drawMotionPanel(ctx, rect.x, rect.y, rect.w, rect.h, "#0ea5e9");
+        ctx.save();
+        const chips = [
+            ["主峰", `${compactNumber(payload.peaks.mainAngle)}°`, "#f97316", stage.progress("pick-main-peak")],
+            ["平滑", "circular", "#2563eb", stage.progress("smooth-histogram")],
+            ["辅方向", payload.peaks.hasSecondary ? `${compactNumber(payload.peaks.secondaryAngle)}°` : "未触发", "#7c3aed", duplicateProgress || .25],
+            ["回写", `${payload.peaks.outputCount} 个方向`, "#16a34a", writeProgress]
+        ];
+        chips.forEach(([label, value, color, progress], index) => {
+            const x = rect.x + 18 + index * ((rect.w - 36) / chips.length);
+            const w = (rect.w - 54) / chips.length;
+            ctx.fillStyle = "rgba(255,255,255,.82)";
+            ctx.strokeStyle = `${color}${progress > 0 ? "aa" : "33"}`;
+            ctx.lineWidth = progress > 0 ? 1.8 : 1;
+            roundRect(ctx, x, rect.y + 12, w, rect.h - 24, 12);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.font = "950 14px sans-serif";
+            ctx.fillText(label, x + 13, rect.y + 35);
+            ctx.fillStyle = "#334155";
+            ctx.font = "850 12px sans-serif";
+            ctx.fillText(value, x + 13, rect.y + 53);
+        });
+        ctx.restore();
+    }
+
+    async function drawOrientationAssignmentMain(canvas, width, height, thumb, options = {}) {
+        if (thumb) {
+            const payload = orientationDemoPayload();
+            await drawSiftKeypointsContained(canvas, payload.keypoints, width, height, 90);
+            return;
+        }
+        const phase = options.animationPhase || 0;
+        const stage = orientationStageInfo(phase);
+        const payload = orientationDemoPayload();
+        ensureCanvasSize(canvas, width, height);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f8fbff";
+        ctx.fillRect(0, 0, width, height);
+        const src = scaleData.images.original;
+        let image = cachedImage(src);
+        if (!image) {
+            preloadImage(src).then(() => {
+                if (selectedAlgorithm() === "sift" && currentStep === 5) {
+                    drawSiftStepCanvas(canvas, currentStep, { animationPhase: siftMotion.progress });
+                }
+            });
+            ctx.fillStyle = "#eef6ff";
+            roundRect(ctx, 28, 36, 860, 430, 16);
+            ctx.fill();
+            ctx.fillStyle = "#64748b";
+            ctx.font = "900 15px sans-serif";
+            ctx.fillText("正在准备主方向分配动画...", 54, 74);
+            return;
+        }
+        const imagePanel = { x: 28, y: 38, w: 500, h: 376 };
+        const patchPanel = { x: 558, y: 30, w: 330, h: 226 };
+        const histPanel = { x: 558, y: 274, w: 330, h: 170 };
+        const resultStrip = { x: 28, y: 436, w: 860, h: 68 };
+        const imageResult = drawLoadedImageInRect(ctx, image, imagePanel, "#f1f5f9");
+        const imageRect = imageResult?.rect || imagePanel;
+        const imageWidth = scaleData.meta?.width || image.naturalWidth || image.width;
+        const imageHeight = scaleData.meta?.height || image.naturalHeight || image.height;
+        const allPoints = payload.keypoints.length ? payload.keypoints : [payload.point];
+        const sampledPoints = evenlySamplePoints(allPoints, 420);
+        orientationLayout = { points: [], imageRect, imageWidth, imageHeight };
+        ctx.save();
+        ctx.fillStyle = "rgba(248,251,255,.36)";
+        ctx.fillRect(imageRect.x, imageRect.y, imageRect.w, imageRect.h);
+        sampledPoints.forEach(point => {
+            const mapped = mapPointToImageRect(point, imageRect, imageWidth, imageHeight);
+            const sourceIndex = allPoints.indexOf(point);
+            orientationLayout.points.push({ index: sourceIndex >= 0 ? sourceIndex : 0, x: mapped.x, y: mapped.y });
+            drawOrientationKeypointSymbol(ctx, mapped.x, mapped.y, point, .20, { color: "#2563eb", arrow: stage.index >= 7 });
+        });
+        const selectedMapped = mapPointToImageRect(payload.point, imageRect, imageWidth, imageHeight);
+        const selectPulse = .55 + .45 * Math.sin(phase * Math.PI * 2) ** 2;
+        drawOrientationKeypointSymbol(ctx, selectedMapped.x, selectedMapped.y, payload.point, .98, { color: "#f97316", active: true, arrow: stage.progress("write-back-orientation") > 0 });
+        drawCandidateCircle(ctx, selectedMapped.x, selectedMapped.y, 14 + 10 * selectPulse * (1 - stage.progress("write-back-orientation") * .35), "#f97316", .45);
+        if (payload.peaks.hasSecondary && stage.progress("duplicate-secondary-peak") > 0) {
+            drawOrientationArrow(ctx, selectedMapped.x, selectedMapped.y, payload.peaks.secondaryAngle, 25, "#7c3aed", stage.progress("duplicate-secondary-peak"), 2.6);
+        }
+        ctx.strokeStyle = "rgba(37,99,235,.38)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([7, 7]);
+        ctx.beginPath();
+        ctx.moveTo(selectedMapped.x, selectedMapped.y);
+        ctx.bezierCurveTo(474, 58, 520, 92, patchPanel.x + 22, patchPanel.y + 76);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        drawOrientationPatchPanel(ctx, patchPanel, payload, stage, phase);
+        drawOrientationHistogramPanel(ctx, histPanel, payload, stage);
+        drawOrientationVoteParticles(ctx, patchPanel, histPanel, payload, stage, phase);
+        drawOrientationResultStrip(ctx, resultStrip, payload, stage);
+    }
+
+    function drawDoGVolume(ctx, x, y, options = {}) {
+        const size = options.size || 64;
+        const gapX = options.gapX || 74;
+        const gapY = options.gapY || 38;
+        const phase = options.phase || 0;
+        const activeNeighbor = Math.floor(phase * 26) % 26;
+        let neighborIndex = 0;
+        let centerMarker = null;
+        let activeMarker = null;
+        const dog = scaleData?.pyramid?.probe;
+        const layers = [
+            { matrix: dog?.prev, label: "σ-", caption: "上一尺度", color: "#64748b" },
+            { matrix: dog?.current, label: "σ", caption: "当前尺度", color: "#2563eb" },
+            { matrix: dog?.next, label: "σ+", caption: "下一尺度", color: "#64748b" }
+        ];
+        layers.forEach((layer, layerIndex) => {
+            const lx = x + layerIndex * gapX;
+            const ly = y - layerIndex * gapY;
+            const values = dogMatrixValues(layer.matrix);
+            const flat = values.flat().map(value => Number(value) || 0);
+            const maxAbs = Math.max(1e-6, ...flat.map(value => Math.abs(value)));
+            ctx.save();
+            ctx.fillStyle = "rgba(255,255,255,.82)";
+            ctx.strokeStyle = `${layer.color}8a`;
+            ctx.lineWidth = layerIndex === 1 ? 2 : 1.3;
+            ctx.beginPath();
+            ctx.moveTo(lx, ly);
+            ctx.lineTo(lx + size, ly - 20);
+            ctx.lineTo(lx + size + size * .82, ly + size * .38);
+            ctx.lineTo(lx + size * .82, ly + size * .38 + 20);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            values.forEach((row, rowIndex) => {
+                row.forEach((value, colIndex) => {
+                    const baseX = lx + colIndex * size / 3 + rowIndex * size * .27;
+                    const baseY = ly + rowIndex * size * .14 - colIndex * 6;
+                    const cellW = size / 3;
+                    const cellH = size / 6;
+                    const v = Number(value) || 0;
+                    const strength = Math.min(1, Math.abs(v) / maxAbs);
+                    const isCenter = layerIndex === 1 && rowIndex === 1 && colIndex === 1;
+                    ctx.fillStyle = v >= 0
+                        ? `rgba(37,99,235,${.12 + strength * .42})`
+                        : `rgba(249,115,22,${.10 + strength * .38})`;
+                    ctx.strokeStyle = isCenter ? "#f97316" : "rgba(147,197,253,.72)";
+                    ctx.lineWidth = isCenter ? 2.4 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(baseX, baseY);
+                    ctx.lineTo(baseX + cellW, baseY - 6);
+                    ctx.lineTo(baseX + cellW + size * .27, baseY + cellH);
+                    ctx.lineTo(baseX + size * .27, baseY + cellH + 6);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    const markerX = baseX + cellW * .62;
+                    const markerY = baseY + cellH * .54;
+                    if (isCenter) {
+                        centerMarker = { x: markerX, y: markerY };
+                        const pulse = .5 + .5 * Math.sin(phase * Math.PI * 2);
+                        drawCandidateCircle(ctx, markerX, markerY, (options.thumb ? 5 : 8.5) + pulse * 2.2, "#f97316", 1);
+                        drawCandidateCircle(ctx, markerX, markerY, options.thumb ? 2.4 : 3.4, "#f97316", .88, true);
+                    } else if (!options.thumb) {
+                        const isActive = neighborIndex === activeNeighbor;
+                        if (isActive) activeMarker = { x: markerX, y: markerY };
+                        drawCandidateCircle(
+                            ctx,
+                            markerX,
+                            markerY,
+                            isActive ? 5.8 : 3.9,
+                            isActive ? "#2563eb" : "#64748b",
+                            isActive ? .95 : .42,
+                            false
+                        );
+                        if (isActive) {
+                            drawCandidateCircle(ctx, markerX, markerY, 2.1, "#2563eb", .72, true);
+                        }
+                        neighborIndex += 1;
+                    } else {
+                        neighborIndex += 1;
+                    }
+                });
+            });
+            ctx.fillStyle = layer.color;
+            ctx.font = options.thumb ? "900 10px sans-serif" : "950 14px sans-serif";
+            ctx.fillText(layer.label, lx + size * .18, ly - 16);
+            if (!options.thumb) {
+                ctx.fillStyle = "#475569";
+                ctx.font = "850 11px sans-serif";
+                ctx.fillText(layer.caption, lx + size * .18 + 28, ly - 16);
+            }
+            ctx.restore();
+        });
+        if (!options.thumb && centerMarker && activeMarker) {
+            ctx.save();
+            const beam = ctx.createLinearGradient(activeMarker.x, activeMarker.y, centerMarker.x, centerMarker.y);
+            beam.addColorStop(0, "rgba(37,99,235,.18)");
+            beam.addColorStop(.55, "rgba(37,99,235,.9)");
+            beam.addColorStop(1, "rgba(249,115,22,.82)");
+            ctx.strokeStyle = beam;
+            ctx.lineWidth = 3.2;
+            ctx.lineCap = "round";
+            ctx.shadowColor = "rgba(37,99,235,.45)";
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(activeMarker.x, activeMarker.y);
+            ctx.lineTo(centerMarker.x, centerMarker.y);
+            ctx.stroke();
+            const t = motionEase((phase * 26) % 1);
+            const px = activeMarker.x + (centerMarker.x - activeMarker.x) * t;
+            const py = activeMarker.y + (centerMarker.y - activeMarker.y) * t;
+            drawCandidateCircle(ctx, px, py, 4.4, "#2563eb", .92, true);
+            ctx.restore();
+        }
+        return { center: centerMarker, active: activeMarker, activeNeighbor };
+    }
+
+    function dogTransitionLayers() {
+        const rows = scaleData?.pyramid?.dog || [];
+        const probe = scaleData?.pyramid?.probe || {};
+        const octave = Math.max(0, Math.min(rows.length - 1, Number(probe.octave) || 0));
+        const row = rows[octave] || rows[0] || [];
+        const currentLayer = Number.isFinite(Number(probe.layer)) ? Number(probe.layer) : 1;
+        const indices = [currentLayer - 1, currentLayer, currentLayer + 1]
+            .map(index => Math.max(0, Math.min(row.length - 1, index)));
+        return indices.map((index, order) => ({
+            cell: row[index],
+            label: ["σ-", "σ", "σ+"][order],
+            caption: ["上一尺度", "当前尺度", "下一尺度"][order]
+        })).filter(item => item.cell?.array);
+    }
+
+    function drawImageCard(ctx, packed, cx, cy, w, h, angle, alpha, label, color) {
+        const temp = cloneToCanvas(packed, "heat");
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.scale(1, 0.74);
+        ctx.shadowColor = "rgba(37,99,235,.16)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetY = 10;
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        roundRect(ctx, -w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 14);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.save();
+        roundRect(ctx, -w / 2, -h / 2, w, h, 10);
+        ctx.clip();
+        ctx.drawImage(temp, -w / 2, -h / 2, w, h);
+        ctx.restore();
+        ctx.strokeStyle = `${color}aa`;
+        ctx.lineWidth = 2;
+        roundRect(ctx, -w / 2, -h / 2, w, h, 10);
+        ctx.stroke();
+        ctx.scale(1, 1 / 0.74);
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(label, -w / 2 + 10, -h / 2 - 12);
+        ctx.restore();
+    }
+
+    function drawDogPyramidToExtremaTransition(ctx, phase, alpha = 1) {
+        const t = motionEase(clamp01(phase));
+        const layers = dogTransitionLayers();
+        const start = [
+            { x: 92, y: 286, angle: -0.02 },
+            { x: 216, y: 286, angle: 0.01 },
+            { x: 340, y: 286, angle: 0.02 }
+        ];
+        const size = 116;
+        const deck = { x: 74, y: 352, gapX: 28, gapY: 48 };
+        const targets = [0, 1, 2].map(index => {
+            const lx = deck.x + index * deck.gapX;
+            const ly = deck.y - index * deck.gapY;
+            return {
+                x: lx + size * .91,
+                y: ly + size * .19,
+                angle: -0.18
+            };
+        });
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.save();
+        ctx.fillStyle = "rgba(219,234,254,.76)";
+        roundRect(ctx, 48, 76, 402, 62, 18);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(147,197,253,.72)";
+        ctx.stroke();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 17px sans-serif";
+        ctx.fillText("从 DoG Pyramid 抽取相邻三层", 68, 106);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("三张差分层做 3D 旋转，落成 3×3×3 极值定位的尺度邻域。", 68, 128);
+        ctx.restore();
+
+        layers.forEach((layer, index) => {
+            const from = start[index] || start[1];
+            const to = targets[index] || targets[1];
+            const cx = from.x + (to.x - from.x) * t;
+            const cy = from.y + (to.y - from.y) * t;
+            const angle = from.angle + (to.angle - from.angle) * t;
+            const w = 106 + 18 * t;
+            const h = 82 + 14 * t;
+            const color = index === 1 ? "#2563eb" : "#64748b";
+            drawImageCard(ctx, layer.cell.array, cx, cy, w, h, angle, alpha * (.62 + .34 * t), `${layer.label} ${layer.caption}`, color);
+        });
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(37,99,235,.28)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 8]);
+        ctx.beginPath();
+        ctx.moveTo(404, 284);
+        ctx.bezierCurveTo(480, 222, 566, 170, 646, 128);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText(t < .62 ? "抽取 L(s-1), L(s), L(s+1)" : "旋转成尺度邻域层板", 520, 120);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("下一步：中心点与三层 26 个邻居逐一比较。", 520, 144);
+        ctx.restore();
+        ctx.restore();
+    }
+
+    function clamp01(value) {
+        return Math.max(0, Math.min(1, value));
+    }
+
+    async function drawDogExtremaMain(canvas, width, height, thumb, sift, options = {}) {
+        const phase = options.animationPhase || 0;
+        V.setCanvasSize(canvas, width, height);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f8fbff";
+        ctx.fillRect(0, 0, width, height);
+        if (thumb) {
+            drawDoGVolume(ctx, 30, 92, { size: 42, gapX: 34, gapY: 18, thumb: true });
+            ctx.fillStyle = "#1d4ed8";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText("26 邻域", 18, 24);
+            return;
+        }
+
+        const transitionEnd = 0.42;
+        const overlapStart = 0.18;
+        const blend = motionEase(clamp01((phase - overlapStart) / (transitionEnd - overlapStart)));
+        if (phase < overlapStart) {
+            drawDogPyramidToExtremaTransition(ctx, phase / transitionEnd, 1);
+            return;
+        }
+
+        if (phase < transitionEnd) {
+            drawDogPyramidToExtremaTransition(ctx, phase / transitionEnd, 1 - blend);
+        }
+
+        const finalAlpha = phase < transitionEnd ? blend : 1;
+        const localPhase = phase < transitionEnd ? 0 : clamp01((phase - transitionEnd) / (1 - transitionEnd));
+        ctx.save();
+        ctx.globalAlpha = finalAlpha;
+        const volume = drawDoGVolume(ctx, 70, 334, { size: 122, gapX: 28, gapY: 50, phase: localPhase });
+        ctx.save();
+        ctx.fillStyle = "rgba(219,234,254,.78)";
+        roundRect(ctx, 44, 48, 370, 58, 16);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(147,197,253,.75)";
+        ctx.stroke();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("三层 DoG 层叠：上一尺度 / 当前尺度 / 下一尺度", 62, 78);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("先找 26 邻域极值，再用二次拟合修正到真实极值位置。", 62, 100);
+        ctx.restore();
+
+        const compareCount = Math.min(26, Math.floor(localPhase * 27) + 1);
+        const panel = { x: 466, y: 34, w: 394, h: 106 };
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.strokeStyle = "rgba(147,197,253,.72)";
+        ctx.lineWidth = 1.4;
+        roundRect(ctx, panel.x, panel.y, panel.w, panel.h, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 18px sans-serif";
+        ctx.fillText("逐邻域比较", panel.x + 22, panel.y + 30);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("中心响应大于全部邻居，或小于全部邻居。", panel.x + 22, panel.y + 50);
+        ctx.fillStyle = "#e0f2fe";
+        roundRect(ctx, panel.x + 22, panel.y + 60, panel.w - 44, 10, 5);
+        ctx.fill();
+        const ratio = compareCount / 26;
+        const grad = ctx.createLinearGradient(panel.x + 22, 0, panel.x + panel.w - 22, 0);
+        grad.addColorStop(0, "#2563eb");
+        grad.addColorStop(1, "#f97316");
+        ctx.fillStyle = grad;
+        roundRect(ctx, panel.x + 22, panel.y + 60, (panel.w - 44) * ratio, 10, 5);
+        ctx.fill();
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "950 22px sans-serif";
+        ctx.fillText(`${compareCount}`, panel.x + 22, panel.y + 94);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText("/ 26 neighbors", panel.x + 56, panel.y + 93);
+        const passAlpha = Math.max(0, Math.min(1, (localPhase - .78) / .08));
+        ctx.globalAlpha = .35 + passAlpha * .65;
+        ctx.fillStyle = passAlpha > .2 ? "#16a34a" : "#94a3b8";
+        roundRect(ctx, panel.x + 244, panel.y + 78, 104, 24, 12);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText(passAlpha > .2 ? "进入精确定位" : "比较中", panel.x + 260, panel.y + 94);
+        ctx.restore();
+
+        const refineT = motionEase(clamp01((localPhase - .52) / .34));
+        const refinePanel = { x: 466, y: 148, w: 394, h: 56 };
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.9)";
+        ctx.strokeStyle = "rgba(187,247,208,.9)";
+        ctx.lineWidth = 1.2;
+        roundRect(ctx, refinePanel.x, refinePanel.y, refinePanel.w, refinePanel.h, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#15803d";
+        ctx.font = "950 14px sans-serif";
+        ctx.fillText("精确定位：Xi + ΔX", refinePanel.x + 18, refinePanel.y + 23);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText("二次拟合估计真实极值偏移", refinePanel.x + 18, refinePanel.y + 42);
+        ctx.strokeStyle = "#93c5fd";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i <= 28; i++) {
+            const x = refinePanel.x + 184 + i * 64 / 28;
+            const d = (i - 19) / 15;
+            const y = refinePanel.y + 42 - 22 + d * d * 20;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        const xi = refinePanel.x + 206;
+        const xr = refinePanel.x + 236;
+        const xc = xi + (xr - xi) * refineT;
+        drawCandidateCircle(ctx, xi, refinePanel.y + 41, 4.2, "#f97316", 1, true);
+        drawCandidateCircle(ctx, xc, refinePanel.y + 34 - 10 * refineT, 4.8, "#16a34a", 1, true);
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 11px sans-serif";
+        ctx.fillText("ΔX=-H⁻¹g", refinePanel.x + 268, refinePanel.y + 24);
+        ctx.fillText(`(${(0.32 * refineT).toFixed(2)}, ${(-0.27 * refineT).toFixed(2)}, ${(0.18 * refineT).toFixed(2)})`, refinePanel.x + 268, refinePanel.y + 43);
+        ctx.restore();
+
+        if (volume.center) {
+            ctx.save();
+            ctx.strokeStyle = "rgba(37,99,235,.22)";
+            ctx.lineWidth = 2.4;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(volume.center.x + 22, volume.center.y - 10);
+            ctx.bezierCurveTo(392, 216, 436, 150, panel.x, panel.y + 82);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        const preview = { x: 466, y: 212, w: 394, h: 272 };
+        const result = await drawImageInRect(ctx, scaleData.images.original, preview, "#f1f5f9");
+        if (result) {
+            ctx.save();
+            ctx.fillStyle = "rgba(248,251,255,.50)";
+            ctx.fillRect(preview.x, preview.y, preview.w, preview.h);
+            evenlySamplePoints(sift.points_extrema, 120).forEach(point => {
+                const mapped = mapPointToImageRect(point, result.rect, scaleData.meta?.width || result.img.width, scaleData.meta?.height || result.img.height);
+                drawCandidateCircle(ctx, mapped.x, mapped.y, 3.2, "#64748b", .46);
+            });
+            const pulsePoints = evenlySamplePoints(sift.points_extrema, 12);
+            const active = pulsePoints.length ? pulsePoints[Math.floor(localPhase * pulsePoints.length) % pulsePoints.length] : null;
+            if (active) {
+                const mapped = mapPointToImageRect(active, result.rect, scaleData.meta?.width || result.img.width, scaleData.meta?.height || result.img.height);
+                const refined = { x: mapped.x + 18 * refineT, y: mapped.y - 13 * refineT };
+                drawCandidateCircle(ctx, mapped.x, mapped.y, 7.2, "#f97316", .92);
+                ctx.strokeStyle = "#16a34a";
+                ctx.lineWidth = 2.2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(mapped.x, mapped.y);
+                ctx.lineTo(refined.x, refined.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                drawCandidateCircle(ctx, refined.x, refined.y, 6.4 + 1.8 * refineT, "#16a34a", .95, true);
+            }
+
+            ctx.restore();
+        }
+        ctx.fillStyle = "#334155";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText(`粗定位候选：${sift.counts?.raw_extrema || 0} · 精确定位：Xi + ΔX`, 466, 504);
+        ctx.fillStyle = "#15803d";
+        ctx.fillText(`ΔX=-H⁻¹g · (${(0.32 * refineT).toFixed(2)}, ${(-0.27 * refineT).toFixed(2)}, ${(0.18 * refineT).toFixed(2)})`, 686, 504);
+        ctx.restore();
+    }
+
+    async function drawSiftFilterComparison(canvas, width, height, thumb, sift, options = {}) {
+        const phase = options.animationPhase || 0;
+        const state = edgeSuppressionState(phase);
+        ensureCanvasSize(canvas, width, height);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f8fbff";
+        ctx.fillRect(0, 0, width, height);
+        const raw = sift.points_extrema || [];
+        const filtered = sift.points_edge || [];
+        const kept = sift.points_keypoints || sift.keypoints || [];
+        const left = thumb
+            ? { x: 10, y: 20, w: 94, h: 92 }
+            : { x: 44, y: 44, w: 400, h: 382 };
+        const right = thumb
+            ? { x: 116, y: 20, w: 94, h: 92 }
+            : { x: 486, y: 44, w: 400, h: 382 };
+        const src = scaleData.images.original;
+        let image = cachedImage(src);
+        if (!image) {
+            preloadImage(src).then(() => {
+                if (selectedAlgorithm() === "sift" && currentStep === 4) {
+                    drawSiftStepCanvas(canvas, currentStep, { animationPhase: siftMotion.progress });
+                }
+            });
+            ctx.fillStyle = "#eef6ff";
+            roundRect(ctx, left.x, left.y, left.w, left.h, 14);
+            ctx.fill();
+            roundRect(ctx, right.x, right.y, right.w, right.h, 14);
+            ctx.fill();
+            ctx.fillStyle = "#64748b";
+            ctx.font = "900 13px sans-serif";
+            ctx.fillText("正在准备图像...", left.x + 18, left.y + 34);
+            return;
+        }
+        const leftImage = drawLoadedImageInRect(ctx, image, left, "#f1f5f9");
+        const rightImage = drawLoadedImageInRect(ctx, image, right, "#f1f5f9");
+
+        const drawRaw = (image, alpha) => {
+            if (!image) return;
+            ctx.save();
+            ctx.fillStyle = `rgba(248,251,255,${thumb ? .42 : .56})`;
+            ctx.fillRect(image.rect.x, image.rect.y, image.rect.w, image.rect.h);
+            evenlySamplePoints(raw, thumb ? 70 : 340).forEach(point => {
+                const mapped = mapPointToImageRect(point, image.rect, scaleData.meta?.width || image.img.width, scaleData.meta?.height || image.img.height);
+                drawCandidateCross(ctx, mapped.x, mapped.y, thumb ? 2.3 : 3.6, "#64748b", alpha);
+            });
+            ctx.restore();
+        };
+        drawRaw(leftImage, thumb ? .38 : .46);
+        drawRaw(rightImage, thumb ? .18 : .20);
+
+        const sampledRaw = evenlySamplePoints(raw, 12);
+        const candidate = sampledRaw.length ? sampledRaw[Math.floor(phase * sampledRaw.length) % sampledRaw.length] : null;
+        if (candidate && leftImage) {
+            const mapped = mapPointToImageRect(candidate, leftImage.rect, scaleData.meta?.width || leftImage.img.width, scaleData.meta?.height || leftImage.img.height);
+            const alpha = state.edgeLike ? .92 - .62 * motionEase((phase * 2) % 1) : .92;
+            drawCandidateCircle(ctx, mapped.x, mapped.y, thumb ? 4.2 : 8, state.edgeLike ? "#f97316" : "#16a34a", alpha);
+            if (state.edgeLike && !thumb) {
+                drawCandidateCross(ctx, mapped.x, mapped.y, 10, "#ef4444", .72);
+            }
+        }
+
+        if (rightImage) {
+            filtered.slice(0, thumb ? 80 : 360).forEach(point => {
+                const mapped = mapPointToImageRect(point, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                V.drawCircle(ctx, mapped.x, mapped.y, "#f97316", thumb ? 2.2 : 3.5);
+            });
+            kept.slice(0, thumb ? 60 : 240).forEach(point => {
+                const mapped = mapPointToImageRect(point, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                V.drawCircle(ctx, mapped.x, mapped.y, "#ea580c", thumb ? 3 : 5.2);
+            });
+            if (candidate && !state.edgeLike) {
+                const mapped = mapPointToImageRect(candidate, rightImage.rect, scaleData.meta?.width || rightImage.img.width, scaleData.meta?.height || rightImage.img.height);
+                drawCandidateCircle(ctx, mapped.x, mapped.y, thumb ? 5 : 9 + 2 * Math.sin(phase * Math.PI * 2) ** 2, "#16a34a", .95);
+            }
+        }
+
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = thumb ? "900 10px sans-serif" : "950 15px sans-serif";
+        ctx.fillText("过滤前候选", left.x, left.y - (thumb ? 8 : 14));
+        ctx.fillText("过滤后关键点", right.x, right.y - (thumb ? 8 : 14));
+        if (!thumb) {
+            const y = 466;
+            [
+                ["原始极值", raw.length, "#64748b"],
+                ["过滤后", filtered.length, "#f97316"],
+                ["NMS 保留", kept.length, "#16a34a"]
+            ].forEach(([label, value, color], index) => {
+                const x = 116 + index * 230;
+                ctx.fillStyle = "rgba(255,255,255,.9)";
+                ctx.strokeStyle = `${color}66`;
+                roundRect(ctx, x, y - 26, 170, 44, 12);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = color;
+                ctx.font = "950 18px sans-serif";
+                ctx.fillText(String(value), x + 18, y);
+                ctx.fillStyle = "#475569";
+                ctx.font = "850 12px sans-serif";
+                ctx.fillText(label, x + 76, y);
+            });
+        }
+        ctx.restore();
+    }
+
     async function drawSiftStepCanvas(canvas, stepIndex, options = {}) {
         if (!canvas || !scaleData) return;
         const thumb = Boolean(options.thumb);
         const step = stepContentMap.sift[stepIndex] || stepContentMap.sift[0];
-        const gray = await grayPacked();
+        const gray = stepIndex === 0 ? await grayPacked() : null;
         const sift = scaleData.sift || {};
         const descriptor = descriptorData?.sift || {};
         const preprocessSize = (!thumb && stepIndex === 0 && gray)
@@ -1339,29 +2458,18 @@
         }
 
         if (stepIndex === 3) {
-            const contained = await drawOriginalContained(canvas, width, height);
-            const drawCtx = contained.ctx;
-            const sx = contained.rect.w / (scaleData.meta?.width || contained.img.width);
-            const sy = contained.rect.h / (scaleData.meta?.height || contained.img.height);
-            const mapPoint = point => ({ x: contained.rect.x + point.x * sx, y: contained.rect.y + point.y * sy });
-            (sift.points_extrema || []).slice(0, thumb ? 100 : 500).forEach(point => {
-                const mapped = mapPoint(point);
-                V.drawCircle(drawCtx, mapped.x, mapped.y, "rgba(148,163,184,.65)", thumb ? 2 : 3);
-            });
-            (sift.points_edge || []).slice(0, thumb ? 80 : 300).forEach(point => {
-                const mapped = mapPoint(point);
-                V.drawCircle(drawCtx, mapped.x, mapped.y, "#f97316", thumb ? 2 : 3.5);
-            });
-            (sift.points_keypoints || sift.keypoints || []).slice(0, thumb ? 80 : 240).forEach(point => {
-                const mapped = mapPoint(point);
-                V.drawSiftSymbol(drawCtx, { ...point, x: mapped.x, y: mapped.y, scale: thumb ? 3 : (point.scale || 4) * sx });
-            });
+            const animationPhase = thumb ? 0 : replayWithHold(options.animationPhase || 0, 0.86);
+            await drawDogExtremaMain(canvas, width, height, thumb, sift, { animationPhase });
             return;
         }
 
         if (stepIndex === 4) {
-            const points = descriptor.oriented_keypoints || descriptor.extended_points || sift.extended_points || sift.points_keypoints || [];
-            await drawSiftKeypointsContained(canvas, points, width, height, thumb ? 80 : 260);
+            await drawSiftFilterComparison(canvas, width, height, thumb, sift, { animationPhase: options.animationPhase || 0 });
+            return;
+        }
+
+        if (stepIndex === 5) {
+            await drawOrientationAssignmentMain(canvas, width, height, thumb, { animationPhase: options.animationPhase || 0 });
             return;
         }
 
@@ -1453,7 +2561,7 @@
             <button type="button" class="${index === currentStep ? "is-active" : ""}" data-sift-thumb-step="${index}">
                 <span class="corner-flow-card-head">
                     <i>${index + 1}</i>
-                    <span><b>${step.title}</b><small>${step.primary?.[0] || ""}</small></span>
+                    <span><b>${step.title}</b><small>${step.primary?.[0] || (step.goal || "").split("，")[0]}</small></span>
                 </span>
                 <canvas id="siftThumb${index}"></canvas>
             </button>
@@ -1502,10 +2610,32 @@
             ["RGB 采样", "灰度融合", "统一输入"],
             ["尺度层", "高斯平滑", "Octave 下采样"],
             ["相邻高斯层", "差分响应", "DoG 输出"],
-            ["3×3×3 邻域", "26 邻居比较", "阈值过滤"],
-            ["局部梯度", "36-bin 累加", "主方向峰值"],
+            ["3×3×3 邻域", "26 邻居比较", "Taylor 精确定位"],
+            ["局部 patch", "方向探针", "edge ratio gate"],
+            ["选择关键点", "显示支持域", "显示梯度", "投票直方图", "平滑直方图", "选择主峰", "复制辅方向", "回写方向"],
             ["4×4 cell", "8-bin 统计", "128 维归一化"]
         ][step] || ["输入", "计算", "输出"];
+    }
+
+    function edgeSuppressionState(phase = 0) {
+        const t = ((Number(phase) || 0) % 1 + 1) % 1;
+        const edgeThreshold = Math.max(1, Number(form.elements.edge_threshold?.value) || 10);
+        const ratioThreshold = (edgeThreshold + 1) * (edgeThreshold + 1) / edgeThreshold;
+        const edgeLike = t < 0.56;
+        const scan = motionEase((t % 0.56) / 0.56);
+        const parallel = edgeLike ? 0.12 + 0.04 * Math.sin(t * Math.PI * 4) : 0.74 + 0.08 * Math.sin(t * Math.PI * 4);
+        const perpendicular = edgeLike ? 0.88 + 0.06 * Math.sin(t * Math.PI * 3) : 0.78 + 0.07 * Math.cos(t * Math.PI * 4);
+        const edgeRatio = edgeLike ? ratioThreshold * (1.22 + 0.1 * scan) : ratioThreshold * (0.42 + 0.06 * scan);
+        return {
+            edgeLike,
+            type: edgeLike ? "Edge-like" : "Corner-like",
+            decision: edgeLike ? "REJECT" : "KEEP",
+            parallel,
+            perpendicular,
+            edgeRatio,
+            threshold: ratioThreshold,
+            scan
+        };
     }
 
     function motionProbeData() {
@@ -1547,6 +2677,8 @@
         const counts = data.counts || {};
         const selected = data.selected;
         const dog = data.dogProbe;
+        const edgeState = edgeSuppressionState(siftMotion.progress);
+        const orientationState = currentStep === 5 ? orientationDemoPayload() : null;
         const common = algorithm === "sift" ? [
             [
                 ["图像尺寸", scaleData?.meta ? `${scaleData.meta.width} × ${scaleData.meta.height}` : "-", "blue"],
@@ -1567,20 +2699,33 @@
             ],
             [
                 ["原始极值", counts.raw_extrema || 0, "blue"],
-                ["边缘过滤后", counts.edge_survivors || 0, "orange"],
-                ["最终关键点", counts.kept || 0, "green"]
+                ["邻域比较", "26", "purple"],
+                ["输出", "候选点", "orange"]
             ],
             [
-                ["方向点", data.keypoints.length || "懒加载", "blue"],
-                ["方向 bins", 36, "purple"],
-                ["主方向", selected ? `${compactNumber(selected.orientation_deg)}°` : "-", "orange"]
+                ["当前点类型", edgeState.type, edgeState.edgeLike ? "orange" : "green"],
+                ["平行方向变化", compactNumber(edgeState.parallel), "blue"],
+                ["垂直方向变化", compactNumber(edgeState.perpendicular), "orange"],
+                ["edge ratio", compactNumber(edgeState.edgeRatio), "purple"],
+                ["threshold", compactNumber(edgeState.threshold), "blue"],
+                ["最终判定", edgeState.decision, edgeState.edgeLike ? "orange" : "green"]
+            ],
+            [
+                ["当前关键点", orientationState?.point?.x !== undefined ? `(${compactNumber(orientationState.point.x)}, ${compactNumber(orientationState.point.y)})` : "-", "blue"],
+                ["octave / layer", orientationState?.point ? `${orientationState.point.octave ?? "-"} / ${orientationState.point.layer ?? orientationState.point.scale ?? "-"}` : "-", "purple"],
+                ["σ", orientationState?.point?.sigma !== undefined ? compactNumber(orientationState.point.sigma) : "-", "blue"],
+                ["主峰角度", orientationState ? `${compactNumber(orientationState.peaks.mainAngle)}°` : "-", "orange"],
+                ["主峰值", orientationState ? compactNumber(orientationState.peaks.mainValue) : "-", "orange"],
+                ["次峰角度", orientationState?.peaks?.secondaryBin >= 0 ? `${compactNumber(orientationState.peaks.secondaryAngle)}°` : "-", "purple"],
+                ["次峰比例", orientationState ? compactNumber(orientationState.peaks.secondaryRatio) : "-", "purple"],
+                ["输出方向数", orientationState ? orientationState.peaks.outputCount : 0, orientationState?.peaks?.hasSecondary ? "green" : "blue"]
             ],
             [
                 ["Descriptor", selected ? "128 float" : "懒加载", "blue"],
                 ["Patch vectors", data.vectors.length || 0, "purple"],
                 ["L2 norm", selected ? "normalized" : "-", "green"]
             ]
-        ][currentStep] || [] : noteValues(algorithm, currentStep).slice(0, 5).map(([k, v]) => [k, v, "blue"]);
+        ][currentStep] || [] : noteResults(algorithm, currentStep).slice(0, 5).map(([k, v]) => [k, v, "blue"]);
         box.innerHTML = common.map(([label, value, tone]) => `
             <div class="corner-motion-metric is-${tone || "blue"}">
                 <span>${label}<small>${value}</small></span>
@@ -2385,6 +3530,109 @@
         ctx.restore();
     }
 
+    function drawExtremaRefinementMotion(ctx, x, y, phase, dog) {
+        const fitT = motionEase(clamp01((phase - .34) / .44));
+        const settle = motionEase(clamp01((phase - .76) / .18));
+        const baseX = x + 36;
+        const baseY = y + 112;
+        const peakX = x + 126;
+        const peakY = y + 46;
+        const xiX = x + 78;
+        const xiY = y + 94;
+        const currentX = xiX + (peakX - xiX) * fitT;
+        const currentY = xiY + (peakY - xiY) * fitT;
+        const center = Number(dog?.center || 0);
+
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.strokeStyle = "rgba(187,247,208,.9)";
+        ctx.lineWidth = 1.4;
+        roundRect(ctx, x, y, 278, 168, 20);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#15803d";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Taylor 精确定位", x + 18, y + 28);
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText("候选点是离散采样点，二次拟合估计真实极值偏移。", x + 18, y + 48);
+
+        ctx.strokeStyle = "rgba(148,163,184,.5)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.lineTo(x + 168, baseY);
+        ctx.stroke();
+        ctx.strokeStyle = "#93c5fd";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i <= 56; i++) {
+            const px = baseX + i * 132 / 56;
+            const d = (px - peakX) / 54;
+            const py = peakY + d * d * 54;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "rgba(249,115,22,.72)";
+        ctx.beginPath();
+        ctx.moveTo(xiX, baseY + 4);
+        ctx.lineTo(xiX, xiY - 14);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(22,163,74,.78)";
+        ctx.beginPath();
+        ctx.moveTo(peakX, baseY + 4);
+        ctx.lineTo(peakX, peakY - 12);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        drawCandidateCircle(ctx, xiX, xiY, 7, "#f97316", 1, true);
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(xiX + 10, xiY - 3);
+        ctx.lineTo(currentX - 9, currentY + 3);
+        ctx.stroke();
+        drawCandidateCircle(ctx, currentX, currentY, 8 + settle * 2.2, "#16a34a", .96, true);
+
+        ctx.fillStyle = "#f97316";
+        ctx.font = "950 10px sans-serif";
+        ctx.fillText("Xi", xiX - 8, xiY + 22);
+        ctx.fillStyle = "#16a34a";
+        ctx.fillText("Xi + ΔX", peakX - 20, peakY - 18);
+
+        const dx = 0.34 * fitT;
+        const dy = -0.28 * fitT;
+        const ds = 0.16 * fitT;
+        ctx.fillStyle = "rgba(239,246,255,.95)";
+        ctx.strokeStyle = "rgba(191,219,254,.9)";
+        roundRect(ctx, x + 178, y + 68, 82, 72, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 10px sans-serif";
+        ctx.fillText("ΔX=-H⁻¹g", x + 188, y + 88);
+        ctx.fillText(`Δx ${dx.toFixed(2)}`, x + 188, y + 106);
+        ctx.fillText(`Δy ${dy.toFixed(2)}`, x + 188, y + 122);
+        ctx.fillText(`Δσ ${ds.toFixed(2)}`, x + 188, y + 138);
+
+        const refinedValue = center + Math.abs(center) * .12 * fitT;
+        ctx.fillStyle = "#334155";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText(`D(Xi + ΔX) = ${compactNumber(refinedValue)}`, x + 18, y + 152);
+        if (settle > .2) {
+            ctx.fillStyle = "#16a34a";
+            roundRect(ctx, x + 188, y + 18, 72, 24, 12);
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "950 11px sans-serif";
+            ctx.fillText("|ΔX| < 0.5", x + 198, y + 34);
+        }
+        ctx.restore();
+    }
+
     function drawFilterGate(ctx, x, y, counts, phase) {
         const raw = counts.raw_extrema || 0;
         const edge = counts.edge_survivors || 0;
@@ -2424,7 +3672,7 @@
 
     function drawSiftMotionExtrema(ctx, phase, w, h, data) {
         const dog = data.dogProbe;
-        const cx = 214;
+        const cx = 156;
         const cy = 126;
         drawExtremaSlice(ctx, cx - 54, cy - 18, dog?.prev, "上一层", "#64748b", phase, -1);
         drawExtremaSlice(ctx, cx, cy, dog?.current, "当前层", "#2563eb", phase, 0);
@@ -2440,14 +3688,182 @@
         ctx.textAlign = "center";
         ctx.fillText("center", cx, cy + 43);
         ctx.restore();
-        drawFlowParticles(ctx, 360, 126, 464, 126, "#06b6d4", phase, 5);
-        drawNeighborOrbit(ctx, 520, 126, phase);
-        drawFlowParticles(ctx, 584, 126, 632, 126, "#f97316", (phase + .2) % 1, 4);
-        drawFilterGate(ctx, 646, 78, data.counts || {}, phase);
+        drawFlowParticles(ctx, 304, 126, 388, 126, "#06b6d4", phase, 5);
+        drawNeighborOrbit(ctx, 448, 126, phase);
+        drawFlowParticles(ctx, 512, 126, 584, 126, "#16a34a", (phase + .18) % 1, 4);
+        drawExtremaRefinementMotion(ctx, 596, 46, phase, dog);
         ctx.save();
         ctx.fillStyle = "#334155";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText("先通过 26 邻域比较得到离散候选，再用 Taylor 二次拟合移动到亚像素 / 亚尺度极值。", 82, 224);
+        ctx.restore();
+    }
+
+    function drawSiftMotionFilter(ctx, phase, w, h, data) {
+        const state = edgeSuppressionState(phase);
+        const edgeLike = state.edgeLike;
+        const accent = edgeLike ? "#f97316" : "#16a34a";
+        const parallelColor = "#2563eb";
+        const perpendicularColor = "#f97316";
+        const probeOsc = Math.sin(phase * Math.PI * 2);
+
+        function bar(x, y, label, value, color) {
+            ctx.save();
+            ctx.fillStyle = `${color}12`;
+            roundRect(ctx, x, y, 132, 14, 7);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, x, y, 132 * Math.max(.04, Math.min(1, value)), 14, 7);
+            ctx.fill();
+            ctx.fillStyle = "#334155";
+            ctx.font = "900 11px sans-serif";
+            ctx.fillText(label, x, y - 8);
+            ctx.fillStyle = color;
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(compactNumber(value), x + 104, y - 8);
+            ctx.restore();
+        }
+
+        function arrow(cx, cy, angle, length, color, label) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            const x1 = cx - Math.cos(angle) * length / 2;
+            const y1 = cy - Math.sin(angle) * length / 2;
+            const x2 = cx + Math.cos(angle) * length / 2;
+            const y2 = cy + Math.sin(angle) * length / 2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - Math.cos(angle - .45) * 10, y2 - Math.sin(angle - .45) * 10);
+            ctx.lineTo(x2 - Math.cos(angle + .45) * 10, y2 - Math.sin(angle + .45) * 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.font = "950 11px sans-serif";
+            ctx.fillText(label, x2 + 8, y2 - 4);
+            ctx.restore();
+        }
+
+        drawMotionPanel(ctx, 28, 30, 214, 202, accent);
+        ctx.save();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Local DoG patch", 48, 56);
+        const patch = { x: 58, y: 76, cell: 17 };
+        for (let row = 0; row < 7; row++) {
+            for (let col = 0; col < 7; col++) {
+                const dx = col - 3;
+                const dy = row - 3;
+                const value = edgeLike
+                    ? 0.45 + 0.38 * Math.tanh(dx * 0.9) + 0.04 * Math.sin(row)
+                    : 0.44 + 0.22 * Math.tanh(dx * 1.1) + 0.24 * Math.tanh(dy * 1.1);
+                const blue = Math.round(218 - value * 54);
+                ctx.fillStyle = `rgb(${blue},${Math.round(232 - value * 34)},${Math.round(246 - value * 18)})`;
+                roundRect(ctx, patch.x + col * patch.cell, patch.y + row * patch.cell, patch.cell - 2, patch.cell - 2, 4);
+                ctx.fill();
+            }
+        }
+        const cx = patch.x + 3.5 * patch.cell - 1;
+        const cy = patch.y + 3.5 * patch.cell - 1;
+        drawCandidateCircle(ctx, cx, cy, 9, accent, 1, true);
+        const parallelAngle = edgeLike ? Math.PI / 2 : Math.PI / 4;
+        const perpendicularAngle = parallelAngle + Math.PI / 2;
+        arrow(cx, cy, parallelAngle, 106, parallelColor, "parallel");
+        arrow(cx, cy, perpendicularAngle, 106, perpendicularColor, "perp");
+        const parallelProbe = { x: cx + Math.cos(parallelAngle) * probeOsc * 34, y: cy + Math.sin(parallelAngle) * probeOsc * 34 };
+        const perpProbe = { x: cx + Math.cos(perpendicularAngle) * Math.sin(phase * Math.PI * 2 + Math.PI / 2) * 34, y: cy + Math.sin(perpendicularAngle) * Math.sin(phase * Math.PI * 2 + Math.PI / 2) * 34 };
+        drawCandidateCircle(ctx, parallelProbe.x, parallelProbe.y, 5.2, parallelColor, .95, true);
+        drawCandidateCircle(ctx, perpProbe.x, perpProbe.y, 5.2, perpendicularColor, .95, true);
+        ctx.fillStyle = accent;
         ctx.font = "950 13px sans-serif";
-        ctx.fillText("中心响应必须同时大于或小于 26 个尺度邻居，再通过对比度与边缘过滤", 80, 224);
+        ctx.fillText(state.type, 78, 214);
+        ctx.restore();
+
+        drawMotionPanel(ctx, 266, 36, 152, 86, "#2563eb");
+        drawMotionPanel(ctx, 266, 146, 152, 86, "#f97316");
+        bar(282, 78, "Δ_parallel", state.parallel, parallelColor);
+        bar(282, 188, "Δ_perpendicular", state.perpendicular, perpendicularColor);
+        drawFlowParticles(ctx, 418, 82, 480, 96, parallelColor, phase, 4);
+        drawFlowParticles(ctx, 418, 190, 480, 130, perpendicularColor, (phase + .24) % 1, 4);
+
+        drawMotionPanel(ctx, 482, 52, 144, 150, "#7c3aed");
+        ctx.save();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Hessian / M", 508, 78);
+        const vals = edgeLike
+            ? [["Dxx", "9.4"], ["Dxy", "0.6"], ["Dxy", "0.6"], ["Dyy", "0.9"]]
+            : [["Dxx", "7.3"], ["Dxy", "1.1"], ["Dxy", "1.1"], ["Dyy", "6.8"]];
+        vals.forEach(([label, value], index) => {
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const x = 508 + col * 54;
+            const y = 96 + row * 38;
+            ctx.fillStyle = "rgba(245,243,255,.95)";
+            ctx.strokeStyle = "rgba(167,139,250,.7)";
+            roundRect(ctx, x, y, 46, 28, 8);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#4c1d95";
+            ctx.font = "850 9px sans-serif";
+            ctx.fillText(label, x + 6, y + 11);
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(value, x + 7, y + 24);
+        });
+        ctx.restore();
+
+        drawFlowParticles(ctx, 626, 126, 664, 126, "#7c3aed", (phase + .18) % 1, 4);
+        drawMotionPanel(ctx, 664, 42, 116, 170, accent);
+        ctx.save();
+        ctx.fillStyle = accent;
+        ctx.font = "950 14px sans-serif";
+        ctx.fillText("response ellipse", 678, 68);
+        ctx.translate(722, 124);
+        ctx.rotate(edgeLike ? -.2 : .18);
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, edgeLike ? 42 : 29, edgeLike ? 9 : 25, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(100,116,139,.48)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-50, 0);
+        ctx.lineTo(50, 0);
+        ctx.moveTo(0, -34);
+        ctx.lineTo(0, 34);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText(edgeLike ? "one strong direction" : "balanced directions", 682, 190);
+
+        drawFlowParticles(ctx, 780, 126, 812, 126, accent, (phase + .36) % 1, 3);
+        ctx.save();
+        const gate = { x: 806, y: 72, w: 42, h: 116 };
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = `${accent}88`;
+        roundRect(ctx, gate.x, gate.y, gate.w, gate.h, 18);
+        ctx.fill();
+        ctx.stroke();
+        const ratio = Math.min(1, state.edgeRatio / Math.max(1, state.threshold * 1.45));
+        ctx.fillStyle = edgeLike ? "#fed7aa" : "#bbf7d0";
+        roundRect(ctx, gate.x + 13, gate.y + 18 + (78 * (1 - ratio)), 16, Math.max(7, 78 * ratio), 8);
+        ctx.fill();
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(gate.x + 8, gate.y + 50);
+        ctx.lineTo(gate.x + gate.w - 8, gate.y + 50);
+        ctx.stroke();
+        ctx.fillStyle = accent;
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(state.decision, gate.x - 4, gate.y + 140);
         ctx.restore();
     }
 
@@ -4406,6 +5822,8 @@
         } else if (currentStep === 3) {
             drawSiftMotionExtrema(ctx, phase, w, h, data);
         } else if (currentStep === 4) {
+            drawSiftMotionFilter(ctx, phase, w, h, data);
+        } else if (currentStep === 5) {
             drawSiftMotionOrientation(ctx, phase, w, h, data);
         } else {
             drawSiftMotionDescriptor(ctx, phase, w, h, data);
@@ -4435,7 +5853,7 @@
             if (siftMotion.playing) {
                 siftMotion.progress = (siftMotion.progress + delta / 3600) % 1;
                 renderSiftMotionProbe();
-                if (selectedAlgorithm() === "sift" && (currentStep === 1 || currentStep === 2) && scaleData) {
+                if (selectedAlgorithm() === "sift" && (currentStep === 1 || currentStep === 2 || currentStep === 3 || currentStep === 4 || currentStep === 5) && scaleData) {
                     drawSiftStepCanvas(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
                 }
             }
@@ -4474,6 +5892,7 @@
         const steps = currentSteps();
         currentStep = Math.max(0, Math.min(steps.length - 1, Number(step) || 0));
         siftMotion.progress = 0;
+        if (currentStep !== 5 || algorithm !== "sift") orientationLayout = null;
         syncAlgorithmControls();
         renderStepNav();
         stepPanels.forEach(panel => {
@@ -4482,7 +5901,7 @@
         });
         renderCurrentStepView();
         if (algorithm === "sift") {
-            if (currentStep >= 4) loadDescriptor();
+            if (currentStep >= 5) loadDescriptor();
             else if (scaleData) V.$("siftElapsed").textContent = `${scaleData.meta.elapsed_ms} ms · 基础数据`;
         } else {
             renderSelectedAlgorithmStep();
@@ -4496,11 +5915,32 @@
         selectStep(button.dataset.siftStep);
     });
 
+    V.$("siftStepCanvas")?.addEventListener("click", event => {
+        if (selectedAlgorithm() !== "sift" || currentStep !== 5 || !orientationLayout?.points?.length) return;
+        const canvas = event.currentTarget;
+        const bounds = canvas.getBoundingClientRect();
+        const x = (event.clientX - bounds.left) * canvas.width / Math.max(1, bounds.width);
+        const y = (event.clientY - bounds.top) * canvas.height / Math.max(1, bounds.height);
+        let best = null;
+        orientationLayout.points.forEach(item => {
+            const distance = Math.hypot(item.x - x, item.y - y);
+            if (!best || distance < best.distance) best = { ...item, distance };
+        });
+        if (!best || best.distance > 26) return;
+        orientationDemoIndex = best.index;
+        siftMotion.progress = 0;
+        renderNotes(currentStep);
+        renderSiftMotionProbe();
+        drawSiftStepCanvas(canvas, currentStep, { animationPhase: 0 });
+    });
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
         const requestGeneration = ++generation;
         descriptorData = null;
         descriptorPromise = null;
+        orientationDemoIndex = 0;
+        orientationLayout = null;
         setDescriptorStatus("进入第 5 或第 6 步后加载描述子数据。", "");
         descriptorFlag.value = "false";
 

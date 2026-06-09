@@ -531,6 +531,66 @@ def resize_bilinear(img,scale):
         y+=y_step
     return out
 
+def refine_dogs(dogs,x,y,s,constrast_th,edge_th,max_iter):
+    h,w=dogs[0].shape
+    offset=np.zeros(3,dtype=np.float32)
+    grad=None
+    hessian=None
+    for _ in range(max_iter):
+        if x<=0 or x>=w-1 or y<=0 or y>=h-1 or s<=0 or s>=len(dogs)-1:
+            return None
+        D=dogs[s]
+        Dp=dogs[s+1]
+        Dm=dogs[s-1]
+        dx=0.5*(D[y,x+1]-D[y,x-1])
+        dy=0.5*(D[y+1,x]-D[y-1,x])
+        ds=0.5*(Dp[y,x]-Dm[y,x])
+        dxx=D[y,x+1]-2*D[y,x]+D[y,x-1]
+        dyy=D[y+1,x]-2*D[y,x]+D[y-1,x]
+        dss=Dp[y,x]-2*D[y,x]+Dm[y,x]
+        dxy=0.25*(D[y+1,x+1]-D[y+1,x-1]-D[y-1,x+1]+D[y-1,x-1])
+        dxs=0.25*(Dp[y,x+1]-Dp[y,x-1]-Dm[y,x+1]+Dm[y,x-1])
+        dys=0.25*(Dp[y+1,x]-Dp[y-1,x]-Dm[y+1,x]+Dm[y-1,x])
+        grad=np.array([dx,dy,ds],dtype=np.float32)
+        hessian=np.array([[dxx,dxy,dxs],[dxy,dyy,dys],[dxs,dys,dss]],dtype=np.float32)
+        try:
+            offset=-np.linalg.solve(hessian,grad)
+        except np.linalg.LinAlgError:
+            return None
+        if not np.all(np.isfinite(offset)):
+            return None
+        if np.max(np.abs(offset))<0.5: #在当前点附近
+            break
+        x+=int(round(offset[0]))
+        y+=int(round(offset[1]))
+        s+=int(round(offset[2]))
+    else:
+        return None
+    constrast=dogs[s][y,x]+0.5*np.dot(grad,offset)
+    if abs(constrast)<constrast_th:
+        return None
+    dxx=hessian[0,0]
+    dyy=hessian[1,1]
+    dxy=hessian[0,1]
+    tr=dxx+dyy
+    det=dxx*dyy-dxy**2
+    if det<=1e-12:
+        return None
+    edge_ratio=tr**2/det
+    if edge_ratio>=edge_th:
+        return None
+    return {
+        "x_local":x,
+        "y_local":y,
+        "scale":s,
+        "x_refine":x+offset[0],
+        "y_refine":y+offset[1],
+        "scale_refine":s+offset[2],
+        "offset":offset,
+        "dog":constrast,
+        "edge_ratio":edge_ratio
+    }
+
 @njit
 def trilinear_vote(descriptor,xbin,ybin,obin,val):
     x0=int(np.floor(xbin))
@@ -629,7 +689,7 @@ def sift(image,octave=3,scale=3,sigma0=1.6,contrast_threshold=0.04,edge_threshol
                 "octave": i,
                 "scale": s,
                 "dog": current[y,x]
-            } for y,x in zip(ys,xs)])
+            }for y,x in zip(ys,xs)])
             #边缘响应
             dxx=current[1:h-1,2:w]-2*center+current[1:h-1,:w-2]
             dyy=current[2:h,1:w-1]-2*center+current[:h-2,1:w-1]
@@ -642,23 +702,35 @@ def sift(image,octave=3,scale=3,sigma0=1.6,contrast_threshold=0.04,edge_threshol
             ys,xs=np.where(mask)
             ys+=1
             xs+=1
-            sigma=sigmass[i][s]
-            sigma_global=sigma*scale_factor
             for y,x in zip(ys,xs):
                 val=current[y,x]
-                edge_ratio=tr[y-1,x-1]**2/(det[y-1,x-1]+1e-8)
+                refined=refine_dogs(dog_layer,x,y,s,contrast_threshold,edge_ratio_threshold,5)
+                if refined is None:
+                    continue
+                sr=refined["scale"]
+                sigma_base=sigmass[i][min(max(0,sr),len(sigmass[i])-1)]
+                sigma_refined=sigma_base*(k**refined["offset"][2])
+                sigma_global=sigma_refined*scale_factor
+                x_global=refined["x_refine"]*scale_factor
+                y_global=refined["y_refine"]*scale_factor
                 points_edge.append({
-                    "x": round(x*scale_factor),
-                    "y": round(y*scale_factor),
-                    "x_local": x,
-                    "y_local": y,
+                    "x": round(x_global),
+                    "y": round(y_global),
+                    "x_float": x_global,
+                    "y_float": y_global,
+                    "x_local": refined["x_local"],
+                    "y_local": refined["y_local"],
+                    "x_refine": refined["x_refine"],
+                    "y_refine": refined["y_refine"],
                     "octave": i,
-                    "scale": s,
-                    "sigma": sigma,
+                    "scale": refined["scale"],
+                    "scale_refine": refined["scale_refine"],
+                    "offset": refined["offset"],
+                    "sigma": sigma_refined,
                     "sigma_global": sigma_global,
-                    "response": abs(val),
-                    "dog": val,
-                    "edge_ratio": edge_ratio
+                    "response": abs(refined["dog"]),
+                    "dog": refined["dog"],
+                    "edge_ratio": refined["edge_ratio"]
                 })
     # NMS
     points_edge.sort(key=lambda x:x["response"],reverse=True)
@@ -709,8 +781,10 @@ def sift(image,octave=3,scale=3,sigma0=1.6,contrast_threshold=0.04,edge_threshol
     for kp in keypoints:
         octave=kp["octave"]
         scale=kp["scale"]
-        x0=kp["x_local"]
-        y0=kp["y_local"]
+        x0_int=kp["x_local"]
+        y0_int=kp["y_local"]
+        x0=kp.get("x_refine",x0_int)
+        y0=kp.get("y_refine",y0_int)
         sigma=max(kp["sigma"],1)
         layer=pyramid[octave][scale]
         h,w=layer.shape
@@ -719,8 +793,8 @@ def sift(image,octave=3,scale=3,sigma0=1.6,contrast_threshold=0.04,edge_threshol
         radius=max(4,min(round(4.5*sigma),24))
         w_sigma2=(1.5*sigma)**2
         hist=np.zeros(bin_num,dtype=np.float32)
-        for yy in range(max(0,y0-radius),min(h,y0+radius+1)):
-            for xx in range(max(0,x0-radius),min(w,x0+radius+1)):
+        for yy in range(max(0,y0_int-radius),min(h,y0_int+radius+1)):
+            for xx in range(max(0,x0_int-radius),min(w,x0_int+radius+1)):
                 dx=xx-x0
                 dy=yy-y0
                 weight=np.exp(-(dx*dx+dy*dy)/w_sigma2/2)
@@ -762,8 +836,8 @@ def sift(image,octave=3,scale=3,sigma0=1.6,contrast_threshold=0.04,edge_threshol
             cos_t=np.cos(rad)
             sin_t=np.sin(rad)
             patch_vectors=[]
-            for yy in range(max(0,y0-half_size),min(h,y0+half_size+1)):
-                for xx in range(max(0,x0-half_size),min(w,x0+half_size+1)):
+            for yy in range(max(0,y0_int-half_size),min(h,y0_int+half_size+1)):
+                for xx in range(max(0,x0_int-half_size),min(w,x0_int+half_size+1)):
                     dx=xx-x0
                     dy=yy-y0
                     #旋转坐标系
