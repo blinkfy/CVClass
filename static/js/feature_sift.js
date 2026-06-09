@@ -2506,10 +2506,10 @@
             ctx.fillText("正在准备主方向分配动画...", 54, 74);
             return;
         }
-        const imagePanel = { x: 28, y: 38, w: 500, h: 376 };
-        const patchPanel = { x: 558, y: 30, w: 330, h: 226 };
-        const histPanel = { x: 558, y: 274, w: 330, h: 170 };
-        const resultStrip = { x: 28, y: 436, w: 860, h: 68 };
+        const imagePanel = { x: 22, y: 24, w: 530, h: 410 };
+        const patchPanel = { x: 578, y: 16, w: 318, h: 222 };
+        const histPanel = { x: 578, y: 252, w: 318, h: 176 };
+        const resultStrip = { x: 22, y: 438, w: 874, h: 68 };
         const imageResult = drawLoadedImageInRect(ctx, image, imagePanel, "#f1f5f9");
         const imageRect = imageResult?.rect || imagePanel;
         const imageWidth = scaleData.meta?.width || image.naturalWidth || image.width;
@@ -3027,9 +3027,15 @@
             ctx.restore();
         }
 
-        const sampledRaw = evenlySamplePoints(raw, 12);
-        const candidate = sampledRaw.length ? sampledRaw[Math.floor(phase * sampledRaw.length) % sampledRaw.length] : null;
-        const localPhase = (phase * sampledRaw.length) % 1;
+        const nearPoint = (point, list, tolerance = 1.5) => (list || []).some(item =>
+            Math.hypot((Number(item.x) || 0) - (Number(point.x) || 0), (Number(item.y) || 0) - (Number(point.y) || 0)) <= tolerance
+        );
+        const rejected = raw.filter(point => !nearPoint(point, kept, 2.5));
+        const keptSequence = evenlySamplePoints(kept.length ? kept : filtered.length ? filtered : raw, 12);
+        const rejectedSequence = evenlySamplePoints(rejected.length ? rejected : raw, 12);
+        const activeSequence = state.edgeLike ? rejectedSequence : keptSequence;
+        const candidate = activeSequence.length ? activeSequence[Math.floor(phase * activeSequence.length) % activeSequence.length] : null;
+        const localPhase = activeSequence.length ? (phase * activeSequence.length) % 1 : 0;
 
         if (rightImage) {
             filtered.slice(0, thumb ? 80 : 360).forEach(point => {
@@ -6795,7 +6801,8 @@
             const delta = Math.min(80, time - siftMotion.lastTime);
             siftMotion.lastTime = time;
             if (siftMotion.playing) {
-                siftMotion.progress = (siftMotion.progress + delta / 3600) % 1;
+                const duration = selectedAlgorithm() === "sift" && currentStep === 4 ? 6200 : 3600;
+                siftMotion.progress = (siftMotion.progress + delta / duration) % 1;
                 renderSiftMotionProbe();
                 if (scaleData) {
                     if (selectedAlgorithm() === "sift" && (currentStep >= 1 && currentStep <= 6)) {
