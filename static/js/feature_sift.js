@@ -937,30 +937,40 @@
             const rect = item.rect;
             const layer = Number(rect.layer) || 0;
             if (layer < activeLayer) return;
-            const gaussianCell = item.next || item.previous;
-            ctx.save();
-            roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
-            ctx.clip();
-            if (gaussianCell?.array) {
-                const fitted = coverRect(gaussianCell.array.width, gaussianCell.array.height, rect.w, rect.h, false);
-                fitted.x += rect.x;
-                fitted.y += rect.y;
-                drawPackedImage(ctx, gaussianCell.array, fitted, "gray");
-            } else {
-                ctx.fillStyle = "rgba(248,251,255,.95)";
-                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-            }
-            ctx.restore();
-            ctx.fillStyle = "rgba(255,255,255,.58)";
+            ctx.fillStyle = "rgba(248,251,255,.96)";
             roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 7);
             ctx.fill();
             ctx.strokeStyle = "rgba(191,219,254,.7)";
             ctx.setLineDash([4, 4]);
             ctx.stroke();
             ctx.setLineDash([]);
-            ctx.fillStyle = "#64748b";
-            ctx.font = "900 11px sans-serif";
-            ctx.fillText(layer === activeLayer ? `D${rect.layer}` : `G${rect.layer + 1}`, rect.x + 10, rect.y + 18);
+        });
+
+        gaussianRectRows.forEach(row => {
+            row.forEach(sourceRect => {
+                const sourceLayer = Number(sourceRect.layer) || 0;
+                if (sourceLayer <= activeLayer + 1) return;
+                ctx.save();
+                ctx.globalAlpha = .78;
+                roundRect(ctx, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, 7);
+                ctx.clip();
+                const fitted = coverRect(sourceRect.cell.array.width, sourceRect.cell.array.height, sourceRect.w, sourceRect.h, false);
+                fitted.x += sourceRect.x;
+                fitted.y += sourceRect.y;
+                drawPackedImage(ctx, sourceRect.cell.array, fitted, "gray");
+                ctx.restore();
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = "rgba(96,165,250,.45)";
+                ctx.lineWidth = 1.2;
+                roundRect(ctx, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, 7);
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255,255,255,.86)";
+                roundRect(ctx, sourceRect.x + 5, sourceRect.y + 5, 25, 18, 6);
+                ctx.fill();
+                ctx.fillStyle = "#2563eb";
+                ctx.font = "900 10px sans-serif";
+                ctx.fillText(`G${sourceRect.layer}`, sourceRect.x + 10, sourceRect.y + 18);
+            });
         });
 
         activeTargets.forEach(active => {
