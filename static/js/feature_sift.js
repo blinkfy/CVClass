@@ -278,70 +278,707 @@
         }
     }
 
-    async function drawAlgorithmStepCanvas(canvas, src, data, step) {
+    async function drawAlgorithmStepCanvas(canvas, src, data, step, options = {}) {
         const result = await V.drawBaseImage(canvas, src, "#f8fbff");
         if (!result) return;
         const ctx = result.ctx;
+        const phase = options.animationPhase || 0;
         const points = data.points || [];
         const selected = points[0] || { x: canvas.width / 2, y: canvas.height / 2, orientation: 0 };
 
         if (data.algorithm === "surf" && step.key === "integral") {
-            ctx.fillStyle = "rgba(37,99,235,.08)";
-            const cell = Math.max(24, Math.round(Math.min(canvas.width, canvas.height) / 10));
-            for (let y = 0; y < canvas.height; y += cell) {
-                for (let x = 0; x < canvas.width; x += cell) {
-                    ctx.fillStyle = `rgba(37,99,235,${0.03 + 0.16 * ((x / cell + y / cell) % 6) / 6})`;
-                    ctx.fillRect(x, y, cell, cell);
-                }
-            }
-            ctx.strokeStyle = "#2563eb";
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const cellSize = 40;
+            const px = selected.x; const py = selected.y;
+            const w = 4 * cellSize; const h = 3 * cellSize;
+            
+            const rx = Math.floor(px / cellSize) * cellSize;
+            const ry = Math.floor(py / cellSize) * cellSize;
+            
+            ctx.strokeStyle = "rgba(100, 116, 139, 0.15)";
+            ctx.lineWidth = 1;
+            for(let x=0; x<=canvas.width; x+=cellSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            for(let y=0; y<=canvas.height; y+=cellSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            
+            const A = {x: rx - w, y: ry - h};
+            const B = {x: rx + w, y: ry - h};
+            const C = {x: rx - w, y: ry + h};
+            const D = {x: rx + w, y: ry + h};
+            
+            ctx.fillStyle = "rgba(59, 130, 246, 0.1)";
+            ctx.fillRect(A.x, A.y, B.x - A.x, C.y - A.y);
+            
+            ctx.strokeStyle = "#3b82f6";
             ctx.lineWidth = 2;
-            ctx.strokeRect(selected.x - 36, selected.y - 28, 72, 56);
+            ctx.strokeRect(A.x, A.y, B.x - A.x, C.y - A.y);
+            
+            const drawNode = (pt, label, color, t) => {
+                if (phase < t) return;
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#1e293b";
+                ctx.font = "900 16px sans-serif";
+                ctx.fillText(label, pt.x + 10, pt.y - 10);
+            };
+            
+            drawNode(A, "A", "#ef4444", 0.2); 
+            drawNode(B, "B", "#eab308", 0.4); 
+            drawNode(C, "C", "#eab308", 0.6); 
+            drawNode(D, "D", "#22c55e", 0.1); 
+            
+            const panelX = canvas.width / 2 - 200;
+            const panelY = canvas.height - 120;
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(0,0,0,0.1)";
+            ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.roundRect(panelX, panelY, 400, 100, 10); ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 18px sans-serif";
+            ctx.fillText("积分图矩形求和 (O(1) 复杂度)", panelX + 20, panelY + 35);
+            
+            ctx.font = "800 24px monospace";
+            let eq = "Sum = ";
+            if (phase > 0.1) eq += "D ";
+            if (phase > 0.2) eq += "+ A ";
+            if (phase > 0.4) eq += "- B ";
+            if (phase > 0.6) eq += "- C";
+            ctx.fillText(eq, panelX + 20, panelY + 75);
+            
+            return;
+        }
+        
+        if (data.algorithm === "surf" && step.key === "hessian") {
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const px = canvas.width / 2;
+            const py = canvas.height / 2 - 30;
+            
+            const drawBoxFilter = (cx, cy, type) => {
+                const s = 10; 
+                ctx.strokeStyle = "#cbd5e1";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx - 4.5*s, cy - 4.5*s, 9*s, 9*s);
+                
+                if (type === "Dyy") {
+                    ctx.fillStyle = "#000000"; ctx.fillRect(cx - 4.5*s, cy - 1.5*s, 9*s, 3*s); 
+                    ctx.fillStyle = "#ffffff"; ctx.fillRect(cx - 4.5*s, cy - 4.5*s, 9*s, 3*s); 
+                    ctx.fillStyle = "#ffffff"; ctx.fillRect(cx - 4.5*s, cy + 1.5*s, 9*s, 3*s); 
+                } else if (type === "Dxx") {
+                    ctx.fillStyle = "#000000"; ctx.fillRect(cx - 1.5*s, cy - 4.5*s, 3*s, 9*s); 
+                    ctx.fillStyle = "#ffffff"; ctx.fillRect(cx - 4.5*s, cy - 4.5*s, 3*s, 9*s); 
+                    ctx.fillStyle = "#ffffff"; ctx.fillRect(cx + 1.5*s, cy - 4.5*s, 3*s, 9*s); 
+                } else if (type === "Dxy") {
+                    ctx.fillStyle = "#000000"; 
+                    ctx.fillRect(cx + 0.5*s, cy + 0.5*s, 3*s, 3*s); ctx.fillRect(cx - 3.5*s, cy - 3.5*s, 3*s, 3*s);
+                    ctx.fillStyle = "#ffffff"; 
+                    ctx.fillRect(cx + 0.5*s, cy - 3.5*s, 3*s, 3*s); ctx.fillRect(cx - 3.5*s, cy + 0.5*s, 3*s, 3*s);
+                }
+                
+                for(let i=0; i<=9; i++) {
+                    ctx.beginPath(); ctx.moveTo(cx - 4.5*s + i*s, cy - 4.5*s); ctx.lineTo(cx - 4.5*s + i*s, cy + 4.5*s); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx - 4.5*s, cy - 4.5*s + i*s); ctx.lineTo(cx + 4.5*s, cy - 4.5*s + i*s); ctx.stroke();
+                }
+                
+                ctx.fillStyle = "#1e293b";
+                ctx.font = "800 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(type, cx, cy + 60);
+            };
+            
+            drawBoxFilter(px - 150, py, "Dxx");
+            drawBoxFilter(px, py, "Dyy");
+            drawBoxFilter(px + 150, py, "Dxy");
+            
+            const panelX = canvas.width / 2 - 200;
+            const panelY = canvas.height - 110;
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 18px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("Hessian 矩阵行列式近似 (Box Filters)", panelX + 20, panelY + 20);
+            
+            const detPhase = Math.min(1, phase * 1.5);
+            ctx.font = "800 20px monospace";
+            let eq = "det(H_approx) = ";
+            if (detPhase > 0.3) eq += "Dxx * Dyy";
+            if (detPhase > 0.6) eq += " - (0.9 * Dxy)²";
+            ctx.fillText(eq, panelX + 20, panelY + 60);
+            
+            return;
+        }
+        
+        if (data.algorithm === "surf" && step.key === "orientation") {
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const px = canvas.width / 2;
+            const py = canvas.height / 2 - 20;
+            const radius = 150;
+            
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI*2); ctx.stroke();
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Haar Wavelet Responses in Radius 6s", px, py - radius - 20);
+            
+            const seed = 999; let currentSeed = seed;
+            const random = () => { currentSeed = (currentSeed * 9301 + 49297) % 233280; return currentSeed / 233280; };
+            for(let i=0; i<150; i++) {
+                const r = Math.sqrt(random()) * radius;
+                const a = random() * Math.PI * 2;
+                const weight = random() * 4; 
+                const hx = px + Math.cos(a) * r;
+                const hy = py + Math.sin(a) * r;
+                
+                ctx.fillStyle = (a > Math.PI/4 && a < 3*Math.PI/4) ? "#3b82f6" : "#94a3b8"; 
+                ctx.beginPath(); ctx.arc(hx, hy, weight, 0, Math.PI*2); ctx.fill();
+            }
+            
+            const wedgePhase = phase; 
+            const sweepAngle = wedgePhase * Math.PI * 2;
+            const wedgeSize = Math.PI / 3;
+            
+            ctx.fillStyle = "rgba(234, 179, 8, 0.2)";
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.arc(px, py, radius, sweepAngle, sweepAngle + wedgeSize);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "#eab308";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            if (phase > 0.9) {
+                const targetAngle = Math.PI / 2; 
+                ctx.strokeStyle = "#ef4444";
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(px + Math.cos(targetAngle) * radius * 1.2, py + Math.sin(targetAngle) * radius * 1.2);
+                ctx.stroke();
+                
+                ctx.fillStyle = "#ef4444";
+                ctx.beginPath();
+                ctx.moveTo(px + Math.cos(targetAngle) * radius * 1.2, py + Math.sin(targetAngle) * radius * 1.2);
+                ctx.lineTo(px + Math.cos(targetAngle) * radius * 1.2 - 12*Math.cos(targetAngle-0.5), py + Math.sin(targetAngle) * radius * 1.2 - 12*Math.sin(targetAngle-0.5));
+                ctx.lineTo(px + Math.cos(targetAngle) * radius * 1.2 - 12*Math.cos(targetAngle+0.5), py + Math.sin(targetAngle) * radius * 1.2 - 12*Math.sin(targetAngle+0.5));
+                ctx.fill();
+            }
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "800 16px sans-serif";
+            ctx.fillText("滑动扇形窗口 (π/3) 统计响应和", px, py + radius + 40);
+            
+            return;
+        }
+
+        if (step.key === "fast") {
+            // Draw background points
+            points.slice(0, 150).forEach(point => {
+                V.drawDiamond(ctx, point.x, point.y, data.algorithm === "orb-lite" ? "#22c55e" : "#eab308", 4);
+            });
+            
+            // Dim background
+            ctx.fillStyle = "rgba(248, 251, 255, 0.75)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw selected point highlighted
+            V.drawDiamond(ctx, selected.x, selected.y, data.algorithm === "orb-lite" ? "#16a34a" : "#ca8a04", 8);
+            
+            // Setup Magnifier
+            const cellSize = 38;
+            const magSize = cellSize * 7;
+            const magX = Math.min(canvas.width - magSize / 2 - 40, Math.max(magSize / 2 + 40, selected.x + 180));
+            const magY = canvas.height / 2;
+            
+            // Draw connection line
+            ctx.strokeStyle = "rgba(100, 116, 139, 0.4)";
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(selected.x, selected.y);
+            ctx.bezierCurveTo(selected.x + 100, selected.y, magX - 100, magY, magX, magY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw Magnifier Background
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,0.15)";
+            ctx.shadowBlur = 24;
+            ctx.shadowOffsetY = 8;
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.roundRect(magX - magSize/2 - 20, magY - magSize/2 - 20, magSize + 40, magSize + 60, 20);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 16px sans-serif";
+            ctx.fillText("FAST-9 16-pixel Ring", magX - magSize/2 - 2, magY - magSize/2 - 40);
+            
+            // Grid
+            ctx.strokeStyle = "rgba(203, 213, 225, 0.4)";
+            ctx.lineWidth = 1;
+            for(let i = 0; i <= 7; i++) {
+                ctx.beginPath();
+                ctx.moveTo(magX - magSize/2 + i * cellSize, magY - magSize/2);
+                ctx.lineTo(magX - magSize/2 + i * cellSize, magY + magSize/2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(magX - magSize/2, magY - magSize/2 + i * cellSize);
+                ctx.lineTo(magX + magSize/2, magY - magSize/2 + i * cellSize);
+                ctx.stroke();
+            }
+            
+            // Center Pixel p
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillRect(magX - cellSize/2, magY - cellSize/2, cellSize, cellSize);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "900 18px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("p", magX, magY);
+            
+            // Bresenham circle coordinates (radius 3)
+            const offsets = [
+                [0,-3], [1,-3], [2,-2], [3,-1], [3,0], [3,1], [2,2], [1,3],
+                [0,3], [-1,3], [-2,2], [-3,-1], [-3,0], [-3,1], [-2,-2], [-1,-3]
+            ];
+            
+            // Radar sweep logic
+            const sweepIndex = Math.floor((phase * 2) * 16) % 16;
+            const isContiguous = (i) => i >= 2 && i <= 10; // Highlight a contiguous bright region
+            const isOrb = data.algorithm === "orb-lite";
+            
+            offsets.forEach(([dx, dy], i) => {
+                const px = magX + dx * cellSize;
+                const py = magY + dy * cellSize;
+                
+                // Determine state
+                let stateColor = "#f1f5f9"; // unvisited
+                let strokeColor = "#cbd5e1";
+                if (i <= sweepIndex || phase > 0.5) {
+                    if (isContiguous(i)) {
+                        stateColor = isOrb ? "#dcfce7" : "#fef08a"; // bright
+                        strokeColor = isOrb ? "#22c55e" : "#eab308";
+                    } else {
+                        stateColor = "#e2e8f0"; // dark
+                        strokeColor = "#94a3b8";
+                    }
+                }
+                
+                ctx.fillStyle = stateColor;
+                ctx.fillRect(px - cellSize/2 + 2, py - cellSize/2 + 2, cellSize - 4, cellSize - 4);
+                
+                if (i === sweepIndex && phase < 0.5) {
+                    ctx.strokeStyle = "#ef4444";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(px - cellSize/2, py - cellSize/2, cellSize, cellSize);
+                } else {
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(px - cellSize/2 + 2, py - cellSize/2 + 2, cellSize - 4, cellSize - 4);
+                }
+                
+                ctx.fillStyle = "#64748b";
+                ctx.font = "800 11px sans-serif";
+                ctx.fillText(String(i + 1), px, py);
+            });
+            
+            ctx.restore();
             return;
         }
 
         if (data.algorithm === "fast-brief" && step.key === "pairs") {
-            V.drawDiamond(ctx, selected.x, selected.y, "#eab308", 7);
-            for (let index = 0; index < 36; index++) {
-                const a = index * 2.399;
-                const b = index * 1.317 + 0.8;
-                const r1 = 4 + (index % 9) * 1.3;
-                const r2 = 6 + ((index * 5) % 11) * 1.1;
-                ctx.strokeStyle = index % 2 ? "rgba(37,99,235,.48)" : "rgba(234,179,8,.52)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(selected.x + Math.cos(a) * r1, selected.y + Math.sin(a) * r1);
-                ctx.lineTo(selected.x + Math.cos(b) * r2, selected.y + Math.sin(b) * r2);
-                ctx.stroke();
+            // Dim background
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw patch
+            const patchSize = 310;
+            const px = canvas.width / 2;
+            const py = canvas.height / 2;
+            
+            ctx.save();
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(0,0,0,0.1)";
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.roundRect(px - patchSize/2 - 20, py - patchSize/2 - 20, patchSize + 40, patchSize + 60, 20);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 16px sans-serif";
+            ctx.fillText("BRIEF 31×31 采样对 (Gaussian Dist.)", px - patchSize/2, py - patchSize/2 - 40);
+            
+            // Seeded random for stable pairs
+            const seed = 12345;
+            let currentSeed = seed;
+            const random = () => {
+                currentSeed = (currentSeed * 9301 + 49297) % 233280;
+                return currentSeed / 233280;
+            };
+            
+            const randomGaussian = () => {
+                let u = 0, v = 0;
+                while(u === 0) u = random();
+                while(v === 0) v = random();
+                return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            };
+            
+            const numPairs = 256;
+            const pairs = [];
+            for(let i=0; i<numPairs; i++) {
+                const std = patchSize / 5;
+                const p1x = Math.max(-patchSize/2, Math.min(patchSize/2, randomGaussian() * std));
+                const p1y = Math.max(-patchSize/2, Math.min(patchSize/2, randomGaussian() * std));
+                const p2x = Math.max(-patchSize/2, Math.min(patchSize/2, randomGaussian() * std));
+                const p2y = Math.max(-patchSize/2, Math.min(patchSize/2, randomGaussian() * std));
+                pairs.push({p1x, p1y, p2x, p2y});
             }
+            
+            const activePairIndex = Math.floor(phase * numPairs * 1.5) % numPairs;
+            
+            pairs.forEach((pair, i) => {
+                const isActive = (i === activePairIndex);
+                const isPast = (i < activePairIndex) || (phase > 0.66);
+                
+                if (!isPast && !isActive) return;
+                
+                ctx.strokeStyle = isActive ? "#ef4444" : "rgba(37,99,235,0.15)";
+                ctx.lineWidth = isActive ? 2.5 : 1;
+                
+                const ax = px + pair.p1x;
+                const ay = py + pair.p1y;
+                const bx = px + pair.p2x;
+                const by = py + pair.p2y;
+                
+                ctx.beginPath();
+                ctx.moveTo(ax, ay);
+                ctx.lineTo(bx, by);
+                ctx.stroke();
+                
+                if (isActive) {
+                    ctx.fillStyle = "#3b82f6";
+                    ctx.beginPath(); ctx.arc(ax, ay, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = "#eab308";
+                    ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = "#1e293b";
+                    ctx.font = "900 14px sans-serif";
+                    const bit = random() > 0.5 ? 1 : 0;
+                    ctx.fillText(`I(p1) ${bit ? "<" : ">"} I(p2)  →  Bit = ${bit}`, px - 70, py + patchSize/2 + 25);
+                }
+            });
+            
+            ctx.restore();
             return;
         }
 
         if (step.key === "descriptor") {
-            await drawAnalogCanvas(canvas, src, data.algorithm, points);
-            const bits = data.descriptorType === "binary" ? 32 : 16;
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const bits = data.descriptorType === "binary" ? (data.algorithm === "fast-brief" || data.algorithm === "orb-lite" ? 256 : 32) : 64;
+            
+            if (bits === 256) {
+                const isOrb = data.algorithm === "orb-lite";
+                const gridW = 380;
+                const cellW = gridW / 16;
+                const startX = isOrb ? (canvas.width / 2 + 30) : (canvas.width / 2 - gridW / 2);
+                const startY = canvas.height / 2 - gridW / 2;
+                
+                if (isOrb) {
+                    const px = canvas.width / 2 - 200;
+                    const py = canvas.height / 2;
+                    const patchSize = 220;
+                    
+                    ctx.save();
+                    ctx.fillStyle = "#ffffff";
+                    ctx.shadowColor = "rgba(0,0,0,0.1)";
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(px, py, patchSize/2, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.clip();
+                    const grad = ctx.createRadialGradient(px + patchSize*0.1, py + patchSize*0.2, 10, px, py, patchSize/2);
+                    grad.addColorStop(0, "rgba(34, 197, 94, 0.15)");
+                    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(px - patchSize, py - patchSize, patchSize*2, patchSize*2);
+                    ctx.restore();
+                    
+                    ctx.strokeStyle = "#cbd5e1";
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(px, py, patchSize/2, 0, Math.PI*2);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = "#334155";
+                    ctx.font = "950 16px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("Steered BRIEF Pairs", px, py - patchSize/2 - 25);
+                    
+                    const theta = selected.orientation || (Math.PI / 3);
+                    const steerPhase = Math.min(1, phase * 3);
+                    const currentAngle = theta * (1 - Math.pow(1 - steerPhase, 3));
+                    
+                    const numPairs = 120;
+                    const seed = 42; let currentSeed = seed;
+                    const random = () => { currentSeed = (currentSeed * 9301 + 49297) % 233280; return currentSeed / 233280; };
+                    const randomGaussian = () => { let u=0, v=0; while(u===0)u=random(); while(v===0)v=random(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); };
+                    
+                    const cosA = Math.cos(currentAngle);
+                    const sinA = Math.sin(currentAngle);
+                    
+                    const drawPairPhase = Math.max(0, Math.min(1, (phase - 0.33) * 1.5));
+                    const activePairIndex = Math.floor(drawPairPhase * numPairs);
+                    
+                    for(let i=0; i<numPairs; i++) {
+                        const std = patchSize / 5;
+                        const bx1 = randomGaussian() * std; const by1 = randomGaussian() * std;
+                        const bx2 = randomGaussian() * std; const by2 = randomGaussian() * std;
+                        
+                        const rx1 = bx1 * cosA - by1 * sinA; const ry1 = bx1 * sinA + by1 * cosA;
+                        const rx2 = bx2 * cosA - by2 * sinA; const ry2 = bx2 * sinA + by2 * cosA;
+                        
+                        const ax = px + rx1; const ay = py + ry1;
+                        const bx = px + rx2; const by = py + ry2;
+                        
+                        const isActive = (i === activePairIndex);
+                        const isPast = i < activePairIndex;
+                        if (!isPast && !isActive) {
+                            ctx.strokeStyle = "rgba(100, 116, 139, 0.08)";
+                            ctx.lineWidth = 1;
+                            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                        } else {
+                            ctx.strokeStyle = isActive ? "#ef4444" : "rgba(34, 197, 94, 0.15)";
+                            ctx.lineWidth = isActive ? 2 : 1;
+                            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                        }
+                    }
+                    
+                    ctx.strokeStyle = "#ef4444";
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4,4]);
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(px + Math.cos(currentAngle) * patchSize/2.2, py + Math.sin(currentAngle) * patchSize/2.2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                ctx.fillStyle = "#334155";
+                ctx.font = "950 18px sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText(`256-bit 二进制描述子 (${data.algorithm})`, startX, startY - 30);
+                
+                let bitPhase = isOrb ? Math.max(0, Math.min(1, (phase - 0.33) * 1.5)) : phase;
+                const activeBit = Math.floor(bitPhase * 256 * 1.2);
+                
+                for(let i=0; i<256; i++) {
+                    const row = Math.floor(i / 16);
+                    const col = i % 16;
+                    const x = startX + col * cellW;
+                    const y = startY + row * cellW;
+                    
+                    const val = (Math.sin(i * 12.345) > 0) ? 1 : 0;
+                    
+                    if (i <= activeBit || phase > 0.95) {
+                        ctx.fillStyle = val ? (isOrb ? "#16a34a" : "#2563eb") : "#f1f5f9";
+                        ctx.fillRect(x + 1, y + 1, cellW - 2, cellW - 2);
+                        
+                        ctx.fillStyle = val ? "#ffffff" : "#94a3b8";
+                        ctx.font = "800 11px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(val, x + cellW/2, y + cellW/2);
+                        
+                        if (i === activeBit) {
+                            ctx.strokeStyle = "#ef4444";
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(x, y, cellW, cellW);
+                        }
+                    } else {
+                        ctx.fillStyle = "#e2e8f0";
+                        ctx.fillRect(x + 1, y + 1, cellW - 2, cellW - 2);
+                    }
+                }
+                return;
+            }
+            
+            if (data.algorithm === "surf") {
+                const gridW = 300;
+                const cellW = gridW / 4;
+                const startX = canvas.width / 2 - 350;
+                const startY = canvas.height / 2 - gridW / 2;
+                
+                ctx.fillStyle = "#334155";
+                ctx.font = "950 18px sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText(`64维描述子 (4×4 Grid, 4 Features/Cell)`, startX, startY - 20);
+                
+                ctx.strokeStyle = "#cbd5e1";
+                ctx.lineWidth = 1;
+                for(let i=0; i<=4; i++) {
+                    ctx.beginPath(); ctx.moveTo(startX + i*cellW, startY); ctx.lineTo(startX + i*cellW, startY + gridW); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(startX, startY + i*cellW); ctx.lineTo(startX + gridW, startY + i*cellW); ctx.stroke();
+                }
+                
+                const chartX = startX + gridW + 40;
+                const chartW = 350;
+                const chartH = gridW;
+                const barW = chartW / 64;
+                
+                ctx.fillText(`Flattened 64-D Vector`, chartX, startY - 20);
+                ctx.strokeStyle = "rgba(100, 116, 139, 0.2)";
+                ctx.beginPath(); ctx.moveTo(chartX, startY + chartH); ctx.lineTo(chartX + chartW, startY + chartH); ctx.stroke();
+                
+                const currentCell = Math.min(15, Math.floor(phase * 16 * 1.2));
+                
+                for(let c=0; c<16; c++) {
+                    const cx = startX + (c%4)*cellW + cellW/2;
+                    const cy = startY + Math.floor(c/4)*cellW + cellW/2;
+                    
+                    if (c === currentCell && phase < 0.95) {
+                        ctx.fillStyle = "rgba(234, 179, 8, 0.2)";
+                        ctx.fillRect(startX + (c%4)*cellW, startY + Math.floor(c/4)*cellW, cellW, cellW);
+                    }
+                    
+                    if (c <= currentCell || phase > 0.95) {
+                        ctx.fillStyle = "#3b82f6"; ctx.fillRect(cx - 15, cy - 20, 8, 20);
+                        ctx.fillStyle = "#22c55e"; ctx.fillRect(cx - 5, cy - 15, 8, 15);
+                        ctx.fillStyle = "#ef4444"; ctx.fillRect(cx + 5, cy - 25, 8, 25);
+                        ctx.fillStyle = "#f59e0b"; ctx.fillRect(cx + 15, cy - 10, 8, 10);
+                        
+                        const ease = (c === currentCell && phase < 0.95) ? Math.max(0, Math.min(1, (phase * 16 * 1.2 - c))) : 1;
+                        
+                        const bx = chartX + c * 4 * barW;
+                        ctx.fillStyle = "#3b82f6"; ctx.fillRect(bx, startY + chartH - 20*ease, barW-1, 20*ease);
+                        ctx.fillStyle = "#22c55e"; ctx.fillRect(bx + barW, startY + chartH - 15*ease, barW-1, 15*ease);
+                        ctx.fillStyle = "#ef4444"; ctx.fillRect(bx + 2*barW, startY + chartH - 25*ease, barW-1, 25*ease);
+                        ctx.fillStyle = "#f59e0b"; ctx.fillRect(bx + 3*barW, startY + chartH - 10*ease, barW-1, 10*ease);
+                    }
+                }
+                
+                return;
+            }
+            
             const width = Math.min(canvas.width - 32, 420);
             const x0 = (canvas.width - width) / 2;
             const y0 = canvas.height - 34;
             for (let index = 0; index < bits; index++) {
-                ctx.fillStyle = data.descriptorType === "binary"
-                    ? (index % 3 ? "#2563eb" : "#facc15")
-                    : `rgba(14,165,233,${0.25 + 0.7 * ((index * 7) % 16) / 16})`;
+                ctx.fillStyle = `rgba(14,165,233,${0.25 + 0.7 * ((index * 7) % 16) / 16})`;
                 ctx.fillRect(x0 + index * width / bits, y0, Math.max(2, width / bits - 2), 18);
             }
             return;
         }
 
         if (data.algorithm === "orb-lite" && step.key === "orientation") {
-            points.slice(0, 260).forEach(point => {
-                V.drawDiamond(ctx, point.x, point.y, "#22c55e", 4);
-                ctx.strokeStyle = "#16a34a";
-                ctx.lineWidth = 1.5;
+            ctx.fillStyle = "rgba(248, 251, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const px = canvas.width / 2;
+            const py = canvas.height / 2;
+            const radius = 160;
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(0,0,0,0.15)";
+            ctx.shadowBlur = 24;
+            ctx.fill();
+            ctx.clip(); 
+            
+            const grad = ctx.createRadialGradient(px + radius*0.3, py + radius*0.4, 10, px, py, radius);
+            grad.addColorStop(0, "rgba(34, 197, 94, 0.5)");
+            grad.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+            ctx.fillStyle = grad;
+            ctx.fillRect(px - radius, py - radius, radius*2, radius*2);
+            ctx.restore();
+            
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.fillStyle = "#3b82f6";
+            ctx.beginPath();
+            ctx.arc(px, py, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "800 16px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("O", px - 25, py - 10);
+            
+            const angle = selected.orientation || Math.PI / 4;
+            const mag = radius * 0.55;
+            const cx = px + Math.cos(angle) * mag;
+            const cy = py + Math.sin(angle) * mag;
+            
+            const centroidPhase = Math.min(1, phase * 2);
+            const linePhase = Math.max(0, Math.min(1, (phase - 0.5) * 2));
+            
+            if (centroidPhase > 0.1) {
+                ctx.fillStyle = `rgba(234, 179, 8, ${centroidPhase})`;
                 ctx.beginPath();
-                ctx.moveTo(point.x, point.y);
-                ctx.lineTo(point.x + Math.cos(point.orientation || 0) * 13, point.y + Math.sin(point.orientation || 0) * 13);
+                ctx.arc(px + (cx - px) * centroidPhase, py + (cy - py) * centroidPhase, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (centroidPhase === 1) {
+                    ctx.fillStyle = "#1e293b";
+                    ctx.fillText("C (Centroid)", cx + 15, cy + 10);
+                }
+            }
+            
+            if (linePhase > 0) {
+                const curX = px + (cx - px) * linePhase;
+                const curY = py + (cy - py) * linePhase;
+                ctx.strokeStyle = "#16a34a";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(curX, curY);
                 ctx.stroke();
-            });
+                
+                if (linePhase === 1) {
+                    ctx.fillStyle = "#16a34a";
+                    ctx.beginPath();
+                    ctx.moveTo(curX, curY);
+                    ctx.lineTo(curX - 12 * Math.cos(angle - 0.5), curY - 12 * Math.sin(angle - 0.5));
+                    ctx.lineTo(curX - 12 * Math.cos(angle + 0.5), curY - 12 * Math.sin(angle + 0.5));
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = "rgba(100, 116, 139, 0.5)";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 40, 0, angle, angle < 0);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = "#334155";
+                    ctx.fillText(`θ = ${(angle * 180 / Math.PI).toFixed(1)}°`, px + 50, py + 25);
+                }
+            }
+            
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 18px sans-serif";
+            ctx.fillText("灰度矩主方向 (Intensity Centroid)", px - 150, py - radius - 30);
+            ctx.font = "800 14px sans-serif";
+            ctx.fillText("m₀₀ = Σ I(x,y)   m₁₀ = Σ x·I(x,y)   m₀₁ = Σ y·I(x,y)", px - 150, py + radius + 40);
+            ctx.fillText("Centroid C = (m₁₀/m₀₀, m₀₁/m₀₀)", px - 150, py + radius + 65);
+            ctx.fillText("θ = atan2(m₀₁, m₁₀)", px - 150, py + radius + 90);
+            
             return;
         }
 
@@ -2831,7 +3468,7 @@
             ctx.fillText("等待基础数据", 18, 36);
             return;
         }
-        await drawAlgorithmStepCanvas(canvas, scaleData.images.original, data, step);
+        await drawAlgorithmStepCanvas(canvas, scaleData.images.original, data, step, options);
         if (!options.thumb) {
             const ctx = canvas.getContext("2d");
             ctx.fillStyle = "rgba(255,255,255,.9)";
@@ -6160,8 +6797,12 @@
             if (siftMotion.playing) {
                 siftMotion.progress = (siftMotion.progress + delta / 3600) % 1;
                 renderSiftMotionProbe();
-                if (selectedAlgorithm() === "sift" && (currentStep >= 1 && currentStep <= 6) && scaleData) {
-                    drawSiftStepCanvas(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
+                if (scaleData) {
+                    if (selectedAlgorithm() === "sift" && (currentStep >= 1 && currentStep <= 6)) {
+                        drawSiftStepCanvas(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
+                    } else if (selectedAlgorithm() !== "sift") {
+                        drawAnalogStepMain(V.$("siftStepCanvas"), currentStep, { animationPhase: siftMotion.progress });
+                    }
                 }
             }
             siftMotion.raf = requestAnimationFrame(tick);
