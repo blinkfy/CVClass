@@ -379,6 +379,292 @@
         ctx.strokeStyle = "#7c3aed"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(kp.orientation || 0) * r, y + Math.sin(kp.orientation || 0) * r); ctx.stroke();
     }
 
+    function clamp(value, lo, hi) {
+        return Math.max(lo, Math.min(hi, value));
+    }
+
+    function grayAt(gray, width, height, x, y) {
+        const xx = clamp(Math.round(x), 0, width - 1);
+        const yy = clamp(Math.round(y), 0, height - 1);
+        return gray[yy * width + xx] || 0;
+    }
+
+    function seededRandom(seed) {
+        let state = seed >>> 0;
+        return () => {
+            state = (1664525 * state + 1013904223) >>> 0;
+            return state / 4294967296;
+        };
+    }
+
+    function briefPairs(count = 256, radius = 15) {
+        const random = seededRandom(20240517);
+        const pairs = [];
+        for (let i = 0; i < count; i++) {
+            const sample = () => {
+                const r = radius * Math.sqrt(random());
+                const theta = random() * Math.PI * 2;
+                return [Math.cos(theta) * r, Math.sin(theta) * r];
+            };
+            pairs.push([sample(), sample()]);
+        }
+        return pairs;
+    }
+
+    const brief256Pairs = briefPairs(256, 15);
+    const hammingByteTable = Array.from({ length: 256 }, (_, value) => {
+        let bits = value;
+        let count = 0;
+        while (bits) {
+            bits &= bits - 1;
+            count++;
+        }
+        return count;
+    });
+
+    function pointOrientation(gray, width, height, point, radius = 15) {
+        let m10 = 0;
+        let m01 = 0;
+        const cx = Math.round(point.x);
+        const cy = Math.round(point.y);
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                if (dx * dx + dy * dy > radius * radius) continue;
+                const value = grayAt(gray, width, height, cx + dx, cy + dy);
+                m10 += dx * value;
+                m01 += dy * value;
+            }
+        }
+        return Math.atan2(m01, m10);
+    }
+
+    function makeBriefDescriptor(gray, width, height, point, options = {}) {
+        const pairs = options.pairs || brief256Pairs;
+        const angle = Number(options.angle) || 0;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const bytes = new Uint8Array(Math.ceil(pairs.length / 8));
+        for (let i = 0; i < pairs.length; i++) {
+            const [a, b] = pairs[i];
+            const ax = point.x + a[0] * cos - a[1] * sin;
+            const ay = point.y + a[0] * sin + a[1] * cos;
+            const bx = point.x + b[0] * cos - b[1] * sin;
+            const by = point.y + b[0] * sin + b[1] * cos;
+            if (grayAt(gray, width, height, ax, ay) < grayAt(gray, width, height, bx, by)) {
+                bytes[i >> 3] |= 1 << (i & 7);
+            }
+        }
+        return bytes;
+    }
+
+    function hammingDistance(a, b) {
+        const n = Math.min(a?.length || 0, b?.length || 0);
+        let distance = 0;
+        for (let i = 0; i < n; i++) distance += hammingByteTable[(a[i] ^ b[i]) & 255];
+        return distance + Math.abs((a?.length || 0) - (b?.length || 0)) * 8;
+    }
+
+    function l2Distance(a, b) {
+        const n = Math.min(a?.length || 0, b?.length || 0);
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+            const diff = (Number(a[i]) || 0) - (Number(b[i]) || 0);
+            sum += diff * diff;
+        }
+        return Math.sqrt(sum);
+    }
+
+    function integralImage(gray, width, height) {
+        const stride = width + 1;
+        const integral = new Float64Array((width + 1) * (height + 1));
+        for (let y = 1; y <= height; y++) {
+            let row = 0;
+            for (let x = 1; x <= width; x++) {
+                row += gray[(y - 1) * width + (x - 1)] || 0;
+                integral[y * stride + x] = integral[(y - 1) * stride + x] + row;
+            }
+        }
+        return { data: integral, width, height, stride };
+    }
+
+    function rectSum(ii, x0, y0, x1, y1) {
+        const left = clamp(Math.floor(Math.min(x0, x1)), 0, ii.width);
+        const right = clamp(Math.ceil(Math.max(x0, x1)), 0, ii.width);
+        const top = clamp(Math.floor(Math.min(y0, y1)), 0, ii.height);
+        const bottom = clamp(Math.ceil(Math.max(y0, y1)), 0, ii.height);
+        return ii.data[bottom * ii.stride + right] - ii.data[top * ii.stride + right] -
+            ii.data[bottom * ii.stride + left] + ii.data[top * ii.stride + left];
+    }
+
+    function haarX(ii, x, y, size) {
+        const half = size / 2;
+        return rectSum(ii, x, y - half, x + half, y + half) - rectSum(ii, x - half, y - half, x, y + half);
+    }
+
+    function haarY(ii, x, y, size) {
+        const half = size / 2;
+        return rectSum(ii, x - half, y, x + half, y + half) - rectSum(ii, x - half, y - half, x + half, y);
+    }
+
+    function surfResponse(ii, x, y, size = 9) {
+        const s = size;
+        const lobe = s / 3;
+        const dxx = rectSum(ii, x - s, y - lobe, x - lobe, y + lobe) +
+            rectSum(ii, x + lobe, y - lobe, x + s, y + lobe) -
+            2 * rectSum(ii, x - lobe, y - lobe, x + lobe, y + lobe);
+        const dyy = rectSum(ii, x - lobe, y - s, x + lobe, y - lobe) +
+            rectSum(ii, x - lobe, y + lobe, x + lobe, y + s) -
+            2 * rectSum(ii, x - lobe, y - lobe, x + lobe, y + lobe);
+        const dxy = rectSum(ii, x, y, x + lobe, y + lobe) + rectSum(ii, x - lobe, y - lobe, x, y) -
+            rectSum(ii, x - lobe, y, x, y + lobe) - rectSum(ii, x, y - lobe, x + lobe, y);
+        return Math.abs(dxx * dyy - 0.81 * dxy * dxy);
+    }
+
+    function detectSurfLite(gray, width, height, options = {}) {
+        const maxKeypoints = Math.max(20, Number(options.maxKeypoints) || 500);
+        const threshold = Math.max(1, Number(options.threshold) || 1600000);
+        const ii = integralImage(gray, width, height);
+        const candidates = [];
+        const border = 18;
+        for (let y = border; y < height - border; y += 3) {
+            for (let x = border; x < width - border; x += 3) {
+                const response = surfResponse(ii, x, y, 9);
+                if (response > threshold) candidates.push({ x, y, response, sigma: 2.4, orientation: 0 });
+            }
+        }
+        candidates.sort((a, b) => b.response - a.response);
+        const radius = 8;
+        const kept = [];
+        for (const point of candidates) {
+            if (kept.some(item => Math.hypot(item.x - point.x, item.y - point.y) < radius)) continue;
+            const dx = haarX(ii, point.x, point.y, 12);
+            const dy = haarY(ii, point.x, point.y, 12);
+            kept.push({ ...point, orientation: Math.atan2(dy, dx) });
+            if (kept.length >= maxKeypoints) break;
+        }
+        return { keypoints: kept, candidates, integral: ii };
+    }
+
+    function makeSurfDescriptor(gray, width, height, point, ii) {
+        const descriptor = [];
+        const angle = Number(point.orientation) || 0;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const step = 5;
+        for (let cy = -2; cy < 2; cy++) {
+            for (let cx = -2; cx < 2; cx++) {
+                let sx = 0, sy = 0, sax = 0, say = 0;
+                for (let yy = 0; yy < 5; yy++) {
+                    for (let xx = 0; xx < 5; xx++) {
+                        const lx = (cx * 5 + xx + 0.5) * step;
+                        const ly = (cy * 5 + yy + 0.5) * step;
+                        const rx = point.x + lx * cos - ly * sin;
+                        const ry = point.y + lx * sin + ly * cos;
+                        const dx = haarX(ii, rx, ry, 4);
+                        const dy = haarY(ii, rx, ry, 4);
+                        sx += dx; sy += dy; sax += Math.abs(dx); say += Math.abs(dy);
+                    }
+                }
+                descriptor.push(sx, sy, sax, say);
+            }
+        }
+        const norm = Math.sqrt(descriptor.reduce((sum, value) => sum + value * value, 0)) || 1;
+        return descriptor.map(value => value / norm);
+    }
+
+    function computeDescriptorSet(grayObj, algorithm, options = {}) {
+        const start = performance.now();
+        const gray = grayObj.gray;
+        const width = grayObj.width;
+        const height = grayObj.height;
+        if (algorithm === "surf") {
+            const surf = detectSurfLite(gray, width, height, options);
+            const descriptors = surf.keypoints.map(point => makeSurfDescriptor(gray, width, height, point, surf.integral));
+            return {
+                algorithm,
+                keypoints: surf.keypoints,
+                descriptors,
+                descriptorType: "float",
+                descriptorDim: "64 float",
+                distanceType: "L2",
+                elapsedMs: performance.now() - start
+            };
+        }
+        const fast = detectFast(gray, width, height, {
+            threshold: options.threshold || 30,
+            contiguous: options.contiguous || 9,
+            nmsRadius: options.nmsRadius || 8,
+            maxCorners: options.maxKeypoints || 500
+        });
+        const rotate = algorithm === "orb-lite";
+        const keypoints = fast.corners.map(point => {
+            const orientation = rotate ? pointOrientation(gray, width, height, point, 15) : 0;
+            return { ...point, orientation, sigma: 2.2 };
+        });
+        const descriptors = keypoints.map(point => makeBriefDescriptor(gray, width, height, point, { angle: point.orientation }));
+        return {
+            algorithm,
+            keypoints,
+            descriptors,
+            descriptorType: "binary",
+            descriptorDim: "256 bit",
+            distanceType: "Hamming",
+            elapsedMs: performance.now() - start,
+            candidates: fast.candidates,
+            contiguous: fast.contiguous
+        };
+    }
+
+    function matchDescriptorSets(left, right, options = {}) {
+        const ratio = Math.max(0.4, Math.min(0.98, Number(options.ratio) || 0.75));
+        const maxMatches = Math.max(1, Number(options.maxMatches) || 80);
+        const distance = left.distanceType === "Hamming" ? hammingDistance : l2Distance;
+        const matches = [];
+        if (!left.descriptors?.length || (right.descriptors?.length || 0) < 2) {
+            return { matches, rawMatches: 0, passedMatches: 0 };
+        }
+        left.descriptors.forEach((descriptor, leftIndex) => {
+            let best = { index: -1, distance: Infinity };
+            let second = { index: -1, distance: Infinity };
+            right.descriptors.forEach((candidate, rightIndex) => {
+                const d = distance(descriptor, candidate);
+                if (d < best.distance) {
+                    second = best;
+                    best = { index: rightIndex, distance: d };
+                } else if (d < second.distance) {
+                    second = { index: rightIndex, distance: d };
+                }
+            });
+            const ratioValue = best.distance / (second.distance + 1e-9);
+            matches.push({
+                rank: 0,
+                left_index: leftIndex,
+                right_index: best.index,
+                distance: Math.round(best.distance * 1000) / 1000,
+                second_distance: Math.round(second.distance * 1000) / 1000,
+                ratio: Math.round(ratioValue * 10000) / 10000,
+                passed: ratioValue < ratio
+            });
+        });
+        matches.sort((a, b) => Number(a.passed === false) - Number(b.passed === false) || a.ratio - b.ratio || a.distance - b.distance);
+        matches.forEach((item, index) => { item.rank = index + 1; });
+        return {
+            matches: matches.slice(0, maxMatches),
+            rawMatches: matches.length,
+            passedMatches: matches.filter(item => item.passed).length
+        };
+    }
+
+    function featureAlgorithmInfo(algorithm) {
+        const info = {
+            sift: { name: "SIFT", descriptorType: "float", descriptorDim: "128 float", distanceType: "L2" },
+            surf: { name: "SURF", descriptorType: "float", descriptorDim: "64 float", distanceType: "L2" },
+            "fast-brief": { name: "FAST + BRIEF", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming" },
+            "orb-lite": { name: "ORB-lite", descriptorType: "binary", descriptorDim: "256 bit", distanceType: "Hamming" }
+        };
+        return info[algorithm] || info.sift;
+    }
+
     function renderMatrix(container, title, matrix) {
         if (!container) return;
         const rows = (matrix || []).map(row => `<tr>${row.map(v => `<td>${v}</td>`).join("")}</tr>`).join("");
@@ -420,5 +706,5 @@
         }
     }
 
-    window.FeatureViz = { $, root, basePath, assetsBase, setupSamples, bindFileNames, bindAutoSubmit, postForm, loadImage, drawBaseImage, drawArray, drawKeypoints, drawSiftKeypoints, drawCombined, drawCross, drawCircle, drawDiamond, drawSiftSymbol, renderMatrix, renderStatList, drawBarChart, setCanvasSize, imageToGray, detectFast, fastCircle, refineSubpixel, drawFastKeypoints, drawSubpixelKeypoints };
+    window.FeatureViz = { $, root, basePath, assetsBase, setupSamples, bindFileNames, bindAutoSubmit, postForm, loadImage, drawBaseImage, drawArray, drawKeypoints, drawSiftKeypoints, drawCombined, drawCross, drawCircle, drawDiamond, drawSiftSymbol, renderMatrix, renderStatList, drawBarChart, setCanvasSize, imageToGray, detectFast, fastCircle, refineSubpixel, drawFastKeypoints, drawSubpixelKeypoints, computeDescriptorSet, matchDescriptorSets, featureAlgorithmInfo, integralImage };
 })();

@@ -2,7 +2,7 @@
 {% block feature_content %}
 <section class="feature-layout feature-sift-layout">
     <aside class="feature-panel feature-controls">
-        <div><span class="section-label">Input & Params</span><h2>SIFT 参数</h2></div>
+        <div><span class="section-label">Input & Params</span><h2>特征算法参数</h2></div>
         <form id="featureSiftForm" data-feature-form>
             <input type="hidden" name="mode" value="sift">
             <input id="siftDescriptorFlag" type="hidden" name="descriptor" value="false">
@@ -14,7 +14,15 @@
             </label>
             <div class="feature-samples" data-samples></div>
             <div class="feature-control-group">
-                <div class="feature-param-card">
+                <label>算法选择
+                    <select id="siftAnalogMethod">
+                        <option value="sift">SIFT</option>
+                        <option value="surf">SURF</option>
+                        <option value="fast-brief">FAST + BRIEF</option>
+                        <option value="orb-lite">ORB-lite</option>
+                    </select>
+                </label>
+                <div id="siftScaleParams" class="feature-param-card">
                     <strong>尺度空间</strong>
                     <label>Octave 数<input name="sift_octaves" value="3" type="number" min="1" max="5"></label>
                     <label>每组尺度数<input name="sift_scales" value="3" type="number" min="1" max="6"></label>
@@ -22,12 +30,18 @@
                     <label>DoG 阈值<input name="contrast_threshold" value="0.03" type="number" step="0.005" min="0"></label>
                     <label>边缘阈值<input name="edge_threshold" value="10" type="number" min="1"></label>
                 </div>
-                <div class="feature-param-card">
+                <div id="siftDescriptorParams" class="feature-param-card">
                     <strong>方向与描述子</strong>
                     <label>方向 bins<input value="36" type="number" disabled></label>
                     <label>描述子网格<input value="4 × 4" disabled></label>
                     <label>每 cell bins<input value="8" type="number" disabled></label>
                     <label>局部窗口<input value="16 × 16" disabled></label>
+                </div>
+                <div id="siftAnalogParams" class="feature-param-card" hidden>
+                    <strong id="siftAnalogParamTitle">类比方法</strong>
+                    <label>关键点<input id="siftAnalogKeypointType" value="FAST / Hessian" disabled></label>
+                    <label>描述子<input id="siftAnalogDescriptorType" value="binary / float" disabled></label>
+                    <label>距离<input id="siftAnalogDistanceType" value="Hamming / L2" disabled></label>
                 </div>
                 <button class="feature-primary" type="submit">重新计算</button>
             </div>
@@ -37,18 +51,47 @@
     <main class="feature-workspace">
         <section class="feature-panel feature-stage">
             <div class="feature-stage-head">
-                <div><span class="section-label">SIFT Pipeline</span><h2 id="siftStageTitle">预处理</h2></div>
+                <div><span id="siftPipelineLabel" class="section-label">SIFT Pipeline</span><h2 id="siftStageTitle">预处理</h2></div>
                 <span id="siftElapsed" class="status-pill">等待运行</span>
             </div>
 
-            <nav class="feature-sift-steps" aria-label="SIFT 步骤总览">
-                <button class="is-active" type="button" data-sift-step="0"><i>1</i><span>预处理</span></button>
-                <button type="button" data-sift-step="1"><i>2</i><span>Gaussian Pyramid</span></button>
-                <button type="button" data-sift-step="2"><i>3</i><span>DoG Pyramid</span></button>
-                <button type="button" data-sift-step="3"><i>4</i><span>3×3×3 极值与过滤</span></button>
-                <button type="button" data-sift-step="4"><i>5</i><span>主方向分配</span></button>
-                <button type="button" data-sift-step="5"><i>6</i><span>128 维描述子</span></button>
-            </nav>
+            <div id="siftStepStatus" class="feature-compare-status">正在加载示例图...</div>
+            <div>
+                <div class="feature-canvas-frame feature-sift-main-frame">
+                    <canvas id="siftStepCanvas" aria-label="当前特征检测步骤主图"></canvas>
+                </div>
+                <p id="siftStepHint" class="feature-corner-click-hint">切换下方流程步骤查看当前算法的计算过程。</p>
+            </div>
+
+            <section class="feature-flow feature-sift-flow">
+                <strong id="siftFlowTitle">SIFT 特征检测计算流程</strong>
+                <nav class="feature-sift-steps feature-flow-line" aria-label="特征检测步骤总览"></nav>
+                <div id="siftFlowThumbs" class="feature-corner-thumbs"></div>
+            </section>
+
+            <section class="feature-chain-card feature-sift-motion-probe">
+                <div class="feature-chain-head sift-motion-head">
+                    <div>
+                        <span class="section-label">Local Motion Probe</span>
+                        <h3 id="siftMotionTitle">SIFT 局部计算动态探针</h3>
+                    </div>
+                    <div class="corner-motion-controls" aria-label="SIFT 动画控制">
+                        <button type="button" data-sift-motion="toggle">暂停</button>
+                        <button type="button" data-sift-motion="restart">重播</button>
+                    </div>
+                </div>
+                <div class="sift-motion-layout">
+                    <div class="sift-motion-stage">
+                        <canvas id="siftMotionCanvas" width="860" height="260" aria-label="当前 SIFT 步骤局部动画"></canvas>
+                        <div class="corner-motion-status"><span id="siftMotionAction">准备计算</span><b id="siftMotionFrame">01</b></div>
+                        <div id="siftMotionSteps" class="corner-motion-steps" aria-label="SIFT 探针子步骤"></div>
+                    </div>
+                    <div class="corner-motion-result sift-motion-result">
+                        <h3>Probe Results</h3>
+                        <div id="siftMotionMetrics" class="corner-motion-metrics"></div>
+                    </div>
+                </div>
+            </section>
 
             <section class="feature-sift-panel" data-sift-panel="0">
                 <div class="feature-preprocess-grid">
@@ -101,6 +144,18 @@
                     <div><h3>128 维 Descriptor</h3><canvas id="descriptor128Canvas" class="feature-chart"></canvas></div>
                 </div>
             </section>
+
+            <section class="feature-sift-panel feature-sift-algorithm-panel" data-sift-panel="analog" hidden>
+                <div class="feature-analog-selected">
+                    <div class="feature-canvas-frame"><canvas id="siftAnalogSelectedCanvas"></canvas></div>
+                    <div>
+                        <h3 id="siftAnalogSelectedTitle">SIFT</h3>
+                        <div id="siftAnalogSelectedStats" class="feature-stat-list"></div>
+                        <p id="siftAnalogSelectedNote"></p>
+                    </div>
+                </div>
+                <div id="siftAnalogStepDetails" class="feature-analog-grid"></div>
+            </section>
         </section>
     </main>
 
@@ -108,7 +163,9 @@
         <div><span class="section-label">Process Notes</span><h2 id="siftNoteTitle">预处理</h2></div>
         <div id="siftNotePrimary" class="feature-note blue"></div>
         <div id="siftNoteSecondary" class="feature-note green"></div>
-        <div class="feature-boundary"><b>代码边界</b><p id="siftNoteBoundary">课程核心 SIFT 算法负责关键点计算，页面负责步骤切换与可视化绘制。</p></div>
+        <div id="siftNoteFormula" class="feature-note orange feature-latex-note"></div>
+        <div id="siftNoteValues" class="feature-stat-list"></div>
+        <div class="feature-boundary"><b>说明</b><p id="siftNoteBoundary">SIFT 与类比方法用于观察关键点、方向和描述子的不同设计取舍。</p></div>
     </aside>
 </section>
 {% endblock %}

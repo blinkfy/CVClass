@@ -11,8 +11,8 @@
         {% set flow_title = 'SIFT 描述子生成流程' %}
         {% set steps = [('keypoint','Keypoint','尺度关键点'), ('gradient','Local Gradient','局部梯度'), ('orientation','Orientation Hist','主方向分配'), ('rotate','Rotate Patch','旋转坐标系'), ('cells','4×4×8 Cells','方向统计'), ('normalize','Normalize','128 维归一化')] %}
     {% elif active == 'matching' %}
-        {% set flow_title = 'SIFT 特征匹配流程' %}
-        {% set steps = [('detect','SIFT Detect','两图关键点'), ('descriptor','Descriptor','生成描述子'), ('distance','L2 Distance','欧氏距离'), ('nearest','2-NN','最近邻搜索'), ('ratio','Ratio Test','比率筛选'), ('draw','Matches','绘制匹配线')] %}
+        {% set flow_title = '特征描述子匹配流程' %}
+        {% set steps = [('detect','Detect','检测关键点'), ('descriptor','Descriptor','生成描述子'), ('distance','Distance','L2 / Hamming'), ('nearest','2-NN','最近邻搜索'), ('ratio','Ratio Test','比率筛选'), ('draw','Matches','绘制匹配线')] %}
     {% else %}
         {% set flow_title = '特征方法对比流程' %}
         {% set steps = [('input','Input','统一输入'), ('harris','Harris','角点响应'), ('shi','Shi-Tomasi','最小特征值'), ('fast','FAST','圆周连续检测'), ('sift','SIFT','尺度特征'), ('compare','Compare','结果对比')] %}
@@ -50,8 +50,8 @@
             <h1>SIFT 特征检测过程可视化</h1>
             <p>从尺度空间构建、极值筛选到主方向分配和 128 维描述子，连续观察完整 SIFT 流程。</p>
             {% elif feature_mode == 'matching' %}
-            <h1>SIFT 特征匹配应用</h1>
-            <p>基于描述子 L2 距离和 Lowe ratio test 展示两图特征匹配过程。</p>
+            <h1>特征描述子匹配应用</h1>
+            <p>比较 SIFT、SURF、FAST+BRIEF 与 ORB-lite 的描述子距离和 ratio test 匹配过程。</p>
             {% else %}
             <h1>图像角点检测与 SIFT 特征点检测</h1>
             <p>比较 Harris、Shi-Tomasi 与 SIFT 特征点结果，建立整体认识。</p>

@@ -126,8 +126,8 @@
         const algorithm = selectedAlgorithm();
         if (algorithm === "fast") {
             const common = {
-                input: ["输入图像", "读取当前图像并约束计算尺寸。", "\\(I(x,y)\\)", "后续 FAST 在浏览器中用 Canvas ImageData 取灰度。"],
-                gray: ["灰度化", "将 RGB 转为单通道强度，减少圆周比较的通道干扰。", "\\(Gray = 0.299R + 0.587G + 0.114B\\)", "灰度数组由前端生成。"],
+                input: ["输入图像", "读取当前图像并约束计算尺寸。", "\\(I(x,y)\\)", "后续 FAST 通过页面的 Canvas 像素读取灰度。"],
+                gray: ["灰度化", "将 RGB 转为单通道强度，减少圆周比较的通道干扰。", "\\(Gray = 0.299R + 0.587G + 0.114B\\)", "灰度数组由页面生成。"],
                 circle: ["16 点圆周采样", "以中心像素为圆心，取半径 3 的 16 个离散圆周点。", "\\(P_0, P_1, \\ldots, P_{15},\\ r=3\\)", "展示当前候选点的圆周响应。"],
                 threshold: ["FAST 连续阈值检测", "检查是否存在连续 N 个点都亮于或暗于中心超过阈值。", "\\(|P_i-C| > t,\\ i\\in \\text{contiguous run}\\)", "FAST-9/12 的 N 可调。"],
                 nms: ["FAST NMS", "按 FAST 响应强度进行非极大值抑制，减少密集重复点。", "\\(corner = \\operatorname{localmax}(score)\\)", "NMS 半径来自左侧 FAST 参数。"],
@@ -167,19 +167,19 @@
         const fast = fastOptions();
         if (algorithm === "fast") {
             const map = {
-                input: ["输入与灰度采样", "FAST 在浏览器端读取 Canvas 像素并生成灰度数组。", ["I(x,y)", "Gray=0.299R+0.587G+0.114B"], ["换图时重新生成灰度数组。", "后续判断全部基于单通道强度。"], "FAST 属于前端扩展，不影响后端 Harris/SIFT 主流程。"],
-                gray: ["灰度图", "把彩色输入压缩为亮度图，减少 RGB 通道差异对圆周比较的干扰。", ["G(x,y)=0.299R+0.587G+0.114B"], ["中心像素 C 与 16 个圆周像素都从 G 中读取。"], "灰度化在前端 Canvas ImageData 中手写完成。"],
-                circle: ["FAST 16 点圆周", "以候选中心 C 为圆心，检查半径 3 的 Bresenham 圆周 16 个离散点。", ["P_i=G(x+dx_i,y+dy_i),\\ i=0\\ldots15", "r=3"], ["滑动窗口表示逐像素移动候选中心。", "黄色圆周点对应 16 个比较位置。"], "不调用 OpenCV FAST，圆周点偏移由前端固定数组实现。"],
+                input: ["输入与灰度采样", "FAST 通过页面读取 Canvas 像素并生成灰度数组。", ["I(x,y)", "Gray=0.299R+0.587G+0.114B"], ["换图时重新生成灰度数组。", "后续判断全部基于单通道强度。"], "FAST 作为页面扩展，不影响 Harris/SIFT 主流程."],
+                gray: ["灰度图", "把彩色输入压缩为亮度图，减少 RGB 通道差异对圆周比较的干扰。", ["G(x,y)=0.299R+0.587G+0.114B"], ["中心像素 C 与 16 个圆周像素都从 G 中读取。"], "灰度化在页面 Canvas ImageData 中手写完成."],
+                circle: ["FAST 16 点圆周", "以候选中心 C 为圆心，检查半径 3 的 Bresenham 圆周 16 个离散点。", ["P_i=G(x+dx_i,y+dy_i),\\ i=0\\ldots15", "r=3"], ["滑动窗口表示逐像素移动候选中心。", "黄色圆周点对应 16 个比较位置。"], "不调用 OpenCV FAST，圆周点偏移由固定数组实现."],
                 threshold: ["连续阈值判定", `判断是否存在连续 ${fast.contiguous} 个圆周点同时明显亮于或暗于中心。`, [`P_i>C+${fast.threshold}`, `P_i<C-${fast.threshold}`, `\\exists\\ ${fast.contiguous}\\ \\text{contiguous points}`], ["同一段必须全部为 bright 或全部为 dark。", "阈值越大，角点更少但更稳定。"], "FAST-9 与 FAST-12 只改变连续点数 N。"],
                 nms: ["FAST 非极大值抑制", "对候选点按 FAST 响应分数排序，在局部半径内只保留响应最大的点。", ["score=\\max\\sum |P_i-C|", "keep(p)=score(p)=\\max_{q\\in\\Omega_r(p)}score(q)"], ["灰色候选点被黄色保留点的邻域擦除。", "NMS 半径越大，最终点越稀疏。"], "最终 FAST 点用黄色菱形绘制。"],
-                corners: ["FAST 最终角点", "展示通过连续阈值和 NMS 后的最终 FAST 角点集合。", ["Corners=NMS(FAST(G,t,N))"], ["FAST 不计算结构张量，也不做亚像素二次曲面拟合。"], "FAST 只作为第 5 实验前端补充方法。"]
+                corners: ["FAST 最终角点", "展示通过连续阈值和 NMS 后的最终 FAST 角点集合。", ["Corners=NMS(FAST(G,t,N))"], ["FAST 不计算结构张量，也不做亚像素二次曲面拟合。"], "FAST 只作为第 5 实验补充方法。"]
             };
             return normalizeRichNote(map[stepKey] || map.corners);
         }
         const isShi = algorithm === "shi-tomasi";
         const map = {
-            input: ["输入图像", "读取当前图片并保持统一计算尺寸，后续梯度、张量和响应都基于同一输入。", ["I(x,y)"], ["切换样例或上传图片会重新请求后端结果。"], "后端只返回数组与角点数据，所有可视标记由前端 Canvas 绘制。"],
-            gray: ["灰度化", "将 RGB 图像转换成单通道灰度图，作为 Sobel 梯度的输入。", ["G=0.299R+0.587G+0.114B"], ["灰度中心值会同步显示在局部探针中。"], "此处展示的是后端算法返回的灰度数组。"],
+            input: ["输入图像", "读取当前图片并保持统一计算尺寸，后续梯度、张量和响应都基于同一输入。", ["I(x,y)"], ["切换样例或上传图片会重新生成结果。"], "算法模块只返回数组与角点数据，所有可视标记由页面 Canvas 绘制。"],
+            gray: ["灰度化", "将 RGB 图像转换成单通道灰度图，作为 Sobel 梯度的输入。", ["G=0.299R+0.587G+0.114B"], ["灰度中心值会同步显示在局部探针中。"], "此处展示的是算法模块返回的灰度数组。"],
             gradient: ["Sobel 梯度计算", "分别用水平和垂直 Sobel 核卷积灰度图，得到局部亮度变化方向。", ["I_x=G*S_x,\\quad S_x=\\begin{bmatrix}-1&0&1\\\\-2&0&2\\\\-1&0&1\\end{bmatrix}", "I_y=G*S_y,\\quad S_y=\\begin{bmatrix}-1&-2&-1\\\\0&0&0\\\\1&2&1\\end{bmatrix}"], ["Ix 强表示左右方向灰度变化明显。", "Iy 强表示上下方向灰度变化明显。"], "动画中的 3×3 Sobel 窗口表示卷积核在图像上滑动。"],
             second: ["Second Moment 原始项", "把梯度转换为二阶乘积项，记录 x/y 方向能量和方向相关性。", ["E_{xx}=I_x^2", "E_{yy}=I_y^2", "E_{xy}=I_xI_y"], ["平方项只保留强度大小。", "交叉项描述两个方向梯度是否同时变化。"], "这些还是未经过高斯窗口统计的逐像素原始项。"],
             tensor: ["结构张量 M", "对二阶项做高斯加权求和，得到描述局部窗口梯度分布的 2×2 矩阵。", ["S_{xx}=G_\\sigma * I_x^2,\\quad S_{yy}=G_\\sigma * I_y^2,\\quad S_{xy}=G_\\sigma * I_xI_y", "M=\\begin{bmatrix}S_{xx}&S_{xy}\\\\S_{xy}&S_{yy}\\end{bmatrix}"], ["两个特征值都大通常表示角点。", "只有一个方向大通常表示边缘。"], "动画中的同心高斯窗表示中心权重大、远处权重小。"],
@@ -187,7 +187,7 @@
                 ? ["Shi-Tomasi 响应", "Shi-Tomasi 直接取结构张量较小特征值作为角点强度。", ["\\lambda_{1,2}=\\frac{trace(M)\\pm\\sqrt{trace(M)^2-4det(M)}}{2}", "R=\\min(\\lambda_1,\\lambda_2)"], ["R 大说明两个主方向变化都足够强。", "阈值比 Harris 默认更高，减少弱纹理误检。"], "响应图以半透明热力叠加到淡化原图上。"]
                 : ["Harris R 响应", "Harris 用行列式和迹构造响应，抑制单方向强边缘，突出双方向变化。", ["det(M)=S_{xx}S_{yy}-S_{xy}^2", "trace(M)=S_{xx}+S_{yy}", "R=det(M)-k\\cdot trace(M)^2"], ["R 大且为正更像角点。", "R 为负常对应边缘，接近 0 常对应平坦区域。"], "响应显示使用百分位裁剪和原图淡化叠加，避免单色淹没细节。"],
             nms: ["阈值与 NMS", "先过滤低响应候选点，再在局部邻域中只保留响应最大的角点。", ["candidate=R(x,y)>\\tau\\cdot \\max(R)", "keep(p)=R(p)=\\max_{q\\in\\Omega_r(p)}R(q)"], ["保留点向周围发出抑制邻域。", "灰色多余候选点会逐步消失。"], isShi ? "Shi-Tomasi 最终点用绿色绘制。" : "Harris 整数角点用橙色圆圈绘制。"],
-            refine: ["亚像素二次曲面拟合", "在 3×3 响应邻域上估计局部二次曲面，求极值点相对整数角点的偏移。", ["R(p+\\Delta p)\\approx R(p)+g^T\\Delta p+\\frac12\\Delta p^TH\\Delta p", "\\Delta p=-H^{-1}g", "p_{sub}=p+\\Delta p"], ["橙色圆圈表示整数角点。", "青色十字滑动到亚像素位置后闪烁。"], "亚像素定位完全在前端基于 Harris response surface 计算。"],
+            refine: ["亚像素二次曲面拟合", "在 3×3 响应邻域上估计局部二次曲面，求极值点相对整数角点的偏移。", ["R(p+\\Delta p)\\approx R(p)+g^T\\Delta p+\\frac12\\Delta p^TH\\Delta p", "\\Delta p=-H^{-1}g", "p_{sub}=p+\\Delta p"], ["橙色圆圈表示整数角点。", "青色十字滑动到亚像素位置后闪烁。"], "亚像素定位完全基于 Harris response surface 计算。"],
             final: ["最终对比", "对比整数角点与亚像素角点，观察二次拟合带来的细微定位偏移。", ["Final=\\{p_{sub}\\mid |\\Delta p|\\ \\text{valid}\\}"], ["统计区给出平均偏移和最大偏移。"], "Final Compare 只在最终步骤显示。"]
         };
         return normalizeRichNote(map[stepKey] || map.final);
@@ -514,6 +514,8 @@
         V.$("cornerPointBadge").textContent = probe ? `当前点 (${probe.x}, ${probe.y})` : "当前点 -";
         V.$("cornerProbeTitle").textContent = `${step.en} 关键结果`;
         renderMotionMetrics(stepKey);
+        renderMotionStepChips(stepKey);
+        syncMotionControls();
         startMotionProbeLoop(stepKey);
     }
 
@@ -551,16 +553,16 @@
                 circle: ["中心像素", "半径 r=3", "16 点展开", "圆周编号"],
                 threshold: ["中心阈值", "亮暗分类", "连续段扫描", "通过判定"],
                 nms: ["候选点", "局部最大", "抑制", "保留"],
-                corners: ["候选集合", "NMS 结果", "菱形标记", "最终角点"]
+                corners: ["候选集合", "局部极大", "FAST 角点", "最终结果"]
             };
             return fastMap[stepKey] || ["中心点", "16 点采样", "亮暗分类", "连续弧段"];
         }
         const map = {
-            gradient: ["提取 Patch", "Kernel 覆盖", "乘积飞行", "累加向量"],
-            second: ["Ix/Iy 输入", "平方分裂", "交叉项", "三路汇聚"],
+            gradient: ["提取 Patch", "Sobel Gx/Gy", "加权求和", "梯度向量"],
+            second: ["Ix/Iy 输入", "Ix² / Iy²", "IxIy 交叉项", "二阶项输出"],
             tensor: ["二阶项", "Gaussian 加权", "Sxx/Sxy/Syy", "组装 M"],
-            response: selectedAlgorithm() === "shi-tomasi" ? ["M 输入", "特征值", "λmin 高亮", "R 输出"] : ["M 输入", "det/trace", "公式高亮", "R 翻牌"],
-            nms: ["候选粒子", "阈值扫描", "邻域抑制", "保留结果"],
+            response: selectedAlgorithm() === "shi-tomasi" ? ["M 输入", "λ1 / λ2", "选择 λmin", "响应输出"] : ["M 输入", "det / trace", "Harris R 计算", "响应输出"],
+            nms: ["候选响应", "阈值判断", "邻域最大", "NMS 结果"],
             refine: ["整数角点", "二次拟合", "偏移向量", "亚像素点"],
             gray: ["RGB 采样", "灰度融合", "中心值", "Patch 输出"],
             input: ["读取图像", "选取探针", "局部窗口", "准备计算"]
@@ -572,10 +574,51 @@
         const actions = motionActions(stepKey);
         const raw = progress * actions.length;
         const index = Math.min(actions.length - 1, Math.floor(raw));
-        const local = raw - index;
+        const segmentLocal = raw - index;
+        const local = progress;
         V.$("cornerMotionAction").textContent = actions[index] || "计算中";
         V.$("cornerMotionFrame").textContent = String(index + 1).padStart(2, "0");
-        return { actions, index, local, pulse: 0.5 + 0.5 * Math.sin(progress * Math.PI * 2) };
+        syncMotionStepChips(index, segmentLocal);
+        return { actions, index, local, segmentLocal, total: raw, progress, pulse: 0.5 + 0.5 * Math.sin(progress * Math.PI * 2) };
+    }
+
+    function motionProgress(phase) {
+        return Math.max(0, Math.min(1, Number(phase?.progress ?? phase?.local ?? 0)));
+    }
+
+    function motionEase(phase, start = 0, end = 1, floor = 0) {
+        const span = Math.max(0.001, end - start);
+        const t = Math.max(0, Math.min(1, (motionProgress(phase) - start) / span));
+        return Math.max(floor, easeInOutCubic(t));
+    }
+
+    function renderMotionStepChips(stepKey) {
+        const box = V.$("cornerMotionSteps");
+        if (!box) return;
+        const actions = motionActions(stepKey);
+        box.innerHTML = actions.map((action, index) => `
+            <div class="corner-motion-step-chip" data-motion-step-chip="${index}" style="--chip-progress:0">
+                <span>${index + 1}. ${action}</span>
+            </div>
+        `).join("");
+    }
+
+    function syncMotionStepChips(activeIndex, localProgress) {
+        const chips = Array.from(document.querySelectorAll("[data-motion-step-chip]"));
+        chips.forEach((chip, index) => {
+            chip.classList.toggle("is-active", index === activeIndex);
+            chip.classList.toggle("is-done", index < activeIndex);
+            const progress = index < activeIndex ? 1 : index === activeIndex ? Math.max(0.04, Math.min(1, localProgress)) : 0;
+            chip.style.setProperty("--chip-progress", `${(progress * 100).toFixed(1)}%`);
+        });
+    }
+
+    function syncMotionControls() {
+        V.$("motionProbePlay")?.classList.toggle("is-active", motionProbeState.playing);
+        V.$("motionProbePause")?.classList.toggle("is-active", !motionProbeState.playing);
+        document.querySelectorAll("[data-motion-speed]").forEach(button => {
+            button.classList.toggle("is-active", Number(button.dataset.motionSpeed) === Number(motionProbeState.speed));
+        });
     }
 
     function drawMotionProbeFrame(canvas, stepKey, progress) {
@@ -622,27 +665,27 @@
     function drawMotionInput(ctx, phase, w, h) {
         const data = currentProbeData();
         const patch = centerMatrix(data.gray_patch, 3);
-        const active = Math.min(8, Math.floor((phase.index + phase.local) / 4 * 9));
+        const active = Math.min(8, Math.floor(motionEase(phase, .04, .58) * 9));
         drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Local Patch");
         const marker = activeCellPoint(54, 48, 116, 4);
         drawNmsRadius(ctx, marker.x, marker.y, 18 + 7 * phase.pulse, "#facc15", .85);
-        drawMotionFlow(ctx, 182, 108, 318, 108, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawMotionFlow(ctx, 182, 108, 318, 108, "#60a5fa", motionEase(phase, .15, .45, .18));
         drawValueNode(ctx, 374, 78, "x, y", `(${data.x},${data.y})`, "#2563eb", 1);
-        drawValueNode(ctx, 374, 152, "Gray", data.gray, "#f97316", phase.index >= 2 ? 1 : .35);
-        drawMotionFlow(ctx, 430, 118, 548, 118, "#f97316", phase.index >= 2 ? phase.local : .18);
-        drawFlipValue(ctx, 622, 118, "probe", "ready", "#2563eb", phase.index >= 3 ? phase.local : .35);
+        drawValueNode(ctx, 374, 152, "Gray", data.gray, "#f97316", motionEase(phase, .32, .56, .35));
+        drawMotionFlow(ctx, 430, 118, 548, 118, "#f97316", motionEase(phase, .48, .78, .18));
+        drawFlipValue(ctx, 622, 118, "probe", "ready", "#2563eb", motionEase(phase, .72, .96, .35));
     }
 
     function drawMotionGray(ctx, phase, w, h) {
         const data = currentProbeData();
         const patch = centerMatrix(data.gray_patch, 3);
-        const active = Math.min(8, Math.floor((phase.index + phase.local) / 4 * 9));
+        const active = Math.min(8, Math.floor(motionEase(phase, .05, .56) * 9));
         drawCompactPatch(ctx, 54, 48, 116, patch, active, "#2563eb", "Pixel Patch");
-        drawMotionFlow(ctx, 182, 108, 286, 108, "#60a5fa", phase.index >= 1 ? phase.local : .25);
-        drawCompactFormulaBox(ctx, 298, 80, "RGB 加权融合", "0.299 R   +   0.587 G   +   0.114 B", "#2563eb", phase.index >= 1 ? 1 : .42);
-        drawMotionFlow(ctx, 516, 108, 592, 108, "#f97316", phase.index >= 2 ? phase.local : .2);
-        drawFlipValue(ctx, 662, 108, "Gray", data.gray, "#f97316", phase.index >= 2 ? phase.local : .35);
-        drawValueNode(ctx, 662, 176, "source", "center", "#2563eb", phase.index >= 3 ? 1 : .35);
+        drawMotionFlow(ctx, 182, 108, 286, 108, "#60a5fa", motionEase(phase, .14, .42, .22));
+        drawCompactFormulaBox(ctx, 298, 80, "RGB 加权融合", "0.299 R   +   0.587 G   +   0.114 B", "#2563eb", motionEase(phase, .24, .52, .42));
+        drawMotionFlow(ctx, 516, 108, 592, 108, "#f97316", motionEase(phase, .48, .76, .2));
+        drawFlipValue(ctx, 662, 108, "Gray", data.gray, "#f97316", motionEase(phase, .62, .9, .35));
+        drawValueNode(ctx, 662, 176, "source", "center", "#2563eb", motionEase(phase, .72, .96, .35));
     }
 
     function drawMotionGradient(ctx, phase, w, h) {
@@ -650,19 +693,21 @@
         const patch = centerMatrix(probe.gray_patch, 3);
         const kernelX = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
         const kernelY = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
-        const useY = phase.index >= 2;
-        const active = Math.min(8, Math.floor(phase.local * 9));
+        const p = motionProgress(phase);
+        const useY = p >= .5;
+        const passProgress = useY ? (p - .5) / .5 : p / .5;
+        const active = Math.min(8, Math.floor(Math.max(0, Math.min(1, passProgress)) * 9));
         const ix = Number(probe.ix) || 0;
         const iy = Number(probe.iy) || 0;
         const kernel = useY ? kernelY : kernelX;
         drawMotionGrid(ctx, 34, 42, 126, patch, active, "#2563eb", "Gray Patch");
         drawMotionGrid(ctx, 235, 42, 126, kernel, active, "#f97316", useY ? "Sobel Gy" : "Sobel Gx");
-        drawMotionFlow(ctx, 160, 104, 235, 104, "#60a5fa", phase.local);
+        drawMotionFlow(ctx, 160, 104, 235, 104, "#60a5fa", passProgress);
         const cell = activeCellPoint(34, 42, 126, active);
         const product = (Number(flattenMatrix(patch)[active]) || 0) * (Number(flattenMatrix(kernel)[active]) || 0);
-        const ixProgress = !useY ? phase.local : 1;
-        const iyProgress = useY ? phase.local : 0;
-        drawFlyingNumber(ctx, product, cell.x, cell.y, 424, useY ? 146 : 58, phase.local, "#f97316");
+        const ixProgress = !useY ? passProgress : 1;
+        const iyProgress = useY ? passProgress : 0;
+        drawFlyingNumber(ctx, product, cell.x, cell.y, 424, useY ? 146 : 58, passProgress, "#f97316");
         drawAccumulator(ctx, 410, 30, "partial Ix", ix * Math.max(.1, ixProgress), ixProgress, "#2563eb");
         drawAccumulator(ctx, 410, 130, "partial Iy", iy * Math.max(.1, iyProgress), Math.max(.18, iyProgress), "#06b6d4");
         drawMotionFlow(ctx, 528, 60, 590, 60, "#2563eb", ixProgress);
@@ -683,9 +728,9 @@
         ];
         drawValueNode(ctx, 130, 82, "Ix", ix, "#2563eb", 1);
         drawValueNode(ctx, 130, 154, "Iy", iy, "#06b6d4", 1);
-        const tIx2 = Math.max(0, Math.min(1, phase.index / 3 + phase.local));
-        const tCross = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .22));
-        const tIy2 = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .44));
+        const tIx2 = motionEase(phase, .10, .42);
+        const tCross = motionEase(phase, .28, .68);
+        const tIy2 = motionEase(phase, .46, .88);
         drawMotionFlow(ctx, 182, 82, 372, 46, "#2563eb", tIx2);
         drawMotionFlow(ctx, 182, 82, 372, 118, "#7c3aed", tCross);
         drawMotionFlow(ctx, 182, 154, 372, 118, "#7c3aed", tCross);
@@ -693,8 +738,8 @@
         drawValueNode(ctx, values[0].x, values[0].y, values[0].label, values[0].value, values[0].color, tIx2);
         drawValueNode(ctx, values[1].x, values[1].y, values[1].label, values[1].value, values[1].color, tCross);
         drawValueNode(ctx, values[2].x, values[2].y, values[2].label, values[2].value, values[2].color, tIy2);
-        drawCompactFormulaBox(ctx, 585, 48, "平方能量", "Ix × Ix     Iy × Iy", "#2563eb", phase.index >= 1 ? 1 : .35);
-        drawCompactFormulaBox(ctx, 585, 132, "方向相关", "Ix × Iy", "#7c3aed", phase.index >= 2 ? 1 : .3);
+        drawCompactFormulaBox(ctx, 585, 48, "平方能量", "Ix × Ix     Iy × Iy", "#2563eb", motionEase(phase, .36, .62, .35));
+        drawCompactFormulaBox(ctx, 585, 132, "方向相关", "Ix × Iy", "#7c3aed", motionEase(phase, .54, .82, .3));
     }
 
     function drawMotionTensor(ctx, phase, w, h) {
@@ -705,36 +750,42 @@
             { label: "Iy² patch", patch: centerMatrix(probe.iy2_patch, 3), x: 284, color: "#06b6d4", target: "Syy", value: probe.syy, y: 188 }
         ];
         patches.forEach((item, index) => {
-            const alpha = Math.max(.35, Math.min(1, phase.index / 3 + phase.local - index * .12));
+            const alpha = motionEase(phase, .08 + index * .12, .42 + index * .12, .35);
             drawWeightedPatch(ctx, item.x, 48, 86, item.patch, item.color, item.label, alpha);
             drawMotionFlow(ctx, item.x + 86, 92, 430, 118, item.color, alpha);
         });
         drawGaussianGlow(ctx, 430, 118, 76, phase.pulse);
         drawTinyText(ctx, "Gσ", 430, 123, "#ea580c", 15);
         patches.forEach((item, index) => {
-            const t = Math.max(0, Math.min(1, phase.index / 3 + phase.local - .2 - index * .1));
+            const t = motionEase(phase, .44 + index * .08, .76 + index * .08);
             drawMotionFlow(ctx, 500, 118, 555, item.y, item.color, t);
             drawValueNode(ctx, 610, item.y, item.target, item.value, item.color, Math.max(.25, t));
         });
-        drawMatrixMotion(ctx, 722, 58, probe.M, phase.index >= 3 ? 1 : phase.local, "#f97316");
+        drawMatrixMotion(ctx, 722, 58, probe.M, motionEase(phase, .74, .96), "#f97316");
     }
 
     function drawMotionHarrisResponse(ctx, phase, w, h) {
         const probe = currentProbeData();
         const penalty = harrisK() * probe.trace * probe.trace;
+        const tDet = motionEase(phase, .08, .32);
+        const tTrace = motionEase(phase, .14, .38);
+        const tPenalty = motionEase(phase, .34, .62);
+        const tFormula = motionEase(phase, .54, .78);
+        const tResult = motionEase(phase, .72, .96);
         drawMatrixMotion(ctx, 34, 54, probe.M, 1, "#2563eb");
-        drawMotionFlow(ctx, 180, 88, 258, 68, "#2563eb", phase.index >= 1 ? 1 : phase.local);
-        drawMotionFlow(ctx, 180, 124, 258, 148, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
-        drawValueNode(ctx, 314, 68, "det(M)", probe.det, "#2563eb", phase.index >= 1 ? 1 : phase.local);
-        drawValueNode(ctx, 314, 148, "trace(M)", probe.trace, "#7c3aed", phase.index >= 1 ? 1 : phase.local);
-        drawMotionFlow(ctx, 370, 148, 458, 148, "#7c3aed", phase.index >= 2 ? phase.local : .2);
-        drawValueNode(ctx, 514, 148, "k·trace²", penalty, "#7c3aed", phase.index >= 2 ? 1 : .35);
-        drawMotionFlow(ctx, 370, 68, 610, 92, "#2563eb", phase.index >= 2 ? 1 : .25);
-        drawMotionFlow(ctx, 570, 148, 610, 124, "#7c3aed", phase.index >= 2 ? phase.local : .2);
-        drawOperatorNode(ctx, 620, 108, "−", "#f97316", phase.index >= 2 ? 1 : .35);
-        drawFlipValue(ctx, 704, 108, "raw R", probe.responseRaw, "#f97316", phase.index >= 3 ? phase.local : .2);
-        drawMotionFlow(ctx, 760, 108, 810, 154, "#f97316", phase.index >= 3 ? phase.local : .15);
-        drawValueNode(ctx, 810, 178, "display R", probe.responseDisplay, "#2563eb", phase.index >= 3 ? 1 : .35);
+        drawMotionFlow(ctx, 180, 88, 258, 68, "#2563eb", tDet);
+        drawMotionFlow(ctx, 180, 124, 258, 148, "#7c3aed", tTrace);
+        drawValueNode(ctx, 314, 68, "det(M)", probe.det, "#2563eb", tDet);
+        drawValueNode(ctx, 314, 148, "trace(M)", probe.trace, "#7c3aed", tTrace);
+        drawMotionFlow(ctx, 370, 148, 458, 148, "#7c3aed", tPenalty);
+        drawValueNode(ctx, 514, 148, "k·trace²", penalty, "#7c3aed", Math.max(.35, tPenalty));
+        drawPenaltyGauge(ctx, 402, 188, probe.det, penalty, Math.max(.12, tPenalty));
+        drawMotionFlow(ctx, 370, 68, 610, 92, "#2563eb", tFormula);
+        drawMotionFlow(ctx, 570, 148, 610, 124, "#7c3aed", tFormula);
+        drawOperatorNode(ctx, 620, 108, "−", "#f97316", Math.max(.35, tFormula));
+        drawFlipValue(ctx, 704, 108, "raw R", probe.responseRaw, "#f97316", Math.max(.2, tResult));
+        drawMotionFlow(ctx, 760, 108, 810, 154, "#f97316", tResult);
+        drawValueNode(ctx, 810, 178, "display R", probe.responseDisplay, "#2563eb", Math.max(.35, tResult));
         drawHeatHalo(ctx, 810, 112, phase.pulse, "#f97316");
     }
 
@@ -772,31 +823,40 @@
     function drawMotionShiResponse(ctx, phase, w, h) {
         const probe = currentProbeData();
         const eig = eigenValuesFromProbe(probe);
+        const tEllipse = motionEase(phase, .08, .34);
+        const tBars = motionEase(phase, .32, .62);
+        const tMin = motionEase(phase, .56, .82);
+        const tResult = motionEase(phase, .72, .96);
         drawMatrixMotion(ctx, 38, 54, probe.M, 1, "#16a34a");
-        drawMotionFlow(ctx, 190, 118, 288, 118, "#16a34a", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 190, 118, 288, 118, "#16a34a", tEllipse);
         drawEigenEllipse(ctx, 360, 118, eig, phase);
-        drawMotionFlow(ctx, 430, 94, 500, 76, "#2563eb", phase.index >= 1 ? phase.local : .2);
-        drawMotionFlow(ctx, 430, 142, 500, 156, "#16a34a", phase.index >= 1 ? phase.local : .2);
-        drawBarNode(ctx, 520, 76, "λmax", eig.l1, "#2563eb", eig.l1 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
-        drawBarNode(ctx, 520, 156, "λmin", eig.l2, "#16a34a", eig.l2 / Math.max(1, eig.l1, eig.l2), phase.index >= 1 ? 1 : phase.local);
-        drawMotionFlow(ctx, 652, 156, 705, 126, "#16a34a", phase.index >= 2 ? phase.local : .2);
-        drawFlipValue(ctx, 760, 118, "R = λmin", eig.min, "#16a34a", phase.index >= 3 ? phase.local : .35);
+        drawMotionFlow(ctx, 430, 94, 500, 76, "#2563eb", tBars);
+        drawMotionFlow(ctx, 430, 142, 500, 156, "#16a34a", tBars);
+        drawBarNode(ctx, 520, 76, "λmax", eig.l1, "#2563eb", eig.l1 / Math.max(1, eig.l1, eig.l2), Math.max(.25, tBars));
+        drawBarNode(ctx, 520, 156, "λmin", eig.l2, "#16a34a", eig.l2 / Math.max(1, eig.l1, eig.l2), Math.max(.25, tBars));
+        drawMinSelector(ctx, 664, 156, Math.max(.12, tMin));
+        drawMotionFlow(ctx, 652, 156, 705, 126, "#16a34a", tMin);
+        drawFlipValue(ctx, 760, 118, "R = λmin", eig.min, "#16a34a", Math.max(.35, tResult));
     }
 
     function drawMotionNms(ctx, phase, w, h) {
         const probe = currentProbeData();
         const nms = nmsProbeDecision(probe);
         const decisionColor = nms.kept ? "#f97316" : "#94a3b8";
+        const tSelect = motionEase(phase, .10, .34, .2);
+        const tCompare = motionEase(phase, .34, .68, .2);
+        const tDecision = motionEase(phase, .66, .96, .25);
         drawNmsResponseField(ctx, 46, 42, 270, 138, phase, nms);
-        drawMotionFlow(ctx, 318, 110, 392, 110, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 318, 110, 392, 110, "#60a5fa", tSelect);
         drawValueNode(ctx, 450, 84, "raw R", nms.currentR, decisionColor, 1);
         drawValueNode(ctx, 450, 154, "display R", nms.displayR, "#2563eb", 1);
-        drawNmsRadius(ctx, 450, 118, 62 + 10 * phase.pulse, decisionColor, phase.index >= 1 ? .75 : .25);
-        drawMotionFlow(ctx, 508, 84, 590, 74, "#2563eb", phase.index >= 2 ? phase.local : .2);
-        drawMotionFlow(ctx, 508, 154, 590, 154, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawNmsRadius(ctx, 450, 118, 62 + 10 * phase.pulse, decisionColor, Math.max(.25, tSelect));
+        drawMotionFlow(ctx, 508, 84, 590, 74, "#2563eb", tCompare);
+        drawMotionFlow(ctx, 508, 154, 590, 154, "#7c3aed", tCompare);
         drawValueNode(ctx, 646, 74, "threshold", nms.threshold, "#2563eb", 1);
-        drawValueNode(ctx, 646, 154, "max in r", nms.localMax, "#7c3aed", phase.index >= 2 ? 1 : .35);
-        drawNmsDecisionCard(ctx, 780, 118, nms, phase.index >= 3 ? phase.local : .25);
+        drawValueNode(ctx, 646, 154, "max in r", nms.localMax, "#7c3aed", Math.max(.35, tCompare));
+        drawSuppressRelation(ctx, 646, 154, 724, 118, nms, Math.max(.1, tCompare));
+        drawNmsDecisionCard(ctx, 780, 118, nms, tDecision);
     }
 
     function drawMotionRefine(ctx, phase, w, h) {
@@ -805,16 +865,16 @@
         const dy = probe.dy || 0;
         const start = { x: 330, y: 118 };
         const scale = 95;
-        const t = phase.index >= 2 ? Math.max(.25, phase.local) : .15;
+        const t = motionEase(phase, .44, .82, .15);
         const end = { x: start.x + dx * scale * t, y: start.y + dy * scale * t };
         drawRefineSurface(ctx, 62, 44, 170, 148, probe, phase);
-        drawMotionFlow(ctx, 238, 118, start.x - 28, start.y, "#60a5fa", phase.index >= 1 ? phase.local : .25);
+        drawMotionFlow(ctx, 238, 118, start.x - 28, start.y, "#60a5fa", motionEase(phase, .16, .42, .25));
         drawSubpixelStage(ctx, start, end, dx, dy, t, phase);
-        drawMotionFlow(ctx, 390, 118, 500, 118, "#7c3aed", phase.index >= 2 ? phase.local : .2);
+        drawMotionFlow(ctx, 390, 118, 500, 118, "#7c3aed", motionEase(phase, .48, .76, .2));
         drawValueNode(ctx, 555, 72, "dx", dx.toFixed(3), "#7c3aed", 1);
         drawValueNode(ctx, 555, 148, "dy", dy.toFixed(3), "#7c3aed", 1);
-        drawMotionFlow(ctx, 610, 110, 690, 118, "#f97316", phase.index >= 3 ? phase.local : .2);
-        drawFlipValue(ctx, 750, 118, "offset", Math.hypot(dx, dy).toFixed(3), "#f97316", phase.index >= 3 ? phase.local : .45);
+        drawMotionFlow(ctx, 610, 110, 690, 118, "#f97316", motionEase(phase, .70, .94, .2));
+        drawFlipValue(ctx, 750, 118, "offset", Math.hypot(dx, dy).toFixed(3), "#f97316", motionEase(phase, .76, .96, .45));
     }
 
     function drawNmsResponseField(ctx, x, y, width, height, phase, nms) {
@@ -834,15 +894,16 @@
                 const wave = 0.45 + 0.55 * Math.sin((row * 2.1 + col * 1.3 + phase.pulse * 4));
                 const strong = (row === 2 && col === 7) || (row === 3 && col === 6);
                 const current = row === 2 && col === 6;
-                const suppressed = phase.index >= 2 && !strong && !current && (row + col) % 3 === 0;
+                const suppressProgress = motionEase(phase, .52, .84);
+                const suppressed = suppressProgress > .35 && !strong && !current && (row + col) % 3 === 0;
                 const color = current ? "#f97316" : strong ? "#7c3aed" : "#60a5fa";
-                const alpha = suppressed ? .12 : strong ? .82 : .22 + .35 * wave;
+                const alpha = suppressed ? Math.max(.12, .48 * (1 - suppressProgress)) : strong ? .82 : .22 + .35 * wave;
                 drawParticle(ctx, px, py, color, alpha, current ? 6.5 : strong ? 5.5 : 3.2);
             }
         }
         const cx = x + 6.5 * cellW;
         const cy = y + 2.5 * cellH;
-        drawNmsRadius(ctx, cx, cy, 46 + 8 * phase.pulse, nms.kept ? "#f97316" : "#94a3b8", phase.index >= 1 ? .65 : .2);
+        drawNmsRadius(ctx, cx, cy, 46 + 8 * phase.pulse, nms.kept ? "#f97316" : "#94a3b8", motionEase(phase, .16, .42, .2));
         drawLabelPill(ctx, cx - 34, cy + 32, "current", "#ea580c");
         drawLabelPill(ctx, x + 7.5 * cellW + 18, y + 2.5 * cellH - 34, "stronger", "#7c3aed");
         ctx.restore();
@@ -869,6 +930,69 @@
         ctx.font = "900 11px sans-serif";
         ctx.fillText(nms.aboveThreshold ? "R > threshold" : "R <= threshold", cx, cy + 8);
         ctx.fillText(nms.localMaximum ? "local max" : "neighbor wins", cx, cy + 28);
+        ctx.restore();
+    }
+
+    function drawPenaltyGauge(ctx, x, y, detValue, penaltyValue, alpha) {
+        const det = Math.abs(Number(detValue) || 0);
+        const penalty = Math.abs(Number(penaltyValue) || 0);
+        const total = Math.max(1, det, penalty);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.strokeStyle = "rgba(147,197,253,.72)";
+        ctx.lineWidth = 1.6;
+        roundRect(ctx, x, y, 210, 32, 12);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2563eb";
+        roundRect(ctx, x + 10, y + 8, 82 * det / total, 6, 4);
+        ctx.fill();
+        ctx.fillStyle = "#7c3aed";
+        roundRect(ctx, x + 116, y + 8, 82 * penalty / total, 6, 4);
+        ctx.fill();
+        ctx.fillStyle = "#52657f";
+        ctx.font = "850 9px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("det", x + 10, y + 24);
+        ctx.fillText("k·trace² penalty", x + 116, y + 24);
+        ctx.restore();
+    }
+
+    function drawMinSelector(ctx, x, y, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = "#16a34a";
+        ctx.fillStyle = "#16a34a";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 26, y);
+        ctx.lineTo(x - 4, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 10, y - 6);
+        ctx.lineTo(x - 10, y + 6);
+        ctx.closePath();
+        ctx.fill();
+        drawLabelPill(ctx, x + 48, y, "min selected", "#16a34a");
+        ctx.restore();
+    }
+
+    function drawSuppressRelation(ctx, x1, y1, x2, y2, nms, alpha) {
+        const color = nms.kept ? "#f97316" : "#7c3aed";
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = nms.kept ? 2.2 : 3.2;
+        ctx.setLineDash(nms.kept ? [4, 6] : []);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo((x1 + x2) / 2, y1 - 32, (x1 + x2) / 2, y2 + 34, x2, y2);
+        ctx.stroke();
+        drawParticle(ctx, x1, y1, color, .9, nms.kept ? 4.5 : 6);
+        drawParticle(ctx, x2, y2, color, .7, nms.kept ? 3.5 : 5);
+        drawLabelPill(ctx, (x1 + x2) / 2, y2 + 48, nms.kept ? "current is local max" : "stronger neighbor suppresses", color);
         ctx.restore();
     }
 
@@ -927,8 +1051,8 @@
         drawCrossGlyph(ctx, start.x, start.y, "#f97316", 17, 1);
         drawTinyText(ctx, "integer", start.x, start.y - 28, "#ea580c", 12);
         drawMotionFlow(ctx, start.x, start.y, end.x, end.y, "#7c3aed", t);
-        drawRingGlyph(ctx, end.x, end.y, "#06b6d4", 18 + 3 * phase.pulse, phase.index >= 2 ? 1 : .35);
-        drawCrossGlyph(ctx, end.x, end.y, "#06b6d4", 10, phase.index >= 2 ? .9 : .25);
+        drawRingGlyph(ctx, end.x, end.y, "#06b6d4", 18 + 3 * phase.pulse, motionEase(phase, .50, .82, .35));
+        drawCrossGlyph(ctx, end.x, end.y, "#06b6d4", 10, motionEase(phase, .58, .88, .25));
         drawTinyText(ctx, "sub-pixel", end.x + 42, end.y + 5, "#0891b2", 12);
         ctx.fillStyle = "#64748b";
         ctx.font = "900 12px sans-serif";
@@ -972,8 +1096,9 @@
         const py = 34;
         const imageW = 300;
         const imageH = 168;
-        const scanX = px + 24 + (imageW - 48) * ((phase.index + phase.local) / Math.max(1, phase.actions.length));
-        const scanY = py + 34 + ((phase.index % 2) ? 84 : 30) + 8 * Math.sin(phase.local * Math.PI);
+        const p = motionProgress(phase);
+        const scanX = px + 24 + (imageW - 48) * p;
+        const scanY = py + 34 + (p > .5 ? 84 : 30) + 8 * Math.sin(p * Math.PI * 2);
         ctx.save();
         ctx.fillStyle = "rgba(255,255,255,.92)";
         ctx.strokeStyle = "#bfdbfe";
@@ -993,9 +1118,9 @@
         ctx.lineWidth = 3;
         ctx.strokeRect(scanX - 18, scanY - 18, 36, 36);
         drawParticle(ctx, scanX, scanY, "#facc15", .9, 6);
-        drawMotionFlow(ctx, scanX + 28, scanY, 472, 86, "#60a5fa", phase.local);
+        drawMotionFlow(ctx, scanX + 28, scanY, 472, 86, "#60a5fa", motionEase(phase, .18, .62, .18));
         drawValueNode(ctx, 520, 86, "Probe", point ? `(${point.x},${point.y})` : "-", "#2563eb", 1);
-        drawValueNode(ctx, 670, 148, "FAST", "r=3", "#f97316", phase.index >= 3 ? phase.local : .35);
+        drawValueNode(ctx, 670, 148, "FAST", "r=3", "#f97316", motionEase(phase, .70, .96, .35));
         ctx.fillStyle = "#31527f";
         ctx.font = "900 12px sans-serif";
         ctx.fillText("输入图像上滑动候选中心，局部窗口进入 FAST 圆周检测。", px, 222);
@@ -1006,37 +1131,38 @@
         const patch = fastGrayPatch(point, 2);
         const center = Number(fastCenterValue(point)) || 0;
         drawFastChannelMixer(ctx, 52, 50, center, phase);
-        drawMotionFlow(ctx, 230, 118, 318, 118, "#60a5fa", phase.index >= 1 ? phase.local : .2);
-        drawCompactFormulaBox(ctx, 306, 84, "FAST 灰度输入", "G = 0.299R + 0.587G + 0.114B", "#2563eb", phase.index >= 1 ? 1 : .4);
-        drawMotionFlow(ctx, 528, 118, 610, 118, "#f97316", phase.index >= 2 ? phase.local : .18);
+        drawMotionFlow(ctx, 230, 118, 318, 118, "#60a5fa", motionEase(phase, .18, .42, .2));
+        drawCompactFormulaBox(ctx, 306, 84, "FAST 灰度输入", "G = 0.299R + 0.587G + 0.114B", "#2563eb", motionEase(phase, .24, .52, .4));
+        drawMotionFlow(ctx, 528, 118, 610, 118, "#f97316", motionEase(phase, .50, .76, .18));
         drawCompactPatch(ctx, 640, 56, 112, centerMatrix(patch.gray, 3), 4, "#f97316", "Gray Patch");
-        drawValueNode(ctx, 555, 178, "Center G", center, "#f97316", phase.index >= 2 ? 1 : .35);
+        drawValueNode(ctx, 555, 178, "Center G", center, "#f97316", motionEase(phase, .62, .88, .35));
     }
 
     function drawMotionFastCircle(ctx, point, info, phase, w, h) {
         const cx = 270;
         const cy = 118;
         const radius = 72;
-        const scanIndex = Math.min(15, Math.floor((phase.index + phase.local) / 4 * 16));
+        const scanProgress = motionEase(phase, .12, .78);
+        const scanIndex = Math.min(15, Math.floor(scanProgress * 16));
         drawValueNode(ctx, 76, 118, "center P", fastCenterValue(point), "#2563eb", 1);
-        drawMotionFlow(ctx, 128, 118, cx - radius, cy, "#60a5fa", phase.index >= 1 ? phase.local : .25);
-        drawNmsRadius(ctx, cx, cy, radius, "#2563eb", phase.index >= 1 ? .55 + .25 * phase.pulse : .24);
-        drawRadiusArrow(ctx, cx, cy, radius, "#f97316", phase.index >= 1 ? 1 : .35);
+        drawMotionFlow(ctx, 128, 118, cx - radius, cy, "#60a5fa", motionEase(phase, .10, .36, .25));
+        drawNmsRadius(ctx, cx, cy, radius, "#2563eb", .24 + .55 * motionEase(phase, .14, .44));
+        drawRadiusArrow(ctx, cx, cy, radius, "#f97316", motionEase(phase, .18, .48, .35));
         V.fastCircle.forEach((offset, index) => {
             const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
             const x = cx + Math.cos(angle) * radius;
             const y = cy + Math.sin(angle) * radius;
             const state = info.states[index] || "similar";
             const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
-            const visited = index <= scanIndex || phase.index >= 3;
+            const visited = index <= scanIndex || scanProgress > .96;
             const appear = visited ? 1 : .22;
             drawParticle(ctx, x, y, color, appear, index === scanIndex ? 9 : info.active.has(index) ? 8 : 6);
             if (visited) drawTinyText(ctx, index, x, y + 4, "#0f172a", 9);
         });
-        drawScanArc(ctx, cx, cy, radius + 17, scanIndex, "#f97316", phase.index >= 2 ? 1 : .35);
-        drawMotionFlow(ctx, cx + radius + 24, cy, 520, 118, "#60a5fa", phase.index >= 2 ? phase.local : .2);
+        drawScanArc(ctx, cx, cy, radius + 17, scanIndex, "#f97316", motionEase(phase, .24, .70, .35));
+        drawMotionFlow(ctx, cx + radius + 24, cy, 520, 118, "#60a5fa", motionEase(phase, .58, .84, .2));
         drawSampleStrip(ctx, 540, 72, scanIndex, phase);
-        drawFlipValue(ctx, 724, 138, "radius", "3 px", "#f97316", phase.index >= 3 ? phase.local : .35);
+        drawFlipValue(ctx, 724, 138, "radius", "3 px", "#f97316", motionEase(phase, .74, .96, .35));
     }
 
     function drawFastChannelMixer(ctx, x, y, center, phase) {
@@ -1053,13 +1179,13 @@
         channels.forEach((item, index) => {
             const yy = y + index * 48;
             drawChannelPill(ctx, x + 42, yy + 20, item.label, item.value, item.color);
-            drawMotionFlow(ctx, x + 86, yy + 20, x + 178, y + 68, item.color, phase.index >= 1 ? phase.local : .2);
+            drawMotionFlow(ctx, x + 86, yy + 20, x + 178, y + 68, item.color, motionEase(phase, .14 + index * .06, .46 + index * .06, .2));
             ctx.fillStyle = item.color;
             ctx.font = "950 12px sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(`× ${item.weight}`, x + 132, yy + 12);
         });
-        drawOperatorNode(ctx, x + 190, y + 68, "+", "#f97316", phase.index >= 1 ? 1 : .35);
+        drawOperatorNode(ctx, x + 190, y + 68, "+", "#f97316", motionEase(phase, .36, .58, .35));
         ctx.restore();
     }
 
@@ -1139,24 +1265,24 @@
         const contiguous = fastOptions().contiguous;
         drawValueNode(ctx, 74, 64, "bright if >", center + threshold, "#ca8a04", 1);
         drawValueNode(ctx, 74, 170, "dark if <", center - threshold, "#7c3aed", 1);
-        drawMotionFlow(ctx, 126, 64, cx - radius, cy - 20, "#ca8a04", phase.index >= 1 ? phase.local : .2);
-        drawMotionFlow(ctx, 126, 170, cx - radius, cy + 20, "#7c3aed", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 126, 64, cx - radius, cy - 20, "#ca8a04", motionEase(phase, .10, .34, .2));
+        drawMotionFlow(ctx, 126, 170, cx - radius, cy + 20, "#7c3aed", motionEase(phase, .14, .38, .2));
         V.fastCircle.forEach((offset, index) => {
             const angle = -Math.PI / 2 + index * Math.PI * 2 / 16;
             const x = cx + Math.cos(angle) * radius;
             const y = cy + Math.sin(angle) * radius;
             const state = info.states[index] || "similar";
             const color = state === "bright" ? "#facc15" : state === "dark" ? "#7c3aed" : "#cbd5e1";
-            const reveal = Math.max(.22, Math.min(1, phase.index / 3 + phase.local - index / 20));
+            const reveal = motionEase(phase, .22 + index * .018, .70 + index * .018, .22);
             drawParticle(ctx, x, y, color, reveal, info.active.has(index) ? 8 : 5.5);
             if (reveal > .7) drawTinyText(ctx, state === "bright" ? "+" : state === "dark" ? "-" : "=", x, y + 3, "#0f172a", 8);
         });
         drawValueNode(ctx, cx, cy, "C", center, "#2563eb", 1);
-        drawFastArc(ctx, cx, cy, radius + 16, info, phase.index >= 2 ? 1 : phase.local);
-        drawMotionFlow(ctx, cx + radius + 18, cy, 446, 118, info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? phase.local : .2);
+        drawFastArc(ctx, cx, cy, radius + 16, info, motionEase(phase, .46, .76, .25));
+        drawMotionFlow(ctx, cx + radius + 18, cy, 446, 118, info.pass ? "#facc15" : "#94a3b8", motionEase(phase, .58, .84, .2));
         drawFastStateStrip(ctx, 470, 52, info, contiguous, phase);
-        drawFlipValue(ctx, 710, 84, "best run", Math.max(info.bright, info.dark), info.pass ? "#facc15" : "#94a3b8", phase.index >= 2 ? 1 : .35);
-        drawFlipValue(ctx, 710, 156, `FAST-${contiguous}`, info.pass ? "PASS" : "FAIL", info.pass ? "#facc15" : "#94a3b8", phase.index >= 3 ? phase.local : .3);
+        drawFlipValue(ctx, 710, 84, "best run", Math.max(info.bright, info.dark), info.pass ? "#facc15" : "#94a3b8", motionEase(phase, .62, .86, .35));
+        drawFlipValue(ctx, 710, 156, `FAST-${contiguous}`, info.pass ? "PASS" : "FAIL", info.pass ? "#facc15" : "#94a3b8", motionEase(phase, .76, .96, .3));
     }
 
     function drawMotionFastCorners(ctx, point, phase, w, h) {
@@ -1165,13 +1291,13 @@
         const keptKeys = new Set(kept.map(item => `${item.x},${item.y}`));
         const selected = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
         drawFastCornerLayers(ctx, 44, 38, candidates, keptKeys, phase);
-        drawMotionFlow(ctx, 318, 118, 408, 118, "#60a5fa", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 318, 118, 408, 118, "#60a5fa", motionEase(phase, .20, .46, .2));
         drawCornerFunnel(ctx, 460, 118, phase);
-        drawMotionFlow(ctx, 512, 118, 600, 118, "#facc15", phase.index >= 2 ? phase.local : .2);
-        drawDiamondGlyph(ctx, 650, 118, "#facc15", 26 + 4 * phase.pulse, phase.index >= 2 ? 1 : .35);
+        drawMotionFlow(ctx, 512, 118, 600, 118, "#facc15", motionEase(phase, .52, .78, .2));
+        drawDiamondGlyph(ctx, 650, 118, "#facc15", 26 + 4 * phase.pulse, motionEase(phase, .58, .86, .35));
         drawTinyText(ctx, "final corner", 650, 162, "#ca8a04", 15);
         drawFlipValue(ctx, 760, 76, "candidates", currentFast?.candidates?.length || candidates.length, "#2563eb", 1);
-        drawFlipValue(ctx, 760, 158, "final kept", kept.length, "#facc15", phase.index >= 3 ? phase.local : .35);
+        drawFlipValue(ctx, 760, 158, "final kept", kept.length, "#facc15", motionEase(phase, .72, .96, .35));
     }
 
     function drawFastStateStrip(ctx, x, y, info, contiguous, phase) {
@@ -1219,9 +1345,10 @@
             const px = x + 12 + col * 20;
             const py = y + 14 + row * 22;
             const isKept = keptKeys.has(`${item.x},${item.y}`);
-            const dim = phase.index >= 1 && !isKept;
+            const filterProgress = motionEase(phase, .28, .76);
+            const dim = filterProgress > .35 && !isKept;
             drawParticle(ctx, px, py, isKept ? "#facc15" : "#60a5fa", dim ? .10 : isKept ? .9 : .28, isKept ? 5.2 : 3);
-            if (isKept && phase.index >= 2) {
+            if (isKept && filterProgress > .62) {
                 drawDiamondGlyph(ctx, px, py, "#facc15", 6 + phase.pulse * 1.8, .8);
             }
         });
@@ -1304,11 +1431,11 @@
         const selectedKept = nearestPointWithDistance(point?.x || 0, point?.y || 0, kept);
         const keep = selectedKept.distance <= Math.max(4, fastOptions().nmsRadius);
         const field = drawFastNmsField(ctx, 42, 38, 350, 160, candidates, keptKeys, point, selectedKept.point, phase);
-        drawMotionFlow(ctx, 398, 118, 470, 118, keep ? "#facc15" : "#94a3b8", phase.index >= 1 ? phase.local : .2);
+        drawMotionFlow(ctx, 398, 118, 470, 118, keep ? "#facc15" : "#94a3b8", motionEase(phase, .18, .44, .2));
         drawValueNode(ctx, 526, 78, "current score", point?.response || 0, keep ? "#facc15" : "#94a3b8", 1);
-        drawValueNode(ctx, 526, 158, "winner score", selectedKept.point?.response || 0, "#facc15", phase.index >= 2 ? 1 : .35);
-        drawMotionFlow(ctx, 584, 118, 660, 118, keep ? "#facc15" : "#7c3aed", phase.index >= 2 ? phase.local : .2);
-        drawFastNmsDecisionCard(ctx, 742, 118, keep, candidates.length, kept.length, phase.index >= 3 ? phase.local : .35);
+        drawValueNode(ctx, 526, 158, "winner score", selectedKept.point?.response || 0, "#facc15", motionEase(phase, .42, .68, .35));
+        drawMotionFlow(ctx, 584, 118, 660, 118, keep ? "#facc15" : "#7c3aed", motionEase(phase, .52, .78, .2));
+        drawFastNmsDecisionCard(ctx, 742, 118, keep, candidates.length, kept.length, motionEase(phase, .72, .96, .35));
     }
 
     function drawMotionGeneric(ctx, stepKey, phase, w, h) {
@@ -1335,12 +1462,13 @@
             const isCurrent = currentPoint && item.x === currentPoint.x && item.y === currentPoint.y;
             const isWinner = winnerPoint && item.x === winnerPoint.x && item.y === winnerPoint.y;
             const scoreRatio = Math.sqrt((Number(item.response) || 0) / maxScore);
-            const suppressed = phase.index >= 2 && !isKept;
+            const suppressProgress = motionEase(phase, .48, .86);
+            const suppressed = suppressProgress > .30 && !isKept;
             const color = isCurrent ? "#7c3aed" : isWinner || isKept ? "#facc15" : "#60a5fa";
-            const alpha = suppressed ? .12 : .25 + scoreRatio * .7;
+            const alpha = suppressed ? Math.max(.12, (.25 + scoreRatio * .7) * (1 - suppressProgress)) : .25 + scoreRatio * .7;
             drawParticle(ctx, px, py, color, alpha, isCurrent ? 7 : isWinner ? 6.5 : 2.5 + scoreRatio * 3.5);
             if (isCurrent) {
-                drawNmsRadius(ctx, px, py, 38 + 8 * phase.pulse, "#7c3aed", phase.index >= 1 ? .78 : .25);
+                drawNmsRadius(ctx, px, py, 38 + 8 * phase.pulse, "#7c3aed", motionEase(phase, .20, .50, .25));
                 drawLabelPill(ctx, px, py + 44, "current", "#7c3aed");
             }
             if (isWinner && !isCurrent) drawLabelPill(ctx, px + 34, py - 22, "winner", "#ca8a04");
@@ -1376,12 +1504,24 @@
         const box = V.$("cornerMotionMetrics");
         if (!box) return;
         const rows = motionMetricRows(stepKey);
-        box.innerHTML = rows.slice(0, 6).map((row, index) => `
+        box.innerHTML = rows.slice(0, 5).map((row, index) => `
             <div class="corner-motion-metric ${row.tone ? `is-${row.tone}` : ""}">
                 <span>${row.label}</span>
-                <strong style="animation-delay:${index * 45}ms">${row.value}</strong>
+                <strong class="${isSemanticMetricValue(row.value) ? "is-badge" : ""}" style="animation-delay:${index * 45}ms">${formatMetricValue(row.value)}</strong>
             </div>
         `).join("");
+    }
+
+    function formatMetricValue(value) {
+        if (typeof value === "number") return formatCompact(value);
+        if (value === null || value === undefined || value === "") return "-";
+        const text = String(value);
+        if (/^-?\d+(\.\d+)?$/.test(text)) return formatCompact(Number(text));
+        return text.length > 24 ? `${text.slice(0, 22)}…` : text;
+    }
+
+    function isSemanticMetricValue(value) {
+        return /^(KEEP|SUPPRESS|PASS|FAIL|YES|NO|VALID|INVALID|keep|suppress|diamond|ready|READY|λmin selected)$/i.test(String(value || ""));
     }
 
     function motionMetricRows(stepKey) {
@@ -1422,7 +1562,7 @@
                 return [
                     { label: "Candidates", value: currentFast?.candidates?.length || 0 },
                     { label: "Kept", value: currentFast?.corners?.length || 0, tone: "yellow" },
-                    { label: "当前点", value: kept.distance <= fastOptions().nmsRadius ? "keep" : "suppress", tone: kept.distance <= fastOptions().nmsRadius ? "yellow" : "purple" },
+                    { label: "当前点", value: kept.distance <= fastOptions().nmsRadius ? "KEEP" : "SUPPRESS", tone: kept.distance <= fastOptions().nmsRadius ? "yellow" : "purple" },
                     { label: "NMS radius", value: fastOptions().nmsRadius }
                 ];
             }
@@ -1432,7 +1572,7 @@
                     { label: "最终角点", value: currentFast?.corners?.length || 0, tone: "yellow" },
                     { label: "候选点", value: currentFast?.candidates?.length || 0 },
                     { label: "最近角点", value: kept.point ? `(${kept.point.x}, ${kept.point.y})` : "-" },
-                    { label: "标记", value: "diamond", tone: "orange" }
+                    { label: "标记", value: "DIAMOND", tone: "orange" }
                 ];
             }
             return [
@@ -1469,7 +1609,8 @@
             return [
                 { label: "λ1", value: formatNumber(eig.l1) },
                 { label: "λ2", value: formatNumber(eig.l2) },
-                { label: "λmin", value: formatNumber(eig.min), tone: "green" }
+                { label: "λmin", value: formatNumber(eig.min), tone: "green" },
+                { label: "selection", value: "λmin selected", tone: "green" }
             ];
         }
         if (stepKey === "response") return [
@@ -1484,10 +1625,9 @@
             return [
                 { label: "raw R", value: formatNumber(nms.currentR) },
                 { label: "display R", value: formatNumber(nms.displayR) },
-                { label: "raw threshold", value: formatNumber(nms.threshold) },
-                { label: "neighbor max raw", value: formatNumber(nms.localMax) },
+                { label: "threshold", value: formatNumber(nms.threshold) },
+                { label: "neighbor max", value: formatNumber(nms.localMax) },
                 { label: "NMS", value: nms.kept ? "KEEP" : "SUPPRESS", tone: nms.kept ? "orange" : "purple" },
-                { label: "原因", value: nms.reason }
             ];
         }
         if (stepKey === "refine") {
@@ -3113,27 +3253,33 @@
         const kept = currentFast?.corners || [];
         const keptKeys = new Set(kept.map(point => `${point.x},${point.y}`));
         animateCanvas(canvas, (ctx, t) => {
-            const erase = easeInOutCubic(Math.max(0, Math.min(1, (t - 0.12) / 0.72)));
+            const erase = easeInOutCubic(Math.max(0, Math.min(1, (t - 0.10) / 0.78)));
             candidates.forEach((point, index) => {
                 const isKept = keptKeys.has(`${point.x},${point.y}`);
-                if (!isKept && index / Math.max(1, candidates.length) < erase) return;
+                const deleteProgress = Math.max(0, Math.min(1, erase * 1.25 - index / Math.max(1, candidates.length)));
+                if (!isKept && deleteProgress >= 1) return;
                 if (isKept) {
                     const pulse = 1 + 0.18 * Math.sin(t * Math.PI * 8);
                     V.drawDiamond(ctx, point.x, point.y, "#facc15", 4.5 * pulse);
                 } else {
-                    ctx.globalAlpha = Math.max(0.12, 0.82 - erase * 0.7);
+                    ctx.globalAlpha = Math.max(0.10, 0.82 * (1 - deleteProgress));
                     V.drawCircle(ctx, point.x, point.y, "#94a3b8", 2.8);
                     ctx.globalAlpha = 1;
                 }
             });
-            kept.slice(0, 80).forEach((point, index) => {
-                const local = Math.max(0, Math.min(1, erase * kept.length - index));
-                if (!local) return;
-                ctx.strokeStyle = `rgba(250,204,21,${0.55 * (1 - local)})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 6 + fastOptions().nmsRadius * 2.4 * local, 0, Math.PI * 2);
-                ctx.stroke();
+            kept.slice(0, 90).forEach((point, index) => {
+                const start = Math.min(0.62, index / Math.max(1, kept.length) * 0.55);
+                const visible = Math.max(0, Math.min(1, (t - start) / 0.24));
+                if (visible <= 0) return;
+                for (let waveIndex = 0; waveIndex < 2; waveIndex++) {
+                    const wave = (t * 1.85 + index * 0.071 + waveIndex * 0.46) % 1;
+                    const alpha = 0.46 * (1 - wave) * visible;
+                    ctx.strokeStyle = `rgba(250,204,21,${alpha})`;
+                    ctx.lineWidth = 1.6 + 1.2 * (1 - wave);
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 7 + fastOptions().nmsRadius * 2.8 * wave, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             });
         }, 2400);
     }
@@ -3997,7 +4143,7 @@
             ["亚像素有效数", algorithm === "harris" ? refined.length : "-"],
             ["亚像素平均偏移", algorithm === "harris" ? offsets.avg : "-"],
             ["亚像素最大偏移", algorithm === "harris" ? offsets.max : "-"],
-            ["处理耗时", algorithm === "fast" ? "浏览器计算" : `${currentData.meta.elapsed_ms} ms`]
+            ["处理耗时", algorithm === "fast" ? "页面计算" : `${currentData.meta.elapsed_ms} ms`]
         ]);
     }
 
@@ -4061,7 +4207,7 @@
         }
         currentStep = Math.min(currentStep, harrisSteps().length - 1);
         await drawCurrentStep();
-        V.$("harrisElapsed").textContent = selectedAlgorithm() === "fast" ? "FAST · 浏览器计算" : `${data.meta.elapsed_ms} ms`;
+        V.$("harrisElapsed").textContent = selectedAlgorithm() === "fast" ? "FAST · 页面计算" : `${data.meta.elapsed_ms} ms`;
     }
 
     V.$("cornerAlgorithm").addEventListener("change", async () => {
@@ -4077,21 +4223,27 @@
     V.$("motionProbePlay")?.addEventListener("click", () => {
         motionProbeState.playing = true;
         motionProbeState.lastTime = 0;
+        syncMotionControls();
     });
     V.$("motionProbePause")?.addEventListener("click", () => {
         motionProbeState.playing = false;
+        syncMotionControls();
     });
     V.$("motionProbeStep")?.addEventListener("click", () => {
         const actions = motionActions(currentStepKey());
         motionProbeState.playing = false;
-        motionProbeState.progress = (motionProbeState.progress + 1 / Math.max(1, actions.length)) % 1;
+        const segment = 1 / Math.max(1, actions.length);
+        const currentSegment = Math.floor(motionProbeState.progress / segment);
+        motionProbeState.progress = ((currentSegment + 1) % actions.length) * segment + 0.001;
+        motionProbeState.lastTime = 0;
+        syncMotionControls();
         const canvas = V.$("cornerMotionCanvas");
         if (canvas) drawMotionProbeFrame(canvas, currentStepKey(), motionProbeState.progress);
     });
     document.querySelectorAll("[data-motion-speed]").forEach(button => {
         button.addEventListener("click", () => {
             motionProbeState.speed = Number(button.dataset.motionSpeed) || 1;
-            document.querySelectorAll("[data-motion-speed]").forEach(item => item.classList.toggle("is-active", item === button));
+            syncMotionControls();
         });
     });
     ["fastThreshold", "fastNmsRadius", "fastMaxCorners"].forEach(id => {

@@ -16,12 +16,18 @@
                         <option value="shi">Shi-Tomasi</option>
                         <option value="fast">FAST</option>
                         <option value="sift">SIFT</option>
+                        <option value="surf">SURF</option>
+                        <option value="fast-brief">FAST + BRIEF</option>
+                        <option value="orb-lite">ORB-lite</option>
                     </select>
                 </label>
                 <label>叠加方法 B
                     <select id="featureCompareRight">
                         <option value="fast">FAST</option>
                         <option value="sift">SIFT</option>
+                        <option value="surf">SURF</option>
+                        <option value="fast-brief">FAST + BRIEF</option>
+                        <option value="orb-lite">ORB-lite</option>
                         <option value="harris">Harris</option>
                         <option value="shi">Shi-Tomasi</option>
                     </select>
@@ -71,11 +77,14 @@
                 <strong>结果速览</strong>
                 <span>点击卡片左半区设为方法 A，右半区设为方法 B</span>
             </div>
-            <div class="feature-result-grid feature-result-grid-4 feature-compare-results">
+            <div class="feature-result-grid feature-result-grid-analog feature-compare-results">
                 <button type="button" data-feature-method="harris"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="harrisCanvas"></canvas><div><h3>Harris</h3><span class="feature-method-tag">响应函数</span><p id="harrisStats">-</p></div></button>
                 <button type="button" data-feature-method="shi"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="shiCanvas"></canvas><div><h3>Shi-Tomasi</h3><span class="feature-method-tag">特征值</span><p id="shiStats">-</p></div></button>
                 <button type="button" data-feature-method="fast"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="fastCanvas"></canvas><div><h3>FAST</h3><span class="feature-method-tag">圆周检测</span><p id="fastStats">-</p></div></button>
                 <button type="button" data-feature-method="sift"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="siftCanvas"></canvas><div><h3>SIFT</h3><span class="feature-method-tag">尺度特征</span><p id="siftStats">-</p></div></button>
+                <button type="button" data-feature-method="surf"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="surfCanvas"></canvas><div><h3>SURF</h3><span class="feature-method-tag">Hessian/Haar</span><p id="surfStats">-</p></div></button>
+                <button type="button" data-feature-method="fast-brief"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="fast-briefCanvas"></canvas><div><h3>FAST + BRIEF</h3><span class="feature-method-tag">Binary</span><p id="fast-briefStats">-</p></div></button>
+                <button type="button" data-feature-method="orb-lite"><span class="feature-compare-side-badge" data-side-badge></span><canvas id="orb-liteCanvas"></canvas><div><h3>ORB-lite</h3><span class="feature-method-tag">Rotated BRIEF</span><p id="orb-liteStats">-</p></div></button>
             </div>
             <section class="feature-compare-insights-card">
                 <div class="feature-compare-insights-head"><strong>当前叠加方法说明</strong><span>跟随方法 A / B 同步更新</span></div>
@@ -86,18 +95,24 @@
 
     <aside class="feature-panel feature-info">
         <div><span class="section-label">Process Notes</span><h2>当前选中算法说明</h2></div>
-        <article class="feature-method-guide">
-            <header><h3 id="featureInfoMethod">SIFT</h3><span id="featureInfoCategory">尺度不变特征</span></header>
-            <div><b>核心思想</b><p id="featureInfoSummary">在尺度空间中检测稳定关键点，并分配尺度、方向和描述子。</p></div>
-            <div><b>特点</b><p id="featureInfoPros">具备尺度和旋转鲁棒性，适合匹配任务。</p></div>
-            <div><b>适用场景</b><p id="featureInfoBestFor">图像匹配、目标识别和拼接。</p></div>
+        <article class="feature-method-guide feature-method-guide-plain">
+            <figure class="feature-method-guide-figure">
+                <img id="featureInfoImage" src="{{ url_for('static', filename='assets/img/sift.webp') }}" alt="SIFT 算法说明">
+                <figcaption id="featureInfoCaption">尺度空间、方向分配与描述子构成完整 SIFT 流程。</figcaption>
+            </figure>
+            <div class="feature-method-guide-copy">
+                <p><b>类别：</b><span id="featureInfoCategoryText">尺度不变特征</span></p>
+                <p><b>特点：</b><span id="featureInfoPros">具备尺度和旋转鲁棒性，关键点信息丰富。</span></p>
+                <p><b>优点：</b><span id="featureInfoAdvantage">匹配稳定，适合跨尺度、旋转和光照变化场景。</span></p>
+                <p><b>缺点：</b><span id="featureInfoWeakness">计算量较大，流程比角点检测更复杂。</span></p>
+                <p><b>适用：</b><span id="featureInfoBestFor">图像匹配、目标识别、图像拼接。</span></p>
+            </div>
             <dl>
                 <div><dt>点数</dt><dd id="featureInfoCount">-</dd></div>
                 <div><dt>标记</dt><dd id="featureInfoMarker">圆环 + 方向</dd></div>
             </dl>
         </article>
         <div id="featureCompareMeta" class="feature-stat-list"></div>
-        <div class="feature-boundary"><b>算法实现边界</b><p>算法模块返回角点、关键点和核心数组；所有点位叠加、热力图、方向箭头在页面 Canvas 绘制。</p></div>
     </aside>
 </section>
 {% endblock %}
