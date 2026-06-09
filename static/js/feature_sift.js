@@ -2454,6 +2454,123 @@
         ctx.restore();
     }
 
+    function drawSurfGrayAccumulation(ctx, x, y, phase) {
+        const cols = 6;
+        const rows = 5;
+        const cell = 19;
+        const active = Math.min(cols * rows - 1, Math.floor(phase * cols * rows));
+        ctx.save();
+        ctx.fillStyle = "#0ea5e9";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Gray patch", x, y - 14);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const index = row * cols + col;
+                const value = (Math.sin(row * 1.4 + col * .9) + 1) / 2;
+                const done = index <= active;
+                ctx.fillStyle = `rgba(14,165,233,${done ? .14 + value * .3 : .06})`;
+                ctx.strokeStyle = done ? "#0ea5e9" : "rgba(147,197,253,.55)";
+                ctx.lineWidth = index === active ? 2.3 : 1;
+                roundRect(ctx, x + col * cell, y + row * cell, cell - 2, cell - 2, 5);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        const rowY = y + Math.floor(active / cols) * cell + cell / 2;
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 6, rowY);
+        ctx.lineTo(x + cols * cell + 6, rowY);
+        ctx.stroke();
+        ctx.fillStyle = "#475569";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("scan rows → prefix sum", x, y + rows * cell + 20);
+        ctx.restore();
+    }
+
+    function drawSurfIntegralSurface(ctx, x, y, phase) {
+        const cols = 6;
+        const rows = 5;
+        const cell = 22;
+        const active = Math.min(cols * rows - 1, Math.floor(phase * cols * rows));
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Integral surface", x, y - 14);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const index = row * cols + col;
+                const done = index <= active;
+                const height = 4 + row * 4 + col * 3;
+                const px = x + col * cell;
+                const py = y + row * cell - (done ? height * .22 : 0);
+                ctx.fillStyle = done ? `rgba(37,99,235,${.12 + index / 90})` : "rgba(255,255,255,.72)";
+                ctx.strokeStyle = done ? "#60a5fa" : "#dbeafe";
+                ctx.lineWidth = index === active ? 2 : 1;
+                roundRect(ctx, px, py, cell - 2, cell - 2, 5);
+                ctx.fill();
+                ctx.stroke();
+                if (done && index % 7 === 0) {
+                    ctx.fillStyle = "#1d4ed8";
+                    ctx.font = "800 8px sans-serif";
+                    ctx.fillText(String(20 + row * 8 + col * 6), px + 4, py + 14);
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawSurfRectSum(ctx, x, y, phase) {
+        const cell = 25;
+        const rect = { col: 1, row: 1, w: 4, h: 3 };
+        ctx.save();
+        ctx.fillStyle = "#f97316";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Rect sum in O(1)", x, y - 16);
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 6; col++) {
+                const inside = col >= rect.col && col < rect.col + rect.w && row >= rect.row && row < rect.row + rect.h;
+                ctx.fillStyle = inside ? "rgba(249,115,22,.14)" : "rgba(255,255,255,.66)";
+                ctx.strokeStyle = inside ? "rgba(249,115,22,.45)" : "rgba(191,219,254,.55)";
+                roundRect(ctx, x + col * cell, y + row * cell, cell - 2, cell - 2, 6);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        roundRect(ctx, x + rect.col * cell, y + rect.row * cell, rect.w * cell - 2, rect.h * cell - 2, 8);
+        const corners = [
+            ["A", rect.col, rect.row, "#2563eb"],
+            ["B", rect.col + rect.w, rect.row, "#ef4444"],
+            ["C", rect.col, rect.row + rect.h, "#ef4444"],
+            ["D", rect.col + rect.w, rect.row + rect.h, "#16a34a"]
+        ];
+        corners.forEach(([label, col, row, color], index) => {
+            const pulse = 1 + .18 * Math.sin(phase * Math.PI * 2 + index);
+            const cx = x + col * cell;
+            const cy = y + row * cell;
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, cx + 8, cy - 6);
+        });
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("D - B - C + A", x + 24, y + 150);
+        ctx.fillStyle = "#166534";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("box filter reads 4 corners", x + 24, y + 171);
+        ctx.restore();
+    }
+
     function drawHaarCompass(ctx, cx, cy, phase, color = "#0ea5e9") {
         ctx.save();
         for (let i = 0; i < 16; i++) {
@@ -2511,14 +2628,11 @@
 
     function drawSurfMotion(ctx, phase, w, h, data, step) {
         if (step?.key === "integral") {
-            drawPatchTiles(ctx, 42, 54, 6, 5, 21, phase, "#0ea5e9");
-            drawMotionPill(ctx, 42, 174, 150, 42, "Gray patch", "逐行累加", "#0ea5e9");
-            drawMotionFlow(ctx, 212, 118, 308, 118, "#0ea5e9", phase);
-            drawIntegralGrid(ctx, 330, 54, phase);
-            drawMotionPill(ctx, 322, 174, 178, 42, "Integral image", "sum up-left", "#2563eb");
-            drawMotionFlow(ctx, 518, 118, 624, 118, "#f97316", phase);
-            drawMotionPill(ctx, 638, 82, 180, 62, "Rect sum", "D - B - C + A", "#f97316");
-            drawMotionPill(ctx, 638, 174, 180, 42, "Box filter", "O(1) region sum", "#16a34a");
+            drawSurfGrayAccumulation(ctx, 46, 62, phase);
+            drawFlowParticles(ctx, 178, 122, 286, 122, "#0ea5e9", phase, 5);
+            drawSurfIntegralSurface(ctx, 306, 62, phase);
+            drawFlowParticles(ctx, 448, 122, 548, 122, "#f97316", (phase + .18) % 1, 5);
+            drawSurfRectSum(ctx, 572, 62, phase);
         } else if (step?.key === "hessian") {
             drawMotionPill(ctx, 42, 34, 150, 46, "Integral image", "box access", "#2563eb");
             drawMotionFlow(ctx, 204, 88, 294, 88, "#2563eb", phase);
