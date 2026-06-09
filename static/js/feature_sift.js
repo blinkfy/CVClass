@@ -1099,6 +1099,13 @@
     }
 
     function drawMotionBackground(ctx, w, h) {
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
         ctx.clearRect(0, 0, w, h);
         const bg = ctx.createLinearGradient(0, 0, w, h);
         bg.addColorStop(0, "#ffffff");
@@ -1463,105 +1470,786 @@
         ctx.restore();
     }
 
+    function drawGaussianTextureTile(ctx, cx, cy, size, blur, color, active, phase) {
+        ctx.save();
+        const radius = size / 2;
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * (1.1 + blur * .4));
+        glow.addColorStop(0, `${color}${active ? "55" : "28"}`);
+        glow.addColorStop(.62, `${color}${active ? "20" : "12"}`);
+        glow.addColorStop(1, `${color}00`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * (1.25 + blur * .45), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,.72)";
+        ctx.strokeStyle = active ? "#f97316" : `${color}72`;
+        ctx.lineWidth = active ? 2.6 : 1.3;
+        roundRect(ctx, cx - radius, cy - radius * .68, size, size * .78, 11);
+        ctx.fill();
+        ctx.stroke();
+        const cols = 4;
+        const rows = 3;
+        const tileX = cx - radius;
+        const tileY = cy - radius * .68;
+        const tileW = size;
+        const tileH = size * .78;
+        const gridW = Math.min(tileW - 16, tileW * .72);
+        const gridH = Math.min(tileH - 14, tileH * .58);
+        const gridX = tileX + (tileW - gridW) / 2;
+        const gridY = tileY + (tileH - gridH) / 2;
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const t = (Math.sin(row * 1.7 + col * 1.2 + phase * Math.PI * 2) + 1) / 2;
+                const alpha = Math.max(.08, (.42 - blur * .13) * (active ? 1 : .7));
+                ctx.fillStyle = `rgba(37,99,235,${alpha * (.45 + t * .55)})`;
+                const px = gridX + (col + .5) * gridW / cols;
+                const py = gridY + (row + .5) * gridH / rows;
+                ctx.beginPath();
+                ctx.arc(px, py, Math.max(2.2, 4.2 - blur * .55), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        if (active) {
+            ctx.strokeStyle = "#f97316";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 5]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * (1.03 + .12 * phase), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        ctx.restore();
+    }
+
+    function drawGaussianBlurBeam(ctx, x1, y1, x2, y2, phase, active) {
+        ctx.save();
+        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+        gradient.addColorStop(0, "rgba(37,99,235,.08)");
+        gradient.addColorStop(.5, active ? "rgba(6,182,212,.34)" : "rgba(96,165,250,.16)");
+        gradient.addColorStop(1, "rgba(249,115,22,.12)");
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = active ? 9 : 5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo((x1 + x2) / 2, y1 - 18, (x1 + x2) / 2, y2 + 18, x2, y2);
+        ctx.stroke();
+        for (let i = 0; i < 3; i++) {
+            const t = (phase + i / 3) % 1;
+            const mx = x1 + (x2 - x1) * t;
+            const my = y1 + (y2 - y1) * t + Math.sin(t * Math.PI) * 8;
+            ctx.globalAlpha = active ? .72 : .36;
+            ctx.fillStyle = active ? "#06b6d4" : "#60a5fa";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = active ? 14 : 8;
+            ctx.beginPath();
+            ctx.arc(mx, my, active ? 4.5 : 3.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+    }
+
     function drawSiftMotionGaussian(ctx, phase, w, h, data) {
-        const rows = Math.max(1, data.gaussianRows.length || 3);
-        const activeLayer = Math.floor(phase * 5) % 5;
-        for (let octave = 0; octave < rows; octave++) {
-            const y = 34 + octave * 58;
-            drawMotionPill(ctx, 34, y, 98, 38, `Octave ${octave}`, octave ? "1/2 尺寸" : "原尺寸", "#2563eb");
-            for (let layer = 0; layer < 5; layer++) {
-                const x = 170 + layer * 84;
-                const alpha = 0.18 + layer * 0.12;
-                ctx.fillStyle = `rgba(37,99,235,${alpha})`;
-                ctx.strokeStyle = layer === activeLayer ? "#f97316" : "#bfdbfe";
-                ctx.lineWidth = layer === activeLayer ? 2.5 : 1;
-                roundRect(ctx, x, y - layer * 2, 58, 38, 8);
+        const rows = Math.max(1, Math.min(3, data.gaussianRows.length || 3));
+        const layers = Math.max(4, Math.min(5, data.gaussianRows[0]?.length || 5));
+        const layerProgress = phase * layers;
+        const activeLayer = Math.min(layers - 1, Math.floor(layerProgress));
+        const local = layerProgress - activeLayer;
+        const startX = 116;
+        const endX = 498;
+        const octaveYs = rows === 1 ? [128] : Array.from({ length: rows }, (_, index) => 82 + index * 52);
+        const baseSize = 50;
+
+        ctx.save();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Gaussian Scale Space", 64, 36);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText("σ 逐层增大，末层缩小后进入下一 octave", 64, 53);
+        ctx.restore();
+
+        octaveYs.forEach((y, octave) => {
+            const scale = Math.pow(.72, octave);
+            ctx.save();
+            ctx.strokeStyle = "rgba(96,165,250,.35)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(startX - 18, y);
+            ctx.lineTo(endX + 18, y);
+            ctx.stroke();
+            ctx.fillStyle = "#2563eb";
+            ctx.font = "950 13px sans-serif";
+            ctx.fillText(`O${octave}`, 50, y + 5);
+            ctx.fillStyle = "#64748b";
+            ctx.font = "850 10px sans-serif";
+            ctx.fillText(octave ? "1/2 size" : "base", 50, y + 21);
+            ctx.restore();
+
+            for (let layer = 0; layer < layers; layer++) {
+                const x = startX + layer * ((endX - startX) / Math.max(1, layers - 1));
+                const active = layer === activeLayer;
+                const blur = layer / Math.max(1, layers - 1);
+                const size = baseSize * scale * (1 - blur * .08);
+                drawGaussianBlurBeam(ctx, x - 58, y, x - 8, y, phase, active && layer > 0);
+                drawGaussianTextureTile(ctx, x, y, size, blur, "#2563eb", active, phase);
+                ctx.fillStyle = active ? "#ea580c" : "#1d4ed8";
+                ctx.font = "950 12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`σ${layer}`, x, y + size * .46 + 18);
+                ctx.textAlign = "left";
+            }
+
+            if (octave < rows - 1) {
+                const fromX = endX + 22;
+                const toX = endX + 68;
+                const fromY = y;
+                const toY = octaveYs[octave + 1];
+                ctx.save();
+                ctx.strokeStyle = "rgba(6,182,212,.28)";
+                ctx.lineWidth = 10;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+                ctx.restore();
+                drawFlowParticles(ctx, fromX, fromY, toX, toY, "#06b6d4", (phase + octave * .18) % 1, 4);
+            }
+        });
+
+        const gaugeX = 610;
+        const gaugeY = 86;
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.78)";
+        ctx.strokeStyle = "rgba(6,182,212,.55)";
+        ctx.lineWidth = 1.6;
+        roundRect(ctx, gaugeX, gaugeY, 138, 92, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#0891b2";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("σ sweep", gaugeX + 18, gaugeY + 26);
+        const sweep = Math.min(1, (activeLayer + local) / Math.max(1, layers - 1));
+        ctx.strokeStyle = "rgba(6,182,212,.18)";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.arc(gaugeX + 50, gaugeY + 61, 23, -Math.PI * .75, Math.PI * .75);
+        ctx.stroke();
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.arc(gaugeX + 50, gaugeY + 61, 23, -Math.PI * .75, -Math.PI * .75 + Math.PI * 1.5 * sweep);
+        ctx.stroke();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 18px sans-serif";
+        ctx.fillText(`σ${activeLayer}`, gaugeX + 86, gaugeY + 67);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText("blur", gaugeX + 18, gaugeY + 84);
+        ctx.fillText("downsample", gaugeX + 68, gaugeY + 84);
+        ctx.restore();
+    }
+
+    function dogMatrixValues(matrix) {
+        const fallback = [[-0.05, 0.06, 0.067], [-0.06, -0.075, 0.073], [-0.06, 0.07, 0.069]];
+        return Array.isArray(matrix) && matrix.length ? matrix : fallback;
+    }
+
+    function drawDogLayerSheet(ctx, x, y, w, h, label, sigmaLabel, color, phase, topLayer) {
+        ctx.save();
+        const lift = topLayer ? -10 : 10;
+        ctx.globalAlpha = topLayer ? .95 : .84;
+        const gradient = ctx.createLinearGradient(x, y + lift, x + w, y + h + lift);
+        gradient.addColorStop(0, "rgba(255,255,255,.9)");
+        gradient.addColorStop(1, topLayer ? "rgba(219,234,254,.78)" : "rgba(239,246,255,.82)");
+        ctx.fillStyle = gradient;
+        ctx.strokeStyle = `${color}88`;
+        ctx.lineWidth = 1.8;
+        roundRect(ctx, x, y + lift, w, h, 18);
+        ctx.fill();
+        ctx.stroke();
+        for (let i = 0; i < 30; i++) {
+            const col = i % 6;
+            const row = Math.floor(i / 6);
+            const t = (Math.sin(i * 1.31 + phase * Math.PI * 2) + 1) / 2;
+            ctx.fillStyle = topLayer
+                ? `rgba(37,99,235,${.08 + t * .14})`
+                : `rgba(14,165,233,${.07 + t * .10})`;
+            ctx.beginPath();
+            ctx.arc(x + 18 + col * (w - 36) / 5, y + lift + 18 + row * (h - 36) / 4, topLayer ? 5.4 : 4.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.fillStyle = color;
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText(label, x + 14, y + lift + 25);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText(sigmaLabel, x + 14, y + lift + h - 14);
+        ctx.restore();
+    }
+
+    function drawDogResponsePatch(ctx, x, y, size, matrix, phase) {
+        const values = dogMatrixValues(matrix);
+        const flat = values.flat().map(value => Number(value) || 0);
+        const maxAbs = Math.max(1e-6, ...flat.map(value => Math.abs(value)));
+        const cell = size / 3;
+        ctx.save();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("DoG response", x, y - 16);
+        values.forEach((row, rowIndex) => {
+            row.forEach((value, colIndex) => {
+                const v = Number(value) || 0;
+                const strength = Math.min(1, Math.abs(v) / maxAbs);
+                const px = x + colIndex * cell;
+                const py = y + rowIndex * cell;
+                const positive = v >= 0;
+                ctx.fillStyle = positive
+                    ? `rgba(37,99,235,${.13 + strength * .52})`
+                    : `rgba(249,115,22,${.13 + strength * .55})`;
+                ctx.strokeStyle = rowIndex === 1 && colIndex === 1 ? "#f97316" : "rgba(147,197,253,.62)";
+                ctx.lineWidth = rowIndex === 1 && colIndex === 1 ? 2.6 : 1;
+                roundRect(ctx, px + 3, py + 3, cell - 6, cell - 6, 9);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = layer === activeLayer ? "#ea580c" : "#1d4ed8";
-                ctx.font = "900 12px sans-serif";
-                ctx.fillText(`σ${layer}`, x + 18, y + 24);
-            }
-            if (octave < rows - 1) drawMotionFlow(ctx, 604, y + 18, 684, y + 76, "#06b6d4", phase);
+                if (rowIndex === 1 && colIndex === 1) {
+                    ctx.fillStyle = "#7c2d12";
+                    ctx.font = "950 12px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(compactNumber(v), px + cell / 2, py + cell / 2 + 4);
+                    ctx.strokeStyle = "#f97316";
+                    ctx.lineWidth = 2.4;
+                    ctx.beginPath();
+                    ctx.arc(px + cell / 2, py + cell / 2, 18 + 5 * phase, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+        });
+        ctx.restore();
+    }
+
+    function drawDogSubtractCore(ctx, cx, cy, phase) {
+        ctx.save();
+        const t = motionEase(phase);
+        ctx.strokeStyle = "rgba(249,115,22,.24)";
+        ctx.lineWidth = 16;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx - 82, cy - 42);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx - 82, cy + 42);
+        ctx.stroke();
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 32, cy);
+        ctx.lineTo(cx + 32, cy);
+        ctx.moveTo(cx, cy - 32);
+        ctx.lineTo(cx, cy + 32);
+        ctx.stroke();
+        ctx.fillStyle = "#fff7ed";
+        ctx.strokeStyle = "rgba(249,115,22,.72)";
+        ctx.lineWidth = 1.8;
+        roundRect(ctx, cx - 72, cy - 34, 144, 68, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 17px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("L(kσ) - L(σ)", cx, cy - 5);
+        ctx.fillStyle = "#7c2d12";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("相邻高斯层逐像素相减", cx, cy + 17);
+        for (let i = 0; i < 5; i++) {
+            const angle = -Math.PI / 2 + i * Math.PI * 2 / 5 + t * Math.PI * 2;
+            const px = cx + Math.cos(angle) * 48;
+            const py = cy + Math.sin(angle) * 34;
+            ctx.fillStyle = i % 2 ? "#2563eb" : "#f97316";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(px, py, 3.8, 0, Math.PI * 2);
+            ctx.fill();
         }
-        drawMotionPill(ctx, 684, 54, 130, 64, "Gaussian", "平滑 → 下采样", "#06b6d4");
+        ctx.restore();
     }
 
     function drawSiftMotionDog(ctx, phase, w, h, data) {
-        drawMotionPill(ctx, 54, 56, 142, 56, "L(kσ)", "高斯层 i+1", "#2563eb");
-        drawMotionPill(ctx, 54, 142, 142, 56, "L(σ)", "高斯层 i", "#2563eb");
-        drawMotionFlow(ctx, 220, 84, 362, 112, "#2563eb", phase);
-        drawMotionFlow(ctx, 220, 170, 362, 128, "#2563eb", phase);
-        drawMotionPill(ctx, 382, 88, 148, 64, "subtract", "L(kσ) - L(σ)", "#f97316");
-        drawMotionFlow(ctx, 548, 120, 680, 120, "#f97316", phase);
         const dog = data.dogProbe;
-        drawMiniMatrix(ctx, 700, 104, "DoG patch", dog?.current, phase, "#f97316");
+        const response = dogMatrixValues(dog?.current);
+        const center = Number(dog?.center ?? response[1]?.[1] ?? 0);
+        drawDogLayerSheet(ctx, 54, 66, 168, 76, "L(kσ)", "blurred layer i+1", "#2563eb", phase, true);
+        drawDogLayerSheet(ctx, 74, 130, 168, 76, "L(σ)", "blurred layer i", "#06b6d4", phase, false);
+        drawFlowParticles(ctx, 230, 96, 344, 118, "#2563eb", phase, 4);
+        drawFlowParticles(ctx, 246, 158, 344, 130, "#06b6d4", (phase + .22) % 1, 4);
+        drawDogSubtractCore(ctx, 430, 124, phase);
+        drawFlowParticles(ctx, 506, 124, 612, 124, "#f97316", (phase + .12) % 1, 5);
+        drawDogResponsePatch(ctx, 628, 76, 120, response, phase);
+        ctx.save();
+        const color = center >= 0 ? "#2563eb" : "#f97316";
+        ctx.strokeStyle = `${color}66`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(628, 214);
+        for (let i = 0; i < 72; i++) {
+            const x = 628 + i * 2.2;
+            const y = 214 + Math.sin(i * .35 + phase * Math.PI * 2) * 8 - Math.sign(center || -1) * 8;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText(`center response ${compactNumber(center)}`, 616, 238);
+        ctx.restore();
+    }
+
+    function drawExtremaSlice(ctx, cx, cy, matrix, label, color, phase, depthIndex) {
+        const values = dogMatrixValues(matrix);
+        const cell = 27;
+        const skewX = depthIndex * 16;
+        const skewY = depthIndex * -10;
+        ctx.save();
+        ctx.translate(cx + skewX, cy + skewY);
+        ctx.fillStyle = "rgba(255,255,255,.74)";
+        ctx.strokeStyle = `${color}80`;
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, -cell * 1.5 - 10, -cell * 1.5 - 10, cell * 3 + 20, cell * 3 + 20, 15);
+        ctx.fill();
+        ctx.stroke();
+        values.forEach((row, rowIndex) => {
+            row.forEach((value, colIndex) => {
+                const x = (colIndex - 1) * cell;
+                const y = (rowIndex - 1) * cell;
+                const center = rowIndex === 1 && colIndex === 1 && depthIndex === 0;
+                const neighbor = !center;
+                const scan = Math.floor(phase * 27) % 27;
+                const flatIndex = (depthIndex + 1) * 9 + rowIndex * 3 + colIndex;
+                const hot = neighbor && flatIndex % 27 === scan;
+                const v = Number(value) || 0;
+                ctx.fillStyle = center ? "rgba(249,115,22,.32)" : v >= 0 ? "rgba(37,99,235,.17)" : "rgba(249,115,22,.16)";
+                ctx.strokeStyle = center ? "#f97316" : hot ? "#06b6d4" : "rgba(147,197,253,.55)";
+                ctx.lineWidth = center ? 2.8 : hot ? 2.2 : 1;
+                roundRect(ctx, x - 11, y - 11, 22, 22, 6);
+                ctx.fill();
+                ctx.stroke();
+                if (center || hot) {
+                    ctx.fillStyle = center ? "#ea580c" : "#0891b2";
+                    ctx.font = "950 9px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText(compactNumber(v), x, y + 3);
+                }
+                if (hot) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 16 + 4 * phase, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+        });
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(label, 0, -cell * 1.75 - 15);
+        ctx.restore();
+    }
+
+    function drawNeighborOrbit(ctx, cx, cy, phase) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(6,182,212,.22)";
+        ctx.lineWidth = 2;
+        [30, 48, 66].forEach(radius => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        for (let i = 0; i < 26; i++) {
+            const layer = Math.floor(i / 9);
+            const angle = i * 2.399 + phase * Math.PI * 2;
+            const radius = 30 + layer * 18 + (i % 3) * 2;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius * .62;
+            const active = i === Math.floor(phase * 26) % 26;
+            ctx.fillStyle = active ? "#f97316" : "#06b6d4";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = active ? 16 : 7;
+            ctx.globalAlpha = active ? .95 : .42;
+            ctx.beginPath();
+            ctx.arc(x, y, active ? 6 : 3.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#0891b2";
+        ctx.font = "950 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("26", cx, cy - 6);
         ctx.fillStyle = "#475569";
-        ctx.font = "900 15px sans-serif";
-        ctx.fillText(`center response: ${dog ? compactNumber(dog.center) : "-"}`, 682, 218);
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("neighbors", cx, cy + 13);
+        ctx.restore();
+    }
+
+    function drawFilterGate(ctx, x, y, counts, phase) {
+        const raw = counts.raw_extrema || 0;
+        const edge = counts.edge_survivors || 0;
+        const kept = counts.kept || 0;
+        const t = motionEase(phase);
+        ctx.save();
+        ctx.strokeStyle = "rgba(249,115,22,.55)";
+        ctx.fillStyle = "rgba(255,247,237,.78)";
+        ctx.lineWidth = 1.8;
+        roundRect(ctx, x, y, 146, 96, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("Filter gate", x + 18, y + 25);
+        [["contrast", raw, edge, "#f97316"], ["edge", edge, kept, "#16a34a"]].forEach(([label, before, after, color], index) => {
+            const yy = y + 44 + index * 25;
+            const ratio = before ? Math.max(.08, Math.min(1, after / before)) : .15;
+            ctx.fillStyle = "rgba(255,255,255,.8)";
+            roundRect(ctx, x + 18, yy, 84, 9, 5);
+            ctx.fill();
+            ctx.fillStyle = color;
+            roundRect(ctx, x + 18, yy, 84 * ratio * t, 9, 5);
+            ctx.fill();
+            ctx.fillStyle = "#64748b";
+            ctx.font = "850 10px sans-serif";
+            ctx.fillText(label, x + 108, yy + 8);
+        });
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 20px sans-serif";
+        ctx.fillText(`${kept}`, x + 104, y + 86);
+        ctx.fillStyle = "#166534";
+        ctx.font = "850 11px sans-serif";
+        ctx.fillText("kept", x + 104, y + 70);
+        ctx.restore();
     }
 
     function drawSiftMotionExtrema(ctx, phase, w, h, data) {
         const dog = data.dogProbe;
-        drawMiniMatrix(ctx, 60, 84, "上一层", dog?.prev, phase, "#64748b");
-        drawMiniMatrix(ctx, 210, 84, "当前层", dog?.current, phase, "#2563eb");
-        drawMiniMatrix(ctx, 360, 84, "下一层", dog?.next, phase, "#64748b");
-        drawMotionFlow(ctx, 472, 121, 580, 121, "#06b6d4", phase);
-        drawMotionPill(ctx, 596, 58, 138, 58, "26 neighbors", "极大 / 极小", "#06b6d4");
-        drawMotionPill(ctx, 596, 136, 138, 58, "Filter", "contrast + edge", "#f97316");
-        drawMotionFlow(ctx, 744, 160, 812, 160, "#16a34a", phase);
-        ctx.fillStyle = "#16a34a";
-        ctx.font = "950 18px sans-serif";
-        ctx.fillText(`${data.counts.kept || 0} kept`, 750, 118);
+        const cx = 214;
+        const cy = 126;
+        drawExtremaSlice(ctx, cx - 54, cy - 18, dog?.prev, "上一层", "#64748b", phase, -1);
+        drawExtremaSlice(ctx, cx, cy, dog?.current, "当前层", "#2563eb", phase, 0);
+        drawExtremaSlice(ctx, cx + 54, cy + 18, dog?.next, "下一层", "#64748b", phase, 1);
+        ctx.save();
+        ctx.strokeStyle = "rgba(249,115,22,.75)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 21 + 6 * phase, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("center", cx, cy + 43);
+        ctx.restore();
+        drawFlowParticles(ctx, 360, 126, 464, 126, "#06b6d4", phase, 5);
+        drawNeighborOrbit(ctx, 520, 126, phase);
+        drawFlowParticles(ctx, 584, 126, 632, 126, "#f97316", (phase + .2) % 1, 4);
+        drawFilterGate(ctx, 646, 78, data.counts || {}, phase);
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("中心响应必须同时大于或小于 26 个尺度邻居，再通过对比度与边缘过滤", 80, 224);
+        ctx.restore();
+    }
+
+    function fallbackOrientationVectors() {
+        return Array.from({ length: 42 }, (_, index) => {
+            const col = index % 7;
+            const row = Math.floor(index / 7);
+            const dx = col - 3;
+            const dy = row - 2.5;
+            const angle = Math.atan2(dy, dx) + .55 * Math.sin(index);
+            const mag = 4 + ((index * 7) % 13);
+            return { dx: Math.cos(angle) * mag, dy: Math.sin(angle) * mag, mag, angle };
+        });
+    }
+
+    function vectorAngle(vector) {
+        if (Number.isFinite(Number(vector.angle))) return Number(vector.angle);
+        if (Number.isFinite(Number(vector.orientation))) return Number(vector.orientation);
+        return Math.atan2(Number(vector.dy) || 0, Number(vector.dx) || 0);
+    }
+
+    function vectorMagnitude(vector) {
+        if (Number.isFinite(Number(vector.mag))) return Number(vector.mag);
+        return Math.hypot(Number(vector.dx) || 0, Number(vector.dy) || 0);
+    }
+
+    function drawWeightedGradientWindow(ctx, x, y, vectors, phase) {
+        const cols = 7;
+        const rows = 6;
+        const cell = 23;
+        const cx = x + cols * cell / 2;
+        const cy = y + rows * cell / 2;
+        ctx.save();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("weighted gradient patch", x, y - 14);
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const px = x + (col + .5) * cell;
+                const py = y + (row + .5) * cell;
+                const dist = Math.hypot(px - cx, py - cy);
+                const weight = Math.exp(-(dist * dist) / 5600);
+                ctx.fillStyle = `rgba(124,58,237,${.04 + weight * .11})`;
+                ctx.beginPath();
+                ctx.arc(px, py, 8.5 * weight, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        vectors.slice(0, cols * rows).forEach((vector, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const px = x + (col + .5) * cell;
+            const py = y + (row + .5) * cell;
+            const angle = vectorAngle(vector) + phase * .18;
+            const mag = Math.min(16, 6 + vectorMagnitude(vector) * .42);
+            const active = index === Math.floor(phase * vectors.length) % Math.max(1, vectors.length);
+            ctx.strokeStyle = active ? "#f97316" : "#7c3aed";
+            ctx.lineWidth = active ? 3 : 1.9;
+            ctx.beginPath();
+            ctx.moveTo(px - Math.cos(angle) * mag * .45, py - Math.sin(angle) * mag * .45);
+            ctx.lineTo(px + Math.cos(angle) * mag * .55, py + Math.sin(angle) * mag * .55);
+            ctx.stroke();
+            if (active) drawFlowParticles(ctx, px, py, 360, 126, "#7c3aed", phase, 2);
+        });
+        ctx.restore();
+    }
+
+    function drawCircularOrientationHistogram(ctx, cx, cy, values, peak, phase) {
+        const bins = values.length ? values : new Array(36).fill(1).map((_, i) => 2 + (i * 7) % 12);
+        const max = Math.max(1e-6, ...bins.map(value => Math.abs(Number(value) || 0)));
+        ctx.save();
+        ctx.strokeStyle = "rgba(37,99,235,.16)";
+        ctx.lineWidth = 1.5;
+        [34, 58, 82].forEach(radius => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        bins.forEach((value, index) => {
+            const ratio = Math.abs(Number(value) || 0) / max;
+            const angle = -Math.PI / 2 + index / bins.length * Math.PI * 2;
+            const inner = 34;
+            const outer = inner + 48 * ratio;
+            const hot = index === peak;
+            ctx.strokeStyle = hot ? "#f97316" : "#2563eb";
+            ctx.globalAlpha = hot ? .95 : .26 + .44 * ratio;
+            ctx.lineWidth = hot ? 4.2 : 2.2;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+            ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+            ctx.stroke();
+            if (hot) {
+                ctx.fillStyle = "#f97316";
+                ctx.shadowColor = "#f97316";
+                ctx.shadowBlur = 14;
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(angle) * (outer + 7), cy + Math.sin(angle) * (outer + 7), 6 + 2 * phase, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "rgba(255,255,255,.82)";
+        ctx.strokeStyle = "rgba(147,197,253,.72)";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("36", cx, cy - 2);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 10px sans-serif";
+        ctx.fillText("bins", cx, cy + 13);
+        ctx.restore();
+    }
+
+    function drawMainOrientationArrow(ctx, cx, cy, angleDeg, phase) {
+        const angle = (Number(angleDeg) || 0) * Math.PI / 180;
+        const len = 74;
+        ctx.save();
+        ctx.strokeStyle = "rgba(249,115,22,.18)";
+        ctx.lineWidth = 18;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+        ctx.stroke();
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+        ctx.stroke();
+        const tipX = cx + Math.cos(angle) * len;
+        const tipY = cy + Math.sin(angle) * len;
+        ctx.fillStyle = "#f97316";
+        ctx.shadowColor = "#f97316";
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, 8 + 2 * phase, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("main θ", cx - 42, cy + 92);
+        ctx.fillStyle = "#7c2d12";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText(`${compactNumber(angleDeg)}°`, cx + 20, cy + 92);
+        ctx.restore();
     }
 
     function drawSiftMotionOrientation(ctx, phase, w, h, data) {
         const values = orientationHistogram(data.vectors);
+        const vectors = data.vectors.length ? data.vectors : fallbackOrientationVectors();
         const selected = data.selected;
-        const peak = selected ? Math.round(Number(selected.orientation_deg) / 10) % 36 : values.indexOf(Math.max(...values));
-        for (let i = 0; i < 28; i++) {
-            const gx = 72 + (i % 7) * 34;
-            const gy = 62 + Math.floor(i / 7) * 34;
-            const angle = (i * 0.71 + phase * 1.8) % (Math.PI * 2);
-            const len = 9 + (i % 4) * 2;
-            ctx.strokeStyle = "#7c3aed";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(gx - Math.cos(angle) * len, gy - Math.sin(angle) * len);
-            ctx.lineTo(gx + Math.cos(angle) * len, gy + Math.sin(angle) * len);
-            ctx.stroke();
+        const angleDeg = selected ? Number(selected.orientation_deg) : 292.964;
+        const peak = selected ? Math.round(angleDeg / 10) % 36 : values.indexOf(Math.max(...values));
+        drawWeightedGradientWindow(ctx, 56, 62, vectors, phase);
+        drawFlowParticles(ctx, 276, 126, 372, 126, "#7c3aed", phase, 5);
+        drawCircularOrientationHistogram(ctx, 470, 126, values, peak, phase);
+        drawFlowParticles(ctx, 560, 126, 642, 126, "#f97316", (phase + .18) % 1, 4);
+        drawMainOrientationArrow(ctx, 690, 126, angleDeg, phase);
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("局部梯度按高斯权重投票到 36 个方向 bin，最高峰定义关键点主方向", 100, 224);
+        ctx.restore();
+    }
+
+    function descriptorValues(data) {
+        return data.descriptor128.length
+            ? data.descriptor128
+            : Array.from({ length: 128 }, (_, index) => (((index * 17) % 31) + 3) / 34);
+    }
+
+    function drawDescriptorPatchGrid(ctx, x, y, size, phase) {
+        const cell = size / 4;
+        const active = Math.min(15, Math.floor(phase * 16));
+        ctx.save();
+        ctx.fillStyle = "#7c3aed";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("oriented 16×16 patch", x, y - 14);
+        ctx.translate(x + size / 2, y + size / 2);
+        ctx.rotate(-0.32);
+        ctx.translate(-size / 2, -size / 2);
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 4; col++) {
+                const index = row * 4 + col;
+                const on = index <= active;
+                const px = col * cell;
+                const py = row * cell;
+                ctx.fillStyle = on ? "rgba(124,58,237,.18)" : "rgba(255,255,255,.72)";
+                ctx.strokeStyle = on ? "#7c3aed" : "rgba(147,197,253,.7)";
+                ctx.lineWidth = on ? 2 : 1;
+                roundRect(ctx, px + 2, py + 2, cell - 4, cell - 4, 7);
+                ctx.fill();
+                ctx.stroke();
+                if (on) {
+                    const angle = -Math.PI / 2 + ((index * 5) % 16) / 16 * Math.PI * 2;
+                    ctx.strokeStyle = index === active ? "#f97316" : "#2563eb";
+                    ctx.lineWidth = index === active ? 2.5 : 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(px + cell / 2 - Math.cos(angle) * 7, py + cell / 2 - Math.sin(angle) * 7);
+                    ctx.lineTo(px + cell / 2 + Math.cos(angle) * 9, py + cell / 2 + Math.sin(angle) * 9);
+                    ctx.stroke();
+                }
+            }
         }
-        drawMotionPill(ctx, 70, 188, 210, 36, "gradient patch", `${data.vectors.length || 0} weighted vectors`, "#7c3aed");
-        drawMotionFlow(ctx, 312, 112, 414, 112, "#7c3aed", phase);
-        drawHistogramBars(ctx, 430, 52, 260, 128, values.length ? values : new Array(36).fill(1).map((_, i) => i % 9 + 1), peak, "#2563eb");
-        drawMotionFlow(ctx, 704, 116, 788, 116, "#f97316", phase);
-        drawMotionPill(ctx, 718, 184, 118, 36, "main θ", selected ? `${compactNumber(selected.orientation_deg)}°` : "懒加载", "#f97316");
-        ctx.strokeStyle = "#f97316";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(770, 126);
-        ctx.lineTo(810, 88);
+        ctx.restore();
+    }
+
+    function drawCellHistogramBank(ctx, x, y, descriptor, phase) {
+        const cell = 34;
+        const activeCell = Math.min(15, Math.floor(phase * 16));
+        ctx.save();
+        ctx.fillStyle = "#2563eb";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("4×4 cells × 8 bins", x, y - 14);
+        for (let c = 0; c < 16; c++) {
+            const col = c % 4;
+            const row = Math.floor(c / 4);
+            const cx = x + col * cell + cell / 2;
+            const cy = y + row * cell + cell / 2;
+            const active = c === activeCell;
+            ctx.strokeStyle = active ? "#f97316" : "rgba(37,99,235,.36)";
+            ctx.fillStyle = active ? "rgba(249,115,22,.08)" : "rgba(255,255,255,.7)";
+            ctx.lineWidth = active ? 2.4 : 1;
+            roundRect(ctx, x + col * cell + 2, y + row * cell + 2, cell - 4, cell - 4, 9);
+            ctx.fill();
+            ctx.stroke();
+            const values = descriptor.slice(c * 8, c * 8 + 8);
+            const max = Math.max(1e-6, ...values.map(value => Math.abs(Number(value) || 0)));
+            values.forEach((value, bin) => {
+                const ratio = Math.abs(Number(value) || 0) / max;
+                const angle = -Math.PI / 2 + bin / 8 * Math.PI * 2;
+                ctx.strokeStyle = active ? "#f97316" : "#2563eb";
+                ctx.globalAlpha = active ? .85 : .38;
+                ctx.lineWidth = active ? 2.2 : 1.4;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(angle) * (5 + ratio * 11), cy + Math.sin(angle) * (5 + ratio * 11));
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+    }
+
+    function drawDescriptorVectorRibbon(ctx, x, y, w, h, descriptor, phase) {
+        const max = Math.max(1e-6, ...descriptor.map(value => Math.abs(Number(value) || 0)));
+        const active = Math.min(127, Math.floor(phase * 128));
+        ctx.save();
+        ctx.fillStyle = "#06b6d4";
+        ctx.font = "950 15px sans-serif";
+        ctx.fillText("128-D descriptor", x, y - 14);
+        ctx.fillStyle = "rgba(255,255,255,.76)";
+        ctx.strokeStyle = "rgba(6,182,212,.42)";
+        roundRect(ctx, x, y, w, h, 16);
+        ctx.fill();
         ctx.stroke();
+        const barW = w / 128;
+        descriptor.forEach((value, index) => {
+            const ratio = Math.abs(Number(value) || 0) / max;
+            const barH = Math.max(2, ratio * (h - 30));
+            const hot = index <= active;
+            ctx.fillStyle = hot ? (index === active ? "#f97316" : "#06b6d4") : "rgba(148,163,184,.38)";
+            ctx.globalAlpha = hot ? .92 : .35;
+            ctx.fillRect(x + index * barW, y + h - 16 - barH, Math.max(1, barW - .5), barH);
+        });
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 3;
+        const normT = motionEase(Math.max(0, phase - .54) / .46);
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y + h + 26);
+        ctx.lineTo(x + 12 + (w - 24) * normT, y + h + 26);
+        ctx.stroke();
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("L2 normalize", x + 16, y + h + 48);
+        ctx.restore();
     }
 
     function drawSiftMotionDescriptor(ctx, phase, w, h, data) {
-        const descriptor = data.descriptor128.length ? data.descriptor128 : Array.from({ length: 128 }, (_, i) => ((i * 17) % 31) / 31);
-        drawMotionPill(ctx, 42, 38, 144, 42, "16×16 patch", "梯度窗口", "#7c3aed");
-        const startX = 58, startY = 96, cell = 22;
-        for (let y = 0; y < 4; y++) {
-            for (let x = 0; x < 4; x++) {
-                const active = (x + y * 4) / 16 < phase;
-                ctx.fillStyle = active ? "rgba(37,99,235,.18)" : "rgba(255,255,255,.92)";
-                ctx.strokeStyle = active ? "#2563eb" : "#bfdbfe";
-                ctx.fillRect(startX + x * cell, startY + y * cell, cell, cell);
-                ctx.strokeRect(startX + x * cell, startY + y * cell, cell, cell);
-            }
-        }
-        drawMotionFlow(ctx, 196, 138, 320, 138, "#2563eb", phase);
-        drawMotionPill(ctx, 334, 92, 136, 72, "4×4×8", "cell histograms", "#2563eb");
-        drawMotionFlow(ctx, 488, 128, 594, 128, "#06b6d4", phase);
-        drawHistogramBars(ctx, 610, 58, 204, 118, descriptor, -1, "#06b6d4");
-        drawMotionPill(ctx, 638, 188, 150, 36, "normalize", "128 float vector", "#16a34a");
+        const descriptor = descriptorValues(data);
+        drawDescriptorPatchGrid(ctx, 54, 78, 112, phase);
+        drawFlowParticles(ctx, 178, 136, 270, 136, "#7c3aed", phase, 5);
+        drawCellHistogramBank(ctx, 288, 72, descriptor, phase);
+        drawFlowParticles(ctx, 432, 136, 522, 136, "#06b6d4", (phase + .18) % 1, 5);
+        drawDescriptorVectorRibbon(ctx, 538, 76, 220, 108, descriptor, phase);
+        ctx.save();
+        ctx.fillStyle = "#334155";
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText("16×16 邻域分成 4×4 cell，每个 cell 投票 8 个方向，拼接并归一化为 128 维向量", 74, 226);
+        ctx.restore();
     }
 
     function drawPatchTiles(ctx, x, y, cols, rows, size, phase, color) {

@@ -925,81 +925,160 @@
         ctx.restore();
     }
 
+    function drawInputSourcePlane(ctx, x, y, width, height, patch, sample, phase) {
+        const rows = 5;
+        const cols = 7;
+        const values = flattenMatrix(centerMatrix(patch, 5));
+        const cellW = width / cols;
+        const cellH = height / rows;
+        const scan = Math.min(rows * cols - 1, Math.floor(motionEase(phase, .04, .48) * rows * cols));
+        ctx.save();
+        const plane = ctx.createLinearGradient(x, y, x + width, y + height);
+        plane.addColorStop(0, "rgba(255,255,255,.36)");
+        plane.addColorStop(.5, "rgba(219,234,254,.34)");
+        plane.addColorStop(1, "rgba(255,255,255,.18)");
+        ctx.fillStyle = plane;
+        roundRect(ctx, x, y, width, height, 20);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(96,165,250,.42)";
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, x, y, width, height, 20);
+        ctx.stroke();
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const index = row * cols + col;
+                const value = values[Math.min(values.length - 1, Math.abs((row - 1) * 5 + col - 1))] ?? sample.gray;
+                const mixed = Math.max(40, Math.min(230, Math.round((Number(value) + sample.gray) / 2)));
+                const px = x + col * cellW + cellW / 2;
+                const py = y + row * cellH + cellH / 2;
+                const isCenter = row === 2 && col === 3;
+                const isActive = index <= scan;
+                ctx.globalAlpha = isActive ? .94 : .34;
+                ctx.fillStyle = isCenter
+                    ? `rgb(${Math.round(sample.r)},${Math.round(sample.g)},${Math.round(sample.b)})`
+                    : `rgb(${mixed},${mixed + 6},${Math.min(255, mixed + 18)})`;
+                ctx.shadowColor = isCenter ? "#f97316" : "#60a5fa";
+                ctx.shadowBlur = isCenter ? 12 : isActive ? 5 : 0;
+                ctx.beginPath();
+                ctx.arc(px, py, isCenter ? 6.5 : 4.6, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+        const cx = x + 3.5 * cellW;
+        const cy = y + 2.5 * cellH;
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 7]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 24 + 7 * phase.pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("原图采样平面", x + 8, y - 12);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText("点击中心像素，抽取局部 patch", x + 8, y + height + 18);
+        ctx.restore();
+        return { x: cx, y: cy };
+    }
+
+    function drawInputPayload(ctx, x, y, data, sample, phase) {
+        const appear = motionEase(phase, .24, .62, .12);
+        const rows = [
+            ["x", data.x, "#2563eb"],
+            ["y", data.y, "#7c3aed"],
+            ["RGB", rgbText(sample), "#7c3aed"],
+            ["Gray", formatCompact(sample.gray), "#f97316"]
+        ];
+        ctx.save();
+        ctx.globalAlpha = appear;
+        ctx.fillStyle = "#0891b2";
+        ctx.font = "950 16px sans-serif";
+        ctx.fillText("Probe payload", x, y - 18);
+        rows.forEach(([label, value, color], index) => {
+            const yy = y + index * 28;
+            ctx.strokeStyle = `${color}80`;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(x, yy + 12);
+            ctx.lineTo(x + 136, yy + 12);
+            ctx.stroke();
+            drawParticle(ctx, x + 136 * ((motionProgress(phase) + index * .17) % 1), yy + 12, color, .72, 3.6);
+            ctx.fillStyle = color;
+            ctx.font = "950 12px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(label, x, yy + 5);
+            ctx.fillStyle = "#334155";
+            ctx.font = "950 14px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(String(value), x + 136, yy + 5);
+        });
+        ctx.restore();
+    }
+
+    function drawInputAnchor(ctx, x, y, patch, sample, phase) {
+        const appear = motionEase(phase, .56, .92, .12);
+        ctx.save();
+        ctx.globalAlpha = appear;
+        const pulse = 1 + .12 * phase.pulse;
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, 48 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(249,115,22,.24)";
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.arc(x, y, 58 + 6 * phase.pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        drawGrayPatchOutput(ctx, x - 38, y - 37, 76, patch, 12, "#f97316", "");
+        ctx.fillStyle = "#fff7ed";
+        ctx.strokeStyle = "rgba(249,115,22,.58)";
+        ctx.lineWidth = 1.6;
+        roundRect(ctx, x + 54, y - 22, 116, 44, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 13px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("READY", x + 112, y - 4);
+        ctx.fillStyle = "#9a3412";
+        ctx.font = "900 12px sans-serif";
+        ctx.fillText("same center", x + 112, y + 14);
+        ctx.fillStyle = "#ea580c";
+        ctx.font = "950 16px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("统一输入锚点", x - 48, y - 74);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 12px sans-serif";
+        ctx.fillText(`Gray ${formatCompact(sample.gray)} 将被后续步骤复用`, x - 48, y + 76);
+        ctx.restore();
+    }
+
     function drawMotionInput(ctx, phase, w, h) {
         const data = currentProbeData();
         const patch = centerMatrix(data.gray_patch, 5);
         const sample = sampleRgbAtSource(data.x, data.y, data.gray);
-        const scan = Math.min(24, Math.floor(motionEase(phase, .05, .56) * 25));
-        const extractProgress = motionEase(phase, .18, .50, .14);
-        const packProgress = motionEase(phase, .48, .84, .16);
-
-        drawMotionPanel(ctx, 34, 38, 226, 148, "#2563eb");
-        drawMotionPanel(ctx, 318, 42, 208, 140, "#06b6d4");
-        drawMotionPanel(ctx, 590, 38, 226, 148, "#f97316");
-        drawParticleFlow(ctx, 260, 112, 318, 112, "#06b6d4", phase, 3);
-        drawParticleFlow(ctx, 526, 112, 590, 112, "#f97316", phase, 3);
-
+        const source = drawInputSourcePlane(ctx, 48, 74, 218, 94, patch, sample, phase);
+        const payloadX = 336;
+        const anchor = { x: 652, y: 122 };
+        drawParticleFlow(ctx, source.x + 32, source.y, payloadX - 28, 112, "#06b6d4", phase, 5);
+        drawParticleFlow(ctx, payloadX + 156, 112, anchor.x - 78, anchor.y, "#f97316", phase, 5);
+        drawInputPayload(ctx, payloadX, 76, data, sample, phase);
+        drawInputAnchor(ctx, anchor.x, anchor.y, patch, sample, phase);
         ctx.save();
-        ctx.fillStyle = "#1d4ed8";
-        ctx.font = "950 17px sans-serif";
-        ctx.fillText("原图局部窗口", 54, 67);
-        ctx.fillStyle = "#64748b";
-        ctx.font = "850 12px sans-serif";
-        ctx.fillText(`点击点 (${data.x}, ${data.y})`, 54, 86);
-        drawRgbPatch(ctx, 58, 113, 78, patch, sample, scan, "#2563eb", phase, "");
-        const center = { x: 58 + 78 / 2, y: 113 + 78 / 2 };
-        ctx.strokeStyle = "#f97316";
-        ctx.lineWidth = 2.6;
-        ctx.setLineDash([6, 5]);
-        roundRect(ctx, center.x - 36 - 8 * extractProgress, center.y - 36 - 8 * extractProgress, 72 + 16 * extractProgress, 72 + 16 * extractProgress, 14);
+        const ghost = motionEase(phase, .20, .62);
+        ctx.globalAlpha = .18 + ghost * .36;
+        ctx.strokeStyle = "#06b6d4";
+        ctx.lineWidth = 2;
+        const gx = source.x + (payloadX - source.x - 20) * ghost;
+        roundRect(ctx, gx - 26, 88 + 14 * Math.sin(ghost * Math.PI), 52, 52, 13);
         ctx.stroke();
-        ctx.setLineDash([]);
         ctx.fillStyle = "#334155";
-        ctx.font = "900 12px sans-serif";
-        ctx.fillText(`RGB ${rgbText(sample)}`, 152, 122);
-        ctx.fillText(`Gray ${formatCompact(sample.gray)}`, 152, 145);
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalAlpha = .28 + extractProgress * .72;
-        ctx.fillStyle = "#0891b2";
-        ctx.font = "950 17px sans-serif";
-        ctx.fillText("探针包", 346, 72);
-        ctx.fillStyle = "#64748b";
-        ctx.font = "850 12px sans-serif";
-        ctx.fillText("坐标、灰度、局部 patch", 346, 94);
-        [
-            ["x", data.x, "#2563eb"],
-            ["y", data.y, "#7c3aed"],
-            ["G", formatCompact(sample.gray), "#f97316"]
-        ].forEach(([label, value, color], index) => {
-            ctx.fillStyle = "rgba(255,255,255,.9)";
-            ctx.strokeStyle = `${color}88`;
-            ctx.lineWidth = 1.6;
-            roundRect(ctx, 346, 108 + index * 22, 126, 17, 8);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = color;
-            ctx.font = "950 11px sans-serif";
-            ctx.fillText(label, 357, 121 + index * 22);
-            ctx.fillStyle = "#334155";
-            ctx.font = "900 11px sans-serif";
-            ctx.textAlign = "right";
-            ctx.fillText(String(value), 462, 121 + index * 22);
-            ctx.textAlign = "left";
-        });
-        ctx.restore();
-
-        ctx.save();
-        ctx.globalAlpha = .32 + packProgress * .68;
-        ctx.fillStyle = "#ea580c";
-        ctx.font = "950 17px sans-serif";
-        ctx.fillText("统一输入", 612, 67);
-        ctx.fillStyle = "#64748b";
-        ctx.font = "850 12px sans-serif";
-        ctx.fillText("后续步骤读取同一中心点", 612, 86);
-        drawGrayPatchOutput(ctx, 616, 112, 78, patch, 12, "#f97316", "");
-        drawFlipValue(ctx, 750, 132, "READY", "probe", "#f97316", packProgress);
+        ctx.font = "950 14px sans-serif";
+        ctx.fillText(`(${data.x}, ${data.y})`, 66, 58);
         ctx.restore();
     }
 
