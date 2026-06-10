@@ -2030,8 +2030,239 @@ th { color: #1e3a8a; background: #eff6ff; }
     background: #f8fbff;
 }
 
+.feature-panorama-layout {
+    grid-template-columns: 286px minmax(0, 1fr) minmax(300px, 340px);
+}
+
+.panorama-controls {
+    gap: 11px;
+}
+
+.panorama-controls form,
+.panorama-control-set {
+    display: grid;
+    gap: 10px;
+}
+
+.panorama-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid #dbeafe;
+    border-radius: 13px;
+    background: #f8fbff;
+}
+
+.panorama-mode-switch button,
+.panorama-control-set > button,
+.panorama-result-stats button,
+.panorama-blend-process button {
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 0 10px;
+    color: #52627a;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+    background: transparent;
+}
+
+.panorama-mode-switch button:hover,
+.panorama-mode-switch button.is-active,
+.panorama-control-set > button:hover,
+.panorama-result-stats button:hover,
+.panorama-blend-process button:hover {
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, .09);
+}
+
+.panorama-controls .feature-upload {
+    min-height: 72px;
+    padding: 12px 14px;
+}
+
+.panorama-controls .feature-upload span {
+    font-size: 15px;
+}
+
+.panorama-controls .feature-sample-btn {
+    height: 40px;
+}
+
+.panorama-controls .feature-param-card {
+    gap: 7px;
+    padding: 10px;
+}
+
+.panorama-controls .feature-param-card label,
+.panorama-control-set > label {
+    gap: 5px;
+    font-size: 12px;
+}
+
+.panorama-controls input,
+.panorama-controls select {
+    min-height: 34px;
+    border-radius: 10px;
+}
+
+.panorama-controls input[type="checkbox"] {
+    width: 17px;
+    min-height: 17px;
+    height: 17px;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--feature-blue);
+}
+
+.panorama-controls .feature-check-row,
+.panorama-checkbox {
+    display: flex !important;
+    grid-template-columns: none !important;
+    align-items: center;
+    gap: 8px !important;
+    min-height: 30px;
+}
+
+.panorama-control-set > button {
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.panorama-control-set > button.feature-primary {
+    min-height: 38px;
+    border: 0;
+    color: #fff;
+    background: linear-gradient(135deg, var(--feature-blue), var(--feature-blue-dark));
+}
+
+.panorama-stage {
+    gap: 13px;
+}
+
+.panorama-stage .feature-stage-head {
+    align-items: center;
+}
+
+.panorama-view-toolbar {
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+
+.panorama-canvas-shell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: clamp(390px, 34vw, 560px);
+    padding: 10px;
+    background:
+        linear-gradient(45deg, rgba(219, 234, 254, .42) 25%, transparent 25%) 0 0 / 22px 22px,
+        linear-gradient(-45deg, rgba(219, 234, 254, .42) 25%, transparent 25%) 0 11px / 22px 22px,
+        #f8fbff;
+}
+
+.panorama-canvas-shell canvas {
+    width: 100%;
+    max-height: 560px;
+    object-fit: contain;
+    border: 1px solid rgba(191, 219, 254, .8);
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.panorama-canvas-shell video {
+    display: none;
+}
+
+.panorama-result-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #dbeafe;
+    border-radius: 15px;
+    padding: 10px;
+    background: linear-gradient(145deg, #fff, #f8fbff);
+}
+
+.panorama-result-stats .feature-stat-list {
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 6px;
+}
+
+.panorama-result-stats .feature-stat-list div {
+    padding: 6px 8px;
+    font-size: 10px;
+}
+
+.panorama-result-stats button {
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: #eff6ff;
+    white-space: nowrap;
+}
+
+.panorama-blend-process {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: 12px;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(14, 165, 233, .1), transparent 30%),
+        linear-gradient(145deg, #fff, #f8fbff);
+}
+
+.panorama-blend-process article {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.panorama-blend-process canvas {
+    width: 100%;
+    height: 96px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background: #f8fbff;
+}
+
+.panorama-blend-process span {
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.panorama-info {
+    gap: 12px;
+}
+
+.panorama-info .feature-boundary,
+.panorama-info .feature-note {
+    padding: 11px;
+}
+
+.panorama-info .feature-stat-list {
+    gap: 6px;
+}
+
+.panorama-info .feature-stat-list div {
+    min-height: 28px;
+    padding: 6px 8px;
+    font-size: 10px;
+}
+
 @media (max-width: 1540px) {
     .feature-matching-layout {
+        grid-template-columns: 280px minmax(0, 1fr) 310px;
+    }
+    .feature-panorama-layout {
         grid-template-columns: 280px minmax(0, 1fr) 310px;
     }
     .match-ransac-layout {
@@ -2047,10 +2278,20 @@ th { color: #1e3a8a; background: #eff6ff; }
     .match-probe-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .panorama-result-stats {
+        grid-template-columns: 1fr;
+    }
+    .panorama-result-stats button {
+        width: 100%;
+    }
+    .panorama-blend-process {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 1180px) {
-    .feature-matching-layout {
+    .feature-matching-layout,
+    .feature-panorama-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -2077,6 +2318,13 @@ th { color: #1e3a8a; background: #eff6ff; }
     }
     .match-canvas-shell {
         min-height: 260px;
+    }
+    .panorama-canvas-shell {
+        min-height: 300px;
+    }
+    .panorama-mode-switch,
+    .panorama-blend-process {
+        grid-template-columns: 1fr;
     }
     .match-algorithm-grid {
         grid-template-columns: 1fr;

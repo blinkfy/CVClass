@@ -20,8 +20,8 @@
     <nav class="feature-tabs" aria-label="特征检测子页面">
         <a class="{{ 'active' if feature_mode == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
         <a class="{{ 'active' if feature_mode == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
-        <a class="{{ 'active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征检测</a>
-        <a class="{{ 'active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配应用</a>
+        <a class="{{ 'active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">特征检测</a>
+        <a class="{{ 'active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配</a>
     </nav>
 
     {% if feature_mode == 'matching' %}
@@ -78,7 +78,7 @@
         </main>
 
         <aside class="notes-panel">
-            <h2>PROCESS NOTES · 特征匹配应用</h2>
+            <h2>PROCESS NOTES · 特征匹配</h2>
             <div class="note blue"><b>描述子匹配</b><p>使用 L2 距离比较两幅图像中的 SIFT 128 维描述子。</p></div>
             <div class="note green"><b>Ratio Test</b><p>最近邻距离 d1 与次近邻距离 d2 的比值小于阈值时保留。</p></div>
             <div class="note orange"><b>旋转与尺度鲁棒性</b><p>主方向和尺度空间使 SIFT 在旋转、缩放下仍能匹配。</p></div>

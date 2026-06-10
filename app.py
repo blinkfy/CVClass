@@ -166,6 +166,7 @@ def feature_detection_mode_page(mode):
         "corner": "feature_harris.html",
         "sift": "feature_sift.html",
         "matching": "feature_matching.html",
+        "panorama": "feature_panorama.html",
     }
     if mode not in feature_templates:
         return redirect(url_for("feature_detection_mode_page", mode="compare"))
