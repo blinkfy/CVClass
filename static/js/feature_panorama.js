@@ -33,6 +33,8 @@
             stable: false,
             lastMetrics: null,
             lastOverlap: 0,
+            lastAttachMode: "",
+            lastMessage: "",
             autoTimer: 0
         },
         busy: false
@@ -393,6 +395,27 @@
         return mask;
     }
 
+    function layerOverlapStats(layers) {
+        const leftMask = alphaCoverage(layers.leftMaskLayer);
+        const rightMask = alphaCoverage(layers.rightMaskLayer);
+        let left = 0;
+        let right = 0;
+        let overlap = 0;
+        for (let i = 0; i < leftMask.length; i += 1) {
+            if (leftMask[i]) left += 1;
+            if (rightMask[i]) right += 1;
+            if (leftMask[i] && rightMask[i]) overlap += 1;
+        }
+        const union = Math.max(1, left + right - overlap);
+        return {
+            leftPixels: left,
+            rightPixels: right,
+            overlapPixels: overlap,
+            overlapMinRatio: overlap / Math.max(1, Math.min(left, right)),
+            overlapUnionRatio: overlap / union
+        };
+    }
+
     function distanceTransform(mask, width, height) {
         const inf = width + height + 1024;
         const dist = new Float32Array(width * height);
@@ -585,7 +608,8 @@
         if (geometry.inliers < 4) throw new Error("内点不足：当前图像无法可靠估计几何变换。");
         if (geometry.meanError > options.threshold * 1.8) throw new Error("H 不可靠：重投影误差过大。");
         const layers = drawWarpedLayers(leftImg, rightImg, geometry.H, options.scale);
-        const overlapRatio = Math.min(leftImg.width, rightImg.width) / Math.max(layers.bounds.width, 1);
+        const overlapStats = layerOverlapStats(layers);
+        const overlapRatio = overlapStats.overlapMinRatio;
         if (overlapRatio < .12) throw new Error("重叠区域太小，无法生成稳定全景。");
         const blended = blendLayers(layers, options.blend, options.levels);
         const panorama = options.autoCrop ? cropTransparent(blended) : blended;
@@ -599,7 +623,7 @@
             blended,
             panorama,
             options,
-            meta: { elapsedMs: performance.now() - started, overlapRatio }
+            meta: { elapsedMs: performance.now() - started, overlapRatio, overlapStats }
         };
     }
 
@@ -696,14 +720,7 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const data = state.mode === "camera" ? state.camera.panorama : state.upload;
         if (state.mode === "camera") {
-            const baseWidth = 980;
-            const baseHeight = 560;
-            const scale = Math.min(canvas.width / baseWidth, canvas.height / baseHeight);
-            ctx.save();
-            ctx.translate((canvas.width - baseWidth * scale) / 2, (canvas.height - baseHeight * scale) / 2);
-            ctx.scale(scale, scale);
-            drawCameraScene(ctx, { width: baseWidth, height: baseHeight });
-            ctx.restore();
+            drawCameraSceneV2(ctx, canvas);
             return;
         }
         if (!data) {
@@ -737,22 +754,19 @@
                 ctx.stroke();
             });
         } else if (state.view === "warp") {
-            drawContained(ctx, data.layers.rightLayer, content, "Warp 对齐与全景画布边界");
+            const layerRect = drawContained(ctx, data.layers.rightLayer, content, "Warp 对齐与全景画布边界");
+            ctx.save();
+            ctx.globalAlpha = 0.58;
+            ctx.drawImage(data.layers.maskLayer, layerRect.x, layerRect.y, layerRect.w, layerRect.h);
+            ctx.restore();
             ctx.strokeStyle = "#16a34a";
             ctx.lineWidth = clamp(canvas.width * 0.0024, 3, 5);
             ctx.setLineDash([12, 8]);
             ctx.strokeRect(content.x, content.y, content.w, content.h);
             ctx.setLineDash([]);
-            ctx.fillStyle = "rgba(37,99,235,.13)";
-            const maskW = clamp(content.w * 0.36, 280, 520);
-            const maskH = clamp(content.h * 0.36, 180, 320);
-            const maskX = content.x + content.w * 0.24;
-            const maskY = content.y + content.h * 0.30;
-            roundRect(ctx, maskX, maskY, maskW, maskH, 16);
-            ctx.fill();
             ctx.fillStyle = "#1d4ed8";
             ctx.font = `950 ${clamp(canvas.width * 0.012, 14, 18)}px sans-serif`;
-            ctx.fillText("重叠区域 / overlap mask", maskX + 26, maskY + 38);
+            ctx.fillText("真实覆盖与重叠区域 / actual overlap mask", content.x + 28, content.y + 42);
         } else if (state.view === "blend") {
             const cards = [
                 ["overlap mask", data.layers.maskLayer],
@@ -897,6 +911,49 @@
         };
     }
 
+    function cameraResultScore(result, preferred = false) {
+        const quality = cameraQuality(result);
+        const inlierScore = Math.min(quality.inliers, 80) * 2.2;
+        const overlapScore = Math.min(quality.overlap, 1) * 85;
+        const errorPenalty = Math.min(quality.error, 30) * 6;
+        return inlierScore + overlapScore - errorPenalty + (preferred ? 8 : 0);
+    }
+
+    async function stitchCameraFrameAnyDirection(baseSrc, frameSrc, options) {
+        const attempts = [
+            {
+                mode: "frame-to-panorama",
+                label: "新帧接入当前全景坐标",
+                preferred: true,
+                run: () => stitchSources(frameSrc, baseSrc, options)
+            },
+            {
+                mode: "panorama-to-frame",
+                label: "全景重定位到当前帧坐标",
+                preferred: false,
+                run: () => stitchSources(baseSrc, frameSrc, options)
+            }
+        ];
+        const results = [];
+        const failures = [];
+        for (const attempt of attempts) {
+            try {
+                const result = await attempt.run();
+                result.meta.cameraAttachMode = attempt.mode;
+                result.meta.cameraAttachLabel = attempt.label;
+                result.meta.cameraAttachScore = cameraResultScore(result, attempt.preferred);
+                results.push(result);
+            } catch (error) {
+                failures.push(error?.message || attempt.label);
+            }
+        }
+        if (!results.length) {
+            throw new Error(failures[0] || "当前帧无法与已有全景稳定拼接");
+        }
+        results.sort((a, b) => b.meta.cameraAttachScore - a.meta.cameraAttachScore);
+        return results[0];
+    }
+
     function drawBlendProcessPanel(data) {
         const panel = $("blendProcessPanel");
         if (!panel || panel.hidden || !data?.layers) return;
@@ -959,6 +1016,8 @@
     function setMode(mode) {
         state.mode = mode;
         if (mode !== "camera") stopAutoCapture();
+        if (mode === "camera" && state.camera.status === "idle") state.camera.status = "等待打开摄像头";
+        if (mode === "camera") $("panoramaElapsed").textContent = state.camera.panorama ? `${fixed(state.camera.panorama.meta.elapsedMs, 2)} ms` : "等待运行";
         document.querySelectorAll("[data-panorama-mode]").forEach(button => button.classList.toggle("is-active", button.dataset.panoramaMode === mode));
         document.querySelectorAll("[data-panorama-controls]").forEach(box => { box.hidden = box.dataset.panoramaControls !== mode; });
         $("panoramaStageTitle").textContent = mode === "camera" ? "摄像头连续拍摄全景" : "双图拼接结果预览";
@@ -992,7 +1051,8 @@
             video.srcObject = stream;
             video.hidden = true;
             await video.play();
-            state.camera.status = "请沿箭头方向缓慢移动";
+            state.camera.status = "请保持重叠，向任意方向缓慢移动";
+            $("panoramaElapsed").textContent = "摄像头已打开";
             drawPanorama();
             renderStats();
         } catch (error) {
@@ -1003,40 +1063,7 @@
     }
 
     async function captureCameraFrame(first = false) {
-        const frame = captureVideoFrame();
-        if (!frame) {
-            showError("摄像头尚未就绪。");
-            return;
-        }
-        if (first || !state.camera.frames.length) {
-            state.camera.frames = [frame];
-            state.camera.panorama = null;
-            state.camera.status = "第一帧已捕获，请向右缓慢移动";
-        } else {
-            const previous = state.camera.panorama?.panorama?.toDataURL("image/png") || state.camera.frames[state.camera.frames.length - 1];
-            try {
-                const result = await stitchSources(previous, frame, {
-                    algorithm: $("cameraAlgorithm").value,
-                    ratio: 0.78,
-                    threshold: number($("cameraMaxError").value, 5),
-                    model: "affine",
-                    blend: $("cameraPreviewBlend").value,
-                    levels: 3,
-                    autoCrop: false,
-                    scale: .7
-                });
-                const minInliers = number($("cameraMinInliers").value, 12);
-                if (result.geometry.inliers < minInliers) throw new Error("当前帧不可拼接：内点数不足。");
-                state.camera.frames.push(frame);
-                state.camera.panorama = result;
-                state.camera.status = "检测到稳定重叠，可捕获下一帧";
-                state.camera.lastMetrics = result.geometry;
-            } catch (error) {
-                state.camera.status = error.message || "当前帧不可拼接";
-            }
-        }
-        renderStats();
-        drawPanorama();
+        return captureCameraFrameEnhanced(first);
     }
 
     async function captureCameraFrameEnhanced(first = false) {
@@ -1051,7 +1078,10 @@
             state.camera.panorama = null;
             state.camera.stable = false;
             state.camera.lastOverlap = 0;
-            state.camera.status = "第一帧已捕获，请向右缓慢移动";
+            state.camera.lastAttachMode = "";
+            state.camera.lastMessage = "";
+            state.camera.status = "第一帧已捕获，可向任意方向缓慢移动";
+            $("panoramaElapsed").textContent = "已捕获第一帧";
             renderStats();
             drawPanorama();
             return;
@@ -1059,9 +1089,10 @@
         const previous = state.camera.panorama?.panorama?.toDataURL("image/png") || state.camera.frames[state.camera.frames.length - 1];
         try {
             state.busy = true;
-            state.camera.status = "正在检测重叠并拼接当前帧";
+            state.camera.status = "正在检测任意方向重叠并拼接当前帧";
+            $("panoramaElapsed").textContent = "拼接中...";
             renderStats();
-            const result = await stitchSources(previous, frame, cameraStitchOptions($("cameraPreviewBlend").value, .7));
+            const result = await stitchCameraFrameAnyDirection(previous, frame, cameraStitchOptions($("cameraPreviewBlend").value, .7));
             const quality = cameraQuality(result);
             if (!quality.stable) {
                 const reason = quality.inliers < quality.minInliers ? "内点数不足" : quality.overlap < quality.minOverlap ? "重叠区域太小" : "重投影误差偏大";
@@ -1072,10 +1103,14 @@
             state.camera.stable = true;
             state.camera.lastOverlap = quality.overlap;
             state.camera.lastMetrics = result.geometry;
-            state.camera.status = "检测到稳定重叠，可捕获下一帧";
+            state.camera.lastAttachMode = result.meta.cameraAttachMode || "";
+            state.camera.lastMessage = result.meta.cameraAttachLabel || "";
+            state.camera.status = "已从任意方向接入当前帧，可继续扩展四周";
+            $("panoramaElapsed").textContent = `${fixed(result.meta.elapsedMs, 2)} ms`;
         } catch (error) {
             state.camera.stable = false;
             state.camera.status = error.message || "当前帧不可拼接";
+            $("panoramaElapsed").textContent = "处理失败";
         } finally {
             state.busy = false;
         }
@@ -1083,69 +1118,112 @@
         drawPanorama();
     }
 
-    function drawCameraScene(ctx, canvas) {
+    function drawCameraSceneV2(ctx, canvas) {
         const video = $("panoramaVideo");
-        $("panoramaEmptyState").hidden = Boolean(state.camera.stream);
+        const content = canvasContentRect(canvas);
+        const gap = clamp(content.w * 0.025, 20, 34);
+        const topH = state.camera.stream && video.videoWidth ? content.h * 0.62 : content.h * 0.72;
+        const leftW = state.camera.stream && video.videoWidth ? (content.w - gap) * 0.52 : 0;
+        const panoRect = state.camera.stream && video.videoWidth
+            ? { x: content.x + leftW + gap, y: content.y, w: content.w - leftW - gap, h: topH }
+            : { x: content.x, y: content.y, w: content.w, h: topH };
+        $("panoramaEmptyState").hidden = true;
+
         if (state.camera.stream && video.videoWidth) {
-            const rect = { x: 38, y: 32, w: 560, h: 330 };
-            drawVideoContained(ctx, video, rect);
-            ctx.strokeStyle = "#2563eb";
-            ctx.lineWidth = 3;
-            roundRect(ctx, rect.x + rect.w / 2 - 105, rect.y + 52, 210, 210, 20);
+            const liveRect = { x: content.x, y: content.y, w: leftW, h: topH };
+            drawVideoContained(ctx, video, liveRect);
+            ctx.strokeStyle = "rgba(37,99,235,.78)";
+            ctx.lineWidth = clamp(canvas.width * 0.0024, 2.5, 4);
+            roundRect(ctx, liveRect.x + liveRect.w * 0.25, liveRect.y + liveRect.h * 0.18, liveRect.w * 0.5, liveRect.h * 0.55, 22);
             ctx.stroke();
-            ctx.strokeStyle = "#16a34a";
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(rect.x + 90, rect.y + rect.h + 34);
-            ctx.lineTo(rect.x + rect.w - 92, rect.y + rect.h + 34);
-            ctx.stroke();
-            ctx.fillStyle = "#16a34a";
-            ctx.beginPath();
-            ctx.moveTo(rect.x + rect.w - 92, rect.y + rect.h + 34);
-            ctx.lineTo(rect.x + rect.w - 112, rect.y + rect.h + 22);
-            ctx.lineTo(rect.x + rect.w - 112, rect.y + rect.h + 46);
-            ctx.fill();
-            ctx.fillStyle = "#1e3a8a";
-            ctx.font = "950 18px sans-serif";
-            ctx.fillText("请沿箭头方向缓慢移动", rect.x + 160, rect.y + rect.h + 72);
-            ctx.fillStyle = "#64748b";
-            ctx.font = "850 13px sans-serif";
-            ctx.fillText("保持足够重叠区域；检测到稳定重叠后可捕获下一帧", rect.x + 128, rect.y + rect.h + 96);
-        }
-        if (state.camera.frames.length) {
-            const ghostY = 462;
-            const ghostW = Math.min(460, 92 + state.camera.frames.length * 72);
-            ctx.save();
-            ctx.fillStyle = "rgba(37,99,235,.10)";
-            roundRect(ctx, 84, ghostY, ghostW, 34, 17);
-            ctx.fill();
-            for (let i = 0; i < state.camera.frames.length; i += 1) {
-                const x = 98 + i * 58;
-                ctx.fillStyle = `rgba(37,99,235,${0.12 + Math.min(.32, i * .04)})`;
-                roundRect(ctx, x, ghostY + 6, 74, 22, 11);
-                ctx.fill();
-            }
+            drawCameraCompass(ctx, { x: liveRect.x + 22, y: liveRect.y + liveRect.h - 116, w: 178, h: 86 });
             ctx.fillStyle = "#1d4ed8";
-            ctx.font = "900 11px sans-serif";
-            ctx.fillText(`已拍摄区域 ghost × ${state.camera.frames.length}`, 104, ghostY + 23);
-            ctx.restore();
+            ctx.font = `950 ${clamp(canvas.width * 0.012, 13, 17)}px sans-serif`;
+            ctx.fillText("当前取景", liveRect.x + 24, liveRect.y + 34);
         }
 
-        const preview = { x: 640, y: 52, w: 300, h: 260 };
         ctx.fillStyle = "#f1f5f9";
-        roundRect(ctx, preview.x, preview.y, preview.w, preview.h, 16);
+        roundRect(ctx, panoRect.x, panoRect.y, panoRect.w, panoRect.h, 18);
         ctx.fill();
-        if (state.camera.panorama) drawContained(ctx, state.camera.panorama.panorama, preview, "实时全景预览");
-        else {
+        if (state.camera.panorama) {
+            drawContained(ctx, state.camera.panorama.panorama, panoRect, "实时全景预览");
+        } else if (state.camera.frames.length) {
+            ctx.fillStyle = "#1d4ed8";
+            ctx.font = `950 ${clamp(canvas.width * 0.014, 14, 18)}px sans-serif`;
+            ctx.fillText("已捕获第一帧", panoRect.x + 28, panoRect.y + 44);
             ctx.fillStyle = "#64748b";
-            ctx.font = "900 14px sans-serif";
-            ctx.fillText("实时全景预览", preview.x + 24, preview.y + 42);
+            ctx.font = `850 ${clamp(canvas.width * 0.011, 12, 15)}px sans-serif`;
+            ctx.fillText("继续向上、下、左、右任意方向移动并捕获下一帧", panoRect.x + 28, panoRect.y + 74);
+        } else {
+            ctx.fillStyle = "#64748b";
+            ctx.font = `900 ${clamp(canvas.width * 0.014, 14, 18)}px sans-serif`;
+            ctx.fillText(state.camera.stream ? "拍摄第一帧后开始全景扩展" : "打开摄像头或继续已有全景", panoRect.x + 28, panoRect.y + 44);
         }
-        const status = state.camera.panorama?.geometry || {};
+
+        const status = state.camera.panorama?.geometry || state.camera.lastMetrics || {};
         const inliers = number(status.inliers, 0);
         const error = number(status.meanError, 0);
-        const ok = inliers >= number($("cameraMinInliers").value, 12);
-        drawCameraStatus(ctx, { x: 640, y: 340, w: 300, h: 132 }, ok, inliers, error);
+        const quality = cameraQuality(state.camera.panorama || { geometry: status, meta: { overlapRatio: state.camera.lastOverlap } });
+        const statusRect = { x: content.x, y: content.y + topH + gap, w: content.w, h: Math.max(120, content.h - topH - gap) };
+        drawCameraStatus(ctx, statusRect, quality.stable, inliers, error);
+        drawCameraFrameStrip(ctx, statusRect);
+    }
+
+    function drawCameraCompass(ctx, rect) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,.86)";
+        ctx.strokeStyle = "rgba(191,219,254,.95)";
+        roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 16);
+        ctx.fill();
+        ctx.stroke();
+        const cx = rect.x + 42;
+        const cy = rect.y + rect.h / 2;
+        ctx.strokeStyle = "#16a34a";
+        ctx.lineWidth = 3;
+        [[0, -22], [0, 22], [-22, 0], [22, 0]].forEach(([dx, dy]) => {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + dx, cy + dy);
+            ctx.stroke();
+        });
+        ctx.fillStyle = "#16a34a";
+        [[0, -27, 0, -18, -6, -20, 6, -20], [0, 27, 0, 18, -6, 20, 6, 20], [-27, 0, -18, 0, -20, -6, -20, 6], [27, 0, 18, 0, 20, -6, 20, 6]].forEach(points => {
+            ctx.beginPath();
+            ctx.moveTo(cx + points[0], cy + points[1]);
+            ctx.lineTo(cx + points[4], cy + points[5]);
+            ctx.lineTo(cx + points[6], cy + points[7]);
+            ctx.closePath();
+            ctx.fill();
+        });
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 12px sans-serif";
+        ctx.fillText("四周均可扩展", rect.x + 78, rect.y + 34);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 10px sans-serif";
+        ctx.fillText("只需保持足够重叠", rect.x + 78, rect.y + 56);
+        ctx.restore();
+    }
+
+    function drawCameraFrameStrip(ctx, rect) {
+        if (!state.camera.frames.length) return;
+        const count = state.camera.frames.length;
+        const stripY = rect.y + rect.h - 38;
+        const stripW = Math.min(rect.w * 0.52, 120 + count * 56);
+        ctx.save();
+        ctx.fillStyle = "rgba(37,99,235,.10)";
+        roundRect(ctx, rect.x + 16, stripY, stripW, 30, 15);
+        ctx.fill();
+        for (let i = 0; i < count; i += 1) {
+            const x = rect.x + 28 + i * 42;
+            if (x + 52 > rect.x + stripW) break;
+            ctx.fillStyle = `rgba(37,99,235,${0.14 + Math.min(.34, i * .045)})`;
+            roundRect(ctx, x, stripY + 6, 52, 18, 9);
+            ctx.fill();
+        }
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "900 11px sans-serif";
+        ctx.fillText(`已捕获 ${count} 帧`, rect.x + 28, stripY + 20);
+        ctx.restore();
     }
 
     function drawVideoContained(ctx, video, rect) {
@@ -1160,30 +1238,6 @@
     }
 
     function drawCameraStatus(ctx, rect, ok, inliers, error) {
-        ctx.fillStyle = "#fff";
-        ctx.strokeStyle = ok ? "#86efac" : inliers ? "#fde68a" : "#fecaca";
-        roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 14);
-        ctx.fill();
-        ctx.stroke();
-        const rows = [
-            ["重叠度", ok ? "稳定" : "等待"],
-            ["RANSAC 内点数", inliers],
-            ["平均重投影误差", error ? `${fixed(error, 2)} px` : "-"],
-            ["可拼接状态", ok ? "可捕获" : (inliers ? "勉强可拼接" : "不可拼接")]
-        ];
-        rows.forEach(([label, value], index) => {
-            ctx.fillStyle = "#475569";
-            ctx.font = "850 12px sans-serif";
-            ctx.fillText(label, rect.x + 18, rect.y + 26 + index * 26);
-            ctx.fillStyle = ok ? "#15803d" : inliers ? "#ca8a04" : "#dc2626";
-            ctx.font = "950 12px sans-serif";
-            ctx.textAlign = "right";
-            ctx.fillText(String(value), rect.x + rect.w - 18, rect.y + 26 + index * 26);
-            ctx.textAlign = "left";
-        });
-    }
-
-    function drawCameraStatus(ctx, rect, ok, inliers, error) {
         const overlap = state.camera.lastOverlap || state.camera.panorama?.meta?.overlapRatio || 0;
         const weak = inliers > 0 || overlap > 0;
         ctx.fillStyle = "#fff";
@@ -1195,11 +1249,12 @@
             ["重叠度", overlap ? `${fixed(overlap * 100, 1)}%` : "-"],
             ["RANSAC 内点数", inliers],
             ["平均重投影误差", error ? `${fixed(error, 2)} px` : "-"],
+            ["接入方式", state.camera.lastMessage || "-"],
             ["稳定度", ok ? "稳定" : weak ? "勉强" : "不足"],
             ["可拼接状态", ok ? "可捕获" : weak ? "需要更稳" : "不可拼接"]
         ];
         rows.forEach(([label, value], index) => {
-            const y = rect.y + 23 + index * 21;
+            const y = rect.y + 22 + index * 19;
             ctx.fillStyle = "#475569";
             ctx.font = "850 11px sans-serif";
             ctx.textAlign = "left";
@@ -1246,7 +1301,7 @@
         state.camera.panorama = null;
         state.camera.stable = false;
         state.camera.lastOverlap = 0;
-        state.camera.status = state.camera.stream ? "请拍摄第一帧" : "idle";
+        state.camera.status = state.camera.stream ? "请拍摄第一帧" : "等待打开摄像头";
         renderStats();
         drawPanorama();
     }
@@ -1257,7 +1312,7 @@
         let result = null;
         const blend = $("cameraExportBlend")?.value || "multiband";
         for (let index = 1; index < state.camera.frames.length; index += 1) {
-            result = await stitchSources(source, state.camera.frames[index], cameraStitchOptions(blend, 1));
+            result = await stitchCameraFrameAnyDirection(source, state.camera.frames[index], cameraStitchOptions(blend, 1));
             source = result.panorama.toDataURL("image/png");
         }
         return result;
