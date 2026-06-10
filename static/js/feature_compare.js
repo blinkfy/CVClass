@@ -128,10 +128,8 @@
     }
 
     async function postMethod(method) {
-        const response = await fetch(`${V.basePath}/api/feature-detect`, {
-            method: "POST",
-            body: requestBody(method)
-        });
+        if (V.computeMode === "frontend") return V.computeFeatureForm(form, { methods: method });
+        const response = await fetch(`${V.basePath}/api/feature-detect`, { method: "POST", body: requestBody(method) });
         const data = await response.json();
         if (!response.ok || data.error) throw new Error(data.error || `${methodInfo[method]?.name || method} 计算失败`);
         return data;

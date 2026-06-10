@@ -117,7 +117,7 @@
         const btn = form.querySelector("button[type=submit]");
         if (btn) btn.textContent = "生成中...";
         try {
-            const data = await V.postForm(form, "/api/feature-detect");
+            const data = await V.computeFeatureForm(form);
             if (currentRequest !== requestId) return;
             await render(data);
         } catch (err) { }

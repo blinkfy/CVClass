@@ -57,6 +57,7 @@
     id="featurePage"
     class="feature-page"
     data-feature-mode="{{ feature_mode }}"
+    data-compute-mode="{{ compute_config.feature_detection }}"
     data-assets-base="{{ url_for('static', filename='assets/img/') }}"
 >
     <header class="feature-hero">
@@ -97,5 +98,6 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="{{ url_for('static', filename='js/feature_common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/feature_compute_frontend.js') }}"></script>
 {% block feature_js %}{% endblock %}
 {% endblock %}

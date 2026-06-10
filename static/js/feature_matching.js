@@ -476,7 +476,14 @@
         const ratio = formNumber("ratio_threshold", 0.75, 0.4, 0.95);
         const maxMatches = Math.round(formNumber("max_matches", 80, 10, 200));
         const images = await matchImageSources();
-        const [leftGray, rightGray] = await Promise.all([V.imageToGray(images.left), V.imageToGray(images.right)]);
+        const [leftImage, rightImage] = await Promise.all([
+            V.prepareImageSource({ src: images.left, filename: "left.png" }, 480),
+            V.prepareImageSource({ src: images.right, filename: "right.png" }, 480)
+        ]);
+        images.left = leftImage.src;
+        images.right = rightImage.src;
+        const leftGray = leftImage;
+        const rightGray = rightImage;
         const options = { maxKeypoints: 500, threshold: 30, contiguous: 9, nmsRadius: 8 };
         const left = V.computeDescriptorSet(leftGray, algorithm, options);
         const right = V.computeDescriptorSet(rightGray, algorithm, options);
@@ -1261,7 +1268,7 @@
         $("matchEmptyState").hidden = false;
         $("matchEmptyState").textContent = "正在计算描述子、匹配与 RANSAC...";
         try {
-            const raw = algorithm === "sift"
+            const raw = algorithm === "sift" && V.computeMode !== "frontend"
                 ? { ...(await V.postForm(form, "/api/feature-match")), algorithm: "sift" }
                 : await frontendMatch(algorithm);
             if (currentRequest !== state.requestId) return;

@@ -46,6 +46,7 @@ def load_compute_config():
         "image_convolution": "backend",
         "edge_detection": "backend",
         "digit_recognition": "backend",
+        "feature_detection": "backend",
     }
     try:
         with open(COMPUTE_CONFIG_PATH, "r", encoding="utf-8") as config_file:
@@ -351,6 +352,9 @@ def edge_detect_api():
 
 @app.route("/api/feature-detect", methods=["POST"])
 def feature_detect_api():
+    if compute_mode("feature_detection") == "frontend":
+        return frontend_only_response("特征检测")
+
     try:
         return jsonify(build_feature_response(request.form, request.files, app.static_folder, allowed_file))
     except (UnidentifiedImageError, ValueError) as error:
@@ -362,6 +366,9 @@ def feature_detect_api():
 
 @app.route("/api/feature-match", methods=["POST"])
 def feature_match_api():
+    if compute_mode("feature_detection") == "frontend":
+        return frontend_only_response("特征匹配")
+
     try:
         return jsonify(build_feature_match_response(request.form, request.files, app.static_folder, allowed_file))
     except (UnidentifiedImageError, ValueError) as error:

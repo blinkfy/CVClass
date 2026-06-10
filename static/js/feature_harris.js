@@ -4751,7 +4751,7 @@
             if (selectedAlgorithm() === "fast" && canReuseFastImage) {
                 data = currentData;
             } else {
-                data = await V.postForm(form, "/api/feature-detect");
+                data = await V.computeFeatureForm(form);
             }
             if (currentRequest !== requestId) return;
             await render(data);

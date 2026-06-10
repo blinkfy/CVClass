@@ -28,13 +28,20 @@
         camera: {
             stream: null,
             frames: [],
+            frameImages: [],
             panorama: null,
+            latestPair: null,
+            pairHistory: [],
             status: "idle",
             stable: false,
             lastMetrics: null,
             lastOverlap: 0,
             lastAttachMode: "",
             lastMessage: "",
+            transforms: [],
+            lastMotionSignature: null,
+            stillCount: 0,
+            motionCount: 0,
             autoTimer: 0
         },
         busy: false
@@ -249,6 +256,22 @@
         const det = a * A + b * D + c * G;
         if (Math.abs(det) < 1e-10) return null;
         return [A / det, B / det, C / det, D / det, E / det, F / det, G / det, Hh / det, I / det];
+    }
+
+    function multiplyHomography(A, B) {
+        const out = [
+            A[0] * B[0] + A[1] * B[3] + A[2] * B[6],
+            A[0] * B[1] + A[1] * B[4] + A[2] * B[7],
+            A[0] * B[2] + A[1] * B[5] + A[2] * B[8],
+            A[3] * B[0] + A[4] * B[3] + A[5] * B[6],
+            A[3] * B[1] + A[4] * B[4] + A[5] * B[7],
+            A[3] * B[2] + A[4] * B[5] + A[5] * B[8],
+            A[6] * B[0] + A[7] * B[3] + A[8] * B[6],
+            A[6] * B[1] + A[7] * B[4] + A[8] * B[7],
+            A[6] * B[2] + A[7] * B[5] + A[8] * B[8]
+        ];
+        const scale = Math.abs(out[8]) > 1e-10 ? out[8] : 1;
+        return out.map(value => value / scale);
     }
 
     function imageCorners(width, height) {
@@ -711,6 +734,148 @@
         });
     }
 
+    function drawCanvasMessage(ctx, rect, title, detail) {
+        ctx.fillStyle = "#f1f5f9";
+        roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 16);
+        ctx.fill();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.font = "950 18px sans-serif";
+        ctx.fillText(title, rect.x + 28, rect.y + 48);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "850 13px sans-serif";
+        ctx.fillText(detail, rect.x + 28, rect.y + 78);
+    }
+
+    function drawCameraInputs(ctx, canvas) {
+        const content = canvasContentRect(canvas);
+        const images = state.camera.frameImages.slice(-8);
+        if (!images.length) {
+            drawCanvasMessage(ctx, content, "尚未捕获图像", "打开摄像头并拍摄第一帧后，这里会按顺序显示各拍摄帧。");
+            return;
+        }
+        const rects = splitContentRects(content, images.length);
+        images.forEach((image, index) => {
+            const frameNumber = state.camera.frameImages.length - images.length + index + 1;
+            drawContained(ctx, image, rects[index], `拍摄帧 ${frameNumber}`);
+        });
+    }
+
+    function drawCameraMatch(ctx, canvas) {
+        const content = canvasContentRect(canvas);
+        const history = state.camera.pairHistory;
+        const images = state.camera.frameImages.slice(-8);
+        if (!history.length || images.length < 2) {
+            drawCanvasMessage(ctx, content, "等待相邻帧匹配", "至少成功捕获两帧后显示最近一次 Ratio Test 与 RANSAC 匹配摘要。");
+            return;
+        }
+        const startIndex = state.camera.frameImages.length - images.length;
+        const rects = splitContentRects(content, images.length);
+        history.filter(item => item.toIndex >= startIndex).forEach(item => {
+            const leftIndex = item.fromIndex - startIndex;
+            const rightIndex = item.toIndex - startIndex;
+            const leftRect = rects[leftIndex];
+            const rightRect = rects[rightIndex];
+            if (!leftRect || !rightRect) return;
+            const x1 = leftRect.x + leftRect.w / 2;
+            const y1 = leftRect.y + leftRect.h / 2;
+            const x2 = rightRect.x + rightRect.w / 2;
+            const y2 = rightRect.y + rightRect.h / 2;
+            ctx.strokeStyle = item.quality.stable ? "rgba(22,163,74,.78)" : "rgba(220,38,38,.6)";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            ctx.fillStyle = "rgba(255,255,255,.94)";
+            roundRect(ctx, midX - 58, midY - 20, 116, 40, 10);
+            ctx.fill();
+            ctx.fillStyle = "#15803d";
+            ctx.font = "950 10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`${item.data.geometry.inliers} 内点`, midX, midY - 3);
+            ctx.fillStyle = "#475569";
+            ctx.font = "850 9px sans-serif";
+            ctx.fillText(`重叠 ${fixed(item.quality.overlap * 100, 1)}%`, midX, midY + 12);
+        });
+        ctx.textAlign = "left";
+        images.forEach((image, index) => {
+            drawContained(ctx, image, rects[index], `帧 ${startIndex + index + 1}`);
+        });
+    }
+
+    function cameraFramePolygon(data, frameIndex) {
+        const image = state.camera.frameImages[frameIndex];
+        const H = state.camera.transforms[frameIndex];
+        if (!image || !H || !data?.layers) return [];
+        return imageCorners(image.width, image.height).map(point => {
+            const world = project(H, point);
+            return {
+                x: world.x * data.layers.outputScale + data.layers.shiftX,
+                y: world.y * data.layers.outputScale + data.layers.shiftY
+            };
+        });
+    }
+
+    function drawCameraCoverage(ctx, rect, data, fill = false) {
+        const colors = ["#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0891b2", "#db2777", "#ca8a04", "#475569"];
+        const plane = drawContained(ctx, data.blended, rect, fill ? "多帧覆盖与交叠关系" : "所有拍摄帧统一 Warp 平面");
+        state.camera.frameImages.forEach((_, index) => {
+            const polygon = cameraFramePolygon(data, index);
+            if (polygon.length !== 4) return;
+            const display = polygon.map(point => ({
+                x: plane.x + point.x / data.layers.width * plane.w,
+                y: plane.y + point.y / data.layers.height * plane.h
+            }));
+            const color = colors[index % colors.length];
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = `${color}${fill ? "28" : "12"}`;
+            ctx.lineWidth = index === state.camera.frameImages.length - 1 ? 4 : 2.5;
+            ctx.setLineDash(index === state.camera.frameImages.length - 1 ? [] : [9, 5]);
+            ctx.beginPath();
+            display.forEach((point, pointIndex) => {
+                if (pointIndex === 0) ctx.moveTo(point.x, point.y);
+                else ctx.lineTo(point.x, point.y);
+            });
+            ctx.closePath();
+            if (fill) ctx.fill();
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = color;
+            ctx.font = "950 11px sans-serif";
+            ctx.fillText(`F${index + 1}`, display[0].x + 6, display[0].y + 15);
+            ctx.restore();
+        });
+        return plane;
+    }
+
+    function drawCameraWarp(ctx, canvas) {
+        const data = state.camera.panorama;
+        const content = canvasContentRect(canvas);
+        if (!data?.layers) {
+            drawCanvasMessage(ctx, content, "等待平面投影", "成功拼接第二帧后显示各帧 Warp 到统一全景平面的覆盖范围。");
+            return;
+        }
+        drawCameraCoverage(ctx, content, data, false);
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = "950 14px sans-serif";
+        ctx.fillText("F1…Fn 表示全部拍摄帧在累计全景坐标系中的投影边界", content.x + 28, content.y + 46);
+    }
+
+    function drawCameraBlend(ctx, canvas) {
+        const data = state.camera.panorama;
+        const content = canvasContentRect(canvas);
+        if (!data?.layers) {
+            drawCanvasMessage(ctx, content, "等待融合预览", "成功拼接第二帧后显示平面交叠、融合带与当前融合结果。");
+            return;
+        }
+        const [coverageRect, blendRect] = splitContentRects(content, 2);
+        drawCameraCoverage(ctx, coverageRect, data, true);
+        drawContained(ctx, data.blended, blendRect, `累计融合结果 · ${state.camera.frameImages.length} 帧`);
+    }
+
     function drawPanorama() {
         const canvas = $("panoramaCanvas");
         syncPanoramaCanvasSize(canvas);
@@ -720,7 +885,12 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const data = state.mode === "camera" ? state.camera.panorama : state.upload;
         if (state.mode === "camera") {
-            drawCameraSceneV2(ctx, canvas);
+            $("panoramaEmptyState").hidden = true;
+            if (state.view === "inputs") drawCameraInputs(ctx, canvas);
+            else if (state.view === "match") drawCameraMatch(ctx, canvas);
+            else if (state.view === "warp") drawCameraWarp(ctx, canvas);
+            else if (state.view === "blend") drawCameraBlend(ctx, canvas);
+            else drawCameraSceneV2(ctx, canvas);
             return;
         }
         if (!data) {
@@ -942,6 +1112,8 @@
                 result.meta.cameraAttachMode = attempt.mode;
                 result.meta.cameraAttachLabel = attempt.label;
                 result.meta.cameraAttachScore = cameraResultScore(result, attempt.preferred);
+                result.meta.frameToBaseH = attempt.mode === "frame-to-panorama" ? result.geometry.H : invertHomography(result.geometry.H);
+                if (!result.meta.frameToBaseH) throw new Error("H 不可靠：无法累计当前帧。");
                 results.push(result);
             } catch (error) {
                 failures.push(error?.message || attempt.label);
@@ -952,6 +1124,123 @@
         }
         results.sort((a, b) => b.meta.cameraAttachScore - a.meta.cameraAttachScore);
         return results[0];
+    }
+
+    async function renderAccumulatedCameraPanorama(pairResult, options) {
+        const started = performance.now();
+        const frames = state.camera.frames;
+        const transforms = state.camera.transforms;
+        const images = await Promise.all(frames.map(src => V.loadImage(src)));
+        const corners = [];
+        images.forEach((img, index) => {
+            const H = transforms[index] || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+            imageCorners(img.width, img.height).forEach(point => corners.push(project(H, point)));
+        });
+        const finite = corners.filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+        if (!finite.length) throw new Error("当前帧无法累计到全景坐标。");
+        const minX = Math.min(...finite.map(point => point.x));
+        const minY = Math.min(...finite.map(point => point.y));
+        const maxX = Math.max(...finite.map(point => point.x));
+        const maxY = Math.max(...finite.map(point => point.y));
+        const bounds = { minX, minY, maxX, maxY, width: Math.ceil(maxX - minX), height: Math.ceil(maxY - minY) };
+        const maxSide = options.blend === "multiband" ? 1700 : 1300;
+        const outputScale = Math.min(options.scale || 1, maxSide / Math.max(bounds.width, bounds.height, 1));
+        const width = Math.max(1, Math.round(bounds.width * outputScale));
+        const height = Math.max(1, Math.round(bounds.height * outputScale));
+        if (width * height > 3200000) throw new Error("输出画布过大，请减少帧数或降低输出缩放。");
+        const make = () => {
+            const canvas = document.createElement("canvas");
+            V.setCanvasSize(canvas, width, height);
+            return canvas;
+        };
+        const panorama = make();
+        const maskLayer = make();
+        let firstLayer = null;
+        let lastLayer = null;
+        const shiftX = -bounds.minX * outputScale;
+        const shiftY = -bounds.minY * outputScale;
+        const total = width * height;
+        const accR = new Float32Array(total);
+        const accG = new Float32Array(total);
+        const accB = new Float32Array(total);
+        const accW = new Float32Array(total);
+        const sequentialBlend = options.blend !== "average";
+        images.forEach((img, index) => {
+            const layer = make();
+            const mask = make();
+            warpProjectiveLayer(img, transforms[index] || [1, 0, 0, 0, 1, 0, 0, 0, 1], layer, mask, shiftX, shiftY, outputScale);
+            if (!firstLayer) firstLayer = layer;
+            lastLayer = layer;
+            const weightMask = make();
+            const wctx = weightMask.getContext("2d");
+            const blur = options.blend === "multiband" ? Math.max(10, (options.levels || 5) * 3) : options.blend === "feather" ? 10 : 0;
+            if (blur) {
+                wctx.filter = `blur(${blur}px)`;
+                wctx.drawImage(mask, 0, 0);
+                wctx.filter = "none";
+            } else {
+                wctx.drawImage(mask, 0, 0);
+            }
+            const layerData = layer.getContext("2d").getImageData(0, 0, width, height).data;
+            const weightData = weightMask.getContext("2d").getImageData(0, 0, width, height).data;
+            for (let p = 0, q = 0; p < total; p += 1, q += 4) {
+                if (layerData[q + 3] <= 4) continue;
+                let weight = weightData[q + 3] / 255;
+                if (options.blend === "average") weight = 1;
+                if (weight <= 0.001) continue;
+                if (sequentialBlend) {
+                    const previousWeight = accW[p];
+                    if (previousWeight <= 0.001) {
+                        accR[p] = layerData[q];
+                        accG[p] = layerData[q + 1];
+                        accB[p] = layerData[q + 2];
+                        accW[p] = 1;
+                    } else {
+                        const alpha = Math.min(1, Math.max(0, weight));
+                        accR[p] = accR[p] * (1 - alpha) + layerData[q] * alpha;
+                        accG[p] = accG[p] * (1 - alpha) + layerData[q + 1] * alpha;
+                        accB[p] = accB[p] * (1 - alpha) + layerData[q + 2] * alpha;
+                        accW[p] = 1;
+                    }
+                } else {
+                    accR[p] += layerData[q] * weight;
+                    accG[p] += layerData[q + 1] * weight;
+                    accB[p] += layerData[q + 2] * weight;
+                    accW[p] += weight;
+                }
+            }
+            maskLayer.getContext("2d").drawImage(mask, 0, 0);
+        });
+        const outCtx = panorama.getContext("2d");
+        const out = outCtx.createImageData(width, height);
+        for (let p = 0, q = 0; p < total; p += 1, q += 4) {
+            const weight = accW[p];
+            if (weight <= 0) continue;
+            out.data[q] = Math.round(sequentialBlend ? accR[p] : accR[p] / weight);
+            out.data[q + 1] = Math.round(sequentialBlend ? accG[p] : accG[p] / weight);
+            out.data[q + 2] = Math.round(sequentialBlend ? accB[p] : accB[p] / weight);
+            out.data[q + 3] = 255;
+        }
+        outCtx.putImageData(out, 0, 0);
+        const cropped = options.autoCrop ? cropTransparent(panorama) : panorama;
+        const elapsedMs = (pairResult?.meta?.elapsedMs || 0) + performance.now() - started;
+        return {
+            sources: { left: frames[0], right: frames[frames.length - 1] },
+            images: { left: images[0], right: images[images.length - 1] },
+            features: pairResult?.features || { left: { keypoints: [] }, right: { keypoints: [] } },
+            matches: pairResult?.matches || [],
+            geometry: pairResult?.geometry || { H: transforms[transforms.length - 1], inliers: 0, inlierIndices: [], meanError: 0, candidates: 0 },
+            layers: { leftLayer: firstLayer || panorama, rightLayer: lastLayer || panorama, maskLayer, bounds, outputScale, shiftX, shiftY, width, height },
+            blended: panorama,
+            panorama: cropped,
+            options,
+            meta: {
+                ...(pairResult?.meta || {}),
+                elapsedMs,
+                overlapRatio: pairResult?.meta?.overlapRatio || 0,
+                accumulatedFrames: frames.length
+            }
+        };
     }
 
     function drawBlendProcessPanel(data) {
@@ -1015,6 +1304,8 @@
 
     function setMode(mode) {
         state.mode = mode;
+        const page = document.getElementById("featurePage");
+        if (page) page.dataset.panoramaMode = mode;
         if (mode !== "camera") stopAutoCapture();
         if (mode === "camera" && state.camera.status === "idle") state.camera.status = "等待打开摄像头";
         if (mode === "camera") $("panoramaElapsed").textContent = state.camera.panorama ? `${fixed(state.camera.panorama.meta.elapsedMs, 2)} ms` : "等待运行";
@@ -1030,6 +1321,16 @@
     function setView(view) {
         state.view = view;
         document.querySelectorAll("[data-panorama-view]").forEach(button => button.classList.toggle("is-active", button.dataset.panoramaView === view));
+        if (state.mode === "camera") {
+            const titles = {
+                inputs: "摄像头拍摄帧序列",
+                match: "最近相邻帧匹配摘要",
+                warp: "拍摄帧 Warp 平面对齐",
+                blend: "平面交叠与融合预览",
+                result: "摄像头连续拍摄全景"
+            };
+            $("panoramaStageTitle").textContent = titles[view] || titles.result;
+        }
         drawPanorama();
         renderStats();
     }
@@ -1037,15 +1338,48 @@
     function captureVideoFrame() {
         const video = $("panoramaVideo");
         if (!video.videoWidth || !video.videoHeight) return null;
+        const maxSide = 1280;
+        const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
         const canvas = document.createElement("canvas");
-        V.setCanvasSize(canvas, video.videoWidth, video.videoHeight);
-        canvas.getContext("2d").drawImage(video, 0, 0);
+        V.setCanvasSize(canvas, Math.round(video.videoWidth * scale), Math.round(video.videoHeight * scale));
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
         return canvas.toDataURL("image/png");
+    }
+
+    function cameraMotionSignature() {
+        const video = $("panoramaVideo");
+        if (!video.videoWidth || !video.videoHeight) return null;
+        const width = 24;
+        const height = 18;
+        const canvas = document.createElement("canvas");
+        V.setCanvasSize(canvas, width, height);
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, width, height);
+        const data = ctx.getImageData(0, 0, width, height).data;
+        const values = new Uint8Array(width * height);
+        for (let i = 0, j = 0; i < data.length; i += 4, j += 1) {
+            values[j] = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+        }
+        return values;
+    }
+
+    function meanSignatureDelta(a, b) {
+        if (!a || !b || a.length !== b.length) return Infinity;
+        let sum = 0;
+        for (let i = 0; i < a.length; i += 1) sum += Math.abs(a[i] - b[i]);
+        return sum / a.length;
     }
 
     async function openCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "environment",
+                    width: { ideal: 1280, max: 1920 },
+                    height: { ideal: 960, max: 1080 }
+                },
+                audio: false
+            });
             state.camera.stream = stream;
             const video = $("panoramaVideo");
             video.srcObject = stream;
@@ -1055,6 +1389,9 @@
             $("panoramaElapsed").textContent = "摄像头已打开";
             drawPanorama();
             renderStats();
+            if (window.matchMedia("(max-width: 760px)").matches) {
+                document.querySelector(".panorama-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
         } catch (error) {
             state.camera.status = "摄像头权限失败";
             showError("摄像头权限失败，请允许浏览器访问摄像头。");
@@ -1075,36 +1412,55 @@
         }
         if (first || !state.camera.frames.length) {
             state.camera.frames = [frame];
+            state.camera.frameImages = [await V.loadImage(frame)];
             state.camera.panorama = null;
+            state.camera.latestPair = null;
+            state.camera.pairHistory = [];
             state.camera.stable = false;
             state.camera.lastOverlap = 0;
             state.camera.lastAttachMode = "";
             state.camera.lastMessage = "";
+            state.camera.transforms = [[1, 0, 0, 0, 1, 0, 0, 0, 1]];
+            state.camera.lastMotionSignature = cameraMotionSignature();
+            state.camera.stillCount = 0;
+            state.camera.motionCount = 0;
             state.camera.status = "第一帧已捕获，可向任意方向缓慢移动";
             $("panoramaElapsed").textContent = "已捕获第一帧";
             renderStats();
             drawPanorama();
             return;
         }
-        const previous = state.camera.panorama?.panorama?.toDataURL("image/png") || state.camera.frames[state.camera.frames.length - 1];
+        const previous = state.camera.frames[state.camera.frames.length - 1];
         try {
             state.busy = true;
             state.camera.status = "正在检测任意方向重叠并拼接当前帧";
             $("panoramaElapsed").textContent = "拼接中...";
             renderStats();
-            const result = await stitchCameraFrameAnyDirection(previous, frame, cameraStitchOptions($("cameraPreviewBlend").value, .7));
-            const quality = cameraQuality(result);
+            const options = cameraStitchOptions($("cameraPreviewBlend").value, .55);
+            const pairResult = await stitchCameraFrameAnyDirection(previous, frame, options);
+            const quality = cameraQuality(pairResult);
             if (!quality.stable) {
                 const reason = quality.inliers < quality.minInliers ? "内点数不足" : quality.overlap < quality.minOverlap ? "重叠区域太小" : "重投影误差偏大";
                 throw new Error(`当前帧不可拼接：${reason}`);
             }
+            const lastTransform = state.camera.transforms[state.camera.transforms.length - 1] || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+            const fromIndex = state.camera.frames.length - 1;
+            const toIndex = state.camera.frames.length;
             state.camera.frames.push(frame);
+            state.camera.frameImages.push(await V.loadImage(frame));
+            state.camera.transforms.push(multiplyHomography(lastTransform, pairResult.meta.frameToBaseH));
+            const result = await renderAccumulatedCameraPanorama(pairResult, options);
             state.camera.panorama = result;
+            state.camera.latestPair = pairResult;
+            state.camera.pairHistory.push({ fromIndex, toIndex, data: pairResult, quality });
             state.camera.stable = true;
             state.camera.lastOverlap = quality.overlap;
-            state.camera.lastMetrics = result.geometry;
-            state.camera.lastAttachMode = result.meta.cameraAttachMode || "";
-            state.camera.lastMessage = result.meta.cameraAttachLabel || "";
+            state.camera.lastMetrics = pairResult.geometry;
+            state.camera.lastAttachMode = pairResult.meta.cameraAttachMode || "";
+            state.camera.lastMessage = pairResult.meta.cameraAttachLabel || "";
+            state.camera.lastMotionSignature = cameraMotionSignature();
+            state.camera.stillCount = 0;
+            state.camera.motionCount = 0;
             state.camera.status = "已从任意方向接入当前帧，可继续扩展四周";
             $("panoramaElapsed").textContent = `${fixed(result.meta.elapsedMs, 2)} ms`;
         } catch (error) {
@@ -1122,7 +1478,8 @@
         const video = $("panoramaVideo");
         const content = canvasContentRect(canvas);
         const gap = clamp(content.w * 0.025, 20, 34);
-        const topH = state.camera.stream && video.videoWidth ? content.h * 0.62 : content.h * 0.72;
+        const statusH = clamp(content.h * 0.14, 104, 118);
+        const topH = content.h - statusH - gap;
         const leftW = state.camera.stream && video.videoWidth ? (content.w - gap) * 0.52 : 0;
         const panoRect = state.camera.stream && video.videoWidth
             ? { x: content.x + leftW + gap, y: content.y, w: content.w - leftW - gap, h: topH }
@@ -1164,7 +1521,7 @@
         const inliers = number(status.inliers, 0);
         const error = number(status.meanError, 0);
         const quality = cameraQuality(state.camera.panorama || { geometry: status, meta: { overlapRatio: state.camera.lastOverlap } });
-        const statusRect = { x: content.x, y: content.y + topH + gap, w: content.w, h: Math.max(120, content.h - topH - gap) };
+        const statusRect = { x: content.x, y: content.y + topH + gap, w: content.w, h: statusH };
         drawCameraStatus(ctx, statusRect, quality.stable, inliers, error);
         drawCameraFrameStrip(ctx, statusRect);
     }
@@ -1207,22 +1564,22 @@
     function drawCameraFrameStrip(ctx, rect) {
         if (!state.camera.frames.length) return;
         const count = state.camera.frames.length;
-        const stripY = rect.y + rect.h - 38;
-        const stripW = Math.min(rect.w * 0.52, 120 + count * 56);
+        const stripY = rect.y + rect.h - 30;
+        const stripW = Math.min(rect.w * 0.34, 112 + count * 46);
         ctx.save();
         ctx.fillStyle = "rgba(37,99,235,.10)";
-        roundRect(ctx, rect.x + 16, stripY, stripW, 30, 15);
+        roundRect(ctx, rect.x + 14, stripY, stripW, 22, 11);
         ctx.fill();
         for (let i = 0; i < count; i += 1) {
-            const x = rect.x + 28 + i * 42;
-            if (x + 52 > rect.x + stripW) break;
+            const x = rect.x + 24 + i * 34;
+            if (x + 42 > rect.x + stripW) break;
             ctx.fillStyle = `rgba(37,99,235,${0.14 + Math.min(.34, i * .045)})`;
-            roundRect(ctx, x, stripY + 6, 52, 18, 9);
+            roundRect(ctx, x, stripY + 4, 42, 14, 7);
             ctx.fill();
         }
         ctx.fillStyle = "#1d4ed8";
         ctx.font = "900 11px sans-serif";
-        ctx.fillText(`已捕获 ${count} 帧`, rect.x + 28, stripY + 20);
+        ctx.fillText(`已捕获 ${count} 帧`, rect.x + 24, stripY + 16);
         ctx.restore();
     }
 
@@ -1253,16 +1610,21 @@
             ["稳定度", ok ? "稳定" : weak ? "勉强" : "不足"],
             ["可拼接状态", ok ? "可捕获" : weak ? "需要更稳" : "不可拼接"]
         ];
+        const columns = 3;
+        const cellW = (rect.w - 32) / columns;
         rows.forEach(([label, value], index) => {
-            const y = rect.y + 22 + index * 19;
+            const column = index % columns;
+            const row = Math.floor(index / columns);
+            const x = rect.x + 16 + column * cellW;
+            const y = rect.y + 18 + row * 24;
             ctx.fillStyle = "#475569";
             ctx.font = "850 11px sans-serif";
             ctx.textAlign = "left";
-            ctx.fillText(label, rect.x + 16, y);
+            ctx.fillText(label, x, y);
             ctx.fillStyle = ok ? "#15803d" : weak ? "#ca8a04" : "#dc2626";
             ctx.font = "950 11px sans-serif";
             ctx.textAlign = "right";
-            ctx.fillText(String(value), rect.x + rect.w - 16, y);
+            ctx.fillText(String(value), x + cellW - 12, y);
         });
         ctx.textAlign = "left";
     }
@@ -1280,9 +1642,28 @@
         if (toggle) toggle.checked = true;
         state.camera.autoTimer = setInterval(() => {
             if (!state.camera.stream || state.busy) return;
-            if (!state.camera.frames.length) captureCameraFrameEnhanced(true);
-            else captureCameraFrameEnhanced(false);
-        }, 3200);
+            const signature = cameraMotionSignature();
+            if (!state.camera.frames.length) {
+                state.camera.lastMotionSignature = signature;
+                captureCameraFrameEnhanced(true);
+                return;
+            }
+            const delta = meanSignatureDelta(state.camera.lastMotionSignature, signature);
+            if (delta < 3.8) {
+                state.camera.stillCount += 1;
+                state.camera.motionCount = 0;
+                state.camera.status = `画面基本未移动，已跳过自动拼接 ${state.camera.stillCount} 次`;
+                $("panoramaElapsed").textContent = "等待移动";
+                renderStats();
+                drawPanorama();
+                return;
+            }
+            state.camera.motionCount += 1;
+            state.camera.lastMotionSignature = signature;
+            state.camera.stillCount = 0;
+            state.camera.motionCount = 0;
+            captureCameraFrameEnhanced(false);
+        }, 100);
     }
 
     function stopCamera() {
@@ -1298,9 +1679,16 @@
     function resetCamera() {
         stopAutoCapture();
         state.camera.frames = [];
+        state.camera.frameImages = [];
         state.camera.panorama = null;
+        state.camera.latestPair = null;
+        state.camera.pairHistory = [];
         state.camera.stable = false;
         state.camera.lastOverlap = 0;
+        state.camera.transforms = [];
+        state.camera.lastMotionSignature = null;
+        state.camera.stillCount = 0;
+        state.camera.motionCount = 0;
         state.camera.status = state.camera.stream ? "请拍摄第一帧" : "等待打开摄像头";
         renderStats();
         drawPanorama();
@@ -1308,14 +1696,8 @@
 
     async function buildCameraExportPanorama() {
         if (state.camera.frames.length < 2) return state.camera.panorama;
-        let source = state.camera.frames[0];
-        let result = null;
         const blend = $("cameraExportBlend")?.value || "multiband";
-        for (let index = 1; index < state.camera.frames.length; index += 1) {
-            result = await stitchCameraFrameAnyDirection(source, state.camera.frames[index], cameraStitchOptions(blend, 1));
-            source = result.panorama.toDataURL("image/png");
-        }
-        return result;
+        return renderAccumulatedCameraPanorama(state.camera.panorama, cameraStitchOptions(blend, 1));
     }
 
     async function downloadPanoramaFinal() {
@@ -1387,6 +1769,20 @@
     $("blendProcessToggle")?.addEventListener("click", () => {
         const panel = $("blendProcessPanel");
         panel.hidden = !panel.hidden;
+    });
+    $("cameraAdvancedToggle")?.addEventListener("click", event => {
+        const panel = $("cameraAdvancedParams");
+        const open = !panel.classList.contains("is-open");
+        panel.classList.toggle("is-open", open);
+        event.currentTarget.setAttribute("aria-expanded", String(open));
+        event.currentTarget.textContent = open ? "收起高级参数" : "高级参数";
+    });
+    $("panoramaInfoToggle")?.addEventListener("click", event => {
+        const panel = document.querySelector(".panorama-info-content");
+        const open = !panel.classList.contains("is-open");
+        panel.classList.toggle("is-open", open);
+        event.currentTarget.setAttribute("aria-expanded", String(open));
+        event.currentTarget.textContent = open ? "收起状态详情" : "状态详情";
     });
     $("panoramaDownload")?.addEventListener("click", downloadPanoramaFinal);
     if (window.ResizeObserver) {

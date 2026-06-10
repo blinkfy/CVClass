@@ -2,5 +2,6 @@
   "grayscale": "frontend",
   "image_convolution": "frontend",
   "edge_detection": "frontend",
-  "digit_recognition": "frontend"
+  "digit_recognition": "frontend",
+  "feature_detection": "frontend"
 }

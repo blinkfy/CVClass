@@ -7364,7 +7364,7 @@
         const requestGeneration = generation;
         setDescriptorStatus("正在加载主方向与 128 维描述子数据...", "loading");
         descriptorFlag.value = "true";
-        const request = V.postForm(form, "/api/feature-detect");
+        const request = V.computeFeatureForm(form);
         descriptorFlag.value = "false";
 
         descriptorPromise = request.then(async data => {
@@ -7443,7 +7443,7 @@
         if (button) button.textContent = "计算中...";
         V.$("siftElapsed").textContent = "基础数据计算中...";
         try {
-            const data = await V.postForm(form, "/api/feature-detect");
+            const data = await V.computeFeatureForm(form);
             if (requestGeneration !== generation) return;
             await renderScale(data);
             if (selectedAlgorithm() === "sift") {

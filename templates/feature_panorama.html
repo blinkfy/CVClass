@@ -69,29 +69,33 @@
                 <button type="button" data-camera-action="stop">停止拍摄</button>
                 <button type="button" data-camera-action="reset">重置</button>
                 <button type="button" data-camera-action="export">导出全景图</button>
-                <label>特征算法
-                    <select id="cameraAlgorithm">
-                        <option value="orb-lite">ORB-lite</option>
-                        <option value="sift">SIFT</option>
-                        <option value="surf">SURF</option>
-                        <option value="fast-brief">FAST + BRIEF</option>
-                    </select>
-                </label>
-                <label>最小内点数<input id="cameraMinInliers" value="12" type="number" min="4" max="80"></label>
-                <label>最大重投影误差<input id="cameraMaxError" value="5" type="number" min="1" max="20" step="0.5"></label>
-                <label>最小重叠比例<input id="cameraMinOverlap" value="0.35" type="number" min="0.1" max="0.8" step="0.05"></label>
-                <label>实时预览融合
-                    <select id="cameraPreviewBlend">
-                        <option value="feather">快速 Feather</option>
-                        <option value="average">平均融合</option>
-                    </select>
-                </label>
-                <label>最终导出融合
-                    <select id="cameraExportBlend">
-                        <option value="multiband">多频段金字塔融合</option>
-                        <option value="feather">Feather 融合</option>
-                    </select>
-                </label>
+                <button id="cameraAdvancedToggle" class="panorama-mobile-toggle" type="button" aria-expanded="false">高级参数</button>
+                <div id="cameraAdvancedParams" class="panorama-camera-advanced">
+                    <label>特征算法
+                        <select id="cameraAlgorithm">
+                            <option value="orb-lite">ORB-lite</option>
+                            <option value="sift">SIFT</option>
+                            <option value="surf">SURF</option>
+                            <option value="fast-brief">FAST + BRIEF</option>
+                        </select>
+                    </label>
+                    <label>最小内点数<input id="cameraMinInliers" value="6" type="number" min="4" max="80"></label>
+                    <label>最大重投影误差<input id="cameraMaxError" value="5" type="number" min="1" max="20" step="0.5"></label>
+                    <label>最小重叠比例<input id="cameraMinOverlap" value="0.35" type="number" min="0.1" max="0.8" step="0.05"></label>
+                    <label>实时预览融合
+                        <select id="cameraPreviewBlend">
+                            <option value="feather">快速 Feather（推荐）</option>
+                            <option value="multiband">多频段预览（较慢）</option>
+                            <option value="average">平均融合</option>
+                        </select>
+                    </label>
+                    <label>最终导出融合
+                        <select id="cameraExportBlend">
+                            <option value="multiband">多频段金字塔融合</option>
+                            <option value="feather">Feather 融合</option>
+                        </select>
+                    </label>
+                </div>
             </div>
         </form>
     </aside>
@@ -108,6 +112,10 @@
                 <button type="button" data-panorama-view="warp">Warp 对齐</button>
                 <button type="button" data-panorama-view="blend">融合预览</button>
                 <button type="button" data-panorama-view="result">全景结果</button>
+            </div>
+            <div class="panorama-mobile-capture">
+                <button type="button" data-camera-action="first">拍第一帧</button>
+                <button type="button" data-camera-action="next">捕获下一帧</button>
             </div>
             <div class="feature-canvas-frame panorama-canvas-shell">
                 <canvas id="panoramaCanvas" width="1280" height="720" aria-label="全景拼接结果"></canvas>
@@ -129,12 +137,15 @@
     </main>
 
     <aside class="feature-panel feature-info panorama-info">
-        <div><span class="section-label">Application Status</span><h2 id="panoramaInfoTitle">双图上传拼接</h2></div>
-        <div class="feature-note blue"><b>当前步骤</b><p id="panoramaCurrentStep">等待输入</p></div>
-        <div class="feature-boundary"><b>输入图像状态</b><div id="panoramaInputStatus" class="feature-stat-list"></div></div>
-        <div class="feature-boundary"><b>匹配 / 几何状态</b><div id="panoramaGeometryStatus" class="feature-stat-list"></div></div>
-        <div class="feature-boundary"><b>融合与输出</b><div id="panoramaOutputStatus" class="feature-stat-list"></div></div>
-        <div class="feature-note green"><b>提示</b><p id="panoramaHint">实时预览为快速融合，最终导出使用多频段融合。</p></div>
+        <button id="panoramaInfoToggle" class="panorama-mobile-toggle" type="button" aria-expanded="false">状态详情</button>
+        <div class="panorama-info-content">
+            <div><span class="section-label">Application Status</span><h2 id="panoramaInfoTitle">双图上传拼接</h2></div>
+            <div class="feature-note blue"><b>当前步骤</b><p id="panoramaCurrentStep">等待输入</p></div>
+            <div class="feature-boundary"><b>输入图像状态</b><div id="panoramaInputStatus" class="feature-stat-list"></div></div>
+            <div class="feature-boundary"><b>匹配 / 几何状态</b><div id="panoramaGeometryStatus" class="feature-stat-list"></div></div>
+            <div class="feature-boundary"><b>融合与输出</b><div id="panoramaOutputStatus" class="feature-stat-list"></div></div>
+            <div class="feature-note green"><b>提示</b><p id="panoramaHint">实时预览为快速融合，最终导出使用多频段融合。</p></div>
+        </div>
     </aside>
 </section>
 {{ feature_timeline('panorama') }}
