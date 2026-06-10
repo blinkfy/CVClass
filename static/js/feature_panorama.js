@@ -290,15 +290,27 @@
                 const sx = (inverse[0] * wx + inverse[1] * wy + inverse[2]) / den;
                 const sy = (inverse[3] * wx + inverse[4] * wy + inverse[5]) / den;
                 if (sx < 0 || sy < 0 || sx >= sw - 1 || sy >= sh - 1) continue;
-                const ix = Math.max(0, Math.min(sw - 1, Math.round(sx)));
-                const iy = Math.max(0, Math.min(sh - 1, Math.round(sy)));
-                const si = (iy * sw + ix) * 4;
+                const x0 = Math.floor(sx);
+                const y0 = Math.floor(sy);
+                const x1 = Math.min(sw - 1, x0 + 1);
+                const y1 = Math.min(sh - 1, y0 + 1);
+                const fx = sx - x0;
+                const fy = sy - y0;
+                const w00 = (1 - fx) * (1 - fy);
+                const w10 = fx * (1 - fy);
+                const w01 = (1 - fx) * fy;
+                const w11 = fx * fy;
+                const i00 = (y0 * sw + x0) * 4;
+                const i10 = (y0 * sw + x1) * 4;
+                const i01 = (y1 * sw + x0) * 4;
+                const i11 = (y1 * sw + x1) * 4;
                 const ti = (y * target.width + x) * 4;
-                if (sd[si + 3] <= 4) continue;
-                td[ti] = sd[si];
-                td[ti + 1] = sd[si + 1];
-                td[ti + 2] = sd[si + 2];
-                td[ti + 3] = sd[si + 3];
+                const alpha = sd[i00 + 3] * w00 + sd[i10 + 3] * w10 + sd[i01 + 3] * w01 + sd[i11 + 3] * w11;
+                if (alpha <= 4) continue;
+                td[ti] = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
+                td[ti + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+                td[ti + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+                td[ti + 3] = alpha;
                 md[ti] = 255;
                 md[ti + 1] = 255;
                 md[ti + 2] = 255;
@@ -323,62 +335,216 @@
         };
         const leftLayer = make();
         const rightLayer = make();
+        const leftMaskLayer = make();
+        const rightMaskLayer = make();
         const maskLayer = make();
         const shiftX = -bounds.minX * outputScale;
         const shiftY = -bounds.minY * outputScale;
         const leftCtx = leftLayer.getContext("2d");
-        const maskCtx = maskLayer.getContext("2d");
+        const leftMaskCtx = leftMaskLayer.getContext("2d");
         if (hasPerspective(H)) {
-            warpProjectiveLayer(leftImg, H, leftLayer, maskLayer, shiftX, shiftY, outputScale);
+            warpProjectiveLayer(leftImg, H, leftLayer, leftMaskLayer, shiftX, shiftY, outputScale);
         } else {
             const t = affineFromH(H);
             leftCtx.setTransform(t.a * outputScale, t.b * outputScale, t.c * outputScale, t.d * outputScale, t.e * outputScale + shiftX, t.f * outputScale + shiftY);
             leftCtx.drawImage(leftImg, 0, 0);
             leftCtx.setTransform(1, 0, 0, 1, 0, 0);
-            maskCtx.fillStyle = "#fff";
-            maskCtx.setTransform(t.a * outputScale, t.b * outputScale, t.c * outputScale, t.d * outputScale, t.e * outputScale + shiftX, t.f * outputScale + shiftY);
-            maskCtx.fillRect(0, 0, leftImg.width, leftImg.height);
-            maskCtx.setTransform(1, 0, 0, 1, 0, 0);
+            leftMaskCtx.fillStyle = "#fff";
+            leftMaskCtx.setTransform(t.a * outputScale, t.b * outputScale, t.c * outputScale, t.d * outputScale, t.e * outputScale + shiftX, t.f * outputScale + shiftY);
+            leftMaskCtx.fillRect(0, 0, leftImg.width, leftImg.height);
+            leftMaskCtx.setTransform(1, 0, 0, 1, 0, 0);
         }
         const rightCtx = rightLayer.getContext("2d");
         rightCtx.drawImage(rightImg, shiftX, shiftY, rightImg.width * outputScale, rightImg.height * outputScale);
-        maskCtx.fillStyle = "rgba(255,255,255,.65)";
-        maskCtx.fillRect(shiftX, shiftY, rightImg.width * outputScale, rightImg.height * outputScale);
-        return { leftLayer, rightLayer, maskLayer, bounds, outputScale, shiftX, shiftY, width, height };
+        const rightMaskCtx = rightMaskLayer.getContext("2d");
+        rightMaskCtx.fillStyle = "#fff";
+        rightMaskCtx.fillRect(shiftX, shiftY, rightImg.width * outputScale, rightImg.height * outputScale);
+        updateOverlapPreview(maskLayer, leftMaskLayer, rightMaskLayer);
+        return { leftLayer, rightLayer, leftMaskLayer, rightMaskLayer, maskLayer, bounds, outputScale, shiftX, shiftY, width, height };
+    }
+
+    function updateOverlapPreview(preview, leftMaskLayer, rightMaskLayer) {
+        const width = preview.width;
+        const height = preview.height;
+        const left = leftMaskLayer.getContext("2d").getImageData(0, 0, width, height).data;
+        const right = rightMaskLayer.getContext("2d").getImageData(0, 0, width, height).data;
+        const ctx = preview.getContext("2d");
+        const out = ctx.createImageData(width, height);
+        const od = out.data;
+        for (let i = 0, p = 0; i < od.length; i += 4, p += 1) {
+            const hasLeft = left[i + 3] > 8;
+            const hasRight = right[i + 3] > 8;
+            if (!hasLeft && !hasRight) continue;
+            if (hasLeft && hasRight) {
+                od[i] = 37; od[i + 1] = 99; od[i + 2] = 235; od[i + 3] = 210;
+            } else if (hasLeft) {
+                od[i] = 22; od[i + 1] = 163; od[i + 2] = 74; od[i + 3] = 145;
+            } else {
+                od[i] = 14; od[i + 1] = 165; od[i + 2] = 233; od[i + 3] = 145;
+            }
+        }
+        ctx.putImageData(out, 0, 0);
+    }
+
+    function alphaCoverage(canvas) {
+        const data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+        const mask = new Uint8Array(canvas.width * canvas.height);
+        for (let i = 0, p = 0; i < data.length; i += 4, p += 1) mask[p] = data[i + 3] > 8 ? 1 : 0;
+        return mask;
+    }
+
+    function distanceTransform(mask, width, height) {
+        const inf = width + height + 1024;
+        const dist = new Float32Array(width * height);
+        for (let i = 0; i < dist.length; i += 1) dist[i] = mask[i] ? inf : 0;
+        const diag = 1.4142;
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                const i = y * width + x;
+                let best = dist[i];
+                if (x > 0) best = Math.min(best, dist[i - 1] + 1);
+                if (y > 0) best = Math.min(best, dist[i - width] + 1);
+                if (x > 0 && y > 0) best = Math.min(best, dist[i - width - 1] + diag);
+                if (x + 1 < width && y > 0) best = Math.min(best, dist[i - width + 1] + diag);
+                dist[i] = best;
+            }
+        }
+        for (let y = height - 1; y >= 0; y -= 1) {
+            for (let x = width - 1; x >= 0; x -= 1) {
+                const i = y * width + x;
+                let best = dist[i];
+                if (x + 1 < width) best = Math.min(best, dist[i + 1] + 1);
+                if (y + 1 < height) best = Math.min(best, dist[i + width] + 1);
+                if (x + 1 < width && y + 1 < height) best = Math.min(best, dist[i + width + 1] + diag);
+                if (x > 0 && y + 1 < height) best = Math.min(best, dist[i + width - 1] + diag);
+                dist[i] = best;
+            }
+        }
+        return dist;
+    }
+
+    function smoothstep(value) {
+        const t = clamp(value, 0, 1);
+        return t * t * (3 - 2 * t);
+    }
+
+    function boxBlurWeights(weights, width, height, radius, passes = 1) {
+        if (radius <= 0) return weights;
+        let src = weights;
+        let temp = new Float32Array(weights.length);
+        let dst = new Float32Array(weights.length);
+        for (let pass = 0; pass < passes; pass += 1) {
+            for (let y = 0; y < height; y += 1) {
+                let sum = 0;
+                for (let x = -radius; x <= radius; x += 1) sum += src[y * width + clamp(x, 0, width - 1)];
+                for (let x = 0; x < width; x += 1) {
+                    temp[y * width + x] = sum / (radius * 2 + 1);
+                    const removeX = clamp(x - radius, 0, width - 1);
+                    const addX = clamp(x + radius + 1, 0, width - 1);
+                    sum += src[y * width + addX] - src[y * width + removeX];
+                }
+            }
+            for (let x = 0; x < width; x += 1) {
+                let sum = 0;
+                for (let y = -radius; y <= radius; y += 1) sum += temp[clamp(y, 0, height - 1) * width + x];
+                for (let y = 0; y < height; y += 1) {
+                    dst[y * width + x] = sum / (radius * 2 + 1);
+                    const removeY = clamp(y - radius, 0, height - 1);
+                    const addY = clamp(y + radius + 1, 0, height - 1);
+                    sum += temp[addY * width + x] - temp[removeY * width + x];
+                }
+            }
+            [src, dst] = [dst, src];
+        }
+        return src;
+    }
+
+    function makeFeatherWeights(layers, mode, levels) {
+        const width = layers.width;
+        const height = layers.height;
+        const leftMask = alphaCoverage(layers.leftMaskLayer);
+        const rightMask = alphaCoverage(layers.rightMaskLayer);
+        const leftDist = distanceTransform(leftMask, width, height);
+        const rightDist = distanceTransform(rightMask, width, height);
+        const weights = new Float32Array(width * height);
+        for (let i = 0; i < weights.length; i += 1) {
+            if (leftMask[i] && rightMask[i]) {
+                const total = leftDist[i] + rightDist[i];
+                weights[i] = total > 1e-4 ? smoothstep(leftDist[i] / total) : 0.5;
+            } else {
+                weights[i] = leftMask[i] ? 1 : 0;
+            }
+        }
+        if (mode === "multiband") {
+            const radius = Math.max(2, Math.round(levels * 1.8));
+            return boxBlurWeights(weights, width, height, radius, 2);
+        }
+        return weights;
+    }
+
+    function estimateOverlapGains(leftData, rightData) {
+        const leftMean = [0, 0, 0];
+        const rightMean = [0, 0, 0];
+        let count = 0;
+        for (let i = 0; i < leftData.length; i += 4) {
+            if (leftData[i + 3] <= 8 || rightData[i + 3] <= 8) continue;
+            for (let c = 0; c < 3; c += 1) {
+                leftMean[c] += leftData[i + c];
+                rightMean[c] += rightData[i + c];
+            }
+            count += 1;
+        }
+        if (!count) return { left: [1, 1, 1], right: [1, 1, 1] };
+        const leftGain = [1, 1, 1];
+        const rightGain = [1, 1, 1];
+        for (let c = 0; c < 3; c += 1) {
+            leftMean[c] /= count;
+            rightMean[c] /= count;
+            const target = (leftMean[c] + rightMean[c]) / 2;
+            leftGain[c] = clamp(target / Math.max(1, leftMean[c]), 0.82, 1.22);
+            rightGain[c] = clamp(target / Math.max(1, rightMean[c]), 0.82, 1.22);
+        }
+        return { left: leftGain, right: rightGain };
     }
 
     function blendLayers(layers, mode, levels) {
         const canvas = document.createElement("canvas");
         V.setCanvasSize(canvas, layers.width, layers.height);
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(layers.rightLayer, 0, 0);
         if (mode === "average") {
+            ctx.drawImage(layers.rightLayer, 0, 0);
             ctx.globalAlpha = .55;
             ctx.drawImage(layers.leftLayer, 0, 0);
             ctx.globalAlpha = 1;
             return canvas;
         }
-        const feather = document.createElement("canvas");
-        V.setCanvasSize(feather, layers.width, layers.height);
-        const fctx = feather.getContext("2d");
-        fctx.drawImage(layers.maskLayer, 0, 0);
-        fctx.filter = `blur(${mode === "multiband" ? Math.max(10, levels * 4) : 12}px)`;
-        fctx.drawImage(layers.maskLayer, 0, 0);
-        fctx.filter = "none";
-        const temp = document.createElement("canvas");
-        V.setCanvasSize(temp, layers.width, layers.height);
-        const tctx = temp.getContext("2d");
-        tctx.drawImage(layers.leftLayer, 0, 0);
-        tctx.globalCompositeOperation = "destination-in";
-        tctx.drawImage(feather, 0, 0);
-        ctx.drawImage(temp, 0, 0);
-        if (mode === "multiband") {
-            ctx.globalAlpha = .08;
-            ctx.filter = "blur(1.2px)";
-            ctx.drawImage(canvas, 0, 0);
-            ctx.filter = "none";
-            ctx.globalAlpha = 1;
+        const leftData = layers.leftLayer.getContext("2d").getImageData(0, 0, layers.width, layers.height);
+        const rightData = layers.rightLayer.getContext("2d").getImageData(0, 0, layers.width, layers.height);
+        const weights = makeFeatherWeights(layers, mode, levels);
+        const gains = estimateOverlapGains(leftData.data, rightData.data);
+        const out = ctx.createImageData(layers.width, layers.height);
+        const od = out.data;
+        const ld = leftData.data;
+        const rd = rightData.data;
+        for (let i = 0, p = 0; i < od.length; i += 4, p += 1) {
+            const la = ld[i + 3] / 255;
+            const ra = rd[i + 3] / 255;
+            if (la <= 0 && ra <= 0) continue;
+            let lw = weights[p] * la;
+            let rw = (1 - weights[p]) * ra;
+            const sum = lw + rw;
+            if (sum <= 1e-6) continue;
+            lw /= sum;
+            rw /= sum;
+            const overlap = la > 0.03 && ra > 0.03;
+            for (let c = 0; c < 3; c += 1) {
+                const lg = overlap ? gains.left[c] : 1;
+                const rg = overlap ? gains.right[c] : 1;
+                od[i + c] = clamp(ld[i + c] * lg * lw + rd[i + c] * rg * rw, 0, 255);
+            }
+            od[i + 3] = 255 * Math.max(la, ra);
         }
+        ctx.putImageData(out, 0, 0);
         return canvas;
     }
 
@@ -471,15 +637,73 @@
         ctx.closePath();
     }
 
+    function syncPanoramaCanvasSize(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(640, Math.round(rect.width || canvas.width));
+        const height = Math.max(420, Math.round(rect.height || canvas.height));
+        if (canvas.width !== width || canvas.height !== height) V.setCanvasSize(canvas, width, height);
+    }
+
+    function canvasContentRect(canvas) {
+        const margin = clamp(Math.min(canvas.width, canvas.height) * 0.045, 24, 46);
+        return {
+            x: margin,
+            y: margin,
+            w: Math.max(1, canvas.width - margin * 2),
+            h: Math.max(1, canvas.height - margin * 2)
+        };
+    }
+
+    function splitContentRects(rect, count) {
+        const gap = clamp(rect.w * 0.035, 24, 56);
+        if (count === 2 && rect.w < 720) {
+            const h = (rect.h - gap) / 2;
+            return [
+                { x: rect.x, y: rect.y, w: rect.w, h },
+                { x: rect.x, y: rect.y + h + gap, w: rect.w, h }
+            ];
+        }
+        if (count === 2) {
+            const w = (rect.w - gap) / 2;
+            return [
+                { x: rect.x, y: rect.y, w, h: rect.h },
+                { x: rect.x + w + gap, y: rect.y, w, h: rect.h }
+            ];
+        }
+        const columns = rect.w >= 900 ? 4 : 2;
+        const rows = Math.ceil(count / columns);
+        const cardGap = clamp(rect.w * 0.018, 16, 28);
+        const cardW = (rect.w - cardGap * (columns - 1)) / columns;
+        const cardH = (rect.h - cardGap * (rows - 1)) / rows;
+        return Array.from({ length: count }, (_, index) => {
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+            return {
+                x: rect.x + col * (cardW + cardGap),
+                y: rect.y + row * (cardH + cardGap),
+                w: cardW,
+                h: cardH
+            };
+        });
+    }
+
     function drawPanorama() {
         const canvas = $("panoramaCanvas");
+        syncPanoramaCanvasSize(canvas);
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#f8fbff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const data = state.mode === "camera" ? state.camera.panorama : state.upload;
         if (state.mode === "camera") {
-            drawCameraScene(ctx, canvas);
+            const baseWidth = 980;
+            const baseHeight = 560;
+            const scale = Math.min(canvas.width / baseWidth, canvas.height / baseHeight);
+            ctx.save();
+            ctx.translate((canvas.width - baseWidth * scale) / 2, (canvas.height - baseHeight * scale) / 2);
+            ctx.scale(scale, scale);
+            drawCameraScene(ctx, { width: baseWidth, height: baseHeight });
+            ctx.restore();
             return;
         }
         if (!data) {
@@ -487,12 +711,15 @@
             return;
         }
         $("panoramaEmptyState").hidden = true;
+        const content = canvasContentRect(canvas);
         if (state.view === "inputs") {
-            drawContained(ctx, data.images.left, { x: 36, y: 58, w: 420, h: 360 }, "图像 A");
-            drawContained(ctx, data.images.right, { x: 524, y: 58, w: 420, h: 360 }, "图像 B");
+            const [leftRect, rightRect] = splitContentRects(content, 2);
+            drawContained(ctx, data.images.left, leftRect, "图像 A");
+            drawContained(ctx, data.images.right, rightRect, "图像 B");
         } else if (state.view === "match") {
-            const leftRect = drawContained(ctx, data.images.left, { x: 32, y: 56, w: 420, h: 350 }, "匹配摘要 A");
-            const rightRect = drawContained(ctx, data.images.right, { x: 528, y: 56, w: 420, h: 350 }, "匹配摘要 B");
+            const [leftBox, rightBox] = splitContentRects(content, 2);
+            const leftRect = drawContained(ctx, data.images.left, leftBox, "匹配摘要 A");
+            const rightRect = drawContained(ctx, data.images.right, rightBox, "匹配摘要 B");
             const inlierSet = new Set(data.geometry.inlierIndices || []);
             data.matches.filter(match => match.passed || match.ratio_passed).slice(0, 55).forEach((match, index) => {
                 const p = data.features.left.keypoints[match.left_index];
@@ -510,18 +737,22 @@
                 ctx.stroke();
             });
         } else if (state.view === "warp") {
-            drawContained(ctx, data.layers.rightLayer, { x: 46, y: 42, w: 880, h: 420 }, "Warp 对齐与全景画布边界");
+            drawContained(ctx, data.layers.rightLayer, content, "Warp 对齐与全景画布边界");
             ctx.strokeStyle = "#16a34a";
-            ctx.lineWidth = 3;
-            ctx.setLineDash([10, 6]);
-            ctx.strokeRect(46, 42, 880, 420);
+            ctx.lineWidth = clamp(canvas.width * 0.0024, 3, 5);
+            ctx.setLineDash([12, 8]);
+            ctx.strokeRect(content.x, content.y, content.w, content.h);
             ctx.setLineDash([]);
             ctx.fillStyle = "rgba(37,99,235,.13)";
-            roundRect(ctx, 286, 136, 356, 220, 16);
+            const maskW = clamp(content.w * 0.36, 280, 520);
+            const maskH = clamp(content.h * 0.36, 180, 320);
+            const maskX = content.x + content.w * 0.24;
+            const maskY = content.y + content.h * 0.30;
+            roundRect(ctx, maskX, maskY, maskW, maskH, 16);
             ctx.fill();
             ctx.fillStyle = "#1d4ed8";
-            ctx.font = "950 14px sans-serif";
-            ctx.fillText("重叠区域 / overlap mask", 316, 170);
+            ctx.font = `950 ${clamp(canvas.width * 0.012, 14, 18)}px sans-serif`;
+            ctx.fillText("重叠区域 / overlap mask", maskX + 26, maskY + 38);
         } else if (state.view === "blend") {
             const cards = [
                 ["overlap mask", data.layers.maskLayer],
@@ -529,11 +760,12 @@
                 ["pyramid blend", data.blended],
                 ["final blend", data.panorama]
             ];
+            const rects = splitContentRects(content, cards.length);
             cards.forEach(([label, img], index) => {
-                drawContained(ctx, img, { x: 28 + index * 238, y: 86, w: 220, h: 300 }, label);
+                drawContained(ctx, img, rects[index], label);
             });
         } else {
-            drawContained(ctx, data.panorama, { x: 34, y: 34, w: 912, h: 452 }, "全景结果");
+            drawContained(ctx, data.panorama, content, "全景结果");
         }
     }
 
@@ -1102,6 +1334,12 @@
         panel.hidden = !panel.hidden;
     });
     $("panoramaDownload")?.addEventListener("click", downloadPanoramaFinal);
+    if (window.ResizeObserver) {
+        const canvasResizeObserver = new ResizeObserver(() => drawPanorama());
+        canvasResizeObserver.observe($("panoramaCanvas"));
+    } else {
+        window.addEventListener("resize", drawPanorama);
+    }
 
     setMode("upload");
     renderStats();
