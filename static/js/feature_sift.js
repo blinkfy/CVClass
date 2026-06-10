@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     "use strict";
 
     const V = window.FeatureViz;
@@ -429,7 +429,12 @@
         ctx.textAlign = "left";
         ctx.fillStyle = color;
         ctx.font = "950 13px sans-serif";
-        ctx.fillText(mode === "orb" ? "FAST score + NMS" : "FAST-9 contiguous arc", cx - radius, cy + radius + 22);
+        const label = mode === "orb" ? "FAST score + NMS" : "FAST-9 contiguous arc";
+        if (mode === "mini") {
+            ctx.fillText(label, cx + radius + 18, cy + 4);
+        } else {
+            ctx.fillText(label, cx - radius + 10, cy + radius + 36);
+        }
         ctx.restore();
     }
 
@@ -557,16 +562,44 @@
                 ctx.fillStyle = "#0ea5e9";
                 ctx.font = "950 15px sans-serif";
                 ctx.fillText("Integral image rectangle sum", stage.x + 18, stage.y + 30);
+                
                 ctx.font = "950 22px monospace";
+                const prefix = "Sum = ";
                 ctx.fillStyle = "#334155";
-                const terms = ["D", "+ A", "- B", "- C"];
-                ctx.fillText(`Sum = ${terms.slice(0, 1 + Math.floor(phase * 4)).join(" ")}`, stage.x + 22, stage.y + 76);
+                ctx.fillText(prefix, stage.x + 22, stage.y + 72);
+                
+                let textX = stage.x + 22 + ctx.measureText(prefix).width;
+                const terms = [
+                    { text: "D", color: "#16a34a" },
+                    { text: "+ A", color: "#ef4444" },
+                    { text: "- B", color: "#f97316" },
+                    { text: "- C", color: "#f97316" }
+                ];
+                const activeCount = 1 + Math.floor(phase * 4);
+                for (let i = 0; i < Math.min(activeCount, terms.length); i++) {
+                    ctx.fillStyle = terms[i].color;
+                    ctx.fillText(terms[i].text, textX, stage.y + 72);
+                    textX += ctx.measureText(terms[i].text + " ").width;
+                }
+                
+                ctx.fillStyle = "rgba(100,116,139,.1)";
+                roundRect(ctx, stage.x + 22, stage.y + 92, stage.w - 44, 52, 6);
+                ctx.fill();
+                
+                ctx.fillStyle = "#334155";
+                ctx.font = "850 12px sans-serif";
+                ctx.fillText("O(1) 复杂度盒式滤波", stage.x + 32, stage.y + 112);
+                ctx.fillStyle = "#64748b";
+                ctx.font = "800 11px sans-serif";
+                ctx.fillText("无论矩形区域多大，均只需通过 4 次内存", stage.x + 32, stage.y + 128);
+                ctx.fillText("寻址计算像素和，极大地加速了滤波过程。", stage.x + 32, stage.y + 140);
+                
                 drawAnalogMetricStrip(ctx, layout.metrics, [["corner reads", "4", "#0ea5e9"], ["complexity", "O(1)", "#16a34a"], ["output", "area sum", "#f97316"]]);
             } else if (step.key === "hessian") {
                 drawSurfKernelSet(ctx, stage.x + 18, stage.y + 18, phase);
                 ctx.fillStyle = "#334155";
                 ctx.font = "950 15px monospace";
-                ctx.fillText("det(H) = Dxx * Dyy - 0.81 * Dxy²", stage.x + 24, stage.y + 168);
+                ctx.fillText("det(H) = Dxx * Dyy - 0.81 * Dxy²", stage.x + 24, stage.y + 140);
                 ctx.fillStyle = "rgba(14,165,233,.18)";
                 ctx.beginPath();
                 ctx.arc(center.x, center.y, 42 + 8 * Math.sin(phase * Math.PI * 2) ** 2, 0, Math.PI * 2);
@@ -616,10 +649,15 @@
                     ctx.stroke();
                 }
                 ctx.restore();
+                
+                ctx.fillStyle = "#0ea5e9";
+                ctx.font = "950 15px sans-serif";
+                ctx.fillText("Haar features in 4×4 grid", stage.x + 18, stage.y + 30);
+
                 const active = Math.floor(phase * 16) % 16;
                 for (let i = 0; i < 16; i++) {
                     const x = stage.x + 22 + (i % 8) * 32;
-                    const y = stage.y + 40 + Math.floor(i / 8) * 44;
+                    const y = stage.y + 38 + Math.floor(i / 8) * 36;
                     ["dx", "dy", "|x|", "|y|"].forEach((_, k) => {
                         ctx.fillStyle = i <= active ? ["#0ea5e9", "#2563eb", "#f97316", "#16a34a"][k] : "#cbd5e1";
                         roundRect(ctx, x + k * 7, y + 30 - (8 + ((i + k * 3) % 20)), 5, 8 + ((i + k * 3) % 20), 3);
@@ -633,7 +671,7 @@
         }
 
         if (step.key === "fast") {
-            drawFastRingTeaching(ctx, center.x, center.y, 78, phase, color, algorithm === "orb-lite" ? "orb" : "brief");
+            drawFastRingTeaching(ctx, center.x, center.y, 62, phase, color, algorithm === "orb-lite" ? "orb" : "brief");
             const score = Math.round(42 + 48 * motionEase(phase));
             ctx.fillStyle = color;
             ctx.font = "950 15px sans-serif";
@@ -644,9 +682,9 @@
             ctx.strokeStyle = `${color}55`;
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(stage.x + 72, stage.y + 92, 32, 0, Math.PI * 2);
+            ctx.arc(stage.x + 80, stage.y + 104, 38, 0, Math.PI * 2);
             ctx.stroke();
-            drawFastRingTeaching(ctx, stage.x + 72, stage.y + 92, 28, phase, color, "mini");
+            drawFastRingTeaching(ctx, stage.x + 80, stage.y + 104, 34, phase, color, "mini");
             drawAnalogMetricStrip(ctx, layout.metrics, [["circle", "16 pixels", color], ["score", score, "#f97316"], ["NMS", algorithm === "orb-lite" ? "rank + keep" : "local max", "#16a34a"]]);
             return;
         }
@@ -660,7 +698,7 @@
             ctx.font = "950 15px sans-serif";
             ctx.fillText("BRIEF fixed sampling pairs", stage.x + 18, stage.y + 30);
             [["I(a)", valueA, "#0ea5e9"], ["I(b)", valueB, "#f97316"]].forEach(([label, value, c], i) => {
-                const y = stage.y + 62 + i * 42;
+                const y = stage.y + 50 + i * 36;
                 ctx.fillStyle = `${c}22`;
                 roundRect(ctx, stage.x + 22, y, 160, 16, 8);
                 ctx.fill();
@@ -671,7 +709,7 @@
                 ctx.font = "950 12px sans-serif";
                 ctx.fillText(label, stage.x + 190, y + 13);
             });
-            drawBitVector(ctx, stage.x + 22, stage.y + 136, 32, active, "#2563eb", `bit = ${bit}`);
+            drawBitVector(ctx, stage.x + 22, stage.y + 138, 32, active, "#2563eb", `bit = ${bit}`);
             drawAnalogMetricStrip(ctx, layout.metrics, [["pairs", "256 fixed", "#2563eb"], ["current bit", bit, bit ? "#16a34a" : "#f97316"], ["rotation", "none", "#64748b"]]);
             return;
         }
@@ -756,12 +794,12 @@
             return;
         }
         if (thumb) {
-            const mini = drawLoadedImageInRect(ctx, img, { x: 10, y: 16, w: 200, h: 96 }, "#f1f5f9");
+            const mini = drawLoadedImageInRect(ctx, img, { x: 6, y: 6, w: 208, h: 118 }, "#f1f5f9");
             if (mini) {
                 const point = analogDemoPoint(data, step);
                 const mapped = mapPointToImageRect(point, mini.rect, scaleData?.meta?.width || mini.img.width, scaleData?.meta?.height || mini.img.height);
                 const color = data.algorithm === "surf" ? "#0ea5e9" : data.algorithm === "orb-lite" ? "#16a34a" : "#eab308";
-                drawCandidateCircle(ctx, mapped.x, mapped.y, 6, color, .95);
+                drawCandidateCircle(ctx, mapped.x, mapped.y, 7, color, .95);
             }
             return;
         }
