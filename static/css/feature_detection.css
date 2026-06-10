@@ -1435,6 +1435,19 @@ th { color: #1e3a8a; background: #eff6ff; }
     gap: 13px;
 }
 
+.match-nav-block {
+    display: grid;
+    gap: 6px;
+}
+
+.match-nav-label {
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
 .match-view-toolbar {
     display: inline-flex;
     justify-self: start;
@@ -1663,6 +1676,11 @@ th { color: #1e3a8a; background: #eff6ff; }
         linear-gradient(145deg, #fff, #f8fbff);
 }
 
+.match-ransac-lab {
+    gap: 7px;
+    padding: 10px;
+}
+
 .feature-chain-head {
     display: flex;
     align-items: center;
@@ -1792,6 +1810,19 @@ th { color: #1e3a8a; background: #eff6ff; }
 .match-inlier-meter.best i { background: #16a34a; }
 .match-ransac-side .feature-stat-list div { padding: 6px 7px; font-size: 9px; }
 
+.match-ransac-bottom-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.match-ransac-bottom-metrics div {
+    min-height: 24px;
+    padding: 3px 9px;
+    font-size: 10px;
+    line-height: 1.05;
+}
+
 .feature-chain-head > label {
     display: grid;
     gap: 4px;
@@ -1899,6 +1930,11 @@ th { color: #1e3a8a; background: #eff6ff; }
 .match-gate.is-pass b { color: #15803d; }
 .match-gate.is-fail { border-color: #fca5a5; color: #b91c1c; background: #fef2f2; }
 .match-gate.is-fail b { color: #b91c1c; }
+
+.match-table-wrap {
+    max-height: 430px;
+    overflow: auto;
+}
 
 #matchTable {
     min-width: 920px;

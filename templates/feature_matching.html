@@ -58,16 +58,22 @@
                 <span id="matchElapsed" class="status-pill">等待运行</span>
             </div>
 
-            <div class="match-view-toolbar" role="group" aria-label="匹配结果视图">
-                <button type="button" class="is-active" data-match-view="matches">匹配线</button>
-                <button type="button" data-match-view="ransac">RANSAC 验证</button>
-                <button type="button" data-match-view="warp">配准预览</button>
+            <div class="match-nav-block">
+                <span class="match-nav-label">显示视图</span>
+                <div class="match-view-toolbar" role="group" aria-label="显示主图视图">
+                    <button type="button" class="is-active" data-match-view="matches">Ratio Test 视图</button>
+                    <button type="button" data-match-view="ransac">RANSAC 验证视图</button>
+                    <button type="button" data-match-view="warp">配准预览</button>
+                </div>
             </div>
-            <div class="match-phase-strip" aria-label="教学链路">
+            <div class="match-nav-block">
+                <span class="match-nav-label">算法流程快捷跳转</span>
+                <div class="match-phase-strip" aria-label="算法流程快捷跳转">
                 <button type="button" class="is-active" data-phase-step="0"><b>01</b><span>匹配形成</span><small>Detect → 2-NN</small></button>
                 <button type="button" data-phase-step="4"><b>02</b><span>描述子筛选</span><small>Ratio Test</small></button>
                 <button type="button" data-phase-step="5"><b>03</b><span>几何验证</span><small>RANSAC → H</small></button>
                 <button type="button" data-phase-step="7"><b>04</b><span>配准应用</span><small>Warp Preview</small></button>
+                </div>
             </div>
             <label id="warpOpacityControl" class="match-warp-opacity" hidden>
                 <span>变换图 A 叠加透明度</span>
@@ -116,9 +122,9 @@
                             <span>Best 内点 <b id="ransacBestCount">0</b></span>
                             <div><i id="ransacBestBar"></i></div>
                         </div>
-                        <div id="ransacMotionMetrics" class="feature-stat-list"></div>
                     </div>
                 </div>
+                <div id="ransacMotionMetrics" class="feature-stat-list match-ransac-bottom-metrics"></div>
             </section>
 
             <section class="match-probe-card">
@@ -152,9 +158,9 @@
             <section class="match-table-section">
                 <div class="feature-chain-head">
                     <div><span class="section-label">Match Records</span><h3>匹配对明细</h3></div>
-                    <small>点击行可联动 LOCAL MATCH PROBE</small>
+                    <small id="matchTableSummary">默认显示前 10 条；更多匹配可在 Local Match Probe 下拉选择。</small>
                 </div>
-                <div class="table-wrap">
+                <div class="table-wrap match-table-wrap">
                     <table id="matchTable">
                         <thead><tr><th>#</th><th>左图点</th><th>右图点</th><th>d1</th><th>d2</th><th>ratio</th><th>RANSAC</th><th>重投影误差</th><th>状态</th></tr></thead>
                         <tbody></tbody>

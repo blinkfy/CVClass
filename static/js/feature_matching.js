@@ -726,7 +726,8 @@
     function renderTable(data) {
         const tbody = document.querySelector("#matchTable tbody");
         if (!tbody) return;
-        tbody.innerHTML = data.matches.slice(0, 24).map((match, index) => {
+        const visibleMatches = data.matches.slice(0, 10);
+        tbody.innerHTML = visibleMatches.map((match, index) => {
             const left = data.points.left[match.left_index];
             const right = data.points.right[match.right_index];
             return `<tr data-match-index="${index}" class="${index === state.selectedMatch ? "is-selected" : ""}">
@@ -741,6 +742,13 @@
                 <td><span class="match-status ${statusClass(match)}">${match.geometry_status}</span></td>
             </tr>`;
         }).join("");
+        const summary = $("matchTableSummary");
+        if (summary) {
+            const hidden = Math.max(0, data.matches.length - visibleMatches.length);
+            summary.textContent = hidden
+                ? `默认显示前 ${visibleMatches.length} 条，另有 ${hidden} 条可在 Local Match Probe 下拉选择。`
+                : `当前共 ${visibleMatches.length} 条匹配；点击行可联动 Local Match Probe。`;
+        }
     }
 
     function renderProbeOptions(data) {
@@ -953,21 +961,108 @@
         return items[stepIndex] || items[0];
     }
 
+    function currentNoteView() {
+        if (state.step === 6) return "transform";
+        return state.view === "warp" ? "warp" : state.view === "ransac" ? "ransac" : "ratio";
+    }
+
+    function viewNoteDefinition(view) {
+        const ratio = fixed(formNumber("ratio_threshold", 0.75, 0.4, 0.95), 2);
+        const ransacThreshold = fixed(formNumber("ransac_threshold", 4, 1, 20), 1);
+        const iterations = Math.round(formNumber("ransac_iterations", 80, 20, 400));
+        const map = {
+            ratio: {
+                index: "View",
+                title: "Ratio Test：d1 / d2 比率筛选",
+                goal: "判断最近邻 d1 是否明显优于次近邻 d2，过滤重复纹理和歧义匹配。",
+                io: "输入：每个左图描述子的 2-NN 距离 d1、d2 → 输出：Ratio 通过或失败的匹配线",
+                formula: "\\rho=\\frac{d_1}{d_2}<\\tau",
+                logic: `蓝线表示 d1/d2 < ${ratio} 的通过匹配；红色虚线表示最近邻不够有区分度，被 Ratio Test 拒绝。`,
+                params: [["Ratio τ", ratio], ["距离", state.data?.stats?.distance_type || V.featureAlgorithmInfo(selectedAlgorithm()).distanceType]],
+                next: "Ratio 通过的匹配才会进入 RANSAC 几何一致性验证。"
+            },
+            ransac: {
+                index: "View",
+                title: "RANSAC：内点 / 外点与重投影误差",
+                goal: "从 Ratio 通过的匹配中反复采样几何模型，找出支持同一变换的内点集合。",
+                io: "输入：Ratio 通过匹配 → 输出：RANSAC 内点、几何外点和每条匹配的重投影误差",
+                formula: "e_i=\\lVert p_i'-T(p_i)\\rVert_2,\\qquad e_i\\le\\varepsilon",
+                logic: `绿色为重投影误差 e ≤ ${ransacThreshold}px 的内点；红色长虚线为几何外点，说明描述子相似但几何位置不一致。`,
+                params: [["RANSAC ε", `${ransacThreshold} px`], ["迭代次数", iterations]],
+                next: "最佳内点集合用于估计最终的几何变换矩阵。"
+            },
+            transform: {
+                index: "View",
+                title: "Transform：估计几何变换矩阵",
+                goal: "用 RANSAC 最佳内点估计图像 A 到图像 B 的仿射变换，描述平移、旋转、缩放和剪切。",
+                io: "输入：RANSAC 内点 → 输出：Affine 3×3 齐次矩阵 H_A",
+                formula: "\\begin{bmatrix}x'\\\\y'\\\\1\\end{bmatrix}=H_A\\begin{bmatrix}x\\\\y\\\\1\\end{bmatrix}",
+                logic: "矩阵中的 a,b,c,d 控制线性形变，e,f 控制平移；主图中的内点为该模型提供约束。",
+                params: [["模型", "Affine 3×3"], ["RANSAC ε", `${ransacThreshold} px`]],
+                next: "该矩阵会被用于 Warp Preview，将图像 A 映射到图像 B 的坐标系。"
+            },
+            warp: {
+                index: "View",
+                title: "Warp Preview：几何变换与配准预览",
+                goal: "把变换后的图像 A 半透明叠加到图像 B 上，直观看配准是否对齐。",
+                io: "输入：图像 A、图像 B、Affine 矩阵 → 输出：半透明配准预览和投影边框",
+                formula: "I_{warp}(x',y')=I_A\\left(T^{-1}(x',y')\\right)",
+                logic: "绿色虚线框表示图像 A 变换后的投影范围；透明度滑块用于检查纹理边缘是否和目标图重合。",
+                params: [["叠加透明度", `${Math.round(state.warpOpacity * 100)}%`], ["模型", "Affine Warp"]],
+                next: "配准预览用于判断当前匹配与几何模型是否足以支撑后续拼接、定位或测量。"
+            }
+        };
+        return map[view] || map.ratio;
+    }
+
+    function viewResultItems(view) {
+        const stats = state.data?.stats;
+        const transform = state.data?.transform;
+        if (!stats) return [["状态", "等待运行"]];
+        const current = state.data?.matches?.[state.selectedMatch];
+        const map = {
+            ratio: [
+                ["左图关键点", stats.left_keypoints],
+                ["右图关键点", stats.right_keypoints],
+                ["候选匹配", stats.raw_matches],
+                ["Ratio 通过", stats.passed_matches],
+                ["当前 ratio", current ? fixed(current.ratio, 3) : "-"]
+            ],
+            ransac: [
+                ["RANSAC 内点", stats.inlier_matches],
+                ["几何外点", stats.outlier_matches],
+                ["内点率", `${fixed(stats.inlier_ratio * 100, 1)}%`],
+                ["平均重投影误差", `${fixed(stats.mean_reprojection_error, 2)} px`],
+                ["当前误差", current?.reprojection_error == null ? "-" : `${fixed(current.reprojection_error, 2)} px`]
+            ],
+            transform: [
+                ["模型", "Affine"],
+                ["H_A", transform ? `[${fixed(transform.a, 2)} ${fixed(transform.c, 2)} ${fixed(transform.e, 1)}; ${fixed(transform.b, 2)} ${fixed(transform.d, 2)} ${fixed(transform.f, 1)}; 0 0 1]` : "-"],
+                ["约束内点", stats.inlier_matches],
+                ["平均误差", `${fixed(stats.mean_reprojection_error, 2)} px`]
+            ],
+            warp: [
+                ["配准内点", stats.inlier_matches],
+                ["内点率", `${fixed(stats.inlier_ratio * 100, 1)}%`],
+                ["叠加透明度", `${Math.round(state.warpOpacity * 100)}%`],
+                ["变换模型", "Affine 3×3"]
+            ]
+        };
+        return map[view] || map.ratio;
+    }
+
     function updateProcessNotes() {
-        const step = stepDefinitions[state.step];
+        const view = currentNoteView();
+        const note = viewNoteDefinition(view);
         const info = V.featureAlgorithmInfo(state.data?.algorithm || selectedAlgorithm());
-        $("matchInfoLabel").textContent = `Process Notes · ${String(state.step + 1).padStart(2, "0")}`;
-        $("matchInfoTitle").textContent = step.title;
-        $("matchInfoGoal").textContent = step.goal;
-        $("matchInfoIO").textContent = step.io;
-        renderFormula($("matchInfoLogic"), step.formula, step.logic);
-        V.renderStatList($("matchInfoParams"), [
-            ["算法", info.name],
-            ["Ratio τ", fixed(formNumber("ratio_threshold", 0.75, 0.4, 0.95), 2)],
-            ["RANSAC ε", `${fixed(formNumber("ransac_threshold", 4, 1, 20), 1)} px`]
-        ]);
-        V.renderStatList($("matchInfoResult"), stepResultItems(state.step));
-        $("matchInfoNext").textContent = step.next;
+        $("matchInfoLabel").textContent = `Process Notes · ${note.index}`;
+        $("matchInfoTitle").textContent = note.title;
+        $("matchInfoGoal").textContent = note.goal;
+        $("matchInfoIO").textContent = note.io;
+        renderFormula($("matchInfoLogic"), note.formula, note.logic);
+        V.renderStatList($("matchInfoParams"), [["算法", info.name], ...note.params]);
+        V.renderStatList($("matchInfoResult"), viewResultItems(view));
+        $("matchInfoNext").textContent = note.next;
     }
 
     function setStep(index, preserveView = false) {
@@ -1205,6 +1300,7 @@
         state.warpOpacity = clamp(number(event.target.value, 46) / 100, 0, 1);
         $("warpOpacityValue").textContent = `${Math.round(state.warpOpacity * 100)}%`;
         if (state.view === "warp") drawMainCanvas();
+        if (currentNoteView() === "warp") updateProcessNotes();
     });
     $("matchProbeSelect")?.addEventListener("change", event => setSelectedMatch(event.target.value));
     document.querySelector("#matchTable tbody")?.addEventListener("click", event => {

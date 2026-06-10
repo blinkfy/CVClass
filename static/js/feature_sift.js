@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     "use strict";
 
     const V = window.FeatureViz;
@@ -99,6 +99,10 @@
 
     function selectedAlgorithm() {
         return selectedAnalogMethod || "sift";
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     function currentSteps() {
@@ -278,7 +282,503 @@
         }
     }
 
+    function analogRandom(seed) {
+        let value = (Math.round(seed) || 1) >>> 0;
+        return () => {
+            value = (value * 1664525 + 1013904223) >>> 0;
+            return value / 4294967296;
+        };
+    }
+
+    function analogDemoPoint(data, step) {
+        const points = data?.points || [];
+        if (!points.length) return { x: scaleData?.meta?.width ? scaleData.meta.width / 2 : 256, y: scaleData?.meta?.height ? scaleData.meta.height / 2 : 256, sigma: 4, orientation: -0.55 };
+        const seed = `${data.algorithm}-${step?.key || ""}`.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        return points[Math.min(points.length - 1, Math.floor(points.length * ((seed % 47) / 70 + .18)))];
+    }
+
+    function drawAnalogImageBackdrop(ctx, imageResult, data, point, phase, color) {
+        if (!imageResult) return null;
+        const rect = imageResult.rect;
+        const img = imageResult.img;
+        const imageWidth = scaleData?.meta?.width || img.naturalWidth || img.width;
+        const imageHeight = scaleData?.meta?.height || img.naturalHeight || img.height;
+        ctx.save();
+        ctx.fillStyle = "rgba(248,251,255,.54)";
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        (data.points || []).slice(0, 220).forEach((item, index) => {
+            const mapped = mapPointToImageRect(item, rect, imageWidth, imageHeight);
+            ctx.globalAlpha = .16 + .12 * ((index * 7) % 5) / 4;
+            if (data.algorithm === "surf") V.drawCircle(ctx, mapped.x, mapped.y, color, 3.2);
+            else V.drawDiamond(ctx, mapped.x, mapped.y, color, 3.6);
+        });
+        ctx.globalAlpha = 1;
+        const selected = mapPointToImageRect(point, rect, imageWidth, imageHeight);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 16;
+        if (data.algorithm === "surf") drawCandidateCircle(ctx, selected.x, selected.y, 9 + 2 * Math.sin(phase * Math.PI * 2) ** 2, color, .95);
+        else V.drawDiamond(ctx, selected.x, selected.y, color, 9);
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([7, 7]);
+        ctx.strokeStyle = `${color}78`;
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        ctx.moveTo(selected.x, selected.y);
+        ctx.bezierCurveTo(rect.x + rect.w + 18, selected.y - 42, 526, 118, 562, 118);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        return { selected, rect, imageWidth, imageHeight };
+    }
+
+    function drawAnalogPatchFromImage(ctx, img, point, panel, color, label) {
+        drawMotionPanel(ctx, panel.x, panel.y, panel.w, panel.h, color);
+        ctx.save();
+        const imageWidth = scaleData?.meta?.width || img.naturalWidth || img.width;
+        const imageHeight = scaleData?.meta?.height || img.naturalHeight || img.height;
+        const patch = Math.max(48, Math.round((Number(point.sigma) || 4) * 18));
+        const sx = clamp(Number(point.x) - patch / 2, 0, Math.max(1, imageWidth - patch));
+        const sy = clamp(Number(point.y) - patch / 2, 0, Math.max(1, imageHeight - patch));
+        const inner = { x: panel.x + 18, y: panel.y + 34, w: panel.w - 36, h: panel.h - 58 };
+        roundRect(ctx, inner.x, inner.y, inner.w, inner.h, 12);
+        ctx.clip();
+        ctx.drawImage(img, sx, sy, patch, patch, inner.x, inner.y, inner.w, inner.h);
+        ctx.fillStyle = "rgba(248,251,255,.38)";
+        ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
+        ctx.restore();
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(label, panel.x + 16, panel.y + 22);
+        ctx.strokeStyle = "rgba(255,255,255,.65)";
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 6; i++) {
+            ctx.beginPath();
+            ctx.moveTo(inner.x + i * inner.w / 6, inner.y);
+            ctx.lineTo(inner.x + i * inner.w / 6, inner.y + inner.h);
+            ctx.moveTo(inner.x, inner.y + i * inner.h / 6);
+            ctx.lineTo(inner.x + inner.w, inner.y + i * inner.h / 6);
+            ctx.stroke();
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(inner.x + inner.w / 2, inner.y + inner.h / 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return inner;
+    }
+
+    function drawAnalogMetricStrip(ctx, rect, items) {
+        drawMotionPanel(ctx, rect.x, rect.y, rect.w, rect.h, "#2563eb");
+        ctx.save();
+        const gap = 8;
+        const width = (rect.w - 36 - gap * (items.length - 1)) / items.length;
+        items.forEach(([label, value, color], index) => {
+            const x = rect.x + 18 + index * (width + gap);
+            ctx.fillStyle = "rgba(255,255,255,.78)";
+            ctx.strokeStyle = `${color}66`;
+            ctx.lineWidth = 1.2;
+            roundRect(ctx, x, rect.y + 10, width, rect.h - 20, 10);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#475569";
+            ctx.font = "850 11px sans-serif";
+            ctx.fillText(label, x + 10, rect.y + 29);
+            ctx.fillStyle = color;
+            ctx.font = String(value).length > 12 ? "950 11px sans-serif" : "950 14px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(String(value), x + width - 10, rect.y + 30);
+            ctx.textAlign = "left";
+        });
+        ctx.restore();
+    }
+
+    function drawFastRingTeaching(ctx, cx, cy, radius, phase, color, mode) {
+        const offsets = [
+            [0, -3], [1, -3], [2, -2], [3, -1], [3, 0], [3, 1], [2, 2], [1, 3],
+            [0, 3], [-1, 3], [-2, 2], [-3, 1], [-3, 0], [-3, -1], [-2, -2], [-1, -3]
+        ];
+        const active = Math.floor(phase * 24) % 16;
+        ctx.save();
+        ctx.strokeStyle = `${color}55`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#2563eb";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        offsets.forEach(([dx, dy], index) => {
+            const x = cx + dx / 3 * radius;
+            const y = cy + dy / 3 * radius;
+            const contiguous = index >= 2 && index <= 10;
+            const visited = index <= active || phase > .62;
+            ctx.fillStyle = visited ? (contiguous ? `${color}33` : "rgba(148,163,184,.22)") : "rgba(255,255,255,.72)";
+            ctx.strokeStyle = index === active ? "#ef4444" : (contiguous && visited ? color : "rgba(148,163,184,.65)");
+            ctx.lineWidth = index === active ? 3 : 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, index === active ? 9 : 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#334155";
+            ctx.font = "850 9px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(String(index + 1), x, y + 3);
+        });
+        ctx.textAlign = "left";
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(mode === "orb" ? "FAST score + NMS" : "FAST-9 contiguous arc", cx - radius, cy + radius + 22);
+        ctx.restore();
+    }
+
+    function drawBriefPairsTeaching(ctx, center, size, phase, color, rotated = false) {
+        const active = Math.floor(phase * 32) % 32;
+        const angle = rotated ? -0.55 + .06 * Math.sin(phase * Math.PI * 2) : 0;
+        ctx.save();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(angle);
+        ctx.strokeStyle = `${color}35`;
+        ctx.lineWidth = 1.2;
+        for (let r = size * .18; r <= size * .44; r += size * .13) {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 46; i++) {
+            const a = i * 2.399;
+            const b = i * 1.317 + 1.2;
+            const r1 = size * (.1 + (i % 7) * .045);
+            const r2 = size * (.14 + ((i * 3) % 8) * .04);
+            const ax = Math.cos(a) * r1;
+            const ay = Math.sin(a) * r1;
+            const bx = Math.cos(b) * r2;
+            const by = Math.sin(b) * r2;
+            const hot = i === active;
+            ctx.strokeStyle = hot ? "#f97316" : (i < active ? `${color}55` : "rgba(148,163,184,.18)");
+            ctx.lineWidth = hot ? 3 : 1.2;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+            if (hot) {
+                ctx.fillStyle = "#0ea5e9";
+                ctx.beginPath();
+                ctx.arc(ax, ay, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#f97316";
+                ctx.beginPath();
+                ctx.arc(bx, by, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        if (rotated) {
+            ctx.strokeStyle = "#16a34a";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(size * .44, 0);
+            ctx.stroke();
+        }
+        ctx.restore();
+        return active;
+    }
+
+    function drawBitVector(ctx, x, y, count, active, color, label) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "950 13px sans-serif";
+        ctx.fillText(label, x, y - 10);
+        for (let i = 0; i < count; i++) {
+            const bx = x + (i % 32) * 9;
+            const by = y + Math.floor(i / 32) * 18;
+            const on = i <= active;
+            ctx.fillStyle = on ? (i === active ? "#f97316" : (i % 3 ? color : "#16a34a")) : "rgba(203,213,225,.45)";
+            roundRect(ctx, bx, by, 6, 14, 3);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawSurfKernelSet(ctx, x, y, phase) {
+        const kernels = [["Dxx", "#0ea5e9"], ["Dyy", "#2563eb"], ["Dxy", "#7c3aed"]];
+        kernels.forEach(([label, color], index) => {
+            const kx = x + index * 94;
+            ctx.fillStyle = "rgba(255,255,255,.82)";
+            ctx.strokeStyle = `${color}88`;
+            roundRect(ctx, kx, y, 78, 78, 10);
+            ctx.fill();
+            ctx.stroke();
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const hot = label === "Dxy" ? (r === c) : (label === "Dxx" ? c === 1 : r === 1);
+                    ctx.fillStyle = hot ? `${color}88` : "rgba(226,232,240,.75)";
+                    ctx.fillRect(kx + 9 + c * 20, y + 9 + r * 20, 18, 18);
+                }
+            }
+            ctx.fillStyle = color;
+            ctx.font = "950 12px sans-serif";
+            ctx.fillText(label, kx + 25, y + 100);
+        });
+        drawFlowParticles(ctx, x + 276, y + 40, x + 318, y + 40, "#16a34a", phase, 3);
+    }
+
+    function drawAnalogTeachingScene(ctx, img, data, step, phase, layout) {
+        const algorithm = data.algorithm;
+        const color = algorithm === "surf" ? "#0ea5e9" : algorithm === "orb-lite" ? "#16a34a" : "#eab308";
+        const point = analogDemoPoint(data, step);
+        const imageResult = drawLoadedImageInRect(ctx, img, layout.image, "#f1f5f9");
+        const mapped = drawAnalogImageBackdrop(ctx, imageResult, data, point, phase, color);
+        const patch = drawAnalogPatchFromImage(ctx, img, point, layout.patch, color, `${data.name} local evidence`);
+        const center = { x: patch.x + patch.w / 2, y: patch.y + patch.h / 2 };
+        const stage = layout.compute;
+        drawMotionPanel(ctx, stage.x, stage.y, stage.w, stage.h, color);
+
+        if (algorithm === "surf") {
+            if (step.key === "integral") {
+                const rect = { x: patch.x + patch.w * .32, y: patch.y + patch.h * .30, w: patch.w * .42, h: patch.h * .38 };
+                ctx.fillStyle = "rgba(37,99,235,.13)";
+                ctx.strokeStyle = "#2563eb";
+                ctx.lineWidth = 2.3;
+                roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
+                ctx.fill();
+                ctx.stroke();
+                [["A", rect.x, rect.y, "#ef4444"], ["B", rect.x + rect.w, rect.y, "#f97316"], ["C", rect.x, rect.y + rect.h, "#f97316"], ["D", rect.x + rect.w, rect.y + rect.h, "#16a34a"]].forEach(([label, x, y, c], index) => {
+                    if (phase < index * .14) return;
+                    ctx.fillStyle = c;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = "#1e293b";
+                    ctx.font = "950 12px sans-serif";
+                    ctx.fillText(label, x + 8, y - 6);
+                });
+                ctx.fillStyle = "#0ea5e9";
+                ctx.font = "950 15px sans-serif";
+                ctx.fillText("Integral image rectangle sum", stage.x + 18, stage.y + 30);
+                ctx.font = "950 22px monospace";
+                ctx.fillStyle = "#334155";
+                const terms = ["D", "+ A", "- B", "- C"];
+                ctx.fillText(`Sum = ${terms.slice(0, 1 + Math.floor(phase * 4)).join(" ")}`, stage.x + 22, stage.y + 76);
+                drawAnalogMetricStrip(ctx, layout.metrics, [["corner reads", "4", "#0ea5e9"], ["complexity", "O(1)", "#16a34a"], ["output", "area sum", "#f97316"]]);
+            } else if (step.key === "hessian") {
+                drawSurfKernelSet(ctx, stage.x + 18, stage.y + 18, phase);
+                ctx.fillStyle = "#334155";
+                ctx.font = "950 15px monospace";
+                ctx.fillText("det(H) = Dxx * Dyy - 0.81 * Dxy²", stage.x + 24, stage.y + 168);
+                ctx.fillStyle = "rgba(14,165,233,.18)";
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, 42 + 8 * Math.sin(phase * Math.PI * 2) ** 2, 0, Math.PI * 2);
+                ctx.fill();
+                drawAnalogMetricStrip(ctx, layout.metrics, [["Dxx/Dyy/Dxy", "box filters", "#0ea5e9"], ["response", "det(H)", "#7c3aed"], ["decision", "local max", "#16a34a"]]);
+            } else if (step.key === "orientation") {
+                ctx.strokeStyle = "#0ea5e9";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, 74, 0, Math.PI * 2);
+                ctx.stroke();
+                const sweep = phase * Math.PI * 2;
+                ctx.fillStyle = "rgba(249,115,22,.18)";
+                ctx.beginPath();
+                ctx.moveTo(center.x, center.y);
+                ctx.arc(center.x, center.y, 74, sweep, sweep + Math.PI / 3);
+                ctx.closePath();
+                ctx.fill();
+                for (let i = 0; i < 34; i++) {
+                    const a = i * 2.17;
+                    const r = 15 + (i % 7) * 8;
+                    drawOrientationArrow(ctx, center.x + Math.cos(a) * r, center.y + Math.sin(a) * r, a * 180 / Math.PI + 24, 10 + (i % 4) * 2, i % 2 ? "#0ea5e9" : "#16a34a", .68, 1.5);
+                }
+                drawOrientationArrow(ctx, center.x, center.y, -34, 92 * motionEase(phase), "#16a34a", 1, 4);
+                ctx.fillStyle = "#0ea5e9";
+                ctx.font = "950 15px sans-serif";
+                ctx.fillText("Haar responses sweep sector", stage.x + 18, stage.y + 30);
+                for (let i = 0; i < 8; i++) {
+                    const h = 18 + ((i * 13) % 52) * motionEase(phase);
+                    ctx.fillStyle = i === 6 ? "#f97316" : "#60a5fa";
+                    roundRect(ctx, stage.x + 26 + i * 29, stage.y + 132 - h, 16, h, 5);
+                    ctx.fill();
+                }
+                drawAnalogMetricStrip(ctx, layout.metrics, [["support", "radius 6σ", "#0ea5e9"], ["window", "π / 3", "#f97316"], ["main θ", "-34°", "#16a34a"]]);
+            } else {
+                ctx.save();
+                ctx.translate(center.x, center.y);
+                ctx.rotate(-.35);
+                ctx.strokeStyle = "#0ea5e9";
+                ctx.lineWidth = 1.5;
+                for (let r = -2; r <= 2; r++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-82, r * 32);
+                    ctx.lineTo(82, r * 32);
+                    ctx.moveTo(r * 32, -82);
+                    ctx.lineTo(r * 32, 82);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                const active = Math.floor(phase * 16) % 16;
+                for (let i = 0; i < 16; i++) {
+                    const x = stage.x + 22 + (i % 8) * 32;
+                    const y = stage.y + 40 + Math.floor(i / 8) * 44;
+                    ["dx", "dy", "|x|", "|y|"].forEach((_, k) => {
+                        ctx.fillStyle = i <= active ? ["#0ea5e9", "#2563eb", "#f97316", "#16a34a"][k] : "#cbd5e1";
+                        roundRect(ctx, x + k * 7, y + 30 - (8 + ((i + k * 3) % 20)), 5, 8 + ((i + k * 3) % 20), 3);
+                        ctx.fill();
+                    });
+                }
+                drawBitVector(ctx, stage.x + 22, stage.y + 126, 64, Math.floor(phase * 64), "#0ea5e9", "64 float descriptor");
+                drawAnalogMetricStrip(ctx, layout.metrics, [["grid", "4×4", "#0ea5e9"], ["per cell", "4 sums", "#f97316"], ["vector", "64 float", "#16a34a"]]);
+            }
+            return;
+        }
+
+        if (step.key === "fast") {
+            drawFastRingTeaching(ctx, center.x, center.y, 78, phase, color, algorithm === "orb-lite" ? "orb" : "brief");
+            const score = Math.round(42 + 48 * motionEase(phase));
+            ctx.fillStyle = color;
+            ctx.font = "950 15px sans-serif";
+            ctx.fillText("FAST compares center p with 16-pixel circle", stage.x + 18, stage.y + 30);
+            ctx.fillStyle = "#334155";
+            ctx.font = "900 13px sans-serif";
+            ctx.fillText("continuous bright/dark arc -> corner candidate", stage.x + 18, stage.y + 58);
+            ctx.strokeStyle = `${color}55`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(stage.x + 72, stage.y + 92, 32, 0, Math.PI * 2);
+            ctx.stroke();
+            drawFastRingTeaching(ctx, stage.x + 72, stage.y + 92, 28, phase, color, "mini");
+            drawAnalogMetricStrip(ctx, layout.metrics, [["circle", "16 pixels", color], ["score", score, "#f97316"], ["NMS", algorithm === "orb-lite" ? "rank + keep" : "local max", "#16a34a"]]);
+            return;
+        }
+
+        if (algorithm === "fast-brief" && step.key === "pairs") {
+            const active = drawBriefPairsTeaching(ctx, center, Math.min(patch.w, patch.h), phase, "#2563eb", false);
+            const valueA = 82 + (active * 17) % 120;
+            const valueB = 76 + (active * 29) % 132;
+            const bit = valueA < valueB ? 1 : 0;
+            ctx.fillStyle = "#2563eb";
+            ctx.font = "950 15px sans-serif";
+            ctx.fillText("BRIEF fixed sampling pairs", stage.x + 18, stage.y + 30);
+            [["I(a)", valueA, "#0ea5e9"], ["I(b)", valueB, "#f97316"]].forEach(([label, value, c], i) => {
+                const y = stage.y + 62 + i * 42;
+                ctx.fillStyle = `${c}22`;
+                roundRect(ctx, stage.x + 22, y, 160, 16, 8);
+                ctx.fill();
+                ctx.fillStyle = c;
+                roundRect(ctx, stage.x + 22, y, 160 * value / 220, 16, 8);
+                ctx.fill();
+                ctx.fillStyle = "#334155";
+                ctx.font = "950 12px sans-serif";
+                ctx.fillText(label, stage.x + 190, y + 13);
+            });
+            drawBitVector(ctx, stage.x + 22, stage.y + 136, 32, active, "#2563eb", `bit = ${bit}`);
+            drawAnalogMetricStrip(ctx, layout.metrics, [["pairs", "256 fixed", "#2563eb"], ["current bit", bit, bit ? "#16a34a" : "#f97316"], ["rotation", "none", "#64748b"]]);
+            return;
+        }
+
+        if (algorithm === "orb-lite" && step.key === "orientation") {
+            const angle = point.orientation || -.55;
+            const centroid = { x: center.x + Math.cos(angle) * 68, y: center.y + Math.sin(angle) * 42 };
+            const glow = ctx.createRadialGradient(centroid.x, centroid.y, 10, center.x, center.y, 90);
+            glow.addColorStop(0, "rgba(22,163,74,.28)");
+            glow.addColorStop(1, "rgba(22,163,74,0)");
+            ctx.fillStyle = glow;
+            ctx.fillRect(patch.x, patch.y, patch.w, patch.h);
+            for (let i = 0; i < 28; i++) {
+                const a = i * 2.31;
+                const r = 12 + (i % 6) * 10;
+                ctx.strokeStyle = "rgba(22,163,74,.2)";
+                ctx.beginPath();
+                ctx.moveTo(center.x + Math.cos(a) * r, center.y + Math.sin(a) * r);
+                ctx.lineTo(centroid.x, centroid.y);
+                ctx.stroke();
+            }
+            ctx.fillStyle = "#16a34a";
+            ctx.beginPath();
+            ctx.arc(centroid.x, centroid.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            drawOrientationArrow(ctx, center.x, center.y, angle * 180 / Math.PI, 88 * motionEase(phase), "#16a34a", 1, 4);
+            ctx.fillStyle = "#16a34a";
+            ctx.font = "950 15px sans-serif";
+            ctx.fillText("Intensity centroid moments", stage.x + 18, stage.y + 30);
+            [["m10", .72, "#16a34a"], ["m01", .48, "#0ea5e9"]].forEach(([label, value, c], i) => {
+                const y = stage.y + 66 + i * 48;
+                ctx.fillStyle = `${c}22`;
+                roundRect(ctx, stage.x + 22, y, 180, 16, 8);
+                ctx.fill();
+                ctx.fillStyle = c;
+                roundRect(ctx, stage.x + 22, y, 180 * value * motionEase(phase), 16, 8);
+                ctx.fill();
+                ctx.fillStyle = "#334155";
+                ctx.font = "950 12px sans-serif";
+                ctx.fillText(label, stage.x + 214, y + 13);
+            });
+            drawAnalogMetricStrip(ctx, layout.metrics, [["center", "O"], ["centroid", "C", "#16a34a"], ["θ", `${Math.round(angle * 180 / Math.PI)}°`, "#f97316"]]);
+            return;
+        }
+
+        const rotated = algorithm === "orb-lite";
+        const active = drawBriefPairsTeaching(ctx, center, Math.min(patch.w, patch.h), phase, rotated ? "#16a34a" : "#2563eb", rotated);
+        drawBitVector(ctx, stage.x + 22, stage.y + 58, 96, active * 3, rotated ? "#16a34a" : "#2563eb", rotated ? "rotated BRIEF bits" : "BRIEF descriptor bits");
+        if (!rotated) {
+            ctx.fillStyle = "#7c3aed";
+            ctx.font = "950 15px sans-serif";
+            ctx.fillText("Hamming matching preview", stage.x + 22, stage.y + 124);
+            for (let i = 0; i < 32; i++) {
+                const mismatch = (i * 7 + active) % 5 === 0;
+                ctx.fillStyle = mismatch ? "#f97316" : "#16a34a";
+                roundRect(ctx, stage.x + 22 + i * 8, stage.y + 138, 5, 18, 3);
+                ctx.fill();
+            }
+        }
+        drawAnalogMetricStrip(ctx, layout.metrics, [[rotated ? "rotation" : "pairs", rotated ? "Rθ pairs" : "256 tests", rotated ? "#16a34a" : "#2563eb"], ["descriptor", data.descriptorDim, "#f97316"], ["distance", data.distanceType, "#7c3aed"]]);
+    }
+
+    async function drawAnalogTeachingCanvas(canvas, src, data, step, options = {}) {
+        const thumb = Boolean(options.thumb);
+        const width = thumb ? 220 : 920;
+        const height = thumb ? 130 : 520;
+        ensureCanvasSize(canvas, width, height);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f8fbff";
+        ctx.fillRect(0, 0, width, height);
+        let img = cachedImage(src);
+        if (!img) {
+            preloadImage(src).then(() => {
+                if (selectedAlgorithm() !== "sift") drawAnalogStepMain(canvas, currentStep, { animationPhase: siftMotion.progress, thumb });
+            });
+            ctx.fillStyle = "#eef6ff";
+            roundRect(ctx, 18, 18, width - 36, height - 36, 14);
+            ctx.fill();
+            ctx.fillStyle = "#64748b";
+            ctx.font = thumb ? "850 10px sans-serif" : "900 15px sans-serif";
+            ctx.fillText("正在准备教学动画...", 32, 44);
+            return;
+        }
+        if (thumb) {
+            const mini = drawLoadedImageInRect(ctx, img, { x: 10, y: 16, w: 200, h: 96 }, "#f1f5f9");
+            if (mini) {
+                const point = analogDemoPoint(data, step);
+                const mapped = mapPointToImageRect(point, mini.rect, scaleData?.meta?.width || mini.img.width, scaleData?.meta?.height || mini.img.height);
+                const color = data.algorithm === "surf" ? "#0ea5e9" : data.algorithm === "orb-lite" ? "#16a34a" : "#eab308";
+                drawCandidateCircle(ctx, mapped.x, mapped.y, 6, color, .95);
+            }
+            return;
+        }
+        const layout = {
+            image: { x: 28, y: 36, w: 500, h: 378 },
+            patch: { x: 560, y: 28, w: 332, h: 216 },
+            compute: { x: 560, y: 258, w: 332, h: 160 },
+            metrics: { x: 28, y: 438, w: 864, h: 52 }
+        };
+        drawAnalogTeachingScene(ctx, img, data, step, options.animationPhase || 0, layout);
+    }
+
     async function drawAlgorithmStepCanvas(canvas, src, data, step, options = {}) {
+        if (data?.algorithm && data.algorithm !== "sift" && !options.legacy) {
+            await drawAnalogTeachingCanvas(canvas, src, data, step, options);
+            return;
+        }
         const result = await V.drawBaseImage(canvas, src, "#f8fbff");
         if (!result) return;
         const ctx = result.ctx;
@@ -1063,9 +1563,11 @@
         V.renderStatList(V.$("siftAnalogSelectedStats"), analogStepDetails(data, step));
         const details = V.$("siftAnalogStepDetails");
         if (details) {
+            const primary = step.primary || [step.title, step.goal || ""];
+            const secondary = step.secondary || ["输入 / 输出", step.io || step.next || data.note || ""];
             details.innerHTML = [
-                `<article class="feature-analog-card"><div class="feature-analog-head"><h3>${step.primary[0]}</h3><span>Step ${currentStep + 1}</span></div><p>${step.primary[1]}</p></article>`,
-                `<article class="feature-analog-card"><div class="feature-analog-head"><h3>${step.secondary[0]}</h3><span>${data.descriptorDim}</span></div><p>${step.secondary[1]}</p></article>`
+                `<article class="feature-analog-card"><div class="feature-analog-head"><h3>${primary[0]}</h3><span>Step ${currentStep + 1}</span></div><p>${primary[1]}</p></article>`,
+                `<article class="feature-analog-card"><div class="feature-analog-head"><h3>${secondary[0]}</h3><span>${data.descriptorDim}</span></div><p>${secondary[1]}</p></article>`
             ].join("");
         }
         await drawAlgorithmStepCanvas(V.$("siftAnalogSelectedCanvas"), scaleData.images.original, data, step);
