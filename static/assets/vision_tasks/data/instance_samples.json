@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "samples": [
+    {
+      "id": "overlapping-objects-01",
+      "image_size": [640, 420],
+      "mask_threshold": 0.5,
+      "instances": [
+        {
+          "instance_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "score": 0.93,
+          "bbox_xyxy": [84, 46, 286, 382],
+          "mask_encoding": "polygon",
+          "mask_polygon": [[128, 48], [194, 72], [231, 156], [266, 246], [241, 378], [126, 351], [93, 232]],
+          "mask_area_px": 18642,
+          "contour_points": 416
+        },
+        {
+          "instance_id": 2,
+          "class_id": 0,
+          "class_name": "person",
+          "score": 0.89,
+          "bbox_xyxy": [331, 58, 558, 390],
+          "mask_encoding": "polygon",
+          "mask_polygon": [[378, 61], [452, 86], [518, 174], [501, 251], [542, 386], [371, 354], [342, 223]],
+          "mask_area_px": 20118,
+          "contour_points": 452
+        },
+        {
+          "instance_id": 3,
+          "class_id": 1,
+          "class_name": "bicycle",
+          "score": 0.82,
+          "bbox_xyxy": [164, 248, 494, 398],
+          "mask_encoding": "polygon",
+          "mask_polygon": [[178, 323], [239, 269], [319, 298], [387, 258], [478, 314], [439, 381], [310, 393], [211, 371]],
+          "mask_area_px": 15804,
+          "contour_points": 388
+        }
+      ],
+      "metrics": {"ap_box": 0.78, "ap_mask": 0.71}
+    }
+  ]
+}

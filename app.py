@@ -141,6 +141,48 @@ def conv_gradient_lab_page():
         active_sub_page="conv_gradient_lab"
     )
 
+
+@app.route("/vision-tasks", methods=["GET"])
+def vision_tasks_page():
+    return redirect(url_for("vision_tasks_overview_page"))
+
+
+@app.route("/vision-tasks/overview", methods=["GET"])
+def vision_tasks_overview_page():
+    return render_template(
+        "vision_tasks_overview.html",
+        active_page="vision_tasks",
+        active_sub_page="overview",
+    )
+
+
+@app.route("/vision-tasks/detection", methods=["GET"])
+def detection_lab_page():
+    return render_template(
+        "detection_lab.html",
+        active_page="vision_tasks",
+        active_sub_page="detection",
+    )
+
+
+@app.route("/vision-tasks/semantic", methods=["GET"])
+def semantic_segmentation_lab_page():
+    return render_template(
+        "semantic_segmentation_lab.html",
+        active_page="vision_tasks",
+        active_sub_page="semantic",
+    )
+
+
+@app.route("/vision-tasks/instance", methods=["GET"])
+def instance_segmentation_lab_page():
+    return render_template(
+        "instance_segmentation_lab.html",
+        active_page="vision_tasks",
+        active_sub_page="instance",
+    )
+
+
 @app.route("/edge-detection", methods=["GET"])
 def edge_detection_page():
     return redirect(url_for("edge_detection_mode_page", mode="compare"))

@@ -1,0 +1,83 @@
+{% extends "vision_tasks_base.html" %}
+
+{% block vision_badge %}STATION 07 · OBJECT DETECTION{% endblock %}
+{% block vision_title %}目标检测：IoU 与 NMS{% endblock %}
+{% block vision_subtitle %}观察候选框如何经过置信度筛选、IoU 重叠度计算与 NMS 非极大值抑制，形成最终检测结果。{% endblock %}
+
+{% block vision_content %}
+<section class="vision-workbench" aria-label="目标检测教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>检测参数</h3><p>Preset Controls</p></div>
+        </div>
+        <label class="vision-field">
+            <span>样例场景</span>
+            <select disabled>
+                <option>Street Objects · Sample 01</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>Confidence Threshold <output>0.50</output></span>
+            <input type="range" min="0" max="100" value="50" disabled>
+        </label>
+        <label class="vision-field">
+            <span>NMS IoU Threshold <output>0.45</output></span>
+            <input type="range" min="0" max="100" value="45" disabled>
+        </label>
+        <div class="vision-metric-grid">
+            <div><span>候选框</span><strong>6</strong></div>
+            <div><span>保留框</span><strong>3</strong></div>
+        </div>
+        <p class="vision-placeholder-hint">交互筛选将在后续阶段接入预设 JSON 数据。</p>
+    </aside>
+
+    <div class="vision-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>DETECTION CANVAS</span><h3>候选框与保留结果</h3></div>
+            <span class="vision-status-chip">PRESET SAMPLE</span>
+        </div>
+        <div class="detection-stage" role="img" aria-label="预设街景目标检测框示意">
+            <div class="detection-horizon"></div>
+            <div class="detection-object detection-object--car"></div>
+            <div class="detection-object detection-object--person"></div>
+            <div class="detection-object detection-object--bike"></div>
+            <div class="detection-box detection-box--car"><span>car · 0.94</span></div>
+            <div class="detection-box detection-box--car-alt"><span>car · 0.81</span></div>
+            <div class="detection-box detection-box--person"><span>person · 0.88</span></div>
+            <div class="detection-box detection-box--bike"><span>bicycle · 0.76</span></div>
+        </div>
+        <div class="vision-stage-caption">
+            <span class="legend-dot legend-dot--kept"></span>保留框
+            <span class="legend-dot legend-dot--suppressed"></span>待抑制重叠框
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>Process Notes</h3><p>Detection Pipeline</p></div>
+        </div>
+        <div class="vision-formula-card">
+            <span>Intersection over Union</span>
+            <strong>IoU = |A ∩ B| / |A ∪ B|</strong>
+        </div>
+        <div class="vision-note-list">
+            <article><span>01</span><div><strong>Score Filter</strong><p>先移除低于置信度阈值的候选框。</p></div></article>
+            <article><span>02</span><div><strong>Sort</strong><p>按类别与 confidence 从高到低排序。</p></div></article>
+            <article><span>03</span><div><strong>NMS</strong><p>抑制与高分框 IoU 超过阈值的同类框。</p></div></article>
+        </div>
+        <div class="vision-output-schema">
+            <span>输出结构</span>
+            <code>[x1, y1, x2, y2, score, class_id]</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper" aria-label="目标检测处理流程">
+    <li class="is-active"><span>1</span><div><strong>Candidate Boxes</strong><small>Dense Predictions</small></div></li>
+    <li><span>2</span><div><strong>Confidence</strong><small>Score Filtering</small></div></li>
+    <li><span>3</span><div><strong>IoU Matrix</strong><small>Pairwise Overlap</small></div></li>
+    <li><span>4</span><div><strong>NMS</strong><small>Final Detections</small></div></li>
+</ol>
+{% endblock %}
