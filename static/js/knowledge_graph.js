@@ -647,6 +647,10 @@
         state.chart.on("click", (params) => {
             if (params.dataType !== "node") return;
             const node = params.data || {};
+            if (node.drillTo) {
+                switchView(node.drillTo);
+                return;
+            }
             renderView(state.currentViewId, node.id);
         });
     }
