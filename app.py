@@ -4,10 +4,13 @@ from io import BytesIO
 import base64
 import json
 from time import perf_counter
+import urllib.request
+import urllib.error
 from waitress import serve
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from PIL import Image, UnidentifiedImageError
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from flask import Response
 
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.edge_visualization import build_edge_response
@@ -61,6 +64,28 @@ def load_compute_config():
     return config
 
 
+def load_full_config():
+    """Load the full compute_config.json including ai_assistant section."""
+    try:
+        with open(COMPUTE_CONFIG_PATH, "r", encoding="utf-8") as config_file:
+            return json.load(config_file)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def get_ai_config():
+    """Get ai_assistant config; returns None if not enabled or incomplete."""
+    full = load_full_config()
+    ai_cfg = full.get("ai_assistant", {})
+    if not ai_cfg.get("enabled", False):
+        return None
+    required = ("api_base", "api_key", "model")
+    for key in required:
+        if not ai_cfg.get(key) or ai_cfg[key].startswith("在此填写"):
+            return None
+    return ai_cfg
+
+
 def compute_mode(feature):
     return load_compute_config().get(feature, "backend")
 
@@ -74,7 +99,11 @@ def frontend_only_response(feature_name):
 
 @app.context_processor
 def inject_compute_config():
-    return {"compute_config": load_compute_config()}
+    ai_cfg = get_ai_config()
+    return {
+        "compute_config": load_compute_config(),
+        "ai_assistant_enabled": ai_cfg is not None,
+    }
 
 
 def allowed_file(filename):
@@ -459,6 +488,121 @@ def digit_recognize():
 @app.errorhandler(413)
 def file_too_large(_error):
     return jsonify({"error": "文件过大，图片大小不能超过 10MB"}), 413
+
+
+# ---------------------------------------------------------------------------
+# AI 学习助手
+# ---------------------------------------------------------------------------
+
+AI_SYSTEM_PROMPT = """你是计算机视觉实验系统中的 AI 技术助理。
+你需要结合当前页面上下文，解释算法、分析参数、诊断结果、生成简短讲解稿或报告描述。
+回答要求：
+1. 简洁、准确、偏技术说明。
+2. 不编造系统中不存在的功能。
+3. 不替代核心算法实现。
+4. 优先结合 module、page、algorithm、step、params、stats。
+5. 面向课程实验审阅场景，避免冗长科普。
+6. 当用户询问调参时，给出具体参数方向。
+7. 当生成讲解稿时，控制在 40～80 秒口播长度。
+8. 当生成报告描述时，使用正式实验报告风格。"""
+
+ACTION_PROMPTS = {
+    "explain_algorithm": "请解释当前页面中的算法流程，结合当前参数和步骤，控制在 150 字以内。",
+    "analyze_params": "请说明当前参数的作用，以及这些参数如何影响输出结果。",
+    "diagnose_result": "请根据当前算法、参数和统计结果，分析可能的问题，并给出调参建议。",
+    "video_script": "请为当前页面生成一段 40 到 80 秒的视频讲解稿，突出算法流程和系统功能。",
+    "report_text": "请为当前页面生成一段实验报告中的功能说明或结果分析文字，要求正式、技术化。",
+}
+
+
+def call_bailian_model(question, context, action):
+    """Call Bailian (DashScope compatible) model API with streaming."""
+    ai_cfg = get_ai_config()
+    if ai_cfg is None:
+        yield f"data: {json.dumps({'error': 'AI 助手未启用，请在 compute_config.json 中配置 ai_assistant。'})}\n\n"
+        return
+
+    action_hint = ACTION_PROMPTS.get(action, "")
+    user_prompt = action_hint + "\n" + question if action_hint else question
+
+    context_text = (
+        f"当前模块: {context.get('module', 'unknown')}\n"
+        f"当前页面: {context.get('page', 'unknown')}\n"
+        f"当前算法: {context.get('algorithm', 'unknown')}\n"
+        f"当前步骤: {context.get('step', 'unknown')}\n"
+        f"参数: {json.dumps(context.get('params', {}), ensure_ascii=False)}\n"
+        f"统计: {json.dumps(context.get('stats', {}), ensure_ascii=False)}"
+    )
+
+    messages = [
+        {"role": "system", "content": AI_SYSTEM_PROMPT},
+        {"role": "user", "content": f"【页面上下文】\n{context_text}\n\n【用户问题】\n{user_prompt}"},
+    ]
+
+    payload = json.dumps({
+        "model": ai_cfg["model"],
+        "messages": messages,
+        "temperature": ai_cfg.get("temperature", 0.1),
+        "max_tokens": ai_cfg.get("max_tokens", 800),
+        "stream": True
+    }).encode("utf-8")
+
+    api_url = ai_cfg["api_base"].rstrip("/") + "/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ai_cfg['api_key']}",
+        "Accept": "text/event-stream"
+    }
+
+    req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            for line in resp:
+                line = line.decode("utf-8").strip()
+                if not line:
+                    continue
+                if line == "data: [DONE]":
+                    break
+                if line.startswith("data: "):
+                    body = json.loads(line[6:])
+                    choices = body.get("choices", [])
+                    if choices:
+                        chunk = choices[0].get("delta", {}).get("content", "")
+                        if chunk:
+                            yield f"data: {json.dumps({'content': chunk})}\n\n"
+        yield "data: [DONE]\n\n"
+    except urllib.error.HTTPError as exc:
+        app.logger.warning("AI assistant HTTP error: %s", exc)
+        yield f"data: {json.dumps({'error': f'模型服务返回错误 ({exc.code})，请检查 api_key 和 model 配置。'})}\n\n"
+    except urllib.error.URLError as exc:
+        app.logger.warning("AI assistant URL error: %s", exc)
+        yield f"data: {json.dumps({'error': '无法连接模型服务，请检查 api_base 配置和网络。'})}\n\n"
+    except Exception as exc:
+        app.logger.exception("AI assistant unexpected error")
+        yield f"data: {json.dumps({'error': 'AI 助手内部错误，请稍后重试。'})}\n\n"
+
+
+@app.route("/api/ai-assistant", methods=["POST"])
+def ai_assistant_api():
+    ai_cfg = get_ai_config()
+    if ai_cfg is None:
+        return jsonify({
+            "success": False,
+            "message": "AI 助手未启用，请在 compute_config.json 中配置 ai_assistant。",
+        })
+
+    data = request.get_json(silent=True) or {}
+    question = (data.get("question") or "").strip()
+    context = data.get("context", {})
+    action = data.get("action", "free_chat")
+
+    if not question and action == "free_chat":
+        return jsonify({"success": False, "message": "请输入问题。"})
+
+    if not question:
+        question = ACTION_PROMPTS.get(action, "请简要说明当前页面内容。")
+
+    return Response(call_bailian_model(question, context, action), mimetype="text/event-stream")
 
 
 if __name__ == "__main__":
