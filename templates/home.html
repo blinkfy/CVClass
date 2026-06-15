@@ -1,46 +1,255 @@
 {% extends "base.html" %}
-{% block title %}实验首页{% endblock %}
+{% block title %}计算机视觉实验平台{% endblock %}
 {% block content %}
-<section class="home-hero">
-    <span class="section-label">Computer Vision Lab</span>
-    <h1>计算机视觉实验平台</h1>
-    <p>面向课程实验展示的交互式平台，覆盖图像灰度化、基础图像处理、卷积计算可视化、图像卷积应用和进阶卷积结构调研。</p>
-</section>
+<div class="home-page">
+    <section class="home-hero" aria-labelledby="homeHeroTitle">
+        <div class="home-hero-copy">
+            <span class="section-label">COMPUTER VISION LAB</span>
+            <h1 id="homeHeroTitle">从像素到视觉理解</h1>
+            <p class="home-hero-subtitle">计算机视觉通识与算法可视化平台</p>
+            <p class="home-hero-description">从像素矩阵、卷积滤波、边缘轮廓、特征匹配到 CNN、检测与分割，系统化展示计算机视觉核心算法流程。</p>
+            <div class="home-hero-actions">
+                <a class="home-primary-button" href="#core-modules">进入系统 <span aria-hidden="true">&rsaquo;</span></a>
+                <a class="home-secondary-button" href="#knowledge-graph-entry">
+                    <span class="button-node-icon" aria-hidden="true"></span>
+                    查看知识图谱
+                </a>
+            </div>
+        </div>
 
-<section class="home-grid">
-    <article class="home-card">
-        <span>基础视觉</span>
-        <h2>图像基础：计算机如何表示图像</h2>
-        <p>上传图片，观察灰度化方法、通道分离、二值化、反转、翻转、旋转和直方图均衡化等基础图像处理过程。</p>
-        <a href="{{ url_for('grayscale_page') }}">进入实验</a>
-    </article>
+        <div class="home-hero-visual" aria-label="计算机视觉流程示意">
+            <img class="hero-bg-image" src="{{ url_for('static', filename='assets/img/bg.png') }}" alt="" aria-hidden="true">
+            <div class="hero-flow">
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home01.png') }}" alt="" aria-hidden="true">
+                    <strong>像素矩阵</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home02.png') }}" alt="" aria-hidden="true">
+                    <strong>卷积滤波</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home03.png') }}" alt="" aria-hidden="true">
+                    <strong>边缘轮廓</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home04.png') }}" alt="" aria-hidden="true">
+                    <strong>特征匹配</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home05.png') }}" alt="" aria-hidden="true">
+                    <strong>CNN 分类</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home06.png') }}" alt="" aria-hidden="true">
+                    <strong>检测分割</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home07.png') }}" alt="" aria-hidden="true">
+                    <strong>前沿探索</strong>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <article class="home-card">
-        <span>基础视觉</span>
-        <h2>卷积与滤波：局部计算如何提取视觉特征</h2>
-        <p>逐步演示 padding、stride、dilation、多通道、多卷积核、1×1 卷积、空洞卷积和蛇形卷积的计算过程。</p>
-        <a href="{{ url_for('convolution_page') }}">进入实验</a>
-    </article>
+    <section id="core-modules" class="home-panel core-modules" aria-labelledby="coreModulesTitle">
+        <h2 id="coreModulesTitle" class="panel-title">
+            <span class="panel-title-icon panel-title-icon--grid" aria-hidden="true"></span>
+            核心模块
+        </h2>
 
-    <article class="home-card">
-        <span>结构与特征</span>
-        <h2>边缘、轮廓与形态学</h2>
-        <p>对比 Roberts、Sobel、Prewitt、Kirsch、Laplacian、LoG 和 Canny，并观察卷积响应与 Canny 多阶段流水线，以及深度边缘检测拓展。</p>
-        <a href="{{ url_for('edge_detection_page') }}">进入实验</a>
-    </article>
+        <div class="module-grid">
+            <article class="module-card" data-learn-module="image-basic">
+                <div class="module-card-head">
+                    <span class="module-number">01</span>
+                    <span class="module-mini-icon mini-icon--cube" aria-hidden="true"></span>
+                </div>
+                <h3>图像基础</h3>
+                <p>RGB、灰度化、二值化、直方图与基础图像处理</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="image-basic" href="{{ url_for('grayscale_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
 
-    <article class="home-card">
-        <span>结构与特征</span>
-        <h2>角点、特征与图像拼接</h2>
-        <p>比较 Harris、Shi-Tomasi、FAST、SIFT、SURF、ORB 的检测流程，观察尺度空间、描述子生成与匹配应用，以及图像拼接与全景拍照。</p>
-        <a href="{{ url_for('feature_detection_page') }}">进入实验</a>
-    </article>
+            <article class="module-card" data-learn-module="convolution-filter">
+                <div class="module-card-head">
+                    <span class="module-number">02</span>
+                    <span class="module-mini-icon mini-icon--kernel" aria-hidden="true"></span>
+                </div>
+                <h3>卷积与滤波</h3>
+                <p>卷积核、Patch、Stride、Padding、Dilation 与图像滤波</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="convolution-filter" href="{{ url_for('convolution_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
 
-    <article class="home-card">
-        <span>深度视觉</span>
-        <h2>CNN 如何学习图像</h2>
-        <p>使用固定小 CNN 展示前向计算、梯度回传和参数更新；并提供数据传播细节可视化、卷积梯度显微镜，以及手写数字识别应用。</p>
-        <a href="{{ url_for('cnn_visualization_page') }}">进入实验</a>
-    </article>
-</section>
+            <article class="module-card" data-learn-module="edge-contour">
+                <div class="module-card-head">
+                    <span class="module-number">03</span>
+                    <span class="module-mini-icon mini-icon--edge" aria-hidden="true"></span>
+                </div>
+                <h3>边缘、轮廓与形态学</h3>
+                <p>Sobel、Canny、Hough、轮廓提取与应用实践</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="edge-contour" href="{{ url_for('edge_detection_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="feature-panorama">
+                <div class="module-card-head">
+                    <span class="module-number">04</span>
+                    <span class="module-mini-icon mini-icon--match" aria-hidden="true"></span>
+                </div>
+                <h3>角点、特征与图像拼接</h3>
+                <p>Harris、FAST、SIFT、RANSAC、Homography 与全景拼接</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="feature-panorama" href="{{ url_for('feature_detection_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="cnn-learning">
+                <div class="module-card-head">
+                    <span class="module-number">05</span>
+                    <span class="module-mini-icon mini-icon--cnn" aria-hidden="true"></span>
+                </div>
+                <h3>CNN 如何学习</h3>
+                <p>前向传播、反向传播、梯度更新与手写数字识别</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="cnn-learning" href="{{ url_for('cnn_visualization_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="object-detection">
+                <div class="module-card-head">
+                    <span class="module-number">06</span>
+                    <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
+                </div>
+                <h3>目标检测</h3>
+                <p>Bounding Box、Confidence、IoU、NMS 与检测模型</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <span class="module-action module-action--disabled" aria-disabled="true">待学习 <span aria-hidden="true">&rarr;</span></span>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="segmentation">
+                <div class="module-card-head">
+                    <span class="module-number">07</span>
+                    <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
+                </div>
+                <h3>语义分割与实例分割</h3>
+                <p>Semantic Mask、Instance Mask、像素级分类与实例区分</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <span class="module-action module-action--disabled" aria-disabled="true">待学习 <span aria-hidden="true">&rarr;</span></span>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="frontier">
+                <div class="module-card-head">
+                    <span class="module-number">08</span>
+                    <span class="module-mini-icon mini-icon--globe" aria-hidden="true"></span>
+                </div>
+                <h3>CV 前沿探索</h3>
+                <p>SAM、CLIP、DINO、VLM、Vision Banana 与统一视觉模型方向</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <span class="module-action module-action--disabled" aria-disabled="true">查看方向 <span aria-hidden="true">&rarr;</span></span>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="home-lower-grid" aria-label="学习路径与知识图谱入口">
+        <div id="learning-path" class="home-panel learning-path" aria-labelledby="learningPathTitle">
+            <h2 id="learningPathTitle" class="panel-title">
+                <span class="panel-title-icon panel-title-icon--path" aria-hidden="true"></span>
+                学习路径
+            </h2>
+
+            <div class="path-list">
+                <div class="path-row">
+                    <span class="path-badge path-badge--blue" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" focusable="false">
+                            <path d="m4 12 12-6 12 6-12 6-12-6Z"></path>
+                            <path d="m9 15v6c2.4 2.1 11.6 2.1 14 0v-6"></path>
+                        </svg>
+                    </span>
+                    <strong>零基础路线</strong>
+                    <div class="path-steps">
+                        <a href="{{ url_for('grayscale_page') }}"><span class="path-icon mini-icon--cube"></span>图像基础</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('convolution_page') }}"><span class="path-icon mini-icon--kernel"></span>卷积与滤波</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('edge_detection_page') }}"><span class="path-icon mini-icon--edge"></span>边缘轮廓</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('feature_detection_mode_page', mode='matching') }}"><span class="path-icon mini-icon--match"></span>特征匹配</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('cnn_visualization_page') }}"><span class="path-icon mini-icon--cnn"></span>CNN 学习</a>
+                        <span>&rarr;</span>
+                        <span class="path-step-muted"><span class="path-icon mini-icon--detect"></span>检测分割</span>
+                    </div>
+                </div>
+
+                <div class="path-row">
+                    <span class="path-badge path-badge--green" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" focusable="false">
+                            <path d="M18 3 8 17h7l-1 12 10-15h-7l1-11Z"></path>
+                        </svg>
+                    </span>
+                    <strong>快速验收路线</strong>
+                    <div class="path-steps">
+                        <a href="{{ url_for('convolution_page') }}"><span class="path-icon mini-icon--detect"></span>卷积过程</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}"><span class="path-icon mini-icon--match"></span>Canny 流水线</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('feature_detection_mode_page', mode='matching') }}"><span class="path-icon mini-icon--kernel"></span>SIFT 匹配</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('conv_gradient_lab_page') }}"><span class="path-icon mini-icon--cnn"></span>CNN 梯度</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('feature_detection_mode_page', mode='panorama') }}"><span class="path-icon mini-icon--detect"></span>图像拼接</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="knowledge-graph-entry" class="home-panel graph-entry" aria-labelledby="knowledgeGraphTitle">
+            <h2 class="panel-title">
+                <span class="panel-title-icon panel-title-icon--nodes" aria-hidden="true"></span>
+                知识图谱入口
+            </h2>
+            <div class="graph-entry-card">
+                <div>
+                    <h3 id="knowledgeGraphTitle">CV 算法知识图谱</h3>
+                    <p>查看灰度化、卷积、边缘、特征、CNN、检测与分割之间的前置关系和任务关系。</p>
+                    <a class="home-primary-button graph-button" href="#knowledge-graph-entry">打开知识图谱</a>
+                </div>
+                <div class="graph-illustration" aria-hidden="true">
+                    <span class="graph-line graph-line--one"></span>
+                    <span class="graph-line graph-line--two"></span>
+                    <span class="graph-line graph-line--three"></span>
+                    <span class="graph-line graph-line--four"></span>
+                    <span class="graph-node graph-node--one"></span>
+                    <span class="graph-node graph-node--two"></span>
+                    <span class="graph-node graph-node--three"></span>
+                    <span class="graph-node graph-node--four"></span>
+                    <span class="graph-node graph-node--five"></span>
+                    <span class="graph-node graph-node--six"></span>
+                    <span class="graph-node graph-node--seven"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
 {% endblock %}

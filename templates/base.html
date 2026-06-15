@@ -8,11 +8,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') == 'home' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
+        window.CVCLASS_ACTIVE_PAGE = {{ active_page|default('')|tojson }};
+        window.CVCLASS_ACTIVE_SUB_PAGE = {{ active_sub_page|default('')|tojson }};
     </script>
+    {% if active_page|default('') == 'home' %}
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉实验平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="{{ url_for('static', filename='assets/img/icon.png') }}" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉实验平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="active" href="{{ url_for('home') }}">首页</a>
+            <a href="{{ url_for('home') }}#core-modules">实验模块</a>
+            <a href="{{ url_for('home') }}#learning-path">学习路径</a>
+            <a href="{{ url_for('home') }}#knowledge-graph-entry">资源中心</a>
+            <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">关于我们</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    {% endif %}
     <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
     <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
         <div class="sidebar-brand">
