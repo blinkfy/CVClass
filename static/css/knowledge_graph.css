@@ -11,6 +11,10 @@
         linear-gradient(180deg, #f6faff 0%, #eef6ff 52%, #f8fbff 100%);
 }
 
+.knowledge-graph-page [hidden] {
+    display: none !important;
+}
+
 .kg-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 240px;

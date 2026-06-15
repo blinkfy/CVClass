@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}CV 算法知识图谱{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/knowledge_graph.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/knowledge_graph.css') }}?v=3">
 {% endblock %}
 {% block content %}
 <div class="knowledge-graph-page" data-graph-data-url="{{ url_for('static', filename='assets/data/knowledge_graph.json') }}">
@@ -74,5 +74,5 @@
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="{{ url_for('static', filename='js/knowledge_graph.js') }}"></script>
+<script src="{{ url_for('static', filename='js/knowledge_graph.js') }}?v=3"></script>
 {% endblock %}

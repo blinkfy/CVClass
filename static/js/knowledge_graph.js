@@ -28,6 +28,159 @@
         "/feature-geometry": "/feature-detection",
         "/cnn-learning": "/cnn-visualization",
     };
+    const ROUTE_MODULE_LABELS = {
+        "/grayscale": "图像基础",
+        "/convolution": "卷积可视化",
+        "/image-convolution": "图像卷积应用",
+        "/digit-recognition": "卷积模型应用",
+        "/cnn-visualization": "CNN 前向与反向传播",
+        "/cnn-explainer": "CNN 数据传播细节",
+        "/conv-gradient-lab": "卷积梯度显微镜",
+        "/edge-detection": "边缘方法对比",
+        "/edge-detection/kernel": "边缘局部卷积响应",
+        "/edge-detection/canny": "Canny 流水线",
+        "/edge-detection/teed": "深度边缘检测拓展",
+        "/edge-detection/applications": "边缘应用实践",
+        "/feature-detection": "特征方法对比",
+        "/feature-detection/corner": "角点检测",
+        "/feature-detection/sift": "SIFT 特征",
+        "/feature-detection/matching": "特征匹配",
+        "/feature-detection/panorama": "图像拼接与全景拍照",
+    };
+    const COMPLETED_NODE_ROUTES = {
+        图像基础: "/grayscale",
+        图像表示: "/grayscale",
+        图像: "/grayscale",
+        二值图像: "/grayscale",
+        灰度图像: "/grayscale",
+        彩色图像: "/grayscale",
+        色彩空间: "/grayscale",
+        RGB: "/grayscale",
+        空间域操作: "/grayscale",
+        点运算: "/grayscale",
+        直方图均衡: "/grayscale",
+        CLAHE: "/grayscale",
+        镜像翻转: "/grayscale",
+        切割缩放: "/grayscale",
+
+        卷积与滤波: "/convolution",
+        "卷积核组": "/convolution",
+        "卷积核/滤波器": "/convolution",
+        "卷积/滤波": "/convolution",
+        卷积步长: "/convolution",
+        边缘填充: "/convolution",
+        Patch: "/convolution",
+        Product: "/convolution",
+        Sum: "/convolution",
+        "Feature Map": "/convolution",
+        Stride: "/convolution",
+        Padding: "/convolution",
+        Dilation: "/convolution",
+        多通道卷积: "/convolution",
+        多卷积核: "/convolution",
+        "1×1 卷积": "/convolution",
+        空洞卷积: "/convolution",
+        降噪: "/image-convolution",
+        图片增强: "/image-convolution",
+        Gaussian: "/image-convolution",
+        高通滤波: "/image-convolution",
+        低通滤波: "/image-convolution",
+
+        Roberts: "/edge-detection/kernel",
+        Prewitt: "/edge-detection/kernel",
+        Sobel: "/edge-detection/kernel",
+        Scharr: "/edge-detection/kernel",
+        Kirsch: "/edge-detection/kernel",
+        Lapacian: "/edge-detection/kernel",
+        "LoG / Marr": "/edge-detection/kernel",
+        Canny: "/edge-detection/canny",
+        非极大值抑制: "/edge-detection/canny",
+        双阈值: "/edge-detection/canny",
+        滞后连接: "/edge-detection/canny",
+        "TEED / HED": "/edge-detection/teed",
+        轮廓提取: "/edge-detection/applications",
+        "Hough 直线": "/edge-detection/applications",
+        "Hough 圆": "/edge-detection/applications",
+        形态学运算: "/edge-detection/applications",
+        腐蚀算法: "/edge-detection/applications",
+        膨胀算法: "/edge-detection/applications",
+        开运算: "/edge-detection/applications",
+        闭运算: "/edge-detection/applications",
+        连通域: "/edge-detection/applications",
+        边缘图: "/edge-detection/compare",
+        梯度幅值: "/edge-detection/kernel",
+        梯度方向: "/edge-detection/kernel",
+
+        "角点、特征与图像拼接": "/feature-detection",
+        Harris: "/feature-detection/corner",
+        "Shi-Tomasi": "/feature-detection/corner",
+        FAST: "/feature-detection/corner",
+        SIFT: "/feature-detection/sift",
+        描述子: "/feature-detection/sift",
+        尺度空间: "/feature-detection/sift",
+        "DoG 金字塔": "/feature-detection/sift",
+        主方向分配: "/feature-detection/sift",
+        "128 维描述子": "/feature-detection/sift",
+        "Ratio Test": "/feature-detection/matching",
+        "BF Matching": "/feature-detection/matching",
+        "FLANN Matching": "/feature-detection/matching",
+        RANSAC: "/feature-detection/matching",
+        Homography: "/feature-detection/panorama",
+        Affine: "/feature-detection/matching",
+        Warp: "/feature-detection/panorama",
+        图像融合: "/feature-detection/panorama",
+        全景拼接: "/feature-detection/panorama",
+        图像拼接: "/feature-detection/panorama",
+        全景拍照: "/feature-detection/panorama",
+
+        "CNN 如何学习": "/cnn-visualization",
+        卷积神经网络: "/cnn-visualization",
+        LeNet: "/cnn-visualization",
+        AlexNet: "/cnn-visualization",
+        VGG: "/cnn-visualization",
+        ResNet: "/cnn-visualization",
+        池化层: "/cnn-visualization",
+        全连接层: "/cnn-visualization",
+        激活函数: "/cnn-visualization",
+        Sigmoid: "/cnn-visualization",
+        Tanh: "/cnn-visualization",
+        ReLU: "/cnn-visualization",
+        "Leaky ReLU": "/cnn-visualization",
+        Softmax: "/cnn-visualization",
+        Flatten: "/cnn-visualization",
+        前向计算: "/cnn-visualization",
+        反向计算: "/cnn-visualization",
+        计算图: "/cnn-explainer",
+        梯度: "/conv-gradient-lab",
+        链式法则: "/cnn-visualization",
+        梯度下降: "/conv-gradient-lab",
+        优化算法: "/conv-gradient-lab",
+        Adam: "/conv-gradient-lab",
+        损失函数: "/cnn-visualization",
+        交叉熵损失: "/cnn-visualization",
+        模型参数: "/cnn-explainer",
+        权值: "/cnn-explainer",
+        偏置: "/cnn-explainer",
+        学习率: "/conv-gradient-lab",
+        批归一化: "/cnn-explainer",
+        梯度爆炸: "/conv-gradient-lab",
+        梯度消失: "/conv-gradient-lab",
+        梯度裁剪: "/conv-gradient-lab",
+        手写数字识别: "/digit-recognition",
+        手写邮编识别: "/digit-recognition",
+        图像分类任务: "/cnn-visualization",
+    };
+    const VIEW_NODE_ROUTES = {
+        convolution_filtering: {
+            卷积层: "/convolution",
+        },
+        cnn_learning: {
+            卷积层: "/cnn-visualization",
+        },
+        full_legacy_graph: {
+            卷积层: "/cnn-visualization",
+        },
+    };
     const UNAVAILABLE_ROUTES = new Set(["/detection", "/segmentation", "/frontier"]);
     const FALLBACK_COLORS = {
         root: "#2563eb",
@@ -82,9 +235,28 @@
         return window.cvclassUrl ? window.cvclassUrl(path) : path;
     }
 
-    function resolveRoute(route) {
+    function normalizeRoute(route) {
         if (!route || UNAVAILABLE_ROUTES.has(route)) return "";
-        return resolveUrl(ROUTE_ALIASES[route] || route);
+        return ROUTE_ALIASES[route] || route;
+    }
+
+    function resolveRoute(route) {
+        return resolveUrl(normalizeRoute(route));
+    }
+
+    function getNodeRawRoute(node, view) {
+        if (!node) return "";
+        const viewRoute = VIEW_NODE_ROUTES[view?.id]?.[node.name];
+        return normalizeRoute(viewRoute || COMPLETED_NODE_ROUTES[node.name] || node.route);
+    }
+
+    function getNodeRoute(node, view) {
+        return resolveUrl(getNodeRawRoute(node, view));
+    }
+
+    function getEffectiveStatus(node, view) {
+        if (!node) return "reference";
+        return getNodeRawRoute(node, view) ? "completed" : (node.status || "reference");
     }
 
     function getViews() {
@@ -156,6 +328,8 @@
 
         return (view.nodes || []).map((node) => {
             const category = getCategoryMeta(node.category);
+            const effectiveStatus = getEffectiveStatus(node, view);
+            const moduleRoute = getNodeRawRoute(node, view);
             const isSelected = node.id === selectedNodeId;
             const isAdjacent = !selectedNodeId || adjacentNodes.has(node.id);
             const isFocus = node.name === focus || node.name === "计算机视觉";
@@ -165,6 +339,9 @@
 
             return {
                 ...node,
+                originalStatus: node.status,
+                status: effectiveStatus,
+                moduleRoute,
                 rawCategory: node.category,
                 categoryLabel: category.label || category.name || node.category || "未分类",
                 category: categoryMap.has(node.category) ? categoryMap.get(node.category) : 0,
@@ -333,8 +510,9 @@
 
     function updatePanel(view, node) {
         const currentNode = node || null;
-        const status = currentNode?.status || "reference";
-        const route = resolveRoute(currentNode?.route);
+        const status = getEffectiveStatus(currentNode, view);
+        const rawRoute = getNodeRawRoute(currentNode, view);
+        const route = getNodeRoute(currentNode, view);
         const canEnter = Boolean(currentNode && status === "completed" && route);
         const canDrill = Boolean(currentNode?.drillTo);
         const category = currentNode ? getCategoryMeta(currentNode.rawCategory || currentNode.category) : null;
@@ -348,7 +526,7 @@
         infoStatus.textContent = currentNode ? (STATUS_LABELS[status] || status || "-") : "浏览中";
         infoModules.textContent = modules.length
             ? modules.join("、")
-            : (currentNode?.route && canEnter ? "当前项目模块" : "暂无可进入模块");
+            : (canEnter ? (ROUTE_MODULE_LABELS[rawRoute] || "当前项目模块") : "暂无可进入模块");
 
         enterButton.hidden = !canEnter;
         if (canEnter) enterButton.href = route;
@@ -374,12 +552,18 @@
         return (view.nodes || []).find((node) => node.id === nodeId) || null;
     }
 
+    function findDefaultNode(view) {
+        const focusNode = (view.nodes || []).find((node) => node.name === view.focus);
+        if (focusNode && getNodeRawRoute(focusNode, view)) return focusNode;
+        return null;
+    }
+
     function renderView(viewId, selectedNodeId) {
         const view = getView(viewId);
         if (!view) return;
 
         state.currentViewId = view.id || viewId;
-        state.selectedNode = findNode(view, selectedNodeId);
+        state.selectedNode = findNode(view, selectedNodeId) || (!selectedNodeId ? findDefaultNode(view) : null);
 
         window.clearTimeout(state.switchTimer);
         chartShell.classList.add("is-switching");
