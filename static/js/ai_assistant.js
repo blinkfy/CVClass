@@ -303,7 +303,7 @@
     function removeElement(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
 
     /* ---- API 调用 ---- */
-    async function callApi(question, action) {
+    async function streamApi(question, action, onChunk) {
         const ctx = getContext();
         const body = { question, context: ctx, action };
         try {
@@ -312,9 +312,46 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            const data = await resp.json();
-            if (data.success) return { ok: true, answer: data.answer };
-            return { ok: false, answer: data.message || 'AI 助手返回了未知错误。' };
+            
+            if (resp.headers.get('content-type')?.includes('application/json')) {
+                const data = await resp.json();
+                return { ok: false, answer: data.message || '未知错误' };
+            }
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // 保持最后可能不完整的一行
+
+                for (const line of lines) {
+                    if (line.trim() === '') continue;
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.substring(6).trim();
+                        if (dataStr === '[DONE]') {
+                            return { ok: true };
+                        }
+                        try {
+                            const data = JSON.parse(dataStr);
+                            if (data.error) {
+                                return { ok: false, answer: data.error };
+                            }
+                            if (data.content) {
+                                onChunk(data.content);
+                            }
+                        } catch (e) {
+                            console.error('SSE JSON parse error:', e, dataStr);
+                        }
+                    }
+                }
+            }
+            return { ok: true };
         } catch (err) {
             return { ok: false, answer: '网络错误，无法连接 AI 助手服务。' };
         }
@@ -350,38 +387,80 @@
             if (e.key === 'Escape' && isOpen) close();
         });
 
-        async function send(question, action) {
+        async function submitQuestion(q) {
+            if (!q || busy) return;
+            busy = true;
+            appendMessage('user', q);
+            const input = document.getElementById('aiInput');
+            if (input) input.value = '';
+            
+            const loading = appendLoading();
+            let aiBubble = null;
+
+            const res = await streamApi(q, 'free_chat', (chunk) => {
+                if (loading && loading.parentNode) {
+                    removeElement(loading);
+                }
+                if (!aiBubble) {
+                    aiBubble = appendMessage('ai', chunk);
+                } else {
+                    aiBubble.textContent += chunk;
+                    const area = document.getElementById('aiChatArea');
+                    if (area) area.scrollTop = area.scrollHeight;
+                }
+            });
+
+            if (loading && loading.parentNode) {
+                removeElement(loading);
+            }
+            if (!res.ok) {
+                if (!aiBubble) {
+                    appendMessage('ai', 'Error: ' + res.answer);
+                } else {
+                    aiBubble.textContent += '\n\n[Error: ' + res.answer + ']';
+                }
+            }
+            busy = false;
+            if (input) input.focus();
+        }
+
+        async function handleAction(actionId, label) {
             if (busy) return;
             busy = true;
-            appendMessage('user', question);
+            appendMessage('user', `[快捷指令] ${label}`);
+            
             const loading = appendLoading();
-            const result = await callApi(question, action);
-            removeElement(loading);
-            appendMessage('ai', result.answer);
+            let aiBubble = null;
+
+            const res = await streamApi('', actionId, (chunk) => {
+                if (loading && loading.parentNode) {
+                    removeElement(loading);
+                }
+                if (!aiBubble) {
+                    aiBubble = appendMessage('ai', chunk);
+                } else {
+                    aiBubble.textContent += chunk;
+                    const area = document.getElementById('aiChatArea');
+                    if (area) area.scrollTop = area.scrollHeight;
+                }
+            });
+
+            if (loading && loading.parentNode) {
+                removeElement(loading);
+            }
+            if (!res.ok) {
+                if (!aiBubble) {
+                    appendMessage('ai', 'Error: ' + res.answer);
+                } else {
+                    aiBubble.textContent += '\n\n[Error: ' + res.answer + ']';
+                }
+            }
             busy = false;
         }
 
-        // 快捷按钮
-        renderActions((actionId, label) => {
-            renderContextCard(getContext());
-            send(label, actionId);
-        });
-
-        // 手动输入
-        const input = document.getElementById('aiInput');
-        const sendBtn = document.getElementById('aiSendBtn');
-
-        function handleSend() {
-            const q = input.value.trim();
-            if (!q) return;
-            input.value = '';
-            renderContextCard(getContext());
-            send(q, 'free_chat');
-        }
-
-        sendBtn.addEventListener('click', handleSend);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.isComposing) handleSend();
+        document.getElementById('aiSendBtn')?.addEventListener('click', () => {
+            const el = document.getElementById('aiInput');
+            if (el) submitQuestion(el.value.trim());
         });
     }
 
