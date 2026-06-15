@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "sample_id": "vision-taxonomy-01",
+  "input": {
+    "name": "course_sample_image",
+    "shape": [480, 640, 3],
+    "dtype": "uint8"
+  },
+  "tasks": [
+    {
+      "id": "classification",
+      "prediction_unit": "image",
+      "output_schema": ["class_id", "confidence"],
+      "tensor_shape": ["C"],
+      "metrics": ["top_1_accuracy", "top_5_accuracy"]
+    },
+    {
+      "id": "detection",
+      "prediction_unit": "object",
+      "output_schema": ["x1", "y1", "x2", "y2", "score", "class_id"],
+      "tensor_shape": ["N", 6],
+      "metrics": ["iou", "ap", "map"]
+    },
+    {
+      "id": "semantic_segmentation",
+      "prediction_unit": "pixel",
+      "output_schema": ["class_id_per_pixel"],
+      "tensor_shape": ["H", "W"],
+      "metrics": ["pixel_accuracy", "miou"]
+    },
+    {
+      "id": "instance_segmentation",
+      "prediction_unit": "instance",
+      "output_schema": ["bbox", "class_id", "score", "binary_mask", "instance_id"],
+      "tensor_shape": ["N", "H", "W"],
+      "metrics": ["ap_box", "ap_mask"]
+    }
+  ]
+}

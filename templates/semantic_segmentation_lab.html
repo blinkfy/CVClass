@@ -1,0 +1,81 @@
+{% extends "vision_tasks_base.html" %}
+
+{% block vision_badge %}STATION 08 · SEMANTIC SEGMENTATION{% endblock %}
+{% block vision_title %}语义分割：Pixel-wise Mask{% endblock %}
+{% block vision_subtitle %}从 H×W×C logits 经像素级 argmax 得到类别索引图，并以颜色映射构成 Semantic Mask。{% endblock %}
+
+{% block vision_content %}
+<section class="vision-workbench" aria-label="语义分割教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>Mask 参数</h3><p>Preset Controls</p></div>
+        </div>
+        <label class="vision-field">
+            <span>样例场景</span>
+            <select disabled><option>Urban Scene · Sample 01</option></select>
+        </label>
+        <label class="vision-field">
+            <span>Mask Opacity <output>65%</output></span>
+            <input type="range" min="0" max="100" value="65" disabled>
+        </label>
+        <div class="vision-class-filter" aria-label="语义类别图例">
+            <span><i class="class-swatch class-swatch--road"></i>road</span>
+            <span><i class="class-swatch class-swatch--building"></i>building</span>
+            <span><i class="class-swatch class-swatch--vehicle"></i>vehicle</span>
+            <span><i class="class-swatch class-swatch--sky"></i>sky</span>
+        </div>
+        <div class="vision-shape-card">
+            <span>Logits Tensor</span>
+            <strong>H × W × C</strong>
+            <small>每个像素位置包含 C 个类别分数。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>PIXEL-WISE OUTPUT</span><h3>Semantic Mask 预览</h3></div>
+            <span class="vision-status-chip">ARGMAX VIEW</span>
+        </div>
+        <div class="semantic-stage" role="img" aria-label="道路场景语义分割颜色掩码示意">
+            <div class="semantic-region semantic-region--sky"></div>
+            <div class="semantic-region semantic-region--building-left"></div>
+            <div class="semantic-region semantic-region--building-right"></div>
+            <div class="semantic-region semantic-region--road"></div>
+            <div class="semantic-region semantic-region--vehicle"></div>
+            <div class="semantic-pixel-probe">
+                <span>(x=184, y=126)</span>
+                <strong>class_id = 2 · vehicle</strong>
+            </div>
+        </div>
+        <div class="vision-stage-caption">同一类别的不同目标共享相同类别颜色，不保留实例身份。</div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>Process Notes</h3><p>Pixel Classification</p></div>
+        </div>
+        <div class="vision-formula-card">
+            <span>Pixel-wise Decision</span>
+            <strong>mask[h,w] = argmax<sub>c</sub> logits[h,w,c]</strong>
+        </div>
+        <div class="vision-note-list">
+            <article><span>01</span><div><strong>Logits</strong><p>网络输出与原图空间对齐的类别分数张量。</p></div></article>
+            <article><span>02</span><div><strong>Class Map</strong><p>argmax 将每个像素压缩为一个 class_id。</p></div></article>
+            <article><span>03</span><div><strong>Metric</strong><p>按类别统计 intersection 与 union，再求 mIoU。</p></div></article>
+        </div>
+        <div class="vision-output-schema">
+            <span>输出结构</span>
+            <code>semantic_mask: uint8[H][W]</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper" aria-label="语义分割处理流程">
+    <li class="is-active"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
+    <li><span>2</span><div><strong>Logits</strong><small>H×W×C</small></div></li>
+    <li><span>3</span><div><strong>Argmax</strong><small>Class Index Map</small></div></li>
+    <li><span>4</span><div><strong>Semantic Mask</strong><small>Color Overlay + mIoU</small></div></li>
+</ol>
+{% endblock %}

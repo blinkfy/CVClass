@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}高级视觉任务实验室{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="vision-lab" data-vision-page="{{ active_sub_page }}">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 06–09 · ADVANCED VISION TASKS</span>
+            <h1 class="station-title">高级视觉任务实验室</h1>
+            <p class="station-summary">围绕 Classification、Detection、Semantic Segmentation、Instance Segmentation 展示高级视觉任务的输出结构、核心机制和评价指标。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">OUTPUT · METRIC · POST-PROCESS</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs" aria-label="高级视觉任务实验模块">
+        <a class="{{ 'is-active' if active_sub_page == 'overview' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">任务谱系</a>
+        <a class="{{ 'is-active' if active_sub_page == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
+        <a class="{{ 'is-active' if active_sub_page == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">语义分割</a>
+        <a class="{{ 'is-active' if active_sub_page == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">实例分割</a>
+    </nav>
+
+    <section class="vision-page-heading" aria-labelledby="visionPageTitle">
+        <div>
+            <span class="vision-page-kicker">{% block vision_badge %}STATION 06{% endblock %}</span>
+            <h2 id="visionPageTitle">{% block vision_title %}视觉任务谱系{% endblock %}</h2>
+            <p>{% block vision_subtitle %}对比不同视觉任务的预测粒度、输出张量与评价指标。{% endblock %}</p>
+        </div>
+        <span class="vision-static-note">PRESET SAMPLE · EXPLAINABLE VIEW</span>
+    </section>
+
+    {% block vision_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vision_tasks_common.js') }}"></script>
+{% if active_sub_page == 'detection' %}
+<script src="{{ url_for('static', filename='js/detection_lab.js') }}"></script>
+{% elif active_sub_page == 'semantic' %}
+<script src="{{ url_for('static', filename='js/semantic_segmentation_lab.js') }}"></script>
+{% elif active_sub_page == 'instance' %}
+<script src="{{ url_for('static', filename='js/instance_segmentation_lab.js') }}"></script>
+{% endif %}
+{% endblock %}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}计算机视觉实验平台{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='assets/img/icon.png') }}">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block extra_css %}{% endblock %}
@@ -89,11 +90,11 @@
             </div>
 
             <div class="sidebar-category">高级视觉任务</div>
-            <span class="disabled">检测与分割</span>
             <div class="sidebar-subnav" aria-label="高级视觉任务子页面">
-                <span class="disabled">目标检测</span>
-                <span class="disabled">语义分割</span>
-                <span class="disabled">实例分割</span>
+                <a class="{{ 'active' if active_sub_page|default('') == 'overview' and active_page|default('') == 'vision_tasks' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">06 视觉任务谱系</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">07 目标检测</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">08 语义分割</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">09 实例分割</a>
             </div>
         </nav>
     </aside>

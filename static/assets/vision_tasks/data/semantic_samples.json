@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "classes": [
+    {"id": 0, "name": "background", "color": "#0f172a"},
+    {"id": 1, "name": "sky", "color": "#38bdf8"},
+    {"id": 2, "name": "building", "color": "#f59e0b"},
+    {"id": 3, "name": "road", "color": "#64748b"},
+    {"id": 4, "name": "vehicle", "color": "#ef4444"}
+  ],
+  "samples": [
+    {
+      "id": "urban-scene-01",
+      "image_size": [640, 420],
+      "logits_shape": [420, 640, 5],
+      "mask_dtype": "uint8",
+      "preview_grid_shape": [8, 12],
+      "class_map_preview": [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
+        [2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+        [2, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2],
+        [3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3],
+        [3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3],
+        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+      ],
+      "pixel_probe": {
+        "xy": [184, 126],
+        "class_id": 4,
+        "class_name": "vehicle",
+        "logits": [0.03, 0.04, 0.11, 0.17, 0.65]
+      },
+      "metrics": {"pixel_accuracy": 0.91, "miou": 0.73}
+    }
+  ]
+}

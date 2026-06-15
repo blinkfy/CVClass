@@ -1,0 +1,125 @@
+{% extends "vision_tasks_base.html" %}
+
+{% block vision_badge %}STATION 06 · TASK TAXONOMY{% endblock %}
+{% block vision_title %}视觉任务谱系与图像分类{% endblock %}
+{% block vision_subtitle %}从图像级标签到像素级实例，建立 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的统一输出视角。{% endblock %}
+
+{% block vision_content %}
+<section class="vision-workbench" aria-label="视觉任务谱系教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div>
+                <h3>任务粒度</h3>
+                <p>Prediction Granularity</p>
+            </div>
+        </div>
+        <div class="vision-control-stack">
+            <div class="vision-control-item is-selected">
+                <strong>Image-level</strong>
+                <span>整幅图像输出单个类别分布</span>
+            </div>
+            <div class="vision-control-item">
+                <strong>Object-level</strong>
+                <span>输出类别、置信度与空间边界框</span>
+            </div>
+            <div class="vision-control-item">
+                <strong>Pixel-level</strong>
+                <span>为每个像素预测类别或实例编号</span>
+            </div>
+        </div>
+        <div class="vision-shape-card">
+            <span>统一输入</span>
+            <strong>Image ∈ R<sup>H×W×3</sup></strong>
+            <small>本阶段使用预设样例，不加载真实模型。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>OUTPUT STRUCTURE</span>
+                <h3>四类视觉任务输出对照</h3>
+            </div>
+            <span class="vision-status-chip">STATIC BLUEPRINT</span>
+        </div>
+        <div class="task-spectrum">
+            <article class="task-spectrum-card task-spectrum-card--classification">
+                <span class="task-spectrum-number">06A</span>
+                <h4>Classification</h4>
+                <p>图像级类别概率</p>
+                <code>p(y | image) ∈ R<sup>C</sup></code>
+                <dl>
+                    <div><dt>输出</dt><dd>class_id, confidence</dd></div>
+                    <div><dt>指标</dt><dd>Top-1 / Top-5 Accuracy</dd></div>
+                </dl>
+            </article>
+            <article class="task-spectrum-card task-spectrum-card--detection">
+                <span class="task-spectrum-number">07</span>
+                <h4>Detection</h4>
+                <p>目标级类别与位置</p>
+                <code>boxes ∈ R<sup>N×6</sup></code>
+                <dl>
+                    <div><dt>输出</dt><dd>x1, y1, x2, y2, score, class</dd></div>
+                    <div><dt>指标</dt><dd>IoU / AP / mAP</dd></div>
+                </dl>
+            </article>
+            <article class="task-spectrum-card task-spectrum-card--semantic">
+                <span class="task-spectrum-number">08</span>
+                <h4>Semantic Segmentation</h4>
+                <p>像素级类别图</p>
+                <code>mask ∈ {0…C-1}<sup>H×W</sup></code>
+                <dl>
+                    <div><dt>输出</dt><dd>class_id per pixel</dd></div>
+                    <div><dt>指标</dt><dd>Pixel Acc / mIoU</dd></div>
+                </dl>
+            </article>
+            <article class="task-spectrum-card task-spectrum-card--instance">
+                <span class="task-spectrum-number">09</span>
+                <h4>Instance Segmentation</h4>
+                <p>目标级检测与独立 mask</p>
+                <code>{box, class, mask, id}<sup>N</sup></code>
+                <dl>
+                    <div><dt>输出</dt><dd>bbox + binary mask + instance_id</dd></div>
+                    <div><dt>指标</dt><dd>AP<sup>box</sup> / AP<sup>mask</sup></dd></div>
+                </dl>
+            </article>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div>
+                <h3>Process Notes</h3>
+                <p>评分关注点</p>
+            </div>
+        </div>
+        <div class="vision-note-list">
+            <article>
+                <span>01</span>
+                <div><strong>预测单位</strong><p>类别、目标、像素、实例对应不同监督粒度。</p></div>
+            </article>
+            <article>
+                <span>02</span>
+                <div><strong>空间结构</strong><p>检测输出矩形区域，分割输出与图像对齐的 mask。</p></div>
+            </article>
+            <article>
+                <span>03</span>
+                <div><strong>评价协议</strong><p>Accuracy、IoU、AP 与 mIoU 不可跨任务直接替代。</p></div>
+            </article>
+        </div>
+        <div class="vision-formula-card">
+            <span>核心问题</span>
+            <strong>模型究竟为哪个空间单位做预测？</strong>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper" aria-label="视觉任务通用流程">
+    <li class="is-active"><span>1</span><div><strong>Input</strong><small>H×W×3 Image</small></div></li>
+    <li><span>2</span><div><strong>Representation</strong><small>Feature Tensor</small></div></li>
+    <li><span>3</span><div><strong>Prediction</strong><small>Class / Box / Mask</small></div></li>
+    <li><span>4</span><div><strong>Evaluation</strong><small>Accuracy / IoU / AP</small></div></li>
+</ol>
+{% endblock %}

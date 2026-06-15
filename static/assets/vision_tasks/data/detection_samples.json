@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "samples": [
+    {
+      "id": "street-objects-01",
+      "image_size": [640, 420],
+      "confidence_threshold": 0.5,
+      "nms_iou_threshold": 0.45,
+      "candidates": [
+        {"id": "box-01", "class_id": 1, "class_name": "car", "score": 0.94, "bbox_xyxy": [302, 226, 566, 364], "kept": true},
+        {"id": "box-02", "class_id": 1, "class_name": "car", "score": 0.81, "bbox_xyxy": [326, 239, 553, 356], "kept": false, "suppressed_by": "box-01"},
+        {"id": "box-03", "class_id": 0, "class_name": "person", "score": 0.88, "bbox_xyxy": [92, 166, 184, 348], "kept": true},
+        {"id": "box-04", "class_id": 2, "class_name": "bicycle", "score": 0.76, "bbox_xyxy": [218, 278, 424, 392], "kept": true},
+        {"id": "box-05", "class_id": 0, "class_name": "person", "score": 0.43, "bbox_xyxy": [101, 174, 176, 341], "kept": false, "reason": "below_confidence_threshold"},
+        {"id": "box-06", "class_id": 1, "class_name": "car", "score": 0.37, "bbox_xyxy": [314, 220, 579, 370], "kept": false, "reason": "below_confidence_threshold"}
+      ],
+      "pairwise_iou": [
+        {"a": "box-01", "b": "box-02", "iou": 0.72},
+        {"a": "box-03", "b": "box-05", "iou": 0.79}
+      ]
+    }
+  ]
+}

@@ -130,35 +130,61 @@
                 </div>
             </article>
 
-            <article class="module-card" data-learn-module="object-detection">
+            <article class="module-card" data-learn-module="vision-task-overview">
                 <div class="module-card-head">
                     <span class="module-number">06</span>
                     <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
                 </div>
-                <h3>目标检测</h3>
-                <p>Bounding Box、Confidence、IoU、NMS 与检测模型</p>
+                <h3>视觉任务谱系与图像分类</h3>
+                <p>从图像级分类出发，对比 Classification、Detection、Semantic Segmentation 和 Instance Segmentation 的输入、输出与评价指标。</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
-                    <span class="module-action module-action--disabled" aria-disabled="true">待学习 <span aria-hidden="true">&rarr;</span></span>
+                    <a class="module-action" data-learn-link="vision-task-overview" href="{{ url_for('vision_tasks_overview_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
 
-            <article class="module-card" data-learn-module="segmentation">
+            <article class="module-card" data-learn-module="object-detection">
                 <div class="module-card-head">
                     <span class="module-number">07</span>
-                    <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
+                    <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
                 </div>
-                <h3>语义分割与实例分割</h3>
-                <p>Semantic Mask、Instance Mask、像素级分类与实例区分</p>
+                <h3>目标检测：IoU 与 NMS</h3>
+                <p>展示目标检测中的候选框、置信度筛选、IoU 计算和 NMS 非极大值抑制，理解检测结果如何从大量候选框中筛选得到。</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
-                    <span class="module-action module-action--disabled" aria-disabled="true">待学习 <span aria-hidden="true">&rarr;</span></span>
+                    <a class="module-action" data-learn-link="object-detection" href="{{ url_for('detection_lab_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="semantic-segmentation">
+                <div class="module-card-head">
+                    <span class="module-number">08</span>
+                    <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
+                </div>
+                <h3>语义分割：Pixel-wise Mask</h3>
+                <p>展示像素级分类过程，从 H×W×C logits 到 argmax 类别图，再到 Semantic Mask，并支持 mask 透明度、类别筛选和像素探针。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="semantic-segmentation" href="{{ url_for('semantic_segmentation_lab_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="instance-segmentation">
+                <div class="module-card-head">
+                    <span class="module-number">09</span>
+                    <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
+                </div>
+                <h3>实例分割：Instance Mask</h3>
+                <p>展示 Detection + Mask + Instance ID 的组合机制，对比语义分割与实例分割，并统计每个实例的 bbox、mask area 和轮廓属性。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="instance-segmentation" href="{{ url_for('instance_segmentation_lab_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
 
             <article class="module-card" data-learn-module="frontier">
                 <div class="module-card-head">
-                    <span class="module-number">08</span>
+                    <span class="module-number">10</span>
                     <span class="module-mini-icon mini-icon--globe" aria-hidden="true"></span>
                 </div>
                 <h3>CV 前沿探索</h3>
