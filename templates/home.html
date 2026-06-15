@@ -9,38 +9,38 @@
 
 <section class="home-grid">
     <article class="home-card">
-        <span>Lesson 01</span>
-        <h2>第一节：图像灰度化实验</h2>
+        <span>基础视觉</span>
+        <h2>图像基础：计算机如何表示图像</h2>
         <p>上传图片，观察灰度化方法、通道分离、二值化、反转、翻转、旋转和直方图均衡化等基础图像处理过程。</p>
         <a href="{{ url_for('grayscale_page') }}">进入实验</a>
     </article>
 
     <article class="home-card">
-        <span>Lesson 02</span>
-        <h2>第二节：卷积可视化实验</h2>
+        <span>基础视觉</span>
+        <h2>卷积与滤波：局部计算如何提取视觉特征</h2>
         <p>逐步演示 padding、stride、dilation、多通道、多卷积核、1×1 卷积、空洞卷积和蛇形卷积的计算过程。</p>
         <a href="{{ url_for('convolution_page') }}">进入实验</a>
     </article>
 
     <article class="home-card">
-        <span>Lesson 03</span>
-        <h2>第三节：CNN的前向与反向传播</h2>
-        <p>使用固定小 CNN 展示前向计算、梯度回传和参数更新；并提供数据传播细节可视化，观察真实网络的 feature map 流动。</p>
-        <a href="{{ url_for('cnn_visualization_page') }}">进入实验</a>
-    </article>
-
-    <article class="home-card">
-        <span>Lesson 04</span>
-        <h2>第四节：图像边缘检测过程可视化</h2>
-        <p>对比 Roberts、Sobel、Prewitt、Kirsch、Laplacian、LoG 和 Canny，并观察卷积响应与 Canny 多阶段流水线。</p>
+        <span>结构与特征</span>
+        <h2>边缘、轮廓与形态学</h2>
+        <p>对比 Roberts、Sobel、Prewitt、Kirsch、Laplacian、LoG 和 Canny，并观察卷积响应与 Canny 多阶段流水线，以及深度边缘检测拓展。</p>
         <a href="{{ url_for('edge_detection_page') }}">进入实验</a>
     </article>
 
     <article class="home-card">
-        <span>Lesson 05</span>
-        <h2>第五节：角点与特征检测</h2>
-        <p>比较 Harris、Shi-Tomasi、FAST、SIFT、SURF、ORB 的检测流程，观察尺度空间、描述子生成与匹配应用。</p>
+        <span>结构与特征</span>
+        <h2>角点、特征与图像拼接</h2>
+        <p>比较 Harris、Shi-Tomasi、FAST、SIFT、SURF、ORB 的检测流程，观察尺度空间、描述子生成与匹配应用，以及图像拼接与全景拍照。</p>
         <a href="{{ url_for('feature_detection_page') }}">进入实验</a>
+    </article>
+
+    <article class="home-card">
+        <span>深度视觉</span>
+        <h2>CNN 如何学习图像</h2>
+        <p>使用固定小 CNN 展示前向计算、梯度回传和参数更新；并提供数据传播细节可视化、卷积梯度显微镜，以及手写数字识别应用。</p>
+        <a href="{{ url_for('cnn_visualization_page') }}">进入实验</a>
     </article>
 </section>
 {% endblock %}

@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}CNN 如何学习图像{% endblock %}
+{% block title %}卷积与滤波：局部计算如何提取视觉特征{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/convolution.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/advanced.css') }}">
@@ -9,9 +9,9 @@
 <section class="digit-page">
     <section class="conv-hero digit-page-hero station-hero">
         <div>
-            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
-            <h2 class="station-title">CNN 如何学习图像</h2>
-            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
+            <span class="section-label station-eyebrow">STATION 02 · CONVOLUTION &amp; FILTERING</span>
+            <h2 class="station-title">卷积与滤波：局部计算如何提取视觉特征</h2>
+            <p class="station-summary">卷积核、Patch、Stride、Padding、Dilation、多通道卷积与图像滤波过程可视化。</p>
         </div>
         <div class="conv-actions station-hero-actions">
             <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
@@ -22,11 +22,10 @@
         </div>
     </section>
 
-    <nav class="conv-subtabs station-tabs" aria-label="CNN 实验模块">
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
-        <span class="conv-subtab is-active">手写数字识别</span>
+    <nav class="conv-subtabs station-tabs" aria-label="卷积实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积过程</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('image_convolution_page') }}">图像滤波</a>
+        <span class="conv-subtab is-active">卷积模型应用</span>
     </nav>
 
     <section class="digit-layout">

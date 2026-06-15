@@ -75,6 +75,15 @@ body.cv-shell {
     font-size: 17px;
 }
 
+.sidebar-category {
+    margin: 12px 4px 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
 .sidebar-nav {
     display: grid;
     gap: 4px;
