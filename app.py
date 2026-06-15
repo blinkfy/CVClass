@@ -496,20 +496,29 @@ def file_too_large(_error):
 
 AI_SYSTEM_PROMPT = """你是计算机视觉实验系统中的 AI 技术助理。
 你需要结合当前页面上下文，解释算法、分析参数、诊断结果、生成简短讲解稿或报告描述。
+
+【页面主动控制权】
+我们为你打通了操纵用户本地页面的权限。在用户上下文中，你会看到 `controls` 字典，里面列出了当前页面中可以由你来操纵的各种旋钮、输入框和按钮的句柄（handle）。
+当你诊断认为应该调整某个参数，或者想在页面高亮某个按钮让用户注意时，请把控制符单独放在一行：
+- 如果你想帮用户把参数调整为某个数值：`[SET_PARAM: handle | 值]` （例如：[SET_PARAM: #edgeSigma | 1.8]）
+- 如果你想高亮（闪烁）页面的某个控件以引起注意：`[HIGHLIGHT: handle]` （例如：[HIGHLIGHT: #threshold-input]）
+
+【控制符使用绝对要求】
+1. **绝对不要向用户说你能控制什么，不要复述 `controls` 字典或暴露 `handle`。用户不需要知道底层细节。**不要输出“当前可直接操作的控件”“可操控空间”“句柄列表”“控件清单”等标题或说明性段落。
+2. 如果你要执行控制，就直接给出控制符并在正文里只说结果，例如“我已将参数调为更稳的设置”。不要在正文中点名具体元素、ID 或选择器。
+3. 控制符必须**100%完全独立占据一行**，**绝对不要**在行首或行尾加项目符号（如 `- `、`* `、`• `）、括号、解释文字、代码块。正确示例就是纯白板上一句 `[SET_PARAM: #xxxx | 12]`，错误示例是 `- [SET_PARAM: #xxxx | 12]`。
+4. 系统会在后台静默吞掉这行并替你执行，所以你的回答里直接描述你干了啥即可。
+
 回答要求：
 1. 简洁、准确、偏技术说明。
-2. 不编造系统中不存在的功能。
-3. 不替代核心算法实现。
-4. 优先结合 module、page、algorithm、step、params、stats。
-5. 面向课程实验审阅场景，避免冗长科普。
-6. 当用户询问调参时，给出具体参数方向。
-7. 当生成讲解稿时，控制在 40～80 秒口播长度。
-8. 当生成报告描述时，使用正式实验报告风格。"""
+2. 尽量使用页面控制权引导用户调参。
+3. 不编造系统中不存在的 controls 句柄。
+4. 优先结合上下文信息的 params、stats 和 controls。"""
 
 ACTION_PROMPTS = {
     "explain_algorithm": "请解释当前页面中的算法流程，结合当前参数和步骤，控制在 150 字以内。",
     "analyze_params": "请说明当前参数的作用，以及这些参数如何影响输出结果。",
-    "diagnose_result": "请根据当前算法、参数和统计结果，分析可能的问题，并给出调参建议。",
+    "diagnose_result": "请根据当前算法、参数和统计结果，分析可能的问题，如果可以，请直接动用 SET_PARAM 帮我修正到一个较为合适的参数，并在文字里解释。",
     "video_script": "请为当前页面生成一段 40 到 80 秒的视频讲解稿，突出算法流程和系统功能。",
     "report_text": "请为当前页面生成一段实验报告中的功能说明或结果分析文字，要求正式、技术化。",
 }
@@ -531,12 +540,25 @@ def call_bailian_model(question, context, action):
         f"当前算法: {context.get('algorithm', 'unknown')}\n"
         f"当前步骤: {context.get('step', 'unknown')}\n"
         f"参数: {json.dumps(context.get('params', {}), ensure_ascii=False)}\n"
+        f"可操作句柄(controls): {json.dumps(context.get('controls', {}), ensure_ascii=False)}\n"
         f"统计: {json.dumps(context.get('stats', {}), ensure_ascii=False)}"
     )
 
+    image_data = context.get('selectedImage', '')
+
+    # For text-only or models that do not support vision format, we can fallback, but let's assume OpenAI vision format.
+    if image_data:
+        # User prompt structure changed to array if handling vision format
+        user_content = [
+            {"type": "text", "text": f"【页面上下文】\n{context_text}\n\n【用户问题】\n{user_prompt}"},
+            {"type": "image_url", "image_url": {"url": image_data}}
+        ]
+    else:
+        user_content = f"【页面上下文】\n{context_text}\n\n【用户问题】\n{user_prompt}"
+
     messages = [
         {"role": "system", "content": AI_SYSTEM_PROMPT},
-        {"role": "user", "content": f"【页面上下文】\n{context_text}\n\n【用户问题】\n{user_prompt}"},
+        {"role": "user", "content": user_content},
     ]
 
     payload = json.dumps({

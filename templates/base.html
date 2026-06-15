@@ -7,6 +7,8 @@
     <link rel="icon" href="{{ url_for('static', filename='assets/img/icon.png') }}">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }}">

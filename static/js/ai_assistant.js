@@ -156,22 +156,76 @@
     function getContext() {
         const ap = window.CVCLASS_ACTIVE_PAGE || 'unknown';
         
-        if (ap === 'edge') return buildEdgeContext();
-        if (ap === 'feature') return buildFeatureContext();
-        if (ap === 'cnn') return buildCnnContext();
-        if (ap === 'convolution') return buildConvolutionContext();
-        if (ap === 'grayscale') return buildGrayscaleContext();
-        if (ap === 'vision_tasks') return buildVisionTasksContext();
-        
-        return {
-            module: ap || 'unknown',
-            page: location.pathname,
-            algorithm: 'unknown',
-            step: 'unknown',
-            params: {},
-            stats: {},
-            selectedImage: ''
-        };
+        let ctx;
+        if (ap === 'edge') ctx = buildEdgeContext();
+        else if (ap === 'feature') ctx = buildFeatureContext();
+        else if (ap === 'cnn') ctx = buildCnnContext();
+        else if (ap === 'convolution') ctx = buildConvolutionContext();
+        else if (ap === 'grayscale') ctx = buildGrayscaleContext();
+        else if (ap === 'vision_tasks') ctx = buildVisionTasksContext();
+        else {
+            // 通用 Fallback：尽力抓取页面上的信息
+            const pageTitle = document.title.replace(' - 计算机视觉实验平台', '').trim();
+            const h1 = document.querySelector('h1')?.textContent?.replace(/\s+/g, ' ') || '';
+            const h2 = document.querySelector('h2')?.textContent?.replace(/\s+/g, ' ') || '';
+            const params = {};
+            
+            // 抓取页面上常见的可读控件
+            document.querySelectorAll('input[type=range], input[type=number], select').forEach(el => {
+                let name = el.id || el.name;
+                if (!name && el.closest('label')) {
+                    const labelText = el.closest('label').textContent.trim();
+                    name = labelText.split('\n')[0].trim();
+                }
+                if (name) {
+                    params[name] = el.value;
+                }
+            });
+
+            // 尝试判断步骤或活动状态
+            const activeTab = document.querySelector('.is-active, .active');
+            const stepName = activeTab ? activeTab.textContent.trim() : '当前状态';
+
+            ctx = {
+                module: ap || '通用模块',
+                page: h1 || pageTitle || location.pathname,
+                algorithm: h2 || '通用',
+                step: stepName,
+                params: params,
+                stats: {},
+                selectedImage: ''
+            };
+        }
+
+        // 无论是不是 Fallback 页面，我们都在最后统一收集并注入支持 AI 操作的互动物件
+        const activeControls = {};
+        let aiIdx = 0;
+        document.querySelectorAll('input[type=range], input[type=number], select, button.primary-btn, button[class*="primary"]').forEach(el => {
+            let name = el.id || el.name;
+            if (!name && el.closest('label')) {
+                name = el.closest('label').textContent.split('\n')[0].trim();
+            } else if (!name && el.tagName === 'BUTTON') {
+                name = el.textContent.trim();
+            }
+            if (!name) name = 'Control_' + aiIdx;
+
+            // 分配一个临时的操作句柄如果它没有 ID
+            let handle = el.id;
+            if (!handle) {
+                handle = 'ai_managed_' + aiIdx;
+                el.id = handle;
+            }
+            aiIdx++;
+
+            if (el.tagName === 'BUTTON') {
+                activeControls[name] = { type: 'button', handle: '#' + handle };
+            } else {
+                activeControls[name] = { type: 'input', value: el.value, handle: '#' + handle };
+            }
+        });
+
+        ctx.controls = activeControls;
+        return ctx;
     }
 
     /* ---- 快捷操作定义 ---- */
@@ -183,6 +237,23 @@
         { id: 'report_text',       label: '生成报告描述', icon: '📝' },
     ];
 
+    /* ---- 辅助功能 ---- */
+    async function captureScreenshot() {
+        if (!window.html2canvas) return '';
+        try {
+            const canvas = await html2canvas(document.body, {
+                useCORS: true,
+                scale: window.devicePixelRatio > 1 ? 1 : 1 // restrict scale to save bandwidth
+            });
+
+            // Using jpeg to keep size small
+            return canvas.toDataURL('image/jpeg', 0.6);
+        } catch (e) {
+            console.error('Screenshot capture failed', e);
+            return '';
+        }
+    }
+
     /* ---- DOM 构建 ---- */
     function buildUI() {
         // FAB 按钮
@@ -191,7 +262,7 @@
         fab.id = 'aiAssistantFab';
         fab.type = 'button';
         fab.setAttribute('aria-label', '打开 AI 学习助手');
-        fab.innerHTML = '<span class="ai-fab-icon">🤖</span><span class="ai-fab-text">AI 助手</span>';
+        fab.innerHTML = `<span class="ai-fab-icon"><img src="${BASE}/static/assets/img/ai.webp" alt="" aria-hidden="true"></span><span class="ai-fab-text">AI 助手</span>`;
 
         // 遮罩
         const overlay = document.createElement('div');
@@ -206,7 +277,7 @@
         drawer.innerHTML = `
             <div class="ai-assistant-header">
                 <div class="ai-header-title">
-                    <span class="ai-header-icon">🤖</span>
+                    <span class="ai-header-icon"><img src="${BASE}/static/assets/img/ai.webp" alt="" aria-hidden="true"></span>
                     <div>
                         <strong>AI 学习助手</strong>
                         <small>基于当前页面上下文</small>
@@ -278,15 +349,193 @@
     }
 
     /* ---- 聊天区域操作 ---- */
+    function processAiControls(rawText, executedCommandsSet) {
+        // Parse complete lines only so normal prose is never swallowed by command cleanup.
+        const lines = rawText.split(/\r?\n/);
+        const renderedLines = [];
+        const commandLines = [];
+
+        const setParamLineRegex = /^\s*(?:[-*•]\s*)?\[?SET_PARAM:\s*([^\s\|\]]+)\s*\|\s*([^\]\n]+)\]?\s*$/i;
+        const setParamStartRegex = /^\s*(?:[-*•]\s*)?\[?SET_PARAM:\s*([^\s\|\]]+)\s*\|\s*$/i;
+        const hlLineRegex = /^\s*(?:[-*•]\s*)?\[?H?IGHLIGHT:\s*([^\]\n]+)\]?\s*$/i;
+        let pendingSetParam = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const isLastLine = i === lines.length - 1;
+            const hasTrailingNewline = /\n$/.test(rawText);
+            const isPartialCommandTail = isLastLine && !hasTrailingNewline && /^\s*(?:[-*•]\s*)?\[?(?:SET_PARAM|H?IGHLIGHT)?[:\s\|\]]*$/i.test(line);
+
+            if (isPartialCommandTail) {
+                continue;
+            }
+
+            if (pendingSetParam) {
+                const valueLine = line.trim();
+                const value = valueLine.replace(/^\[?/, '').replace(/\]?$/, '').trim();
+                const cmdKey = `SET_PARAM:${pendingSetParam.handle}|${value}`;
+
+                if (!executedCommandsSet || !executedCommandsSet.has(cmdKey)) {
+                    executedCommandsSet?.add(cmdKey);
+                    const el = document.querySelector(pendingSetParam.handle);
+                    if (el) {
+                        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+                            el.value = value;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+
+                            const outputEl = el.parentElement?.querySelector('output');
+                            if (outputEl) outputEl.textContent = value;
+
+                            const origBorder = el.style.border;
+                            const origBoxShadow = el.style.boxShadow;
+                            const origTransition = el.style.transition;
+                            el.style.transition = 'border 0.3s, box-shadow 0.3s';
+                            el.style.border = '2px solid red';
+                            el.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.6)';
+                            setTimeout(() => {
+                                el.style.border = origBorder;
+                                el.style.boxShadow = origBoxShadow;
+                                el.style.transition = origTransition;
+                            }, 4000);
+                        } else if (el.tagName === 'BUTTON') {
+                            el.click();
+                        }
+                    } else {
+                        console.warn(`[AI Assistant] Target element not found for SET_PARAM:`, pendingSetParam.handle);
+                    }
+                }
+
+                commandLines.push(`${pendingSetParam.rawLine}\n${line}`);
+                pendingSetParam = null;
+                continue;
+            }
+
+            const setMatch = line.match(setParamLineRegex);
+            if (setMatch) {
+                const handle = setMatch[1].trim();
+                const val = setMatch[2].trim();
+                const cmdKey = `SET_PARAM:${handle}|${val}`;
+
+                if (!executedCommandsSet || !executedCommandsSet.has(cmdKey)) {
+                    executedCommandsSet?.add(cmdKey);
+                    const el = document.querySelector(handle);
+                    if (el) {
+                        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+                            el.value = val;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+
+                            const outputEl = el.parentElement?.querySelector('output');
+                            if (outputEl) outputEl.textContent = val;
+
+                            const origBorder = el.style.border;
+                            const origBoxShadow = el.style.boxShadow;
+                            const origTransition = el.style.transition;
+                            el.style.transition = 'border 0.3s, box-shadow 0.3s';
+                            el.style.border = '2px solid red';
+                            el.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.6)';
+                            setTimeout(() => {
+                                el.style.border = origBorder;
+                                el.style.boxShadow = origBoxShadow;
+                                el.style.transition = origTransition;
+                            }, 2000);
+                        } else if (el.tagName === 'BUTTON') {
+                            el.click();
+                        }
+                    } else {
+                        console.warn(`[AI Assistant] Target element not found for SET_PARAM:`, handle);
+                    }
+                }
+
+                commandLines.push(line);
+                continue;
+            }
+
+            const setStartMatch = line.match(setParamStartRegex);
+            if (setStartMatch) {
+                pendingSetParam = {
+                    handle: setStartMatch[1].trim(),
+                    rawLine: line,
+                };
+                continue;
+            }
+
+            const hlMatch = line.match(hlLineRegex);
+            if (hlMatch) {
+                const handle = hlMatch[1].trim();
+                const cmdKey = `HIGHLIGHT:${handle}`;
+
+                if (!executedCommandsSet || !executedCommandsSet.has(cmdKey)) {
+                    executedCommandsSet?.add(cmdKey);
+                    const el = document.querySelector(handle);
+                    if (el) {
+                        const originalBorder = el.style.border;
+                        const originalTransition = el.style.transition;
+                        const originalBoxShadow = el.style.boxShadow;
+                        el.style.transition = 'border 0.3s, box-shadow 0.3s';
+                        el.style.border = '2px solid red';
+                        el.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.6)';
+                        setTimeout(() => {
+                            el.style.border = originalBorder;
+                            el.style.boxShadow = originalBoxShadow;
+                            el.style.transition = originalTransition;
+                        }, 4000);
+                    } else {
+                        console.warn(`[AI Assistant] Target element not found for HIGHLIGHT:`, handle);
+                    }
+                }
+
+                commandLines.push(line);
+                continue;
+            }
+
+            renderedLines.push(line);
+        }
+
+        const renderedText = renderedLines.join('\n').replace(/\s+$/g, '');
+        return {
+            text: renderedText,
+            hasCommands: commandLines.length > 0,
+            commandCount: commandLines.length,
+        };
+    }
+
     function appendMessage(role, text) {
         const area = document.getElementById('aiChatArea');
         if (!area) return;
         const bubble = document.createElement('div');
-        bubble.className = role === 'user' ? 'user-message' : 'ai-message';
-        bubble.textContent = text;
+        
+        if (role === 'ai') {
+            bubble.className = 'ai-message markdown-body';
+            
+            // Keep track of executed commands for this bubble
+            bubble.executedCommands = new Set();
+            
+            const result = processAiControls(text, bubble.executedCommands);
+            const cleanText = result.text || (result.hasCommands ? '已执行页面操作。' : '');
+            bubble.dataset.raw = cleanText;
+            bubble.innerHTML = window.marked ? marked.parse(cleanText) : cleanText;
+        } else {
+            bubble.className = 'user-message';
+            bubble.textContent = text;
+        }
+        
         area.appendChild(bubble);
         area.scrollTop = area.scrollHeight;
         return bubble;
+    }
+
+    function updateAiMessage(bubble, rawChunk) {
+        if (!bubble) return;
+        
+        const fullRaw = (bubble.dataset.fullRaw || '') + rawChunk;
+        bubble.dataset.fullRaw = fullRaw;
+        
+        const result = processAiControls(fullRaw, bubble.executedCommands);
+        const cleanText = result.text || (result.hasCommands ? '已执行页面操作。' : '');
+        bubble.dataset.raw = cleanText; // for debugging if needed
+        bubble.innerHTML = window.marked ? marked.parse(cleanText) : cleanText;
     }
 
     function appendLoading() {
@@ -305,6 +554,14 @@
     /* ---- API 调用 ---- */
     async function streamApi(question, action, onChunk) {
         const ctx = getContext();
+        
+        // 如果是要执行视觉分析或者全局发送，截取当前页面：
+        // 这会使得携带截图发送给大模型，供 Qwen-VL 等多模态大模型分析
+        const screenshotBox = document.getElementById('aiScreenshotPreview');
+        if (screenshotBox && screenshotBox.dataset.image) {
+            ctx.selectedImage = screenshotBox.dataset.image;
+        }
+
         const body = { question, context: ctx, action };
         try {
             const resp = await fetch(`${BASE}/api/ai-assistant`, {
@@ -363,12 +620,22 @@
         let isOpen = false;
         let busy = false;
 
-        function open() {
+        async function open() {
             isOpen = true;
             drawer.classList.add('open');
             overlay.hidden = false;
             fab.classList.add('hide');
             renderContextCard(getContext());
+            renderActions(handleAction);
+            await mountScreenshotUI();
+            
+            // Auto take screenshot if not present
+            const btn = document.getElementById('aiTakeScreenshotBtn');
+            const preview = document.getElementById('aiScreenshotPreview');
+            // Allow auto screenshot when button is empty or hidden
+            if (btn && preview && !preview.dataset.image) {
+                btn.click();
+            }
         }
 
         function close() {
@@ -404,7 +671,7 @@
                 if (!aiBubble) {
                     aiBubble = appendMessage('ai', chunk);
                 } else {
-                    aiBubble.textContent += chunk;
+                    updateAiMessage(aiBubble, chunk);
                     const area = document.getElementById('aiChatArea');
                     if (area) area.scrollTop = area.scrollHeight;
                 }
@@ -417,11 +684,75 @@
                 if (!aiBubble) {
                     appendMessage('ai', 'Error: ' + res.answer);
                 } else {
-                    aiBubble.textContent += '\n\n[Error: ' + res.answer + ']';
+                    updateAiMessage(aiBubble, '\n\n[Error: ' + res.answer + ']');
                 }
             }
             busy = false;
             if (input) input.focus();
+        }
+
+        async function mountScreenshotUI() {
+            let container = document.getElementById('aiScreenshotContainer');
+            if (!container) {
+                const header = document.querySelector('.ai-assistant-header');
+                if (!header) return;
+                
+                container = document.createElement('div');
+                container.id = 'aiScreenshotContainer';
+                container.innerHTML = `
+                    <button type="button" id="aiTakeScreenshotBtn" style="display: inline-block; font-size: 0.8rem; background: var(--cv-gray-200); border:none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        📷 重新截取本页
+                    </button>
+                    <div id="aiScreenshotPreview" style="display: none; margin-top: 5px; position: relative;">
+                        <img src="" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--cv-gray-300);" />
+                        <button type="button" class="remove-screenshot" style="position: absolute; top: -5px; right: -5px; background: red; color: white; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                    </div>
+                `;
+                header.parentNode.insertBefore(container, header.nextSibling);
+
+                document.getElementById('aiTakeScreenshotBtn').addEventListener('click', async function() {
+                    const originalBtnStyle = this.style.display;
+                    this.style.display = 'inline-block';
+                    this.textContent = '⏳ 正在截取...';
+                    this.disabled = true;
+                    
+                    // Temporarily hide the drawer content so that screenshot captures the actual page nicely
+                    const drawer = document.getElementById('aiAssistantDrawer');
+                    const overlay = document.getElementById('aiAssistantOverlay');
+                    const drawerDisplay = drawer ? drawer.style.display : '';
+                    if (drawer) drawer.style.display = 'none';
+                    if (overlay) overlay.style.display = 'none';
+                    
+                    // Wait a tiny bit for the browser to reflow
+                    await new Promise(r => setTimeout(r, 50));
+                    
+                    const base64Img = await captureScreenshot();
+                    
+                    if (drawer) drawer.style.display = drawerDisplay;
+                    if (overlay) overlay.style.display = '';
+
+                    this.textContent = '📷 重新截取本页';
+                    this.disabled = false;
+
+                    if (base64Img) {
+                        const preview = document.getElementById('aiScreenshotPreview');
+                        preview.dataset.image = base64Img;
+                        preview.querySelector('img').src = base64Img;
+                        preview.style.display = 'inline-block';
+                        this.style.display = 'none';
+                    } else {
+                        console.error('截屏失败或浏览器不支持');
+                    }
+                });
+
+                container.querySelector('.remove-screenshot').addEventListener('click', function() {
+                    const preview = document.getElementById('aiScreenshotPreview');
+                    preview.dataset.image = '';
+                    preview.querySelector('img').src = '';
+                    preview.style.display = 'none';
+                    document.getElementById('aiTakeScreenshotBtn').style.display = 'inline-block';
+                });
+            }
         }
 
         async function handleAction(actionId, label) {
@@ -439,7 +770,7 @@
                 if (!aiBubble) {
                     aiBubble = appendMessage('ai', chunk);
                 } else {
-                    aiBubble.textContent += chunk;
+                    updateAiMessage(aiBubble, chunk);
                     const area = document.getElementById('aiChatArea');
                     if (area) area.scrollTop = area.scrollHeight;
                 }
@@ -452,7 +783,7 @@
                 if (!aiBubble) {
                     appendMessage('ai', 'Error: ' + res.answer);
                 } else {
-                    aiBubble.textContent += '\n\n[Error: ' + res.answer + ']';
+                    updateAiMessage(aiBubble, '\n\n[Error: ' + res.answer + ']');
                 }
             }
             busy = false;
@@ -461,6 +792,13 @@
         document.getElementById('aiSendBtn')?.addEventListener('click', () => {
             const el = document.getElementById('aiInput');
             if (el) submitQuestion(el.value.trim());
+        });
+
+        document.getElementById('aiInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitQuestion(e.target.value.trim());
+            }
         });
     }
 
