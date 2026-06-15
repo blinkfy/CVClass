@@ -74,6 +74,32 @@
         });
     });
 
+    document.querySelectorAll("[data-learn-module]").forEach((card) => {
+        const link = card.querySelector("a[data-learn-link]");
+        if (!link) return;
+
+        card.classList.add("module-card--clickable");
+        card.setAttribute("role", "link");
+        card.tabIndex = 0;
+
+        function openModule() {
+            setModuleLearned(link.dataset.learnLink);
+            renderLearnedModules();
+            window.location.href = link.href;
+        }
+
+        card.addEventListener("click", (event) => {
+            if (event.target.closest("a, button")) return;
+            openModule();
+        });
+
+        card.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            openModule();
+        });
+    });
+
     setModuleLearned(activePageModuleMap[window.CVCLASS_ACTIVE_PAGE]);
     renderLearnedModules();
 

@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') == 'home' else '' }}">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
         window.CVCLASS_ACTIVE_PAGE = {{ active_page|default('')|tojson }};
         window.CVCLASS_ACTIVE_SUB_PAGE = {{ active_sub_page|default('')|tojson }};
     </script>
-    {% if active_page|default('') == 'home' %}
+    {% if active_page|default('') in ['home', 'knowledge_graph'] %}
     <header class="site-header" aria-label="主页导航">
         <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉实验平台首页">
             <span class="site-brand-icon" aria-hidden="true">
@@ -27,10 +27,10 @@
             </span>
         </a>
         <nav class="site-nav" aria-label="首页导航">
-            <a class="active" href="{{ url_for('home') }}">首页</a>
+            <a class="{{ 'active' if active_page|default('') == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
             <a href="{{ url_for('home') }}#core-modules">实验模块</a>
             <a href="{{ url_for('home') }}#learning-path">学习路径</a>
-            <a href="{{ url_for('home') }}#knowledge-graph-entry">资源中心</a>
+            <a class="{{ 'active' if active_page|default('') == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">知识图谱</a>
             <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">关于我们</a>
         </nav>
         <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
@@ -50,6 +50,7 @@
         <nav class="sidebar-nav">
             <div class="sidebar-category">学习入口</div>
             <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
+            <a class="{{ 'active' if active_page == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">CV 算法知识图谱</a>
 
             <div class="sidebar-category">基础视觉</div>
             <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础：计算机如何表示图像</a>

@@ -1146,6 +1146,21 @@ body.home-page-shell .content-shell {
     box-shadow: 0 10px 23px rgba(22, 163, 74, 0.08);
 }
 
+.module-card--clickable {
+    cursor: pointer;
+}
+
+.module-card--clickable:hover,
+.module-card--clickable:focus-visible {
+    border-color: rgba(29, 92, 255, 0.36);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.11);
+}
+
+.module-card--clickable:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.22);
+    outline-offset: 3px;
+}
+
 .module-card-head {
     display: flex;
     align-items: start;

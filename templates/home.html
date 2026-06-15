@@ -10,7 +10,7 @@
             <p class="home-hero-description">从像素矩阵、卷积滤波、边缘轮廓、特征匹配到 CNN、检测与分割，系统化展示计算机视觉核心算法流程。</p>
             <div class="home-hero-actions">
                 <a class="home-primary-button" href="#core-modules">进入系统 <span aria-hidden="true">&rsaquo;</span></a>
-                <a class="home-secondary-button" href="#knowledge-graph-entry">
+                <a class="home-secondary-button" href="{{ url_for('knowledge_graph_page') }}">
                     <span class="button-node-icon" aria-hidden="true"></span>
                     查看知识图谱
                 </a>
@@ -233,7 +233,7 @@
                 <div>
                     <h3 id="knowledgeGraphTitle">CV 算法知识图谱</h3>
                     <p>查看灰度化、卷积、边缘、特征、CNN、检测与分割之间的前置关系和任务关系。</p>
-                    <a class="home-primary-button graph-button" href="#knowledge-graph-entry">打开知识图谱</a>
+                    <a class="home-primary-button graph-button" href="{{ url_for('knowledge_graph_page') }}">打开知识图谱</a>
                 </div>
                 <div class="graph-illustration" aria-hidden="true">
                     <span class="graph-line graph-line--one"></span>
