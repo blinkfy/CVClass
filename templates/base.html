@@ -8,11 +8,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
+        window.CVCLASS_ACTIVE_PAGE = {{ active_page|default('')|tojson }};
+        window.CVCLASS_ACTIVE_SUB_PAGE = {{ active_sub_page|default('')|tojson }};
     </script>
+    {% if active_page|default('') in ['home', 'knowledge_graph'] %}
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉实验平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="{{ url_for('static', filename='assets/img/icon.png') }}" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉实验平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="{{ 'active' if active_page|default('') == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
+            <a href="{{ url_for('home') }}#core-modules">实验模块</a>
+            <a href="{{ url_for('home') }}#learning-path">学习路径</a>
+            <a class="{{ 'active' if active_page|default('') == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">知识图谱</a>
+            <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">关于我们</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    {% endif %}
     <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
     <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
         <div class="sidebar-brand">
@@ -20,38 +48,53 @@
             <strong>计算机视觉实验平台</strong>
         </div>
         <nav class="sidebar-nav">
-            <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">实验首页</a>
-            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">第一节：图像灰度化实验</a>
-            <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">第二节：卷积可视化实验</a>
-            <div class="sidebar-subnav" aria-label="第二节子页面">
+            <div class="sidebar-category">学习入口</div>
+            <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
+            <a class="{{ 'active' if active_page == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">CV 算法知识图谱</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础：计算机如何表示图像</a>
+            <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">卷积与滤波：局部计算如何提取视觉特征</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
                 <a class="{{ 'active' if active_sub_page|default('') == 'visual' else '' }}" href="{{ url_for('convolution_page') }}">卷积可视化</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'image' else '' }}" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
                 <a href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'digit' else '' }}" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
             </div>
-            <a class="{{ 'active' if active_page == 'cnn' else '' }}" href="{{ url_for('cnn_visualization_page') }}">第三节：CNN的前/反向传播</a>
-            <div class="sidebar-subnav" aria-label="第三节子页面">
-                <a class="{{ 'active' if active_sub_page|default('') == 'cnn_train' else '' }}" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'cnn_explainer' else '' }}" href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'conv_gradient_lab' else '' }}" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
-            </div>
-            <a class="{{ 'active' if active_page == 'edge' else '' }}" href="{{ url_for('edge_detection_page') }}">第四节：图像边缘检测</a>
-            <div class="sidebar-subnav" aria-label="第四节子页面">
-                <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">可比/对比视图</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">核响应演示</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 步骤</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED 深度拓展</a>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="{{ 'active' if active_page == 'edge' else '' }}" href="{{ url_for('edge_detection_page') }}">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">局部卷积响应</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 流水线</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">深度边缘检测拓展</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'applications' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
             </div>
-            <a class="{{ 'active' if active_page == 'feature' else '' }}" href="{{ url_for('feature_detection_page') }}">第五节：角点与特征检测</a>
-            <div class="sidebar-subnav" aria-label="第五节子页面">
+            <a class="{{ 'active' if active_page == 'feature' else '' }}" href="{{ url_for('feature_detection_page') }}">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
                 <a class="{{ 'active' if active_sub_page|default('') == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">特征检测</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'panorama' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='panorama') }}">图像拼接与全景拍照</a>
             </div>
-            <span class="disabled">第六节：</span>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="{{ 'active' if active_page == 'cnn' else '' }}" href="{{ url_for('cnn_visualization_page') }}">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'cnn_train' else '' }}" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'cnn_explainer' else '' }}" href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'conv_gradient_lab' else '' }}" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">高级视觉任务</div>
+            <span class="disabled">检测与分割</span>
+            <div class="sidebar-subnav" aria-label="高级视觉任务子页面">
+                <span class="disabled">目标检测</span>
+                <span class="disabled">语义分割</span>
+                <span class="disabled">实例分割</span>
+            </div>
         </nav>
     </aside>
     <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>

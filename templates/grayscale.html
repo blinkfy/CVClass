@@ -1,13 +1,16 @@
 ﻿{% extends "base.html" %}
-{% block title %}第一节：图像灰度化实验{% endblock %}
+{% block title %}图像基础：计算机如何表示图像{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/grayscale.css') }}">
 {% endblock %}
 {% block content %}
-<section class="page-heading">
-    <span class="section-label">Lesson 01</span>
-    <h1>第一节：图像灰度化实验</h1>
-    <p>上传图片，完成灰度化、通道分离、二值化、反转、翻转、旋转和直方图分析。</p>
+<section class="page-heading station-hero">
+    <div>
+        <span class="section-label station-eyebrow">STATION 01 · IMAGE BASICS</span>
+        <h1 class="station-title">图像基础：计算机如何表示图像</h1>
+        <p class="station-summary">RGB、灰度化、二值化、通道分离、直方图与基础图像处理过程可视化。</p>
+    </div>
+    <strong class="station-badge">PIXEL · COLOR · HISTOGRAM</strong>
 </section>
         <section id="imageLesson" class="grayscale-page">
         <section class="hero-card">

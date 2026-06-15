@@ -45,7 +45,7 @@
 </aside>
 {%- endmacro %}
 
-{% block title %}第五节 图像角点检测与特征点检测{% endblock %}
+{% block title %}角点、特征与图像拼接{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -60,9 +60,9 @@
     data-compute-mode="{{ compute_config.feature_detection }}"
     data-assets-base="{{ url_for('static', filename='assets/img/') }}"
 >
-    <header class="feature-hero">
+    <header class="feature-hero station-hero">
         <div>
-            <span class="section-label">Lesson 05 · Corner & SIFT Feature</span>
+            <span class="section-label">STATION 04 · Corner & SIFT Feature</span>
             {% if feature_mode == 'corner' %}
             <h1>角点检测过程可视化</h1>
             <p>聚焦 Harris、Shi-Tomasi 与 FAST 的步骤化角点检测过程。</p>
@@ -80,13 +80,13 @@
             <p>比较 Harris、Shi-Tomasi 与 SIFT 特征点结果，建立整体认识。</p>
             {% endif %}
         </div>
-        <strong>LESSON 05 · FEATURE DETECTION</strong>
+        <strong class="station-badge">FEATURE · MATCH · PANORAMA</strong>
     </header>
 
-    <nav class="feature-tabs" aria-label="特征检测实验模块">
+    <nav class="feature-tabs station-tabs" aria-label="特征检测实验模块">
         <a class="{{ 'is-active' if feature_mode == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
         <a class="{{ 'is-active' if feature_mode == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
-        <a class="{{ 'is-active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">特征检测</a>
+        <a class="{{ 'is-active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征</a>
         <a class="{{ 'is-active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配</a>
         <a class="{{ 'is-active' if feature_mode == 'panorama' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='panorama') }}">图像拼接与全景拍照</a>
     </nav>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}第四节：边缘检测应用实践{% endblock %}
+{% block title %}边缘、轮廓与形态学{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -12,20 +12,20 @@
     class="edge-page edge-app-page"
     data-assets-base="{{ url_for('static', filename='assets/img/') }}"
 >
-    <header class="edge-hero">
+    <header class="edge-hero station-hero">
         <div>
-            <span class="section-label">Lesson 04 · Edge Detection</span>
-            <h1>图像边缘检测过程可视化系统</h1>
-            <p>展示边缘图如何继续用于轮廓提取、Hough 直线检测和 Hough 圆检测。</p>
+            <span class="section-label station-eyebrow">STATION 03 · EDGES, CONTOURS &amp; MORPHOLOGY</span>
+            <h1 class="station-title">边缘、轮廓与形态学</h1>
+            <p class="station-summary">Sobel、Prewitt、Scharr、Laplacian、LoG、Canny、Hough 与轮廓应用过程可视化。</p>
         </div>
-        <strong>LESSON 04 · EDGE DETECTION</strong>
+        <strong class="station-badge">EDGE · CONTOUR · HOUGH</strong>
     </header>
 
-    <nav class="edge-tabs" aria-label="边缘检测实验模块">
+    <nav class="edge-tabs station-tabs" aria-label="边缘检测实验模块">
         <a href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
-        <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
-        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
-        <a href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">局部卷积响应</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 流水线</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='teed') }}">深度边缘拓展</a>
         <a class="is-active" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
     </nav>
 

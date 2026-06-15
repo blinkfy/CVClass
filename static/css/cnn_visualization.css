@@ -1,7 +1,7 @@
 .cnn-viz-page {
     min-height: calc(100vh - 84px);
     display: grid;
-    grid-template-rows: auto auto minmax(680px, 1fr);
+    grid-template-rows: auto auto auto minmax(680px, 1fr);
     gap: 12px;
     color: #0f172a;
     margin-inline: -12px;

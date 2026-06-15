@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}第五节：图像角点检测与特征点检测{% endblock %}
+{% block title %}角点、特征与图像拼接{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/feature_detection.css') }}">
@@ -10,9 +10,9 @@
 <section class="feature-page" data-mode="{{ feature_mode }}">
     <header class="feature-hero">
         <div>
-            <span class="eyebrow">LESSON 05 · CORNERS & SIFT FEATURES</span>
-            <h1>第五节 图像角点检测与特征点检测</h1>
-            <p>从角点响应到尺度不变特征：可视化 Harris 与 SIFT 的完整计算过程</p>
+            <span class="eyebrow">FEATURE & GEOMETRY</span>
+            <h1>角点、特征与图像拼接</h1>
+            <p>从角点响应到尺度不变特征，再到特征匹配与图像拼接的完整可视化流程。</p>
         </div>
         <div class="hero-badge">NumPy 手写核心算法</div>
     </header>
@@ -20,7 +20,7 @@
     <nav class="feature-tabs" aria-label="特征检测子页面">
         <a class="{{ 'active' if feature_mode == 'compare' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='compare') }}">方法对比</a>
         <a class="{{ 'active' if feature_mode == 'corner' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">角点检测</a>
-        <a class="{{ 'active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">特征检测</a>
+        <a class="{{ 'active' if feature_mode == 'sift' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='sift') }}">SIFT 特征</a>
         <a class="{{ 'active' if feature_mode == 'matching' else '' }}" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">特征匹配</a>
     </nav>
 

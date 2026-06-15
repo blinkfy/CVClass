@@ -1,19 +1,29 @@
 ﻿{% extends "base.html" %}
-{% block title %}第三节 CNN 正反向传播 3D 可视化{% endblock %}
+{% block title %}CNN 如何学习图像{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cnn_visualization.css') }}?v=landscape-lr-compare-1">
 {% endblock %}
 {% block content %}
 <section id="cnnVizPage" class="cnn-viz-page" data-digit-url="{{ url_for('digit_recognition_page') }}">
-    <header class="cnn-viz-header">
+    <header class="cnn-viz-header station-hero">
         <div>
-            <span class="section-label">Lesson 03 · CNN Training</span>
-            <h1>第三节 CNN 正反向传播 3D 可视化</h1>
-            <p>以手写数字识别 CNN 为例，展示输入、卷积、激活、池化、全连接、输出以及梯度回传过程。</p>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h1 class="station-title">CNN 如何学习图像</h1>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
         </div>
-        <strong id="cnnStepStatus">Overview · 手写数字 CNN</strong>
+        <div class="station-hero-actions">
+            <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+            <strong id="cnnStepStatus">Overview · 手写数字 CNN</strong>
+        </div>
     </header>
+
+    <nav class="cnn-third-tabs station-tabs" aria-label="CNN 实验模块">
+        <a class="is-active" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
+        <a href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
+        <a href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+        <a href="{{ url_for('digit_recognition_page') }}">手写数字识别</a>
+    </nav>
 
     <section class="cnn-command-bar" aria-label="第三节操作栏">
         <div class="cnn-mode-group" role="group" aria-label="演示模式">

@@ -98,6 +98,10 @@ def format_file_size(size):
 def home():
     return render_template("home.html", active_page="home")
 
+@app.route("/knowledge-graph", methods=["GET"])
+def knowledge_graph_page():
+    return render_template("knowledge_graph.html", active_page="knowledge_graph")
+
 @app.route("/grayscale", methods=["GET"])
 def grayscale_page():
     return render_template("grayscale.html", active_page="grayscale")

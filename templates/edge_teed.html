@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}第四节 TEED / HED 深度边缘检测拓展{% endblock %}
+{% block title %}深度边缘检测拓展{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/edge_detection.css') }}">
@@ -14,20 +14,20 @@
     data-ort-script-url="{{ url_for('static', filename='vendor/onnxruntime-web/ort.min.js') }}"
     data-ort-wasm-base="{{ url_for('static', filename='vendor/onnxruntime-web/') }}"
 >
-    <header class="edge-hero">
+    <header class="edge-hero station-hero">
         <div>
-            <span class="section-label">Lesson 04 · Edge Detection</span>
-            <h1>图像边缘检测过程可视化系统</h1>
-            <p>展示轻量深度学习边缘检测模型如何通过不同深度层级的特征响应、Side Output 和 Fusion 输出最终边缘图。</p>
+            <span class="section-label station-eyebrow">STATION 03 · EDGES, CONTOURS &amp; MORPHOLOGY</span>
+            <h1 class="station-title">深度边缘检测拓展</h1>
+            <p class="station-summary">从手工算子到深度边缘响应：观察 TEED 在边缘检测中的可视化流程。</p>
         </div>
-        <strong>LESSON 04 · EDGE DETECTION</strong>
+        <strong class="station-badge">EDGE · CONTOUR · HOUGH</strong>
     </header>
 
-    <nav class="edge-tabs" aria-label="边缘检测实验模块">
+    <nav class="edge-tabs station-tabs" aria-label="边缘检测实验模块">
         <a href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
-        <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
-        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
-        <a class="is-active" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">局部卷积响应</a>
+        <a href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 流水线</a>
+        <a class="is-active" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">深度边缘检测拓展</a>
         <a href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
     </nav>
 

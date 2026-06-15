@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}第四节 图像边缘检测过程可视化{% endblock %}
+{% block title %}边缘、轮廓与形态学{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/edge_detection.css') }}">
@@ -15,28 +15,20 @@
     data-ort-script-url="{{ url_for('static', filename='vendor/onnxruntime-web/ort.min.js') }}"
     data-ort-wasm-base="{{ url_for('static', filename='vendor/onnxruntime-web/') }}"
 >
-    <header class="edge-hero">
+    <header class="edge-hero station-hero">
         <div>
-            <span class="section-label">Lesson 04 · Edge Detection</span>
-            {% if edge_mode == 'kernel' %}
-            <h1>卷积核算子边缘检测过程</h1>
-            <p>聚焦 Sobel、Prewitt、Roberts、Laplacian、Scharr、Kirsch、LoG 的卷积响应、幅值计算和阈值化过程。</p>
-            {% elif edge_mode == 'canny' %}
-            <h1>Canny 多阶段边缘检测流水线</h1>
-            <p>按步骤观察灰度化、高斯平滑、梯度、方向、非极大值抑制、双阈值和滞后连接。</p>
-            {% else %}
-            <h1>图像边缘检测过程可视化系统</h1>
-            <p>集中比较一阶导数、二阶导数和 Canny 的边缘结果、适用场景和输出差异。</p>
-            {% endif %}
+            <span class="section-label station-eyebrow">STATION 03 · EDGES, CONTOURS &amp; MORPHOLOGY</span>
+            <h1 class="station-title">边缘、轮廓与形态学</h1>
+            <p class="station-summary">Sobel、Prewitt、Scharr、Laplacian、LoG、Canny、Hough 与轮廓应用过程可视化。</p>
         </div>
-        <strong>LESSON 04 · EDGE DETECTION</strong>
+        <strong class="station-badge">EDGE · CONTOUR · HOUGH</strong>
     </header>
 
-    <nav class="edge-tabs" aria-label="边缘检测实验模块">
+    <nav class="edge-tabs station-tabs" aria-label="边缘检测实验模块">
         <a class="{{ 'is-active' if edge_mode == 'compare' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='compare') }}">方法对比</a>
-        <a class="{{ 'is-active' if edge_mode == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">卷积核算子</a>
-        <a class="{{ 'is-active' if edge_mode == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny算法</a>
-        <a class="{{ 'is-active' if edge_mode == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">TEED拓展</a>
+        <a class="{{ 'is-active' if edge_mode == 'kernel' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='kernel') }}">局部卷积响应</a>
+        <a class="{{ 'is-active' if edge_mode == 'canny' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='canny') }}">Canny 流水线</a>
+        <a class="{{ 'is-active' if edge_mode == 'teed' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='teed') }}">深度边缘拓展</a>
         <a class="{{ 'is-active' if edge_mode == 'applications' else '' }}" href="{{ url_for('edge_detection_mode_page', mode='applications') }}">应用实践</a>
     </nav>
 
