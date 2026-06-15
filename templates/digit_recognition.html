@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% block title %}卷积的模型应用{% endblock %}
+{% block title %}CNN 如何学习图像{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/convolution.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/advanced.css') }}">
@@ -7,13 +7,14 @@
 {% endblock %}
 {% block content %}
 <section class="digit-page">
-    <section class="conv-hero digit-page-hero">
+    <section class="conv-hero digit-page-hero station-hero">
         <div>
-            <span class="section-label">Lesson 02 · Model Application</span>
-            <h2>卷积的模型应用：在线手写数字识别</h2>
-            <p> canvas 手写输入、图像预处理、模型推理和概率分布展示</p>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h2 class="station-title">CNN 如何学习图像</h2>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
         </div>
-        <div class="conv-actions">
+        <div class="conv-actions station-hero-actions">
+            <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
             <div class="model-status digit-hero-status {{ 'ready' if model_ready else 'missing' }}">
                 <span>模型状态</span>
                 <strong>{{ model_message }}</strong>
@@ -21,11 +22,11 @@
         </div>
     </section>
 
-    <nav class="conv-subtabs" aria-label="卷积实验模块">
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积可视化</a>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
-        <span class="conv-subtab is-active">卷积模型应用</span>
+    <nav class="conv-subtabs station-tabs" aria-label="CNN 实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+        <span class="conv-subtab is-active">手写数字识别</span>
     </nav>
 
     <section class="digit-layout">

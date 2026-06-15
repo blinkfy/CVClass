@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}卷积梯度显微镜 - 计算机视觉实验平台{% endblock %}
+{% block title %}CNN 如何学习图像{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -10,20 +10,24 @@
 {% block content %}
 <div class="conv-gradient-page">
   <main class="lab-shell">
-    <header class="cnn-viz-header">
+    <header class="cnn-viz-header station-hero">
       <div>
-        <span class="section-label">Lesson 03 · CNN Gradient Lab</span>
-        <h1>卷积梯度显微镜：从一个 dZ 看清 dK、db、dX</h1>
-        <p>只保留一个单通道卷积层，用 4×4 输入、3×3 卷积核和 2×2 输出，逐步演示 forward、backward 与参数更新。</p>
+        <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+        <h1 class="station-title">CNN 如何学习图像</h1>
+        <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
       </div>
-      <strong id="cnnStepStatus">Microscope · 梯度流观测中</strong>
+      <div class="station-hero-actions">
+        <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+        <strong id="cnnStepStatus">Microscope · 梯度流观测中</strong>
+      </div>
     </header>
 
-    <nav class="cnn-third-tabs" aria-label="第三节实验模块">
+    <nav class="cnn-third-tabs station-tabs" aria-label="CNN 实验模块">
       <div class="cnn-mode-group">
         <a href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
-        <a href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
+        <a href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
         <a class="is-active" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+        <a href="{{ url_for('digit_recognition_page') }}">手写数字识别</a>
       </div>
       <div class="header-legend">
         <span><i class="dot dot-forward"></i>Forward</span>

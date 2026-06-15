@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}第三节 CNN Explainer 网络结构可视化{% endblock %}
+{% block title %}CNN 如何学习图像{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -13,19 +13,20 @@
     data-assets-base="{{ url_for('static', filename='assets/img/') }}"
     data-model-url="{{ url_for('static', filename='assets/data/model.json') }}"
 >
-    <header class="ce-course-header">
+    <header class="ce-course-header station-hero">
         <div>
-            <span class="section-label">Lesson 03 · CNN Explainer</span>
-            <h1>第三节 CNN 网络结构与特征流可视化</h1>
-            <p>网络总览、feature map 热力图、层间连接和局部原理展开，模拟真实 CNN 的层级流动和局部计算原理。</p>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h1 class="station-title">CNN 如何学习图像</h1>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
         </div>
-        <strong>CNN 网络结构与特征流可视化</strong>
+        <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
     </header>
 
-    <nav class="ce-third-tabs" aria-label="第三节实验模块">
+    <nav class="ce-third-tabs station-tabs" aria-label="CNN 实验模块">
         <a href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
-        <a class="is-active" href="{{ url_for('cnn_explainer_page') }}">数据传播细节可视化</a>
+        <a class="is-active" href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
         <a href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+        <a href="{{ url_for('digit_recognition_page') }}">手写数字识别</a>
     </nav>
 
     <div class="ce-controls" aria-label="CNN Explainer controls">

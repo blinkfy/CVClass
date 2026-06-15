@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}图像卷积应用{% endblock %}
+{% block title %}卷积与滤波：局部计算如何提取视觉特征{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/convolution.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/advanced.css') }}">
@@ -7,22 +7,22 @@
 {% endblock %}
 {% block content %}
 <section class="image-conv-page">
-    <section class="conv-hero image-conv-hero">
+    <section class="conv-hero image-conv-hero station-hero">
         <div>
-            <span class="section-label">Lesson 02 · Image Conv</span>
-            <h2>图像卷积应用系统</h2>
-            <p>将预设或自定义卷积核应用到真实图像，观察不同卷积核的处理效果。</p>
+            <span class="section-label station-eyebrow">STATION 02 · CONVOLUTION &amp; FILTERING</span>
+            <h2 class="station-title">卷积与滤波：局部计算如何提取视觉特征</h2>
+            <p class="station-summary">卷积核、Patch、Stride、Padding、Dilation、多通道卷积与图像滤波过程可视化。</p>
         </div>
-        <div class="conv-actions">
+        <div class="conv-actions station-hero-actions">
+            <strong class="station-badge">KERNEL · PATCH · FEATURE MAP</strong>
             <a class="ghost-button" href="{{ url_for('convolution_page') }}">返回卷积可视化</a>
         </div>
     </section>
 
-    <nav class="conv-subtabs" aria-label="卷积实验模块">
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积可视化</a>
-        <span class="conv-subtab is-active">图像卷积应用</span>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
-        <a class="conv-subtab conv-subtab-link" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
+    <nav class="conv-subtabs station-tabs" aria-label="卷积实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积过程</a>
+        <span class="conv-subtab is-active">图像滤波</span>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积应用</a>
     </nav>
 
     <section class="image-conv-layout">
