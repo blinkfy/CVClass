@@ -2,124 +2,326 @@
 
 {% block vision_badge %}STATION 06 · TASK TAXONOMY{% endblock %}
 {% block vision_title %}视觉任务谱系与图像分类{% endblock %}
-{% block vision_subtitle %}从图像级标签到像素级实例，建立 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的统一输出视角。{% endblock %}
+{% block vision_subtitle %}使用同一张预设图像，对比 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的预测单位、空间结构和评价协议。{% endblock %}
 
 {% block vision_content %}
-<section class="vision-workbench" aria-label="视觉任务谱系教学工作台">
-    <aside class="vision-panel vision-control-panel">
+<section class="vision-workbench vision-overview-workbench" data-overview-workbench aria-label="视觉任务谱系对比台">
+    <aside class="vision-panel vision-control-panel overview-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
             <div>
-                <h3>任务粒度</h3>
-                <p>Prediction Granularity</p>
+                <h3>任务粒度与显示</h3>
+                <p>Input &amp; Display</p>
             </div>
         </div>
-        <div class="vision-control-stack">
-            <div class="vision-control-item is-selected">
-                <strong>Image-level</strong>
-                <span>整幅图像输出单个类别分布</span>
+
+        <section class="overview-control-section" aria-labelledby="overviewSampleTitle">
+            <div class="overview-control-title">
+                <strong id="overviewSampleTitle">示例图选择</strong>
+                <span data-sample-count>3 PRESETS</span>
             </div>
-            <div class="vision-control-item">
-                <strong>Object-level</strong>
-                <span>输出类别、置信度与空间边界框</span>
+            <div class="overview-sample-list" data-sample-list aria-label="预设图像样例"></div>
+            <div class="overview-sample-meta">
+                <strong data-sample-name>正在加载样例…</strong>
+                <span data-sample-resolution>-- × --</span>
             </div>
-            <div class="vision-control-item">
-                <strong>Pixel-level</strong>
-                <span>为每个像素预测类别或实例编号</span>
+        </section>
+
+        <section class="overview-control-section" aria-labelledby="overviewModeTitle">
+            <div class="overview-control-title">
+                <strong id="overviewModeTitle">显示模式</strong>
             </div>
-        </div>
-        <div class="vision-shape-card">
+            <div class="overview-segmented-control" data-display-modes>
+                <button class="is-active" type="button" data-display-mode="parallel" aria-pressed="true">
+                    <span class="overview-mode-icon overview-mode-icon--grid" aria-hidden="true"></span>
+                    四结果并排
+                </button>
+                <button type="button" data-display-mode="focus" aria-pressed="false">
+                    <span class="overview-mode-icon overview-mode-icon--focus" aria-hidden="true"></span>
+                    单任务聚焦
+                </button>
+                <button type="button" data-display-mode="explain" aria-pressed="false">
+                    <span class="overview-mode-icon overview-mode-icon--compare" aria-hidden="true"></span>
+                    对比说明
+                </button>
+            </div>
+        </section>
+
+        <section class="overview-control-section" aria-labelledby="overviewTaskTitle">
+            <div class="overview-control-title">
+                <strong id="overviewTaskTitle">当前任务高亮</strong>
+                <span>CLICK TO FOCUS</span>
+            </div>
+            <div class="overview-task-switcher" data-task-switcher role="radiogroup" aria-label="选择视觉任务">
+                <button class="is-active" type="button" data-task-select="classification" role="radio" aria-checked="true">
+                    <span>01</span><div><strong>图像级分类</strong><small>Image-level</small></div>
+                </button>
+                <button type="button" data-task-select="detection" role="radio" aria-checked="false">
+                    <span>02</span><div><strong>目标检测</strong><small>Object-level</small></div>
+                </button>
+                <button type="button" data-task-select="semantic" role="radio" aria-checked="false">
+                    <span>03</span><div><strong>语义分割</strong><small>Pixel-level</small></div>
+                </button>
+                <button type="button" data-task-select="instance" role="radio" aria-checked="false">
+                    <span>04</span><div><strong>实例分割</strong><small>Instance-level</small></div>
+                </button>
+            </div>
+        </section>
+
+        <label class="vision-field overview-threshold-field">
+            <span>Confidence Threshold <output data-confidence-output>0.50</output></span>
+            <input data-confidence-threshold type="range" min="0.20" max="0.95" step="0.05" value="0.50">
+            <small>低于阈值的检测框将灰显，不计入保留数量。</small>
+        </label>
+
+        <label class="vision-field">
+            <span>颜色方案</span>
+            <select data-color-scheme>
+                <option value="system">默认（系统配色）</option>
+                <option value="contrast">高对比配色</option>
+                <option value="cool">冷色分析配色</option>
+            </select>
+        </label>
+
+        <div class="vision-shape-card overview-input-schema">
             <span>统一输入</span>
             <strong>Image ∈ R<sup>H×W×3</sup></strong>
-            <small>本阶段使用预设样例，不加载真实模型。</small>
+            <small>所有输出均来自同一预设样例，不加载真实模型。</small>
         </div>
     </aside>
 
-    <div class="vision-stage-panel">
+    <div class="vision-stage-panel overview-stage-panel">
         <div class="vision-stage-header">
             <div>
-                <span>OUTPUT STRUCTURE</span>
-                <h3>四类视觉任务输出对照</h3>
+                <span>TASK RESULT OVERVIEW</span>
+                <h3>任务结果总览（同一图像在不同任务粒度下的输出）</h3>
             </div>
-            <span class="vision-status-chip">STATIC BLUEPRINT</span>
+            <span class="vision-status-chip" data-overview-status>PRESET SAMPLE</span>
         </div>
-        <div class="task-spectrum">
-            <article class="task-spectrum-card task-spectrum-card--classification">
-                <span class="task-spectrum-number">06A</span>
-                <h4>Classification</h4>
-                <p>图像级类别概率</p>
-                <code>p(y | image) ∈ R<sup>C</sup></code>
-                <dl>
-                    <div><dt>输出</dt><dd>class_id, confidence</dd></div>
-                    <div><dt>指标</dt><dd>Top-1 / Top-5 Accuracy</dd></div>
-                </dl>
+
+        <div class="overview-result-grid" data-result-grid data-display-mode="parallel">
+            <article class="overview-result-card is-selected" data-task-card="classification">
+                <header class="overview-result-header">
+                    <span class="overview-result-number">01</span>
+                    <div><h4>图像级分类</h4><p>Image-level Classification</p></div>
+                </header>
+                <div class="overview-result-visual">
+                    <div class="overview-scene" data-overview-scene aria-label="统一预设城市场景">
+                        <span class="overview-scene-sky"></span>
+                        <span class="overview-scene-building overview-scene-building--left"></span>
+                        <span class="overview-scene-building overview-scene-building--right"></span>
+                        <span class="overview-scene-tree overview-scene-tree--left"></span>
+                        <span class="overview-scene-tree overview-scene-tree--right"></span>
+                        <span class="overview-scene-road"></span>
+                        <span class="overview-scene-lane overview-scene-lane--left"></span>
+                        <span class="overview-scene-lane overview-scene-lane--right"></span>
+                        <span class="overview-scene-bus"></span>
+                        <span class="overview-scene-car"></span>
+                        <span class="overview-scene-person"></span>
+                        <span class="overview-scene-light"></span>
+                    </div>
+                </div>
+                <div class="overview-result-body">
+                    <div class="overview-result-summary">
+                        <span>类别概率分布 Top-5</span>
+                        <strong data-classification-top1>Top-1: --</strong>
+                    </div>
+                    <div class="overview-probability-list" data-classification-bars></div>
+                </div>
+                <footer class="overview-result-footer">
+                    <span><b>输出结构</b><code>1 × C</code></span>
+                    <span><b>指标</b><strong>Top-1 Accuracy</strong></span>
+                </footer>
             </article>
-            <article class="task-spectrum-card task-spectrum-card--detection">
-                <span class="task-spectrum-number">07</span>
-                <h4>Detection</h4>
-                <p>目标级类别与位置</p>
-                <code>boxes ∈ R<sup>N×6</sup></code>
-                <dl>
-                    <div><dt>输出</dt><dd>x1, y1, x2, y2, score, class</dd></div>
-                    <div><dt>指标</dt><dd>IoU / AP / mAP</dd></div>
-                </dl>
+
+            <article class="overview-result-card" data-task-card="detection">
+                <header class="overview-result-header">
+                    <span class="overview-result-number">02</span>
+                    <div><h4>目标检测</h4><p>Object Detection</p></div>
+                </header>
+                <div class="overview-result-visual">
+                    <div class="overview-scene" data-overview-scene aria-label="带预设检测框的统一城市场景">
+                        <span class="overview-scene-sky"></span>
+                        <span class="overview-scene-building overview-scene-building--left"></span>
+                        <span class="overview-scene-building overview-scene-building--right"></span>
+                        <span class="overview-scene-tree overview-scene-tree--left"></span>
+                        <span class="overview-scene-tree overview-scene-tree--right"></span>
+                        <span class="overview-scene-road"></span>
+                        <span class="overview-scene-lane overview-scene-lane--left"></span>
+                        <span class="overview-scene-lane overview-scene-lane--right"></span>
+                        <span class="overview-scene-bus"></span>
+                        <span class="overview-scene-car"></span>
+                        <span class="overview-scene-person"></span>
+                        <span class="overview-scene-light"></span>
+                        <div class="overview-overlay-layer" data-detection-layer></div>
+                    </div>
+                </div>
+                <div class="overview-result-body">
+                    <div class="overview-result-summary">
+                        <span>检测结果</span>
+                        <strong data-detection-count>0 / 0 个目标</strong>
+                    </div>
+                    <div class="overview-legend" data-detection-legend></div>
+                </div>
+                <footer class="overview-result-footer">
+                    <span><b>输出结构</b><code>N × [x1,y1,x2,y2,score,class]</code></span>
+                    <span><b>后处理</b><strong>Confidence + NMS</strong></span>
+                </footer>
             </article>
-            <article class="task-spectrum-card task-spectrum-card--semantic">
-                <span class="task-spectrum-number">08</span>
-                <h4>Semantic Segmentation</h4>
-                <p>像素级类别图</p>
-                <code>mask ∈ {0…C-1}<sup>H×W</sup></code>
-                <dl>
-                    <div><dt>输出</dt><dd>class_id per pixel</dd></div>
-                    <div><dt>指标</dt><dd>Pixel Acc / mIoU</dd></div>
-                </dl>
+
+            <article class="overview-result-card" data-task-card="semantic">
+                <header class="overview-result-header">
+                    <span class="overview-result-number">03</span>
+                    <div><h4>语义分割</h4><p>Semantic Segmentation</p></div>
+                </header>
+                <div class="overview-result-visual">
+                    <div class="overview-scene" data-overview-scene aria-label="带语义掩码的统一城市场景">
+                        <span class="overview-scene-sky"></span>
+                        <span class="overview-scene-building overview-scene-building--left"></span>
+                        <span class="overview-scene-building overview-scene-building--right"></span>
+                        <span class="overview-scene-tree overview-scene-tree--left"></span>
+                        <span class="overview-scene-tree overview-scene-tree--right"></span>
+                        <span class="overview-scene-road"></span>
+                        <span class="overview-scene-lane overview-scene-lane--left"></span>
+                        <span class="overview-scene-lane overview-scene-lane--right"></span>
+                        <span class="overview-scene-bus"></span>
+                        <span class="overview-scene-car"></span>
+                        <span class="overview-scene-person"></span>
+                        <span class="overview-scene-light"></span>
+                        <div class="overview-overlay-layer overview-mask-layer" data-semantic-layer></div>
+                    </div>
+                </div>
+                <div class="overview-result-body">
+                    <div class="overview-result-summary">
+                        <span>类别图例</span>
+                        <strong data-semantic-miou>mIoU --</strong>
+                    </div>
+                    <div class="overview-legend" data-semantic-legend></div>
+                </div>
+                <footer class="overview-result-footer">
+                    <span><b>输出结构</b><code>H × W class map</code></span>
+                    <span><b>中间张量</b><strong>H × W × C logits</strong></span>
+                </footer>
             </article>
-            <article class="task-spectrum-card task-spectrum-card--instance">
-                <span class="task-spectrum-number">09</span>
-                <h4>Instance Segmentation</h4>
-                <p>目标级检测与独立 mask</p>
-                <code>{box, class, mask, id}<sup>N</sup></code>
-                <dl>
-                    <div><dt>输出</dt><dd>bbox + binary mask + instance_id</dd></div>
-                    <div><dt>指标</dt><dd>AP<sup>box</sup> / AP<sup>mask</sup></dd></div>
-                </dl>
+
+            <article class="overview-result-card" data-task-card="instance">
+                <header class="overview-result-header">
+                    <span class="overview-result-number">04</span>
+                    <div><h4>实例分割</h4><p>Instance Segmentation</p></div>
+                </header>
+                <div class="overview-result-visual">
+                    <div class="overview-scene" data-overview-scene aria-label="带实例掩码和边界框的统一城市场景">
+                        <span class="overview-scene-sky"></span>
+                        <span class="overview-scene-building overview-scene-building--left"></span>
+                        <span class="overview-scene-building overview-scene-building--right"></span>
+                        <span class="overview-scene-tree overview-scene-tree--left"></span>
+                        <span class="overview-scene-tree overview-scene-tree--right"></span>
+                        <span class="overview-scene-road"></span>
+                        <span class="overview-scene-lane overview-scene-lane--left"></span>
+                        <span class="overview-scene-lane overview-scene-lane--right"></span>
+                        <span class="overview-scene-bus"></span>
+                        <span class="overview-scene-car"></span>
+                        <span class="overview-scene-person"></span>
+                        <span class="overview-scene-light"></span>
+                        <div class="overview-overlay-layer overview-mask-layer" data-instance-layer></div>
+                    </div>
+                </div>
+                <div class="overview-result-body">
+                    <div class="overview-result-summary">
+                        <span data-instance-count>0 个实例</span>
+                        <strong data-instance-map>Mask AP --</strong>
+                    </div>
+                    <div class="overview-legend" data-instance-legend></div>
+                </div>
+                <footer class="overview-result-footer">
+                    <span><b>输出结构</b><code>N masks + bbox + class + id</code></span>
+                    <span><b>指标</b><strong>Mask AP</strong></span>
+                </footer>
             </article>
         </div>
+
+        <section class="overview-lineage" aria-labelledby="overviewLineageTitle">
+            <div class="overview-section-heading">
+                <div><span>TASK TAXONOMY</span><h4 id="overviewLineageTitle">任务谱系</h4></div>
+                <p>从整体判断逐步细化到实例级空间理解</p>
+            </div>
+            <ol class="overview-lineage-list">
+                <li data-lineage-task="classification">
+                    <span class="overview-lineage-icon overview-lineage-icon--classification" aria-hidden="true"></span>
+                    <div><small>Image-level</small><strong>图像级分类</strong><p>输出：class probability</p><code>p(y|image) ∈ R<sup>C</sup></code></div>
+                </li>
+                <li data-lineage-task="detection">
+                    <span class="overview-lineage-icon overview-lineage-icon--detection" aria-hidden="true"></span>
+                    <div><small>Object-level</small><strong>目标检测</strong><p>输出：bbox + class + score</p><code>boxes ∈ R<sup>N×6</sup></code></div>
+                </li>
+                <li data-lineage-task="semantic">
+                    <span class="overview-lineage-icon overview-lineage-icon--semantic" aria-hidden="true"></span>
+                    <div><small>Pixel-level</small><strong>语义分割</strong><p>输出：class per pixel</p><code>mask ∈ {0…C-1}<sup>H×W</sup></code></div>
+                </li>
+                <li data-lineage-task="instance">
+                    <span class="overview-lineage-icon overview-lineage-icon--instance" aria-hidden="true"></span>
+                    <div><small>Instance-level</small><strong>实例分割</strong><p>输出：mask + bbox + instance id</p><code>{bbox,class,mask,id}<sup>N</sup></code></div>
+                </li>
+            </ol>
+        </section>
     </div>
 
-    <aside class="vision-panel vision-notes-panel">
+    <aside class="vision-panel vision-notes-panel overview-notes-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3>Process Notes</h3>
-                <p>评分关注点</p>
+                <h3>任务谱系说明</h3>
+                <p>Process Notes</p>
             </div>
         </div>
         <div class="vision-note-list">
             <article>
                 <span>01</span>
-                <div><strong>预测单位</strong><p>类别、目标、像素、实例对应不同监督粒度。</p></div>
+                <div><strong>预测单位</strong><p>类别、目标、像素、实例对应不同监督粒度，输出数量逐步增加。</p></div>
             </article>
             <article>
                 <span>02</span>
-                <div><strong>空间结构</strong><p>检测输出矩形区域，分割输出与图像对齐的 mask。</p></div>
+                <div><strong>空间结构</strong><p>分类无显式位置；检测使用 bbox；分割使用与图像对齐的 mask。</p></div>
             </article>
             <article>
                 <span>03</span>
-                <div><strong>评价协议</strong><p>Accuracy、IoU、AP 与 mIoU 不可跨任务直接替代。</p></div>
+                <div><strong>评价协议</strong><p>Accuracy、IoU、AP、mIoU 和 Mask AP 针对不同输出结构。</p></div>
             </article>
         </div>
-        <div class="vision-formula-card">
-            <span>核心问题</span>
-            <strong>模型究竟为哪个空间单位做预测？</strong>
-        </div>
+
+        <section class="overview-schema-table" aria-labelledby="overviewSchemaTitle">
+            <div class="overview-control-title">
+                <strong id="overviewSchemaTitle">输出结构对照表</strong>
+                <span>SHAPE &amp; METRIC</span>
+            </div>
+            <article data-schema-task="classification">
+                <div><span>Classification</span><strong>图像级</strong></div>
+                <code>p(y | image) ∈ R<sup>C</sup></code>
+                <p>Metric: Top-1 / Accuracy</p>
+            </article>
+            <article data-schema-task="detection">
+                <div><span>Detection</span><strong>目标级</strong></div>
+                <code>boxes ∈ R<sup>N×6</sup></code>
+                <p>Metric: IoU / AP / mAP</p>
+            </article>
+            <article data-schema-task="semantic">
+                <div><span>Semantic Segmentation</span><strong>像素级</strong></div>
+                <code>mask ∈ {0…C-1}<sup>H×W</sup></code>
+                <p>Metric: Pixel Acc / mIoU</p>
+            </article>
+            <article data-schema-task="instance">
+                <div><span>Instance Segmentation</span><strong>实例级</strong></div>
+                <code>instances = {bbox,class,mask,id}<sup>N</sup></code>
+                <p>Metric: Mask AP</p>
+            </article>
+        </section>
     </aside>
 </section>
 
-<ol class="vision-stepper" aria-label="视觉任务通用流程">
+<ol class="vision-stepper overview-stepper" aria-label="视觉任务通用流程">
     <li class="is-active"><span>1</span><div><strong>Input</strong><small>H×W×3 Image</small></div></li>
     <li><span>2</span><div><strong>Representation</strong><small>Feature Tensor</small></div></li>
     <li><span>3</span><div><strong>Prediction</strong><small>Class / Box / Mask</small></div></li>
-    <li><span>4</span><div><strong>Evaluation</strong><small>Accuracy / IoU / AP</small></div></li>
+    <li><span>4</span><div><strong>Evaluation</strong><small>Accuracy / IoU / AP / mIoU</small></div></li>
 </ol>
 {% endblock %}
