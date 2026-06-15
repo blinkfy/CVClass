@@ -358,13 +358,14 @@
         const setParamLineRegex = /^\s*(?:[-*•]\s*)?\[?SET_PARAM:\s*([^\s\|\]]+)\s*\|\s*([^\]\n]+)\]?\s*$/i;
         const setParamStartRegex = /^\s*(?:[-*•]\s*)?\[?SET_PARAM:\s*([^\s\|\]]+)\s*\|\s*$/i;
         const hlLineRegex = /^\s*(?:[-*•]\s*)?\[?H?IGHLIGHT:\s*([^\]\n]+)\]?\s*$/i;
+        const navRegex = /^\s*(?:[-*•]\s*)?\[?NAVIGATE:\s*([^\]\n]+)\]?\s*$/i;
         let pendingSetParam = null;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const isLastLine = i === lines.length - 1;
             const hasTrailingNewline = /\n$/.test(rawText);
-            const isPartialCommandTail = isLastLine && !hasTrailingNewline && /^\s*(?:[-*•]\s*)?\[?(?:SET_PARAM|H?IGHLIGHT)?[:\s\|\]]*$/i.test(line);
+            const isPartialCommandTail = isLastLine && !hasTrailingNewline && /^\s*(?:[-*•]\s*)?\[?(?:SET_PARAM|H?IGHLIGHT|NAVIGATE)?[:\s\|\]]*$/i.test(line);
 
             if (isPartialCommandTail) {
                 continue;
@@ -486,6 +487,21 @@
                     }
                 }
 
+                commandLines.push(line);
+                continue;
+            }
+
+            const navMatch = line.match(navRegex);
+            if (navMatch) {
+                const path = navMatch[1].trim();
+                const cmdKey = `NAVIGATE:${path}`;
+                if (!executedCommandsSet || !executedCommandsSet.has(cmdKey)) {
+                    executedCommandsSet?.add(cmdKey);
+                    // 稍微延迟一下以防画面突变，体验更好
+                    setTimeout(() => {
+                        window.location.href = path;
+                    }, 500); 
+                }
                 commandLines.push(line);
                 continue;
             }
