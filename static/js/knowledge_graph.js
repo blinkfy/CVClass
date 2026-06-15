@@ -5,19 +5,28 @@
     const chartElement = document.getElementById("knowledgeGraphChart");
     const chartShell = document.getElementById("kgChartShell");
     const loading = document.getElementById("kgLoading");
+    const viewTitle = document.getElementById("kgViewTitle");
     const breadcrumb = document.getElementById("kgBreadcrumb");
     const stats = document.getElementById("kgStats");
     const fullHint = document.getElementById("kgFullHint");
     const backButton = document.getElementById("kgBackButton");
     const rootButton = document.getElementById("kgRootButton");
     const fullButton = document.getElementById("kgFullButton");
+    const detailBadge = document.getElementById("kgDetailBadge");
     const infoTitle = document.getElementById("kgInfoTitle");
     const infoDescription = document.getElementById("kgInfoDescription");
+    const infoType = document.getElementById("kgInfoType");
     const infoCategory = document.getElementById("kgInfoCategory");
     const infoStatus = document.getElementById("kgInfoStatus");
+    const infoViewId = document.getElementById("kgInfoViewId");
     const infoModules = document.getElementById("kgInfoModules");
+    const metricNodes = document.getElementById("kgMetricNodes");
+    const metricLinks = document.getElementById("kgMetricLinks");
+    const metricDrillable = document.getElementById("kgMetricDrillable");
+    const metricEnterable = document.getElementById("kgMetricEnterable");
     const enterButton = document.getElementById("kgEnterButton");
     const drillButton = document.getElementById("kgDrillButton");
+    const panelFullButton = document.getElementById("kgPanelFullButton");
     const planBadge = document.getElementById("kgPlanBadge");
 
     const FULL_VIEW_ID = "full_legacy_graph";
@@ -499,17 +508,21 @@
     }
 
     function updateToolbar(view) {
-        const path = Array.isArray(view.path) && view.path.length ? view.path : [view.title || view.id];
-        breadcrumb.textContent = path.join(" / ");
-        stats.textContent = `${(view.nodes || []).length} 个节点 · ${(view.links || []).length} 条关系`;
+        const currentStats = viewStats(view);
+        viewTitle.textContent = view.focus || view.title || view.id;
+        breadcrumb.textContent = viewPath(view, state.selectedNode).join(" / ");
+        stats.textContent = `${currentStats.nodes} 个节点 · ${currentStats.links} 条关系`;
         backButton.disabled = state.historyStack.length === 0;
         rootButton.disabled = state.currentViewId === state.graphData.defaultView && state.historyStack.length === 0;
-        fullButton.disabled = state.currentViewId === FULL_VIEW_ID;
+        fullButton.disabled = false;
         fullHint.hidden = !isFullView(view);
     }
 
     function updatePanel(view, node) {
         const currentNode = node || null;
+        const currentStats = viewStats(view);
+        const focusNode = focusNodeForView(view);
+        const panelNode = currentNode || focusNode;
         const status = getEffectiveStatus(currentNode, view);
         const rawRoute = getNodeRawRoute(currentNode, view);
         const route = getNodeRoute(currentNode, view);
@@ -518,38 +531,79 @@
         const category = currentNode ? getCategoryMeta(currentNode.rawCategory || currentNode.category) : null;
         const modules = Array.isArray(currentNode?.relatedModules) ? currentNode.relatedModules : [];
 
+        metricNodes.textContent = currentStats.nodes;
+        metricLinks.textContent = currentStats.links;
+        metricDrillable.textContent = currentStats.drillable;
+        metricEnterable.textContent = currentStats.enterable;
+
+        detailBadge.className = "kg-status-pill";
+        if (canDrill) {
+            detailBadge.textContent = "可展开";
+            detailBadge.classList.add("is-expandable");
+        } else if (canEnter) {
+            detailBadge.textContent = "可进入";
+            detailBadge.classList.add("is-enterable");
+        } else if (currentNode) {
+            detailBadge.textContent = "规划中";
+            detailBadge.classList.add("is-planned");
+        } else {
+            detailBadge.textContent = "浏览中";
+        }
+
         infoTitle.textContent = currentNode ? currentNode.name : (view.title || "当前视图");
         infoDescription.textContent = currentNode
             ? (currentNode.description || "暂无节点说明。")
-            : (state.graphData.description || "从机器学习到计算机视觉任务、算法与应用的层级关系图。");
-        infoCategory.textContent = currentNode ? (currentNode.categoryLabel || category?.label || currentNode.rawCategory || "-") : "当前视图";
+            : (focusNode?.description || state.graphData.description || "从机器学习到计算机视觉任务、算法与应用的层级关系图。");
+        infoType.textContent = currentNode ? "节点" : "当前视图";
+        infoCategory.textContent = currentNode
+            ? (currentNode.categoryLabel || category?.label || currentNode.rawCategory || "-")
+            : (focusNode ? (getCategoryMeta(focusNode.category).label || focusNode.category) : "root");
         infoStatus.textContent = currentNode ? (STATUS_LABELS[status] || status || "-") : "浏览中";
+        infoViewId.textContent = view.id || state.currentViewId;
         infoModules.textContent = modules.length
             ? modules.join("、")
             : (canEnter ? (ROUTE_MODULE_LABELS[rawRoute] || "当前项目模块") : "暂无可进入模块");
 
-        enterButton.hidden = !canEnter;
-        if (canEnter) enterButton.href = route;
+        breadcrumb.textContent = viewPath(view, currentNode).join(" / ");
 
-        drillButton.hidden = !canDrill;
+        enterButton.href = canEnter ? route : "#";
+        enterButton.setAttribute("aria-disabled", canEnter ? "false" : "true");
         drillButton.disabled = !canDrill;
 
         if (currentNode && canDrill) {
-            planBadge.hidden = true;
+            planBadge.textContent = "提示：该节点可继续展开，点击“展开节点”进入下一层图谱";
         } else if (currentNode && !canEnter) {
-            planBadge.hidden = false;
-            planBadge.textContent = currentNode.route && status === "completed" ? "页面规划中" : "规划中";
+            planBadge.textContent = "提示：该节点暂无可进入模块，可继续浏览相关节点";
         } else if (currentNode && canEnter) {
-            planBadge.hidden = true;
+            planBadge.textContent = "提示：该节点已关联实验模块，可直接进入学习";
         } else {
-            planBadge.hidden = false;
-            planBadge.textContent = "点击节点查看详情";
+            planBadge.textContent = "提示：点击图谱中的节点查看详细信息";
         }
     }
 
     function findNode(view, nodeId) {
         if (!nodeId) return null;
         return (view.nodes || []).find((node) => node.id === nodeId) || null;
+    }
+
+    function viewPath(view, node) {
+        const path = Array.isArray(view.path) && view.path.length ? [...view.path] : [view.title || view.id];
+        if (node?.name && path[path.length - 1] !== node.name) path.push(node.name);
+        return path;
+    }
+
+    function viewStats(view) {
+        const nodes = view.nodes || [];
+        return {
+            nodes: nodes.length,
+            links: (view.links || []).length,
+            drillable: nodes.filter((node) => node.drillTo).length,
+            enterable: nodes.filter((node) => getEffectiveStatus(node, view) === "completed" && getNodeRawRoute(node, view)).length,
+        };
+    }
+
+    function focusNodeForView(view) {
+        return (view.nodes || []).find((node) => node.name === view.focus) || null;
     }
 
     function findDefaultNode(view) {
@@ -593,10 +647,6 @@
         state.chart.on("click", (params) => {
             if (params.dataType !== "node") return;
             const node = params.data || {};
-            if (node.drillTo) {
-                switchView(node.drillTo);
-                return;
-            }
             renderView(state.currentViewId, node.id);
         });
     }
@@ -605,8 +655,12 @@
         backButton.addEventListener("click", goBack);
         rootButton.addEventListener("click", goRoot);
         fullButton.addEventListener("click", () => switchView(FULL_VIEW_ID));
+        panelFullButton.addEventListener("click", () => switchView(FULL_VIEW_ID));
         drillButton.addEventListener("click", () => {
             if (state.selectedNode?.drillTo) switchView(state.selectedNode.drillTo);
+        });
+        enterButton.addEventListener("click", (event) => {
+            if (enterButton.getAttribute("aria-disabled") === "true") event.preventDefault();
         });
         window.addEventListener("resize", () => state.chart?.resize());
 
