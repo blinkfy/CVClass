@@ -26,6 +26,11 @@
         edge: "edge-contour",
         feature: "feature-panorama",
         cnn: "cnn-learning",
+        "vision_tasks:overview": "vision-task-overview",
+        "vision_tasks:detection": "object-detection",
+        "vision_tasks:semantic": "semantic-segmentation",
+        "vision_tasks:instance": "instance-segmentation",
+        frontier: "frontier",
     };
 
     function readLearnedModules() {
@@ -49,6 +54,22 @@
         saveLearnedModules(learnedModules);
     }
 
+    // Auto mark as learned on page load
+    (function autoMarkCurrentPage() {
+        const ap = window.CVCLASS_ACTIVE_PAGE;
+        const asp = window.CVCLASS_ACTIVE_SUB_PAGE;
+        if (!ap) return;
+
+        let moduleId = activePageModuleMap[ap];
+        if (!moduleId && asp) {
+            moduleId = activePageModuleMap[`${ap}:${asp}`];
+        }
+
+        if (moduleId) {
+            setModuleLearned(moduleId);
+        }
+    })();
+
     function renderLearnedModules() {
         const learnedModules = readLearnedModules();
 
@@ -67,12 +88,7 @@
         });
     }
 
-    document.querySelectorAll("[data-learn-link]").forEach((link) => {
-        link.addEventListener("click", () => {
-            setModuleLearned(link.dataset.learnLink);
-            renderLearnedModules();
-        });
-    });
+    renderLearnedModules();
 
     document.querySelectorAll("[data-learn-module]").forEach((card) => {
         const link = card.querySelector("a[data-learn-link]");
@@ -83,8 +99,6 @@
         card.tabIndex = 0;
 
         function openModule() {
-            setModuleLearned(link.dataset.learnLink);
-            renderLearnedModules();
             window.location.href = link.href;
         }
 

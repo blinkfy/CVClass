@@ -1,32 +1,20 @@
 {
-  "version": 2,
-  "default_sample": "city_street_01",
+  "version": 3,
+  "default_sample": "crosswalk_people",
   "samples": [
     {
-      "id": "city_street_01",
-      "name": "City Street Sample 01",
-      "short_name": "城市街道",
-      "image": "/static/assets/img/home06.png",
-      "render_mode": "css_scene",
-      "width": 1024,
-      "height": 768,
-      "scene": {
-        "variant": "city-street",
-        "palette": {
-          "sky": "#9CC9F5",
-          "building": "#64748B",
-          "building_alt": "#94A3B8",
-          "road": "#475569",
-          "vegetation": "#65A30D",
-          "vehicle": "#1D4ED8"
-        }
-      },
+      "id": "crosswalk_people",
+      "name": "Crosswalk People",
+      "short_name": "人行横道",
+      "image": "/static/assets/img/crosswalk_people.jpg",
+      "width": 640,
+      "height": 427,
       "classification": {
         "top5": [
           {"label": "城市街道", "score": 0.862},
-          {"label": "商业区", "score": 0.071},
-          {"label": "住宅区", "score": 0.031},
-          {"label": "高速公路", "score": 0.021},
+          {"label": "交通场景", "score": 0.071},
+          {"label": "商业街区", "score": 0.031},
+          {"label": "人行横道", "score": 0.021},
           {"label": "其他", "score": 0.015}
         ]
       },
@@ -39,201 +27,176 @@
           {"name": "bicycle", "color": "#06B6D4"}
         ],
         "boxes": [
-          {"id": 1, "class": "person", "score": 0.93, "bbox": [155, 285, 235, 622], "color": "#EF4444"},
-          {"id": 2, "class": "car", "score": 0.88, "bbox": [555, 430, 760, 585], "color": "#2563EB"},
-          {"id": 3, "class": "bus", "score": 0.91, "bbox": [82, 315, 325, 610], "color": "#A855F7"},
-          {"id": 4, "class": "traffic light", "score": 0.95, "bbox": [745, 118, 795, 292], "color": "#EAB308"},
-          {"id": 5, "class": "bicycle", "score": 0.74, "bbox": [390, 455, 535, 622], "color": "#06B6D4"},
-          {"id": 6, "class": "person", "score": 0.42, "bbox": [850, 330, 920, 615], "color": "#EF4444"}
+          {"id": 1, "class": "person", "score": 0.93, "bbox": [28, 174, 105, 417], "color": "#EF4444"},
+          {"id": 2, "class": "person", "score": 0.89, "bbox": [122, 148, 188, 413], "color": "#EF4444"},
+          {"id": 3, "class": "person", "score": 0.86, "bbox": [265, 168, 343, 420], "color": "#EF4444"},
+          {"id": 4, "class": "person", "score": 0.78, "bbox": [448, 150, 526, 417], "color": "#EF4444"},
+          {"id": 5, "class": "car", "score": 0.82, "bbox": [520, 118, 636, 272], "color": "#2563EB"},
+          {"id": 6, "class": "bus", "score": 0.75, "bbox": [390, 60, 566, 208], "color": "#A855F7"},
+          {"id": 7, "class": "traffic light", "score": 0.95, "bbox": [26, 48, 71, 128], "color": "#EAB308"},
+          {"id": 8, "class": "bicycle", "score": 0.58, "bbox": [8, 293, 112, 424], "color": "#06B6D4"}
         ]
       },
       "semantic": {
+        "miou": 0.786,
         "classes": [
           {"id": 0, "name": "road", "cn": "道路", "color": "#7E3F98"},
-          {"id": 1, "name": "building", "cn": "建筑物", "color": "#6B7280"},
-          {"id": 2, "name": "sky", "cn": "天空", "color": "#60A5FA"},
-          {"id": 3, "name": "vegetation", "cn": "植被", "color": "#84CC16"},
-          {"id": 4, "name": "person", "cn": "行人", "color": "#EF4444"},
-          {"id": 5, "name": "vehicle", "cn": "车辆", "color": "#2563EB"}
+          {"id": 1, "name": "sidewalk", "cn": "人行道", "color": "#C084FC"},
+          {"id": 2, "name": "building", "cn": "建筑", "color": "#6B7280"},
+          {"id": 3, "name": "sky", "cn": "天空", "color": "#60A5FA"},
+          {"id": 4, "name": "vegetation", "cn": "植被", "color": "#84CC16"},
+          {"id": 5, "name": "person", "cn": "行人", "color": "#EF4444"},
+          {"id": 6, "name": "vehicle", "cn": "车辆", "color": "#2563EB"},
+          {"id": 7, "name": "traffic light", "cn": "交通灯", "color": "#EAB308"}
         ],
         "regions": [
-          {"class_id": 2, "polygon": [[0,0],[1024,0],[1024,275],[780,250],[680,330],[350,330],[220,255],[0,295]], "opacity": 0.55},
-          {"class_id": 1, "polygon": [[0,70],[245,35],[340,335],[250,490],[0,475]], "opacity": 0.66},
-          {"class_id": 1, "polygon": [[785,45],[1024,95],[1024,500],[760,455],[690,325]], "opacity": 0.66},
-          {"class_id": 3, "polygon": [[0,220],[215,235],[345,360],[265,525],[0,505]], "opacity": 0.64},
-          {"class_id": 3, "polygon": [[1024,215],[820,225],[690,350],[765,520],[1024,495]], "opacity": 0.64},
-          {"class_id": 0, "polygon": [[345,330],[690,330],[1024,768],[0,768]], "opacity": 0.7},
-          {"class_id": 5, "polygon": [[555,430],[760,430],[785,560],[545,585]], "opacity": 0.8},
-          {"class_id": 5, "polygon": [[82,315],[325,315],[345,600],[70,610]], "opacity": 0.8},
-          {"class_id": 4, "polygon": [[155,285],[220,285],[235,622],[145,622]], "opacity": 0.82},
-          {"class_id": 4, "polygon": [[850,330],[910,330],[925,615],[842,615]], "opacity": 0.82}
-        ],
-        "miou": 0.786
+          {"class": "sky", "polygon": [[0, 0], [640, 0], [640, 72], [0, 88]], "opacity": 0.4},
+          {"class": "building", "polygon": [[0, 0], [640, 0], [640, 198], [510, 185], [380, 126], [250, 112], [0, 145]], "opacity": 0.48},
+          {"class": "vegetation", "polygon": [[0, 118], [112, 102], [188, 168], [128, 238], [0, 252]], "opacity": 0.5},
+          {"class": "sidewalk", "polygon": [[0, 258], [640, 236], [640, 427], [0, 427]], "opacity": 0.48},
+          {"class": "road", "polygon": [[0, 282], [640, 252], [640, 427], [0, 427]], "opacity": 0.52},
+          {"class": "vehicle", "polygon": [[390, 60], [566, 58], [590, 198], [372, 212]], "opacity": 0.55},
+          {"class": "vehicle", "polygon": [[520, 118], [636, 112], [640, 270], [520, 278]], "opacity": 0.55},
+          {"class": "person", "polygon": [[28, 174], [105, 174], [112, 417], [25, 417]], "opacity": 0.62},
+          {"class": "person", "polygon": [[122, 148], [188, 148], [196, 413], [112, 413]], "opacity": 0.62},
+          {"class": "person", "polygon": [[265, 168], [343, 168], [350, 420], [258, 420]], "opacity": 0.62},
+          {"class": "person", "polygon": [[448, 150], [526, 150], [532, 417], [440, 417]], "opacity": 0.62},
+          {"class": "traffic light", "polygon": [[26, 48], [71, 48], [72, 128], [24, 128]], "opacity": 0.65}
+        ]
       },
       "instance": {
         "maskAP": 0.613,
         "instances": [
-          {"id": 1, "class": "person", "score": 0.91, "bbox": [155,285,235,622], "color": "#F97316", "mask": [[178,285],[212,300],[226,405],[235,500],[220,622],[168,618],[154,490],[160,355]]},
-          {"id": 2, "class": "car", "score": 0.87, "bbox": [555,430,760,585], "color": "#22C55E", "mask": [[575,478],[615,438],[716,430],[758,492],[744,565],[575,585],[548,530]]},
-          {"id": 3, "class": "bus", "score": 0.90, "bbox": [82,315,325,610], "color": "#A855F7", "mask": [[105,330],[278,318],[323,385],[315,574],[258,610],[88,592],[78,390]]},
-          {"id": 4, "class": "bicycle", "score": 0.72, "bbox": [390,455,535,622], "color": "#06B6D4", "mask": [[404,515],[432,465],[475,493],[510,458],[535,520],[515,603],[455,622],[390,585]]}
+          {"id": 1, "class": "person", "score": 0.93, "bbox": [28, 174, 105, 417], "color": "#F97316", "polygon": [[48, 174], [86, 182], [103, 278], [101, 417], [42, 417], [28, 278]]},
+          {"id": 2, "class": "person", "score": 0.90, "bbox": [122, 148, 188, 413], "color": "#22C55E", "polygon": [[145, 148], [177, 160], [188, 279], [180, 413], [132, 412], [120, 260]]},
+          {"id": 3, "class": "person", "score": 0.86, "bbox": [265, 168, 343, 420], "color": "#8B5CF6", "polygon": [[292, 168], [330, 181], [343, 312], [333, 420], [278, 418], [265, 293]]},
+          {"id": 4, "class": "car", "score": 0.82, "bbox": [520, 118, 636, 272], "color": "#2563EB", "polygon": [[520, 156], [562, 121], [624, 118], [636, 214], [615, 270], [528, 260]]},
+          {"id": 5, "class": "traffic light", "score": 0.95, "bbox": [26, 48, 71, 128], "color": "#EAB308", "polygon": [[28, 48], [70, 48], [71, 128], [25, 128]]}
         ]
       }
     },
     {
-      "id": "campus_crossing_02",
-      "name": "Campus Crossing Sample 02",
-      "short_name": "校园路口",
-      "image": "/static/assets/img/camera.png",
-      "render_mode": "css_scene",
-      "width": 960,
-      "height": 640,
-      "scene": {
-        "variant": "campus-crossing",
-        "palette": {
-          "sky": "#BFDBFE",
-          "building": "#A16207",
-          "building_alt": "#D6D3D1",
-          "road": "#4B5563",
-          "vegetation": "#16A34A",
-          "vehicle": "#DC2626"
-        }
-      },
+      "id": "bangkok_traffic",
+      "name": "Bangkok Traffic",
+      "short_name": "曼谷交通",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 355,
+      "height": 355,
       "classification": {
         "top5": [
-          {"label": "校园道路", "score": 0.794},
-          {"label": "城市街道", "score": 0.103},
-          {"label": "公园区域", "score": 0.052},
-          {"label": "住宅区", "score": 0.031},
-          {"label": "其他", "score": 0.020}
+          {"label": "拥堵道路", "score": 0.804},
+          {"label": "交通场景", "score": 0.116},
+          {"label": "城市街道", "score": 0.051},
+          {"label": "高速公路", "score": 0.019},
+          {"label": "其他", "score": 0.010}
+        ]
+      },
+      "detection": {
+        "classes": [
+          {"name": "car", "color": "#2563EB"},
+          {"name": "bus", "color": "#A855F7"},
+          {"name": "truck", "color": "#F97316"},
+          {"name": "motorcycle", "color": "#06B6D4"},
+          {"name": "traffic light", "color": "#EAB308"}
+        ],
+        "boxes": [
+          {"id": 1, "class": "car", "score": 0.94, "bbox": [132, 225, 212, 309], "color": "#2563EB"},
+          {"id": 2, "class": "bus", "score": 0.91, "bbox": [0, 226, 108, 355], "color": "#A855F7"},
+          {"id": 3, "class": "truck", "score": 0.86, "bbox": [247, 136, 334, 230], "color": "#F97316"},
+          {"id": 4, "class": "car", "score": 0.82, "bbox": [190, 192, 265, 260], "color": "#2563EB"},
+          {"id": 5, "class": "motorcycle", "score": 0.74, "bbox": [103, 120, 145, 188], "color": "#06B6D4"}
+        ]
+      },
+      "semantic": null,
+      "instance": null
+    },
+    {
+      "id": "classroom_students",
+      "name": "Classroom Students",
+      "short_name": "课堂学生",
+      "image": "/static/assets/img/classroom_students.jpg",
+      "width": 1200,
+      "height": 800,
+      "classification": {
+        "top5": [
+          {"label": "课堂教学", "score": 0.834},
+          {"label": "室内多人", "score": 0.092},
+          {"label": "学习场景", "score": 0.041},
+          {"label": "会议室", "score": 0.021},
+          {"label": "其他", "score": 0.012}
         ]
       },
       "detection": {
         "classes": [
           {"name": "person", "color": "#EF4444"},
-          {"name": "car", "color": "#2563EB"},
-          {"name": "bus", "color": "#A855F7"},
-          {"name": "traffic light", "color": "#EAB308"},
-          {"name": "bicycle", "color": "#06B6D4"}
+          {"name": "chair", "color": "#22C55E"},
+          {"name": "desk", "color": "#F97316"},
+          {"name": "screen", "color": "#2563EB"},
+          {"name": "bag", "color": "#A855F7"}
         ],
         "boxes": [
-          {"id": 1, "class": "person", "score": 0.96, "bbox": [135,225,215,535], "color": "#EF4444"},
-          {"id": 2, "class": "person", "score": 0.84, "bbox": [770,250,845,545], "color": "#EF4444"},
-          {"id": 3, "class": "car", "score": 0.86, "bbox": [505,350,695,505], "color": "#2563EB"},
-          {"id": 4, "class": "bus", "score": 0.67, "bbox": [55,265,290,520], "color": "#A855F7"},
-          {"id": 5, "class": "traffic light", "score": 0.92, "bbox": [700,82,750,235], "color": "#EAB308"},
-          {"id": 6, "class": "bicycle", "score": 0.46, "bbox": [350,380,485,535], "color": "#06B6D4"}
+          {"id": 1, "class": "person", "score": 0.94, "bbox": [545, 255, 610, 410], "color": "#EF4444"},
+          {"id": 2, "class": "person", "score": 0.91, "bbox": [1020, 372, 1120, 672], "color": "#EF4444"},
+          {"id": 3, "class": "person", "score": 0.89, "bbox": [210, 492, 365, 790], "color": "#EF4444"},
+          {"id": 4, "class": "screen", "score": 0.87, "bbox": [0, 163, 128, 322], "color": "#2563EB"},
+          {"id": 5, "class": "desk", "score": 0.82, "bbox": [370, 550, 705, 785], "color": "#F97316"},
+          {"id": 6, "class": "chair", "score": 0.73, "bbox": [960, 505, 1128, 785], "color": "#22C55E"}
         ]
       },
-      "semantic": {
-        "classes": [
-          {"id": 0, "name": "road", "cn": "道路", "color": "#7E3F98"},
-          {"id": 1, "name": "building", "cn": "建筑物", "color": "#6B7280"},
-          {"id": 2, "name": "sky", "cn": "天空", "color": "#60A5FA"},
-          {"id": 3, "name": "vegetation", "cn": "植被", "color": "#84CC16"},
-          {"id": 4, "name": "person", "cn": "行人", "color": "#EF4444"},
-          {"id": 5, "name": "vehicle", "cn": "车辆", "color": "#2563EB"}
-        ],
-        "regions": [
-          {"class_id": 2, "polygon": [[0,0],[960,0],[960,225],[695,210],[610,285],[325,285],[225,215],[0,245]], "opacity": 0.55},
-          {"class_id": 1, "polygon": [[0,60],[225,30],[315,295],[210,430],[0,410]], "opacity": 0.66},
-          {"class_id": 1, "polygon": [[735,30],[960,70],[960,430],[720,400],[640,285]], "opacity": 0.66},
-          {"class_id": 3, "polygon": [[0,175],[210,190],[325,300],[235,450],[0,435]], "opacity": 0.64},
-          {"class_id": 3, "polygon": [[960,170],[760,185],[620,305],[700,445],[960,420]], "opacity": 0.64},
-          {"class_id": 0, "polygon": [[325,280],[620,280],[960,640],[0,640]], "opacity": 0.7},
-          {"class_id": 5, "polygon": [[505,350],[695,350],[710,485],[495,505]], "opacity": 0.8},
-          {"class_id": 4, "polygon": [[135,225],[205,225],[215,535],[128,535]], "opacity": 0.82},
-          {"class_id": 4, "polygon": [[770,250],[835,250],[845,545],[763,545]], "opacity": 0.82}
-        ],
-        "miou": 0.742
-      },
+      "semantic": null,
       "instance": {
         "maskAP": 0.587,
         "instances": [
-          {"id": 1, "class": "person", "score": 0.94, "bbox": [135,225,215,535], "color": "#F97316", "mask": [[158,225],[195,240],[208,350],[215,450],[202,535],[148,530],[134,415],[140,290]]},
-          {"id": 2, "class": "person", "score": 0.82, "bbox": [770,250,845,545], "color": "#EC4899", "mask": [[792,250],[826,267],[838,375],[845,470],[830,545],[780,540],[768,430],[775,310]]},
-          {"id": 3, "class": "car", "score": 0.85, "bbox": [505,350,695,505], "color": "#22C55E", "mask": [[525,395],[565,355],[650,350],[694,405],[680,485],[520,505],[496,450]]},
-          {"id": 4, "class": "bus", "score": 0.65, "bbox": [55,265,290,520], "color": "#A855F7", "mask": [[75,280],[252,270],[288,330],[280,485],[225,520],[65,505],[52,335]]}
+          {"id": 1, "class": "person", "score": 0.94, "bbox": [545, 255, 610, 410], "color": "#F97316", "polygon": [[565, 255], [598, 266], [610, 338], [600, 410], [552, 408], [542, 335]]},
+          {"id": 2, "class": "person", "score": 0.91, "bbox": [1020, 372, 1120, 672], "color": "#22C55E", "polygon": [[1060, 372], [1100, 390], [1120, 535], [1102, 672], [1035, 662], [1018, 510]]},
+          {"id": 3, "class": "person", "score": 0.89, "bbox": [210, 492, 365, 790], "color": "#8B5CF6", "polygon": [[260, 492], [335, 520], [365, 670], [340, 790], [230, 780], [210, 620]]},
+          {"id": 4, "class": "screen", "score": 0.87, "bbox": [0, 163, 128, 322], "color": "#2563EB", "polygon": [[0, 163], [128, 164], [126, 322], [0, 320]]},
+          {"id": 5, "class": "desk", "score": 0.82, "bbox": [370, 550, 705, 785], "color": "#EAB308", "polygon": [[382, 560], [690, 552], [705, 735], [650, 785], [390, 770]]}
         ]
       }
     },
     {
-      "id": "river_road_03",
-      "name": "River Road Sample 03",
-      "short_name": "滨河道路",
-      "image": "/static/assets/img/boat_1.jpeg",
-      "render_mode": "css_scene",
-      "width": 1280,
-      "height": 720,
-      "scene": {
-        "variant": "river-road",
-        "palette": {
-          "sky": "#BAE6FD",
-          "building": "#475569",
-          "building_alt": "#CBD5E1",
-          "road": "#334155",
-          "vegetation": "#15803D",
-          "vehicle": "#F97316"
-        }
-      },
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "short_name": "教室设备",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "width": 3840,
+      "height": 2880,
       "classification": {
         "top5": [
-          {"label": "滨河道路", "score": 0.821},
-          {"label": "城市街道", "score": 0.083},
-          {"label": "公园区域", "score": 0.047},
-          {"label": "高速公路", "score": 0.029},
-          {"label": "其他", "score": 0.020}
+          {"label": "教室设备", "score": 0.812},
+          {"label": "学习空间", "score": 0.111},
+          {"label": "室内场景", "score": 0.046},
+          {"label": "办公空间", "score": 0.021},
+          {"label": "其他", "score": 0.010}
         ]
       },
-      "detection": {
-        "classes": [
-          {"name": "person", "color": "#EF4444"},
-          {"name": "car", "color": "#2563EB"},
-          {"name": "bus", "color": "#A855F7"},
-          {"name": "traffic light", "color": "#EAB308"},
-          {"name": "bicycle", "color": "#06B6D4"}
-        ],
-        "boxes": [
-          {"id": 1, "class": "person", "score": 0.89, "bbox": [205,250,285,580], "color": "#EF4444"},
-          {"id": 2, "class": "car", "score": 0.94, "bbox": [690,395,930,555], "color": "#2563EB"},
-          {"id": 3, "class": "bus", "score": 0.81, "bbox": [105,300,390,585], "color": "#A855F7"},
-          {"id": 4, "class": "traffic light", "score": 0.87, "bbox": [930,92,985,250], "color": "#EAB308"},
-          {"id": 5, "class": "bicycle", "score": 0.69, "bbox": [485,420,655,590], "color": "#06B6D4"},
-          {"id": 6, "class": "person", "score": 0.38, "bbox": [1070,275,1145,590], "color": "#EF4444"}
-        ]
-      },
+      "detection": null,
       "semantic": {
+        "miou": 0.764,
         "classes": [
-          {"id": 0, "name": "road", "cn": "道路", "color": "#7E3F98"},
-          {"id": 1, "name": "building", "cn": "建筑物", "color": "#6B7280"},
-          {"id": 2, "name": "sky", "cn": "天空", "color": "#60A5FA"},
-          {"id": 3, "name": "vegetation", "cn": "植被", "color": "#84CC16"},
-          {"id": 4, "name": "person", "cn": "行人", "color": "#EF4444"},
-          {"id": 5, "name": "vehicle", "cn": "车辆", "color": "#2563EB"}
+          {"id": 0, "name": "floor", "cn": "地面", "color": "#A16207"},
+          {"id": 1, "name": "wall", "cn": "墙面", "color": "#93C5FD"},
+          {"id": 2, "name": "window", "cn": "窗户", "color": "#60A5FA"},
+          {"id": 3, "name": "table", "cn": "桌子", "color": "#F59E0B"},
+          {"id": 4, "name": "chair", "cn": "椅子", "color": "#22C55E"},
+          {"id": 5, "name": "board", "cn": "白板", "color": "#E5E7EB"},
+          {"id": 6, "name": "cabinet", "cn": "柜子", "color": "#8B5CF6"}
         ],
         "regions": [
-          {"class_id": 2, "polygon": [[0,0],[1280,0],[1280,255],[965,230],[850,310],[430,310],[285,245],[0,280]], "opacity": 0.55},
-          {"class_id": 1, "polygon": [[0,50],[300,35],[420,320],[305,485],[0,470]], "opacity": 0.66},
-          {"class_id": 1, "polygon": [[970,30],[1280,70],[1280,480],[955,445],[850,305]], "opacity": 0.66},
-          {"class_id": 3, "polygon": [[0,190],[285,210],[430,335],[325,515],[0,495]], "opacity": 0.64},
-          {"class_id": 3, "polygon": [[1280,180],[1010,205],[825,335],[925,515],[1280,485]], "opacity": 0.64},
-          {"class_id": 0, "polygon": [[430,305],[850,305],[1280,720],[0,720]], "opacity": 0.7},
-          {"class_id": 5, "polygon": [[690,395],[930,395],[948,535],[675,555]], "opacity": 0.8},
-          {"class_id": 5, "polygon": [[105,300],[390,300],[410,560],[92,585]], "opacity": 0.8},
-          {"class_id": 4, "polygon": [[205,250],[275,250],[285,580],[198,580]], "opacity": 0.82},
-          {"class_id": 4, "polygon": [[1070,275],[1137,275],[1145,590],[1062,590]], "opacity": 0.82}
-        ],
-        "miou": 0.768
-      },
-      "instance": {
-        "maskAP": 0.604,
-        "instances": [
-          {"id": 1, "class": "person", "score": 0.88, "bbox": [205,250,285,580], "color": "#F97316", "mask": [[228,250],[264,265],[278,375],[285,495],[270,580],[218,575],[203,460],[210,315]]},
-          {"id": 2, "class": "car", "score": 0.92, "bbox": [690,395,930,555], "color": "#22C55E", "mask": [[715,445],[765,402],[875,395],[928,455],[910,535],[705,555],[678,495]]},
-          {"id": 3, "class": "bus", "score": 0.79, "bbox": [105,300,390,585], "color": "#A855F7", "mask": [[130,315],[340,305],[388,370],[378,545],[310,585],[115,570],[102,375]]},
-          {"id": 4, "class": "bicycle", "score": 0.67, "bbox": [485,420,655,590], "color": "#06B6D4", "mask": [[500,485],[535,430],[580,462],[620,425],[655,490],[632,568],[565,590],[480,550]]}
+          {"class": "wall", "polygon": [[0, 0], [3840, 0], [3840, 1590], [0, 1610]], "opacity": 0.45},
+          {"class": "window", "polygon": [[265, 420], [935, 405], [925, 1125], [260, 1110]], "opacity": 0.55},
+          {"class": "window", "polygon": [[1180, 415], [1735, 410], [1725, 1125], [1180, 1120]], "opacity": 0.55},
+          {"class": "board", "polygon": [[2645, 940], [3510, 820], [3520, 1565], [2630, 1610]], "opacity": 0.62},
+          {"class": "cabinet", "polygon": [[940, 1340], [1640, 1280], [1665, 1975], [950, 2040]], "opacity": 0.58},
+          {"class": "floor", "polygon": [[0, 1660], [3840, 1600], [3840, 2880], [0, 2880]], "opacity": 0.5},
+          {"class": "table", "polygon": [[2460, 1940], [3840, 1850], [3840, 2390], [2360, 2340]], "opacity": 0.58},
+          {"class": "table", "polygon": [[0, 2060], [900, 2050], [760, 2550], [0, 2580]], "opacity": 0.58},
+          {"class": "chair", "polygon": [[2205, 1770], [2465, 1775], [2520, 2240], [2130, 2245]], "opacity": 0.62},
+          {"class": "chair", "polygon": [[3060, 1825], [3310, 1810], [3355, 2405], [2965, 2420]], "opacity": 0.62}
         ]
-      }
+      },
+      "instance": null
     }
   ]
 }

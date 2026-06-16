@@ -92,12 +92,13 @@
                 <a class="{{ 'active' if active_sub_page|default('') == 'conv_gradient_lab' else '' }}" href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
             </div>
 
-            <div class="sidebar-category">高级视觉任务</div>
-            <div class="sidebar-subnav" aria-label="高级视觉任务子页面">
-                <a class="{{ 'active' if active_sub_page|default('') == 'overview' and active_page|default('') == 'vision_tasks' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">06 视觉任务谱系</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">07 目标检测</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">08 语义分割</a>
-                <a class="{{ 'active' if active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">09 实例分割</a>
+            <div class="sidebar-category">高层视觉</div>
+            <a class="{{ 'active' if active_page == 'vision_tasks' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">视觉任务</a>
+            <div class="sidebar-subnav" aria-label="视觉任务子页面">
+                <a class="{{ 'active' if active_sub_page|default('') == 'overview' and active_page|default('') == 'vision_tasks' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">任务谱系</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">语义分割</a>
+                <a class="{{ 'active' if active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">实例分割</a>
             </div>
         </nav>
     </aside>

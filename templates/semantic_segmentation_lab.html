@@ -2,72 +2,79 @@
 
 {% block vision_badge %}STATION 08 · SEMANTIC SEGMENTATION{% endblock %}
 {% block vision_title %}语义分割：Pixel-wise Mask{% endblock %}
-{% block vision_subtitle %}从 H×W×C logits 经像素级 argmax 得到类别索引图，并以颜色映射构成 Semantic Mask。{% endblock %}
+{% block vision_subtitle %}在真实图像上叠加由预设 polygon 生成的 Semantic Mask，理解 H×W×C logits 到像素类别图的转换。{% endblock %}
 
 {% block vision_content %}
-<section class="vision-workbench" aria-label="语义分割教学工作台">
+<section class="vision-workbench semantic-lab-workbench" data-semantic-lab aria-label="语义分割教学工作台">
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>Mask 参数</h3><p>Preset Controls</p></div>
+            <div><h3>Mask 参数</h3><p>Input &amp; Params</p></div>
         </div>
         <label class="vision-field">
-            <span>样例场景</span>
-            <select disabled><option>Urban Scene · Sample 01</option></select>
+            <span>样例图选择</span>
+            <select data-sem-sample></select>
         </label>
-        <label class="vision-field">
-            <span>Mask Opacity <output>65%</output></span>
-            <input type="range" min="0" max="100" value="65" disabled>
-        </label>
-        <div class="vision-class-filter" aria-label="语义类别图例">
-            <span><i class="class-swatch class-swatch--road"></i>road</span>
-            <span><i class="class-swatch class-swatch--building"></i>building</span>
-            <span><i class="class-swatch class-swatch--vehicle"></i>vehicle</span>
-            <span><i class="class-swatch class-swatch--sky"></i>sky</span>
+        <div class="overview-segmented-control semantic-view-modes">
+            <button class="is-active" type="button" data-sem-mode="overlay">叠加图</button>
+            <button type="button" data-sem-mode="image">原图</button>
+            <button type="button" data-sem-mode="mask">纯 mask</button>
         </div>
+        <label class="vision-field">
+            <span>Mask Opacity <output data-sem-opacity-output>65%</output></span>
+            <input data-sem-opacity type="range" min="0" max="100" value="65">
+        </label>
+        <div class="vision-control-stack" data-sem-class-filter></div>
         <div class="vision-shape-card">
             <span>Logits Tensor</span>
-            <strong>H × W × C</strong>
-            <small>每个像素位置包含 C 个类别分数。</small>
+            <strong>H × W × C → argmax → H × W</strong>
+            <small>当前页面使用 JSON polygon 生成 mask，后续可替换为 PNG mask。</small>
         </div>
     </aside>
 
     <div class="vision-stage-panel">
         <div class="vision-stage-header">
-            <div><span>PIXEL-WISE OUTPUT</span><h3>Semantic Mask 预览</h3></div>
-            <span class="vision-status-chip">ARGMAX VIEW</span>
+            <div><span>VISUALIZATION</span><h3>Semantic Mask Overlay</h3></div>
+            <span class="vision-status-chip" data-sem-miou>mIoU --</span>
         </div>
-        <div class="semantic-stage" role="img" aria-label="道路场景语义分割颜色掩码示意">
-            <div class="semantic-region semantic-region--sky"></div>
-            <div class="semantic-region semantic-region--building-left"></div>
-            <div class="semantic-region semantic-region--building-right"></div>
-            <div class="semantic-region semantic-region--road"></div>
-            <div class="semantic-region semantic-region--vehicle"></div>
-            <div class="semantic-pixel-probe">
-                <span>(x=184, y=126)</span>
-                <strong>class_id = 2 · vehicle</strong>
+        <div class="vision-image-stage semantic-real-stage" data-sem-stage>
+            <img data-sem-image alt="语义分割样例图">
+            <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-sem-missing></span></div>
+            <canvas data-sem-canvas></canvas>
+            <div class="semantic-probe-card" data-sem-probe></div>
+        </div>
+        <div class="semantic-detail-grid">
+            <div class="vision-panel-lite">
+                <h4>类别图例</h4>
+                <div class="overview-legend" data-sem-legend></div>
+            </div>
+            <div class="vision-panel-lite">
+                <h4>类别占比</h4>
+                <div class="semantic-ratio-list" data-sem-ratios></div>
             </div>
         </div>
-        <div class="vision-stage-caption">同一类别的不同目标共享相同类别颜色，不保留实例身份。</div>
+        <div class="semantic-tensor-flow">
+            <div><strong>H × W × C logits</strong><span>每个像素 C 个类别分数</span></div>
+            <b>→</b>
+            <div><strong>argmax</strong><span>选择最大类别索引</span></div>
+            <b>→</b>
+            <div><strong>Semantic Mask</strong><span>H × W class map</span></div>
+        </div>
     </div>
 
     <aside class="vision-panel vision-notes-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>Process Notes</h3><p>Pixel Classification</p></div>
-        </div>
-        <div class="vision-formula-card">
-            <span>Pixel-wise Decision</span>
-            <strong>mask[h,w] = argmax<sub>c</sub> logits[h,w,c]</strong>
+            <div><h3>Process Notes</h3><p>Pixel Probe</p></div>
         </div>
         <div class="vision-note-list">
-            <article><span>01</span><div><strong>Logits</strong><p>网络输出与原图空间对齐的类别分数张量。</p></div></article>
-            <article><span>02</span><div><strong>Class Map</strong><p>argmax 将每个像素压缩为一个 class_id。</p></div></article>
-            <article><span>03</span><div><strong>Metric</strong><p>按类别统计 intersection 与 union，再求 mIoU。</p></div></article>
+            <article><span>01</span><div><strong>原图 / 叠加 / 纯 mask</strong><p>三种视图共享同一组 region polygon。</p></div></article>
+            <article><span>02</span><div><strong>类别筛选</strong><p>取消勾选后，该类别 mask 不参与显示和占比统计。</p></div></article>
+            <article><span>03</span><div><strong>像素探针</strong><p>移动鼠标查看 Pixel、RGB、Class ID、Class Name 和 Probability。</p></div></article>
         </div>
         <div class="vision-output-schema">
             <span>输出结构</span>
-            <code>semantic_mask: uint8[H][W]</code>
+            <code>H × W class map / H × W × C logits</code>
         </div>
     </aside>
 </section>
@@ -76,6 +83,6 @@
     <li class="is-active"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
     <li><span>2</span><div><strong>Logits</strong><small>H×W×C</small></div></li>
     <li><span>3</span><div><strong>Argmax</strong><small>Class Index Map</small></div></li>
-    <li><span>4</span><div><strong>Semantic Mask</strong><small>Color Overlay + mIoU</small></div></li>
+    <li><span>4</span><div><strong>Semantic Mask</strong><small>Overlay + mIoU</small></div></li>
 </ol>
 {% endblock %}

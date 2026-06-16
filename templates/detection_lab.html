@@ -1,83 +1,172 @@
 {% extends "vision_tasks_base.html" %}
 
-{% block vision_badge %}STATION 07 · OBJECT DETECTION{% endblock %}
+{% block vision_badge %}STATION 06-09 · ADVANCED VISION TASKS{% endblock %}
 {% block vision_title %}目标检测：IoU 与 NMS{% endblock %}
-{% block vision_subtitle %}观察候选框如何经过置信度筛选、IoU 重叠度计算与 NMS 非极大值抑制，形成最终检测结果。{% endblock %}
+{% block vision_subtitle %}在真实图片上使用 ONNX Runtime 运行 YOLOv8，逐步观察候选框解码、置信度过滤与 NMS 非极大值抑制的完整流程。{% endblock %}
 
 {% block vision_content %}
-<section class="vision-workbench" aria-label="目标检测教学工作台">
+<div data-detection-lab>
+
+<!-- ========== Source Readout (fallback hint) ========== -->
+<div data-det-source-container style="display:none">
+    <div class="vision-info-callout" data-det-source-readout>
+        <span>结果来源：</span><strong data-det-source-note></strong>
+    </div>
+</div>
+
+<!-- ========== Main Workbench ========== -->
+<section class="vision-workbench detection-workbench" aria-label="目标检测工作台">
+
+    <!-- ===== Left Control Panel ===== -->
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>检测参数</h3><p>Preset Controls</p></div>
+            <div><h3>检测参数</h3><p>INPUT &amp; PARAMS</p></div>
         </div>
+
+        <!-- Sample selector -->
         <label class="vision-field">
             <span>样例场景</span>
-            <select disabled>
-                <option>Street Objects · Sample 01</option>
+            <select data-det-sample>
+                <option>加载中…</option>
             </select>
         </label>
-        <label class="vision-field">
-            <span>Confidence Threshold <output>0.50</output></span>
-            <input type="range" min="0" max="100" value="50" disabled>
-        </label>
-        <label class="vision-field">
-            <span>NMS IoU Threshold <output>0.45</output></span>
-            <input type="range" min="0" max="100" value="45" disabled>
-        </label>
-        <div class="vision-metric-grid">
-            <div><span>候选框</span><strong>6</strong></div>
-            <div><span>保留框</span><strong>3</strong></div>
+
+        <!-- Upload -->
+        <div class="vision-field">
+            <span>上传图片（覆盖样例）</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="detUploadInput">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="detUploadFilename">选择文件</span>
+                </label>
+                <input id="detUploadInput" type="file" accept="image/*" data-det-upload class="sr-only">
+            </div>
         </div>
-        <p class="vision-placeholder-hint">交互筛选将在后续阶段接入预设 JSON 数据。</p>
+
+        <!-- Backend selector -->
+        <label class="vision-field">
+            <span>推理后端</span>
+            <select data-det-backend>
+                <option value="wasm">WASM</option>
+                <option value="webgl">WebGL</option>
+                <option value="webgpu">WebGPU</option>
+            </select>
+        </label>
+
+        <!-- Runtime metrics -->
+        <div class="vision-kv-grid">
+            <div><span>模型状态</span><strong data-det-model-status>未加载</strong></div>
+            <div><span>输入尺寸</span><strong data-det-input-size>640 × 640</strong></div>
+            <div><span>推理耗时</span><strong data-det-inference-time>--</strong></div>
+            <div><span>后处理</span><strong data-det-postprocess-time>--</strong></div>
+            <div><span>激活后端</span><strong data-det-active-backend>--</strong></div>
+            <div><span>推理状态</span><strong data-det-inference-message>正在等待自动推理…</strong></div>
+        </div>
+
+        <!-- Sliders -->
+        <label class="vision-field">
+            <span>Confidence Threshold <output data-det-conf-output>0.25</output></span>
+            <input type="range" min="0" max="1" step="0.01" value="0.25" data-det-conf>
+        </label>
+        <label class="vision-field">
+            <span>IoU Threshold <output data-det-iou-output>0.50</output></span>
+            <input type="range" min="0" max="1" step="0.01" value="0.50" data-det-iou>
+        </label>
+
+        <!-- Show low-conf toggle -->
+        <label class="vision-toggle-row">
+            <span>显示高置信度过滤框</span>
+            <input type="checkbox" data-det-show-low checked>
+        </label>
+        <p class="vision-hint">当前模型检测框数…</p>
+
+        <!-- Counts -->
+        <div class="vision-metric-grid">
+            <div><span>候选框</span><strong data-det-total>0</strong></div>
+            <div><span>最终框</span><strong data-det-kept>0</strong></div>
+        </div>
+
+        <!-- Step controls -->
+        <div class="det-step-nav">
+            <button data-det-prev>上一步</button>
+            <button data-det-next>下一步</button>
+        </div>
+        <button class="det-play-btn" data-det-play>自动播放</button>
     </aside>
 
-    <div class="vision-stage-panel">
+    <!-- ===== Center Stage ===== -->
+    <div class="vision-stage-panel detection-stage-panel">
+        <!-- Stage header -->
         <div class="vision-stage-header">
-            <div><span>DETECTION CANVAS</span><h3>候选框与保留结果</h3></div>
-            <span class="vision-status-chip">PRESET SAMPLE</span>
+            <div>
+                <span>DETECTION PLAYGROUND</span>
+                <h3>实景检测可视化</h3>
+            </div>
+            <div class="det-stage-chips">
+                <span data-det-stage-source>ONNX Runtime Web</span>
+                <span data-det-stage-backend>Backend: --</span>
+                <span data-det-stage-inference>Inference: --</span>
+                <span data-det-stage-candidates>Candidates: --</span>
+                <span data-det-stage-final>Final: --</span>
+            </div>
         </div>
-        <div class="detection-stage" role="img" aria-label="预设街景目标检测框示意">
-            <div class="detection-horizon"></div>
-            <div class="detection-object detection-object--car"></div>
-            <div class="detection-object detection-object--person"></div>
-            <div class="detection-object detection-object--bike"></div>
-            <div class="detection-box detection-box--car"><span>car · 0.94</span></div>
-            <div class="detection-box detection-box--car-alt"><span>car · 0.81</span></div>
-            <div class="detection-box detection-box--person"><span>person · 0.88</span></div>
-            <div class="detection-box detection-box--bike"><span>bicycle · 0.76</span></div>
+
+        <!-- Step label -->
+        <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 6</div>
+
+        <!-- Canvas area -->
+        <div class="detection-real-stage">
+            <img data-det-image src="" alt="检测图像">
+            <div data-det-overlay class="det-overlay"></div>
+            <div class="det-missing-hint" data-det-missing></div>
         </div>
-        <div class="vision-stage-caption">
-            <span class="legend-dot legend-dot--kept"></span>保留框
-            <span class="legend-dot legend-dot--suppressed"></span>待抑制重叠框
+
+        <!-- Candidate table -->
+        <div class="det-table-wrap">
+            <div class="det-table-header">
+                <span class="det-section-label">CANDIDATES</span>
+                <div data-det-class-filter class="det-class-filter"></div>
+                <span class="det-section-label">RUNTIME</span>
+                <span class="det-section-label">排序与逻辑描述</span>
+                <span class="det-section-label">CLASSES</span>
+                <span class="det-section-label">各类统计</span>
+            </div>
+            <table data-det-candidate-table class="det-candidate-table">
+                <thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX</th><th>STATUS</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div data-det-runtime-stats class="det-runtime-stats"></div>
+            <div data-det-class-stats class="det-class-stats"></div>
         </div>
     </div>
 
+    <!-- ===== Right Notes Panel ===== -->
     <aside class="vision-panel vision-notes-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>Process Notes</h3><p>Detection Pipeline</p></div>
+            <div>
+                <h3 id="detNotesTitle">Process Notes</h3>
+                <p id="detNotesSubtitle">IoU / NMS DECISION</p>
+            </div>
         </div>
-        <div class="vision-formula-card">
-            <span>Intersection over Union</span>
-            <strong>IoU = |A ∩ B| / |A ∪ B|</strong>
-        </div>
-        <div class="vision-note-list">
-            <article><span>01</span><div><strong>Score Filter</strong><p>先移除低于置信度阈值的候选框。</p></div></article>
-            <article><span>02</span><div><strong>Sort</strong><p>按类别与 confidence 从高到低排序。</p></div></article>
-            <article><span>03</span><div><strong>NMS</strong><p>抑制与高分框 IoU 超过阈值的同类框。</p></div></article>
-        </div>
-        <div class="vision-output-schema">
-            <span>输出结构</span>
-            <code>[x1, y1, x2, y2, score, class_id]</code>
-        </div>
+        <!-- Tutorial narrative -->
+        <div class="det-notes-tutorial" data-det-notes-tutorial></div>
+        <!-- Detail data -->
+        <div class="det-notes-data" data-det-notes></div>
     </aside>
+
 </section>
 
-<ol class="vision-stepper" aria-label="目标检测处理流程">
-    <li class="is-active"><span>1</span><div><strong>Candidate Boxes</strong><small>Dense Predictions</small></div></li>
-    <li><span>2</span><div><strong>Confidence</strong><small>Score Filtering</small></div></li>
-    <li><span>3</span><div><strong>IoU Matrix</strong><small>Pairwise Overlap</small></div></li>
-    <li><span>4</span><div><strong>NMS</strong><small>Final Detections</small></div></li>
+<!-- ========== Stepper ========== -->
+<ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
+    <li data-det-phase="image"><span>1</span><div><strong>Image</strong><small>Image Loaded</small></div></li>
+    <li data-det-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Letterbox Resize</small></div></li>
+    <li data-det-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>ONNX Forward</small></div></li>
+    <li data-det-phase="candidate"><span>4</span><div><strong>Candidate Boxes</strong><small>Decoded Anchors</small></div></li>
+    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence Filter</strong><small>Score Threshold</small></div></li>
+    <li data-det-phase="nms"><span>6</span><div><strong>IoU / NMS</strong><small>Final Detections</small></div></li>
 </ol>
+
+</div><!-- /data-detection-lab -->
 {% endblock %}

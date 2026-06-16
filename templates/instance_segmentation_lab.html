@@ -2,45 +2,45 @@
 
 {% block vision_badge %}STATION 09 · INSTANCE SEGMENTATION{% endblock %}
 {% block vision_title %}实例分割：Instance Mask{% endblock %}
-{% block vision_subtitle %}将目标检测的类别与 bbox 同每个目标独立的二值 mask、instance_id 组合，区分同类别的不同实例。{% endblock %}
+{% block vision_subtitle %}在真实图像上绘制每个实例的 polygon mask、bbox 与 instance id，并计算实例几何统计。{% endblock %}
 
 {% block vision_content %}
-<section class="vision-workbench" aria-label="实例分割教学工作台">
+<section class="vision-workbench instance-lab-workbench" data-instance-lab aria-label="实例分割教学工作台">
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>实例参数</h3><p>Preset Controls</p></div>
+            <div><h3>输入与显示设置</h3><p>Input &amp; Display</p></div>
         </div>
         <label class="vision-field">
-            <span>样例场景</span>
-            <select disabled><option>Overlapping Objects · Sample 01</option></select>
+            <span>样例图选择</span>
+            <select data-inst-sample></select>
         </label>
+        <label class="vision-toggle-row"><span>显示 instance mask</span><input data-inst-show-mask type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>显示 bbox</span><input data-inst-show-box type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>显示 instance id</span><input data-inst-show-id type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>仅显示选中实例</span><input data-inst-only-selected type="checkbox"></label>
         <label class="vision-field">
-            <span>Mask Threshold <output>0.50</output></span>
-            <input type="range" min="0" max="100" value="50" disabled>
+            <span>Mask Opacity <output data-inst-opacity-output>55%</output></span>
+            <input data-inst-opacity type="range" min="0" max="100" value="55">
         </label>
-        <div class="instance-list">
-            <button type="button" disabled><i class="instance-swatch instance-swatch--one"></i><span><strong>#01 person</strong><small>score 0.93</small></span></button>
-            <button type="button" disabled><i class="instance-swatch instance-swatch--two"></i><span><strong>#02 person</strong><small>score 0.89</small></span></button>
-            <button type="button" disabled><i class="instance-swatch instance-swatch--three"></i><span><strong>#03 bicycle</strong><small>score 0.82</small></span></button>
+        <div class="overview-segmented-control">
+            <button class="is-active" type="button" data-inst-view="instance">实例分割视图</button>
+            <button type="button" data-inst-view="semantic">语义分割对比</button>
         </div>
-        <p class="vision-placeholder-hint">实例选择与轮廓探针将在后续阶段启用。</p>
+        <div class="instance-list" data-inst-list></div>
     </aside>
 
     <div class="vision-stage-panel">
         <div class="vision-stage-header">
-            <div><span>INSTANCE-AWARE OUTPUT</span><h3>独立 Mask 与 Instance ID</h3></div>
-            <span class="vision-status-chip">3 INSTANCES</span>
+            <div><span>INSTANCE SEGMENTATION VISUALIZATION</span><h3>真实图像实例分割可视化</h3></div>
+            <span class="vision-status-chip" data-inst-map>Mask AP --</span>
         </div>
-        <div class="instance-stage" role="img" aria-label="三个重叠目标的实例掩码示意">
-            <div class="instance-shape instance-shape--one"><span>#01</span></div>
-            <div class="instance-shape instance-shape--two"><span>#02</span></div>
-            <div class="instance-shape instance-shape--three"><span>#03</span></div>
-            <div class="instance-bbox instance-bbox--one"></div>
-            <div class="instance-bbox instance-bbox--two"></div>
-            <div class="instance-bbox instance-bbox--three"></div>
+        <div class="vision-image-stage instance-real-stage">
+            <img data-inst-image alt="实例分割样例图">
+            <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-inst-missing></span></div>
+            <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
         </div>
-        <div class="vision-stage-caption">相同类别 person 使用不同 instance_id 与颜色，mask 之间可发生遮挡和重叠。</div>
+        <section class="instance-current-card" data-inst-stats></section>
     </div>
 
     <aside class="vision-panel vision-notes-panel">
@@ -48,28 +48,22 @@
             <span class="vision-panel-index">02</span>
             <div><h3>Process Notes</h3><p>Instance Statistics</p></div>
         </div>
-        <div class="instance-stats">
-            <div><span>Instance</span><strong>#01</strong></div>
-            <div><span>BBox</span><strong>142×228</strong></div>
-            <div><span>Mask Area</span><strong>18,642 px</strong></div>
-            <div><span>Contour</span><strong>416 pts</strong></div>
-        </div>
         <div class="vision-note-list">
-            <article><span>01</span><div><strong>Detection Head</strong><p>预测 class、score 与 bbox。</p></div></article>
-            <article><span>02</span><div><strong>Mask Head</strong><p>为每个候选实例预测独立二值 mask。</p></div></article>
-            <article><span>03</span><div><strong>Instance ID</strong><p>区分同类别目标并支持逐实例统计。</p></div></article>
+            <article><span>01</span><div><strong>Detection + Mask</strong><p>每个实例同时包含 bbox、class、score 与独立 mask。</p></div></article>
+            <article><span>02</span><div><strong>实例身份</strong><p>同类目标通过 instance id 区分，可逐实例统计。</p></div></article>
+            <article><span>03</span><div><strong>几何统计</strong><p>面积、中心、轮廓长度由前端根据 bbox 和 polygon 计算。</p></div></article>
         </div>
         <div class="vision-output-schema">
             <span>输出结构</span>
-            <code>{bbox, class_id, score, mask, instance_id}</code>
+            <code>{bbox, class, score, mask, instance_id}</code>
         </div>
     </aside>
 </section>
 
 <ol class="vision-stepper" aria-label="实例分割处理流程">
     <li class="is-active"><span>1</span><div><strong>Detection</strong><small>Class + BBox</small></div></li>
-    <li><span>2</span><div><strong>Mask Head</strong><small>Per-instance Logits</small></div></li>
-    <li><span>3</span><div><strong>Binarize</strong><small>Thresholded Mask</small></div></li>
-    <li><span>4</span><div><strong>Instance Output</strong><small>ID + Area + Contour</small></div></li>
+    <li><span>2</span><div><strong>Mask Prediction</strong><small>Per-instance Polygon</small></div></li>
+    <li><span>3</span><div><strong>Instance Assignment</strong><small>ID + Score</small></div></li>
+    <li><span>4</span><div><strong>Final Instance Masks</strong><small>Area + Contour</small></div></li>
 </ol>
 {% endblock %}

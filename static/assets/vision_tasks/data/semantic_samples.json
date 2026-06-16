@@ -1,36 +1,68 @@
 {
-  "version": 1,
-  "classes": [
-    {"id": 0, "name": "background", "color": "#0f172a"},
-    {"id": 1, "name": "sky", "color": "#38bdf8"},
-    {"id": 2, "name": "building", "color": "#f59e0b"},
-    {"id": 3, "name": "road", "color": "#64748b"},
-    {"id": 4, "name": "vehicle", "color": "#ef4444"}
-  ],
+  "version": 2,
+  "default_sample": "crosswalk_people",
   "samples": [
     {
-      "id": "urban-scene-01",
-      "image_size": [640, 420],
-      "logits_shape": [420, 640, 5],
-      "mask_dtype": "uint8",
-      "preview_grid_shape": [8, 12],
-      "class_map_preview": [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2],
-        [2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 2, 2],
-        [2, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2],
-        [3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+      "id": "crosswalk_people",
+      "name": "Crosswalk People",
+      "image": "/static/assets/img/crosswalk_people.jpg",
+      "mask": "/static/assets/vision_tasks/masks/crosswalk_people_semantic.png",
+      "width": 640,
+      "height": 427,
+      "miou": 0.786,
+      "classes": [
+        {"id": 0, "name": "road", "cn": "道路", "color": "#7E3F98"},
+        {"id": 1, "name": "sidewalk", "cn": "人行道", "color": "#C084FC"},
+        {"id": 2, "name": "building", "cn": "建筑", "color": "#6B7280"},
+        {"id": 3, "name": "sky", "cn": "天空", "color": "#60A5FA"},
+        {"id": 4, "name": "vegetation", "cn": "植被", "color": "#84CC16"},
+        {"id": 5, "name": "person", "cn": "行人", "color": "#EF4444"},
+        {"id": 6, "name": "vehicle", "cn": "车辆", "color": "#2563EB"},
+        {"id": 7, "name": "traffic light", "cn": "交通灯", "color": "#EAB308"}
       ],
-      "pixel_probe": {
-        "xy": [184, 126],
-        "class_id": 4,
-        "class_name": "vehicle",
-        "logits": [0.03, 0.04, 0.11, 0.17, 0.65]
-      },
-      "metrics": {"pixel_accuracy": 0.91, "miou": 0.73}
+      "regions": [
+        {"class": "sky", "polygon": [[0, 0], [640, 0], [640, 72], [0, 88]], "probability": 0.82},
+        {"class": "building", "polygon": [[0, 0], [640, 0], [640, 198], [510, 185], [380, 126], [250, 112], [0, 145]], "probability": 0.78},
+        {"class": "vegetation", "polygon": [[0, 118], [112, 102], [188, 168], [128, 238], [0, 252]], "probability": 0.74},
+        {"class": "sidewalk", "polygon": [[0, 258], [640, 236], [640, 427], [0, 427]], "probability": 0.69},
+        {"class": "road", "polygon": [[0, 282], [640, 252], [640, 427], [0, 427]], "probability": 0.86},
+        {"class": "vehicle", "polygon": [[390, 60], [566, 58], [590, 198], [372, 212]], "probability": 0.77},
+        {"class": "vehicle", "polygon": [[520, 118], [636, 112], [640, 270], [520, 278]], "probability": 0.72},
+        {"class": "person", "polygon": [[28, 174], [105, 174], [112, 417], [25, 417]], "probability": 0.92},
+        {"class": "person", "polygon": [[122, 148], [188, 148], [196, 413], [112, 413]], "probability": 0.9},
+        {"class": "person", "polygon": [[265, 168], [343, 168], [350, 420], [258, 420]], "probability": 0.88},
+        {"class": "traffic light", "polygon": [[26, 48], [71, 48], [72, 128], [24, 128]], "probability": 0.83}
+      ]
+    },
+    {
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "mask": "/static/assets/vision_tasks/masks/classroom_equipment_semantic.png",
+      "width": 3840,
+      "height": 2880,
+      "miou": 0.764,
+      "classes": [
+        {"id": 0, "name": "floor", "cn": "地面", "color": "#A16207"},
+        {"id": 1, "name": "wall", "cn": "墙面", "color": "#93C5FD"},
+        {"id": 2, "name": "window", "cn": "窗户", "color": "#60A5FA"},
+        {"id": 3, "name": "table", "cn": "桌子", "color": "#F59E0B"},
+        {"id": 4, "name": "chair", "cn": "椅子", "color": "#22C55E"},
+        {"id": 5, "name": "board", "cn": "白板", "color": "#E5E7EB"},
+        {"id": 6, "name": "cabinet", "cn": "柜子", "color": "#8B5CF6"}
+      ],
+      "regions": [
+        {"class": "wall", "polygon": [[0, 0], [3840, 0], [3840, 1590], [0, 1610]], "probability": 0.84},
+        {"class": "window", "polygon": [[265, 420], [935, 405], [925, 1125], [260, 1110]], "probability": 0.79},
+        {"class": "window", "polygon": [[1180, 415], [1735, 410], [1725, 1125], [1180, 1120]], "probability": 0.78},
+        {"class": "board", "polygon": [[2645, 940], [3510, 820], [3520, 1565], [2630, 1610]], "probability": 0.81},
+        {"class": "cabinet", "polygon": [[940, 1340], [1640, 1280], [1665, 1975], [950, 2040]], "probability": 0.74},
+        {"class": "floor", "polygon": [[0, 1660], [3840, 1600], [3840, 2880], [0, 2880]], "probability": 0.86},
+        {"class": "table", "polygon": [[2460, 1940], [3840, 1850], [3840, 2390], [2360, 2340]], "probability": 0.72},
+        {"class": "table", "polygon": [[0, 2060], [900, 2050], [760, 2550], [0, 2580]], "probability": 0.7},
+        {"class": "chair", "polygon": [[2205, 1770], [2465, 1775], [2520, 2240], [2130, 2245]], "probability": 0.68},
+        {"class": "chair", "polygon": [[3060, 1825], [3310, 1810], [3355, 2405], [2965, 2420]], "probability": 0.67}
+      ]
     }
   ]
 }

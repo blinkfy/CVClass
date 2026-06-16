@@ -1,22 +1,78 @@
 {
-  "version": 1,
+  "version": 2,
+  "default_sample": "bangkok_traffic",
+  "classes": {
+    "person": "#EF4444",
+    "car": "#2563EB",
+    "bus": "#A855F7",
+    "truck": "#F97316",
+    "motorcycle": "#06B6D4",
+    "traffic light": "#EAB308",
+    "bicycle": "#14B8A6",
+    "chair": "#22C55E",
+    "desk": "#F59E0B",
+    "screen": "#0EA5E9",
+    "bag": "#8B5CF6"
+  },
   "samples": [
     {
-      "id": "street-objects-01",
-      "image_size": [640, 420],
+      "id": "crosswalk_people",
+      "name": "Crosswalk People",
+      "image": "/static/assets/img/crosswalk_people.jpg",
+      "width": 640,
+      "height": 427,
       "confidence_threshold": 0.5,
       "nms_iou_threshold": 0.45,
-      "candidates": [
-        {"id": "box-01", "class_id": 1, "class_name": "car", "score": 0.94, "bbox_xyxy": [302, 226, 566, 364], "kept": true},
-        {"id": "box-02", "class_id": 1, "class_name": "car", "score": 0.81, "bbox_xyxy": [326, 239, 553, 356], "kept": false, "suppressed_by": "box-01"},
-        {"id": "box-03", "class_id": 0, "class_name": "person", "score": 0.88, "bbox_xyxy": [92, 166, 184, 348], "kept": true},
-        {"id": "box-04", "class_id": 2, "class_name": "bicycle", "score": 0.76, "bbox_xyxy": [218, 278, 424, 392], "kept": true},
-        {"id": "box-05", "class_id": 0, "class_name": "person", "score": 0.43, "bbox_xyxy": [101, 174, 176, 341], "kept": false, "reason": "below_confidence_threshold"},
-        {"id": "box-06", "class_id": 1, "class_name": "car", "score": 0.37, "bbox_xyxy": [314, 220, 579, 370], "kept": false, "reason": "below_confidence_threshold"}
-      ],
-      "pairwise_iou": [
-        {"a": "box-01", "b": "box-02", "iou": 0.72},
-        {"a": "box-03", "b": "box-05", "iou": 0.79}
+      "boxes": [
+        {"id": 1, "class": "person", "score": 0.93, "bbox": [28, 174, 105, 417]},
+        {"id": 2, "class": "person", "score": 0.78, "bbox": [34, 182, 108, 412]},
+        {"id": 3, "class": "person", "score": 0.89, "bbox": [122, 148, 188, 413]},
+        {"id": 4, "class": "person", "score": 0.86, "bbox": [265, 168, 343, 420]},
+        {"id": 5, "class": "person", "score": 0.42, "bbox": [270, 176, 348, 415]},
+        {"id": 6, "class": "car", "score": 0.82, "bbox": [520, 118, 636, 272]},
+        {"id": 7, "class": "bus", "score": 0.75, "bbox": [390, 60, 566, 208]},
+        {"id": 8, "class": "traffic light", "score": 0.95, "bbox": [26, 48, 71, 128]},
+        {"id": 9, "class": "bicycle", "score": 0.58, "bbox": [8, 293, 112, 424]}
+      ]
+    },
+    {
+      "id": "bangkok_traffic",
+      "name": "Bangkok Traffic",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 355,
+      "height": 355,
+      "confidence_threshold": 0.25,
+      "nms_iou_threshold": 0.5,
+      "boxes": [
+        {"id": 1, "class": "car", "score": 0.94, "bbox": [132, 225, 212, 309]},
+        {"id": 2, "class": "car", "score": 0.77, "bbox": [139, 230, 215, 306]},
+        {"id": 3, "class": "bus", "score": 0.91, "bbox": [0, 226, 108, 355]},
+        {"id": 4, "class": "truck", "score": 0.86, "bbox": [247, 136, 334, 230]},
+        {"id": 5, "class": "truck", "score": 0.62, "bbox": [253, 142, 340, 236]},
+        {"id": 6, "class": "car", "score": 0.82, "bbox": [190, 192, 265, 260]},
+        {"id": 7, "class": "car", "score": 0.71, "bbox": [92, 180, 150, 238]},
+        {"id": 8, "class": "motorcycle", "score": 0.74, "bbox": [103, 120, 145, 188]},
+        {"id": 9, "class": "traffic light", "score": 0.46, "bbox": [315, 70, 348, 125]},
+        {"id": 10, "class": "car", "score": 0.22, "bbox": [218, 152, 275, 205]},
+        {"id": 11, "class": "bus", "score": 0.64, "bbox": [142, 82, 205, 145]}
+      ]
+    },
+    {
+      "id": "classroom_students",
+      "name": "Classroom Students",
+      "image": "/static/assets/img/classroom_students.jpg",
+      "width": 1200,
+      "height": 800,
+      "confidence_threshold": 0.5,
+      "nms_iou_threshold": 0.45,
+      "boxes": [
+        {"id": 1, "class": "person", "score": 0.94, "bbox": [545, 255, 610, 410]},
+        {"id": 2, "class": "person", "score": 0.91, "bbox": [1020, 372, 1120, 672]},
+        {"id": 3, "class": "person", "score": 0.89, "bbox": [210, 492, 365, 790]},
+        {"id": 4, "class": "screen", "score": 0.87, "bbox": [0, 163, 128, 322]},
+        {"id": 5, "class": "desk", "score": 0.82, "bbox": [370, 550, 705, 785]},
+        {"id": 6, "class": "chair", "score": 0.73, "bbox": [960, 505, 1128, 785]},
+        {"id": 7, "class": "bag", "score": 0.44, "bbox": [64, 582, 142, 790]}
       ]
     }
   ]

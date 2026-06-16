@@ -1,11 +1,12 @@
 {
-  "version": "2.0-full",
+  "version": "2.1-full",
   "name": "CV 算法知识图谱 - 层级钻取全量版",
-  "description": "ECharts 可直接读取的层级钻取图谱数据。保留旧 vis.js 文件中的全部节点与关系，同时补充机器学习根层级、计算机视觉方向层级和各方向钻取视图。",
+  "description": "ECharts 可直接读取的层级钻取图谱数据。保留旧 vis.js 文件中的全部节点与关系，同时补充机器学习根层级、计算机视觉方向层级、各方向钻取视图，以及传统机器学习和自然语言处理的次级展开。",
   "source": {
     "legacyFile": "ba8e7461-2999-498e-8580-2d4a597d31f9.js",
     "legacyNodes": 228,
-    "legacyLinks": 267
+    "legacyLinks": 267,
+    "expandedViews": 24
   },
   "defaultView": "root",
   "views": {
@@ -42,7 +43,7 @@
           "description": "机器学习子领域节点。",
           "route": null,
           "status": "reference",
-          "drillTo": null,
+          "drillTo": "traditional_ml",
           "symbolSize": 60,
           "itemStyle": {
             "color": "#3b82f6"
@@ -94,7 +95,7 @@
           "description": "机器学习子领域节点。",
           "route": null,
           "status": "reference",
-          "drillTo": null,
+          "drillTo": "nlp",
           "symbolSize": 60,
           "itemStyle": {
             "color": "#3b82f6"
@@ -872,7 +873,7 @@
           "description": "典型应用场景或应用系统。",
           "route": null,
           "status": "reference",
-          "drillTo": null,
+          "drillTo": "nlp",
           "symbolSize": 34,
           "itemStyle": {
             "color": "#f87171"
@@ -9428,7 +9429,7 @@
           "description": "典型应用场景或应用系统。",
           "route": null,
           "status": "reference",
-          "drillTo": null,
+          "drillTo": "nlp",
           "symbolSize": 28,
           "itemStyle": {
             "color": "#f87171"
@@ -14617,6 +14618,2030 @@
           "relation": "可能出现"
         }
       ]
+    },
+    "traditional_ml": {
+      "id": "traditional_ml",
+      "title": "传统机器学习体系",
+      "path": [
+        "机器学习",
+        "传统机器学习"
+      ],
+      "parent": "root",
+      "focus": "传统机器学习",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_传统机器学习",
+          "name": "传统机器学习",
+          "category": "domain",
+          "description": "以特征工程、统计学习和可解释模型为核心的机器学习方法体系。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#3b82f6"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_监督学习",
+          "name": "监督学习",
+          "category": "method",
+          "description": "利用带标签样本学习输入到输出的映射。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "supervised_learning",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_无监督学习",
+          "name": "无监督学习",
+          "category": "method",
+          "description": "从无标签数据中发现聚类、低维结构或异常模式。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "unsupervised_learning",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_半监督学习",
+          "name": "半监督学习",
+          "category": "method",
+          "description": "结合少量标注样本和大量未标注样本提升模型泛化。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_强化学习",
+          "name": "强化学习",
+          "category": "method",
+          "description": "通过状态、动作与奖励学习序贯决策策略。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_特征工程",
+          "name": "特征工程",
+          "category": "method",
+          "description": "围绕特征构造、筛选、缩放和编码提升模型表达。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_模型选择",
+          "name": "模型选择",
+          "category": "method",
+          "description": "通过验证集、交叉验证和指标比较选择合适模型。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_124",
+          "name": "多类支持向量机",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 124
+        },
+        {
+          "id": "n_决策树",
+          "name": "决策树",
+          "category": "method",
+          "description": "基于树结构递归划分特征空间的可解释模型。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_随机森林",
+          "name": "随机森林",
+          "category": "method",
+          "description": "由多棵决策树构成的 Bagging 集成模型。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_梯度提升树",
+          "name": "梯度提升树",
+          "category": "method",
+          "description": "逐步拟合残差的 Boosting 树模型族。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_K近邻",
+          "name": "K 近邻",
+          "category": "method",
+          "description": "依据邻近样本投票或平均完成预测。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_朴素贝叶斯",
+          "name": "朴素贝叶斯",
+          "category": "method",
+          "description": "基于条件独立假设的概率分类模型。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_K_means",
+          "name": "K-means",
+          "category": "method",
+          "description": "最小化簇内距离的经典聚类算法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_PCA",
+          "name": "PCA",
+          "category": "method",
+          "description": "通过主成分投影实现线性降维。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_110",
+          "name": "优化算法",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 110
+        }
+      ],
+      "links": [
+        {
+          "source": "n_传统机器学习",
+          "target": "n_监督学习",
+          "relation": "包含"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "n_无监督学习",
+          "relation": "包含"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "n_半监督学习",
+          "relation": "包含"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "n_强化学习",
+          "relation": "包含"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "n_特征工程",
+          "relation": "依赖"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "n_模型选择",
+          "relation": "依赖"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "old_124",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_决策树",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_随机森林",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_梯度提升树",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_K近邻",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_朴素贝叶斯",
+          "relation": "包含"
+        },
+        {
+          "source": "n_无监督学习",
+          "target": "n_K_means",
+          "relation": "包含"
+        },
+        {
+          "source": "n_无监督学习",
+          "target": "n_PCA",
+          "relation": "包含"
+        },
+        {
+          "source": "n_传统机器学习",
+          "target": "old_110",
+          "relation": "优化"
+        }
+      ]
+    },
+    "supervised_learning": {
+      "id": "supervised_learning",
+      "title": "监督学习",
+      "path": [
+        "机器学习",
+        "传统机器学习",
+        "监督学习"
+      ],
+      "parent": "traditional_ml",
+      "focus": "监督学习",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_监督学习",
+          "name": "监督学习",
+          "category": "method",
+          "description": "利用带标签样本学习输入到输出的映射。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_分类任务",
+          "name": "分类任务",
+          "category": "task",
+          "description": "预测离散类别标签的监督学习任务。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_回归任务",
+          "name": "回归任务",
+          "category": "task",
+          "description": "预测连续数值的监督学习任务。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_标签数据",
+          "name": "标签数据",
+          "category": "data",
+          "description": "包含输入样本及其真实输出标注的数据。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#94a3b8"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_线性回归",
+          "name": "线性回归",
+          "category": "method",
+          "description": "用线性函数拟合连续目标变量。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_逻辑回归",
+          "name": "逻辑回归",
+          "category": "method",
+          "description": "使用逻辑函数建模类别概率的线性分类器。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_124",
+          "name": "多类支持向量机",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 124
+        },
+        {
+          "id": "n_决策树",
+          "name": "决策树",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_随机森林",
+          "name": "随机森林",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_梯度提升树",
+          "name": "梯度提升树",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_K近邻",
+          "name": "K 近邻",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_朴素贝叶斯",
+          "name": "朴素贝叶斯",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_147",
+          "name": "评估模型",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 147
+        },
+        {
+          "id": "old_122",
+          "name": "合页损失",
+          "category": "theory",
+          "description": "支撑算法理解的理论概念。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#7dd3fc"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 122
+        },
+        {
+          "id": "old_123",
+          "name": "交叉熵损失",
+          "category": "theory",
+          "description": "支撑算法理解的理论概念。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#7dd3fc"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 123
+        }
+      ],
+      "links": [
+        {
+          "source": "n_监督学习",
+          "target": "n_标签数据",
+          "relation": "依赖"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_分类任务",
+          "relation": "包含"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "n_回归任务",
+          "relation": "包含"
+        },
+        {
+          "source": "n_分类任务",
+          "target": "n_逻辑回归",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_分类任务",
+          "target": "old_124",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_分类任务",
+          "target": "n_决策树",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_分类任务",
+          "target": "n_随机森林",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_分类任务",
+          "target": "n_朴素贝叶斯",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_回归任务",
+          "target": "n_线性回归",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_回归任务",
+          "target": "n_梯度提升树",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_回归任务",
+          "target": "n_K近邻",
+          "relation": "常用方法"
+        },
+        {
+          "source": "n_监督学习",
+          "target": "old_147",
+          "relation": "评估"
+        },
+        {
+          "source": "old_124",
+          "target": "old_122",
+          "relation": "优化目标"
+        },
+        {
+          "source": "n_逻辑回归",
+          "target": "old_123",
+          "relation": "优化目标"
+        }
+      ]
+    },
+    "unsupervised_learning": {
+      "id": "unsupervised_learning",
+      "title": "无监督学习",
+      "path": [
+        "机器学习",
+        "传统机器学习",
+        "无监督学习"
+      ],
+      "parent": "traditional_ml",
+      "focus": "无监督学习",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_无监督学习",
+          "name": "无监督学习",
+          "category": "method",
+          "description": "从无标签数据中发现结构、分布或异常模式。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_聚类",
+          "name": "聚类",
+          "category": "task",
+          "description": "将相似样本自动分组成簇。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_降维",
+          "name": "降维",
+          "category": "task",
+          "description": "保留关键信息的同时降低特征维度。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_异常检测",
+          "name": "异常检测",
+          "category": "task",
+          "description": "识别偏离主体分布的样本或事件。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_K_means",
+          "name": "K-means",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_层次聚类",
+          "name": "层次聚类",
+          "category": "method",
+          "description": "构建样本之间层级簇结构的聚类方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_DBSCAN",
+          "name": "DBSCAN",
+          "category": "method",
+          "description": "基于密度连通性的聚类与噪声识别方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_高斯混合模型",
+          "name": "高斯混合模型",
+          "category": "method",
+          "description": "用多个高斯分布混合表示数据分布。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_PCA",
+          "name": "PCA",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_t_SNE",
+          "name": "t-SNE",
+          "category": "method",
+          "description": "用于可视化高维数据局部邻域结构的非线性降维方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_UMAP",
+          "name": "UMAP",
+          "category": "method",
+          "description": "保持流形邻域结构的非线性降维方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_自编码器",
+          "name": "自编码器",
+          "category": "method",
+          "description": "通过重构输入学习低维表示的神经网络。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "n_无监督学习",
+          "target": "n_聚类",
+          "relation": "包含"
+        },
+        {
+          "source": "n_无监督学习",
+          "target": "n_降维",
+          "relation": "包含"
+        },
+        {
+          "source": "n_无监督学习",
+          "target": "n_异常检测",
+          "relation": "包含"
+        },
+        {
+          "source": "n_聚类",
+          "target": "n_K_means",
+          "relation": "包含"
+        },
+        {
+          "source": "n_聚类",
+          "target": "n_层次聚类",
+          "relation": "包含"
+        },
+        {
+          "source": "n_聚类",
+          "target": "n_DBSCAN",
+          "relation": "包含"
+        },
+        {
+          "source": "n_聚类",
+          "target": "n_高斯混合模型",
+          "relation": "包含"
+        },
+        {
+          "source": "n_降维",
+          "target": "n_PCA",
+          "relation": "包含"
+        },
+        {
+          "source": "n_降维",
+          "target": "n_t_SNE",
+          "relation": "包含"
+        },
+        {
+          "source": "n_降维",
+          "target": "n_UMAP",
+          "relation": "包含"
+        },
+        {
+          "source": "n_降维",
+          "target": "n_自编码器",
+          "relation": "神经方法"
+        },
+        {
+          "source": "n_异常检测",
+          "target": "n_高斯混合模型",
+          "relation": "可基于"
+        }
+      ]
+    },
+    "nlp": {
+      "id": "nlp",
+      "title": "自然语言处理体系",
+      "path": [
+        "机器学习",
+        "自然语言处理"
+      ],
+      "parent": "root",
+      "focus": "自然语言处理",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "old_36",
+          "name": "自然语言处理",
+          "category": "domain",
+          "description": "让机器理解、生成与检索人类语言的机器学习方向。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#3b82f6"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 36
+        },
+        {
+          "id": "n_文本预处理",
+          "name": "文本预处理",
+          "category": "method",
+          "description": "将原始文本规范化并转换为可建模形式。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "text_preprocessing",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_词表示",
+          "name": "词表示",
+          "category": "feature",
+          "description": "将词、子词或句子映射为离散或连续向量。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "word_representations",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_序列建模",
+          "name": "序列建模",
+          "category": "method",
+          "description": "建模词序、上下文依赖和长距离关系。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "sequence_modeling",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_35",
+          "name": "Transformer",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 35
+        },
+        {
+          "id": "n_语言模型",
+          "name": "语言模型",
+          "category": "method",
+          "description": "估计文本序列概率并支持生成、理解与推理。",
+          "route": null,
+          "status": "reference",
+          "drillTo": "language_models",
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_信息抽取",
+          "name": "信息抽取",
+          "category": "task",
+          "description": "从文本中抽取实体、关系和事件。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_机器翻译",
+          "name": "机器翻译",
+          "category": "task",
+          "description": "将一种语言自动转换为另一种语言。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_问答系统",
+          "name": "问答系统",
+          "category": "task",
+          "description": "根据问题从知识或上下文中生成答案。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_文本分类",
+          "name": "文本分类",
+          "category": "task",
+          "description": "将文本分配到预定义类别。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_文本生成",
+          "name": "文本生成",
+          "category": "task",
+          "description": "生成摘要、对话、代码或长文本。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_多模态理解",
+          "name": "多模态理解",
+          "category": "frontier",
+          "description": "融合文本、图像、视频等多源信息的理解任务。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#c084fc"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "old_36",
+          "target": "n_文本预处理",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_词表示",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_序列建模",
+          "relation": "包含"
+        },
+        {
+          "source": "n_序列建模",
+          "target": "old_35",
+          "relation": "发展到"
+        },
+        {
+          "source": "old_36",
+          "target": "n_语言模型",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_信息抽取",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_机器翻译",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_问答系统",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_文本分类",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_文本生成",
+          "relation": "包含"
+        },
+        {
+          "source": "old_36",
+          "target": "n_多模态理解",
+          "relation": "扩展"
+        }
+      ]
+    },
+    "text_preprocessing": {
+      "id": "text_preprocessing",
+      "title": "文本预处理",
+      "path": [
+        "机器学习",
+        "自然语言处理",
+        "文本预处理"
+      ],
+      "parent": "nlp",
+      "focus": "文本预处理",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_文本预处理",
+          "name": "文本预处理",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_分词",
+          "name": "分词",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_规范化",
+          "name": "规范化",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_停用词处理",
+          "name": "停用词处理",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_词干提取",
+          "name": "词干提取",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_词形还原",
+          "name": "词形还原",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_子词切分",
+          "name": "子词切分",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_BPE",
+          "name": "BPE",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_WordPiece",
+          "name": "WordPiece",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_SentencePiece",
+          "name": "SentencePiece",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "n_文本预处理",
+          "target": "n_分词",
+          "relation": "包含"
+        },
+        {
+          "source": "n_文本预处理",
+          "target": "n_规范化",
+          "relation": "包含"
+        },
+        {
+          "source": "n_文本预处理",
+          "target": "n_停用词处理",
+          "relation": "包含"
+        },
+        {
+          "source": "n_文本预处理",
+          "target": "n_词干提取",
+          "relation": "包含"
+        },
+        {
+          "source": "n_文本预处理",
+          "target": "n_词形还原",
+          "relation": "包含"
+        },
+        {
+          "source": "n_文本预处理",
+          "target": "n_子词切分",
+          "relation": "包含"
+        },
+        {
+          "source": "n_子词切分",
+          "target": "n_BPE",
+          "relation": "包含"
+        },
+        {
+          "source": "n_子词切分",
+          "target": "n_WordPiece",
+          "relation": "包含"
+        },
+        {
+          "source": "n_子词切分",
+          "target": "n_SentencePiece",
+          "relation": "包含"
+        }
+      ]
+    },
+    "word_representations": {
+      "id": "word_representations",
+      "title": "词表示",
+      "path": [
+        "机器学习",
+        "自然语言处理",
+        "词表示"
+      ],
+      "parent": "nlp",
+      "focus": "词表示",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_词表示",
+          "name": "词表示",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_独热词表示",
+          "name": "独热词表示",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_TF_IDF",
+          "name": "TF-IDF",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_Word2Vec",
+          "name": "Word2Vec",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_GloVe",
+          "name": "GloVe",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_FastText",
+          "name": "FastText",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_上下文词向量",
+          "name": "上下文词向量",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_句向量",
+          "name": "句向量",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_位置编码",
+          "name": "位置编码",
+          "category": "feature",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a3e635"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "n_词表示",
+          "target": "n_独热词表示",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_TF_IDF",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_Word2Vec",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_GloVe",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_FastText",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_上下文词向量",
+          "relation": "包含"
+        },
+        {
+          "source": "n_词表示",
+          "target": "n_句向量",
+          "relation": "包含"
+        },
+        {
+          "source": "n_上下文词向量",
+          "target": "n_位置编码",
+          "relation": "结合"
+        }
+      ]
+    },
+    "sequence_modeling": {
+      "id": "sequence_modeling",
+      "title": "序列建模",
+      "path": [
+        "机器学习",
+        "自然语言处理",
+        "序列建模"
+      ],
+      "parent": "nlp",
+      "focus": "序列建模",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_序列建模",
+          "name": "序列建模",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_37",
+          "name": "循环神经网络",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 37
+        },
+        {
+          "id": "n_LSTM",
+          "name": "LSTM",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_GRU",
+          "name": "GRU",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "old_39",
+          "name": "注意力机制",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 39
+        },
+        {
+          "id": "old_35",
+          "name": "Transformer",
+          "category": "method",
+          "description": "相关算法或处理方法。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          },
+          "legacy": true,
+          "oldId": 35
+        },
+        {
+          "id": "n_编码器解码器",
+          "name": "编码器-解码器",
+          "category": "structure",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#a78bfa"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_CRF",
+          "name": "CRF",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "n_序列建模",
+          "target": "old_37",
+          "relation": "包含"
+        },
+        {
+          "source": "old_37",
+          "target": "n_LSTM",
+          "relation": "包含"
+        },
+        {
+          "source": "old_37",
+          "target": "n_GRU",
+          "relation": "包含"
+        },
+        {
+          "source": "n_序列建模",
+          "target": "old_39",
+          "relation": "引入"
+        },
+        {
+          "source": "old_39",
+          "target": "old_35",
+          "relation": "发展为"
+        },
+        {
+          "source": "n_序列建模",
+          "target": "n_编码器解码器",
+          "relation": "常用结构"
+        },
+        {
+          "source": "n_序列建模",
+          "target": "n_CRF",
+          "relation": "结构化预测"
+        }
+      ]
+    },
+    "language_models": {
+      "id": "language_models",
+      "title": "语言模型",
+      "path": [
+        "机器学习",
+        "自然语言处理",
+        "语言模型"
+      ],
+      "parent": "nlp",
+      "focus": "语言模型",
+      "layout": "force",
+      "nodes": [
+        {
+          "id": "n_语言模型",
+          "name": "语言模型",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 42,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_N_gram",
+          "name": "N-gram",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_自回归语言模型",
+          "name": "自回归语言模型",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_掩码语言模型",
+          "name": "掩码语言模型",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_指令微调",
+          "name": "指令微调",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_检索增强生成",
+          "name": "检索增强生成",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_提示工程",
+          "name": "提示工程",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_对齐学习",
+          "name": "对齐学习",
+          "category": "method",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#22c55e"
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "n_文本生成",
+          "name": "文本生成",
+          "category": "task",
+          "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+          "route": null,
+          "status": "reference",
+          "drillTo": null,
+          "symbolSize": 36,
+          "itemStyle": {
+            "color": "#fbbf24"
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "links": [
+        {
+          "source": "n_语言模型",
+          "target": "n_N_gram",
+          "relation": "早期方法"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_自回归语言模型",
+          "relation": "包含"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_掩码语言模型",
+          "relation": "包含"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_指令微调",
+          "relation": "后训练"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_检索增强生成",
+          "relation": "增强"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_提示工程",
+          "relation": "交互"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_对齐学习",
+          "relation": "安全对齐"
+        },
+        {
+          "source": "n_语言模型",
+          "target": "n_文本生成",
+          "relation": "用于"
+        }
+      ]
     }
   },
   "allNodes": [
@@ -14643,7 +16668,7 @@
       "description": "机器学习子领域节点。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "traditional_ml",
       "symbolSize": 60,
       "itemStyle": {
         "color": "#3b82f6"
@@ -14659,7 +16684,7 @@
       "description": "以多层神经网络为核心的表示学习方法，是现代视觉任务的重要基础。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "deep_learning",
       "symbolSize": 28,
       "itemStyle": {
         "color": "#22c55e"
@@ -14677,7 +16702,7 @@
       "description": "让机器从图像和视频中获取结构、语义、目标和场景信息的方向。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "computer_vision",
       "symbolSize": 28,
       "itemStyle": {
         "color": "#2563eb"
@@ -14695,7 +16720,7 @@
       "description": "典型应用场景或应用系统。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "nlp",
       "symbolSize": 28,
       "itemStyle": {
         "color": "#f87171"
@@ -14713,7 +16738,7 @@
       "description": "相关算法或处理方法。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "generative_models",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -14729,7 +16754,7 @@
       "description": "相关算法或处理方法。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "data_eval",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -14745,7 +16770,7 @@
       "description": "相关算法或处理方法。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "hardware_imaging",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16201,7 +18226,7 @@
       "description": "图像矩阵、颜色空间、灰度化、直方图和基础几何处理。",
       "route": "/image-basics",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "image_basics",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16217,7 +18242,7 @@
       "description": "局部窗口与卷积核乘加计算，用于滤波、增强和特征提取。",
       "route": "/convolution-filtering",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "convolution_filtering",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16233,7 +18258,7 @@
       "description": "从灰度突变到边缘图、轮廓结构、形态学区域处理的链路。",
       "route": "/edge-structure",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "edge_contour_morphology",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16249,7 +18274,7 @@
       "description": "稳定局部结构、描述子、匹配、几何验证和全景拼接。",
       "route": "/feature-geometry",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "feature_geometry",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16265,7 +18290,7 @@
       "description": "卷积网络前向传播、反向传播、梯度更新与图像分类应用。",
       "route": "/cnn-learning",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "cnn_learning",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16281,7 +18306,7 @@
       "description": "输出目标类别、边界框与置信度，包含 IoU 与 NMS 等关键步骤。",
       "route": "/detection",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "object_detection",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16297,7 +18322,7 @@
       "description": "语义 mask、实例 mask、像素级分类和不同个体区分。",
       "route": "/segmentation",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "segmentation",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16313,7 +18338,7 @@
       "description": "SAM、CLIP、DINO、VLM、统一视觉模型等前沿方向。",
       "route": "/frontier",
       "status": "completed",
-      "drillTo": null,
+      "drillTo": "frontier",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -16329,7 +18354,7 @@
       "description": "视觉算法在真实场景中的任务落点与系统应用。",
       "route": null,
       "status": "reference",
-      "drillTo": null,
+      "drillTo": "applications",
       "symbolSize": 42,
       "itemStyle": {
         "color": "#22c55e"
@@ -20467,6 +22492,1046 @@
       },
       "legacy": true,
       "oldId": 196
+    },
+    {
+      "id": "n_监督学习",
+      "name": "监督学习",
+      "category": "method",
+      "description": "利用带标签样本学习输入到输出的映射。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "supervised_learning",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_无监督学习",
+      "name": "无监督学习",
+      "category": "method",
+      "description": "从无标签数据中发现聚类、低维结构或异常模式。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "unsupervised_learning",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_半监督学习",
+      "name": "半监督学习",
+      "category": "method",
+      "description": "结合少量标注样本和大量未标注样本提升模型泛化。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_强化学习",
+      "name": "强化学习",
+      "category": "method",
+      "description": "通过状态、动作与奖励学习序贯决策策略。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_特征工程",
+      "name": "特征工程",
+      "category": "method",
+      "description": "围绕特征构造、筛选、缩放和编码提升模型表达。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_模型选择",
+      "name": "模型选择",
+      "category": "method",
+      "description": "通过验证集、交叉验证和指标比较选择合适模型。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_决策树",
+      "name": "决策树",
+      "category": "method",
+      "description": "基于树结构递归划分特征空间的可解释模型。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_随机森林",
+      "name": "随机森林",
+      "category": "method",
+      "description": "由多棵决策树构成的 Bagging 集成模型。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_梯度提升树",
+      "name": "梯度提升树",
+      "category": "method",
+      "description": "逐步拟合残差的 Boosting 树模型族。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_K近邻",
+      "name": "K 近邻",
+      "category": "method",
+      "description": "依据邻近样本投票或平均完成预测。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_朴素贝叶斯",
+      "name": "朴素贝叶斯",
+      "category": "method",
+      "description": "基于条件独立假设的概率分类模型。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_K_means",
+      "name": "K-means",
+      "category": "method",
+      "description": "最小化簇内距离的经典聚类算法。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_PCA",
+      "name": "PCA",
+      "category": "method",
+      "description": "通过主成分投影实现线性降维。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_分类任务",
+      "name": "分类任务",
+      "category": "task",
+      "description": "预测离散类别标签的监督学习任务。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_回归任务",
+      "name": "回归任务",
+      "category": "task",
+      "description": "预测连续数值的监督学习任务。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_标签数据",
+      "name": "标签数据",
+      "category": "data",
+      "description": "包含输入样本及其真实输出标注的数据。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#94a3b8"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_线性回归",
+      "name": "线性回归",
+      "category": "method",
+      "description": "用线性函数拟合连续目标变量。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_逻辑回归",
+      "name": "逻辑回归",
+      "category": "method",
+      "description": "使用逻辑函数建模类别概率的线性分类器。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_聚类",
+      "name": "聚类",
+      "category": "task",
+      "description": "将相似样本自动分组成簇。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_降维",
+      "name": "降维",
+      "category": "task",
+      "description": "保留关键信息的同时降低特征维度。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_异常检测",
+      "name": "异常检测",
+      "category": "task",
+      "description": "识别偏离主体分布的样本或事件。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_层次聚类",
+      "name": "层次聚类",
+      "category": "method",
+      "description": "构建样本之间层级簇结构的聚类方法。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_DBSCAN",
+      "name": "DBSCAN",
+      "category": "method",
+      "description": "基于密度连通性的聚类与噪声识别方法。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_高斯混合模型",
+      "name": "高斯混合模型",
+      "category": "method",
+      "description": "用多个高斯分布混合表示数据分布。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_t_SNE",
+      "name": "t-SNE",
+      "category": "method",
+      "description": "用于可视化高维数据局部邻域结构的非线性降维方法。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_UMAP",
+      "name": "UMAP",
+      "category": "method",
+      "description": "保持流形邻域结构的非线性降维方法。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_自编码器",
+      "name": "自编码器",
+      "category": "method",
+      "description": "通过重构输入学习低维表示的神经网络。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_文本预处理",
+      "name": "文本预处理",
+      "category": "method",
+      "description": "将原始文本规范化并转换为可建模形式。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "text_preprocessing",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_词表示",
+      "name": "词表示",
+      "category": "feature",
+      "description": "将词、子词或句子映射为离散或连续向量。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "word_representations",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_序列建模",
+      "name": "序列建模",
+      "category": "method",
+      "description": "建模词序、上下文依赖和长距离关系。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "sequence_modeling",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_语言模型",
+      "name": "语言模型",
+      "category": "method",
+      "description": "估计文本序列概率并支持生成、理解与推理。",
+      "route": null,
+      "status": "reference",
+      "drillTo": "language_models",
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_信息抽取",
+      "name": "信息抽取",
+      "category": "task",
+      "description": "从文本中抽取实体、关系和事件。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_机器翻译",
+      "name": "机器翻译",
+      "category": "task",
+      "description": "将一种语言自动转换为另一种语言。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_问答系统",
+      "name": "问答系统",
+      "category": "task",
+      "description": "根据问题从知识或上下文中生成答案。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_文本分类",
+      "name": "文本分类",
+      "category": "task",
+      "description": "将文本分配到预定义类别。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_文本生成",
+      "name": "文本生成",
+      "category": "task",
+      "description": "生成摘要、对话、代码或长文本。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#fbbf24"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_多模态理解",
+      "name": "多模态理解",
+      "category": "frontier",
+      "description": "融合文本、图像、视频等多源信息的理解任务。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#c084fc"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_分词",
+      "name": "分词",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_规范化",
+      "name": "规范化",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_停用词处理",
+      "name": "停用词处理",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_词干提取",
+      "name": "词干提取",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_词形还原",
+      "name": "词形还原",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_子词切分",
+      "name": "子词切分",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_BPE",
+      "name": "BPE",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_WordPiece",
+      "name": "WordPiece",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_SentencePiece",
+      "name": "SentencePiece",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_独热词表示",
+      "name": "独热词表示",
+      "category": "feature",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_TF_IDF",
+      "name": "TF-IDF",
+      "category": "feature",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_Word2Vec",
+      "name": "Word2Vec",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_GloVe",
+      "name": "GloVe",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_FastText",
+      "name": "FastText",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_上下文词向量",
+      "name": "上下文词向量",
+      "category": "feature",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_句向量",
+      "name": "句向量",
+      "category": "feature",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_位置编码",
+      "name": "位置编码",
+      "category": "feature",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a3e635"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_LSTM",
+      "name": "LSTM",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_GRU",
+      "name": "GRU",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_编码器解码器",
+      "name": "编码器-解码器",
+      "category": "structure",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#a78bfa"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_CRF",
+      "name": "CRF",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_N_gram",
+      "name": "N-gram",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_自回归语言模型",
+      "name": "自回归语言模型",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_掩码语言模型",
+      "name": "掩码语言模型",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_指令微调",
+      "name": "指令微调",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_检索增强生成",
+      "name": "检索增强生成",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_提示工程",
+      "name": "提示工程",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
+    },
+    {
+      "id": "n_对齐学习",
+      "name": "对齐学习",
+      "category": "method",
+      "description": "补充的知识图谱节点，用于展开该主题的关键概念、方法或应用。",
+      "route": null,
+      "status": "reference",
+      "drillTo": null,
+      "symbolSize": 36,
+      "itemStyle": {
+        "color": "#22c55e"
+      },
+      "label": {
+        "show": true
+      }
     }
   ],
   "allLinks": [
@@ -23041,6 +26106,426 @@
       "source": "old_201",
       "target": "old_168",
       "relation": "采集"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_监督学习",
+      "relation": "包含"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_无监督学习",
+      "relation": "包含"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_半监督学习",
+      "relation": "包含"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_强化学习",
+      "relation": "包含"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_特征工程",
+      "relation": "依赖"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "n_模型选择",
+      "relation": "依赖"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "old_124",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_决策树",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_随机森林",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_梯度提升树",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_K近邻",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_朴素贝叶斯",
+      "relation": "包含"
+    },
+    {
+      "source": "n_无监督学习",
+      "target": "n_K_means",
+      "relation": "包含"
+    },
+    {
+      "source": "n_无监督学习",
+      "target": "n_PCA",
+      "relation": "包含"
+    },
+    {
+      "source": "n_传统机器学习",
+      "target": "old_110",
+      "relation": "优化"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_标签数据",
+      "relation": "依赖"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_分类任务",
+      "relation": "包含"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "n_回归任务",
+      "relation": "包含"
+    },
+    {
+      "source": "n_分类任务",
+      "target": "n_逻辑回归",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_分类任务",
+      "target": "old_124",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_分类任务",
+      "target": "n_决策树",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_分类任务",
+      "target": "n_随机森林",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_分类任务",
+      "target": "n_朴素贝叶斯",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_回归任务",
+      "target": "n_线性回归",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_回归任务",
+      "target": "n_梯度提升树",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_回归任务",
+      "target": "n_K近邻",
+      "relation": "常用方法"
+    },
+    {
+      "source": "n_监督学习",
+      "target": "old_147",
+      "relation": "评估"
+    },
+    {
+      "source": "old_124",
+      "target": "old_122",
+      "relation": "优化目标"
+    },
+    {
+      "source": "n_逻辑回归",
+      "target": "old_123",
+      "relation": "优化目标"
+    },
+    {
+      "source": "n_无监督学习",
+      "target": "n_聚类",
+      "relation": "包含"
+    },
+    {
+      "source": "n_无监督学习",
+      "target": "n_降维",
+      "relation": "包含"
+    },
+    {
+      "source": "n_无监督学习",
+      "target": "n_异常检测",
+      "relation": "包含"
+    },
+    {
+      "source": "n_聚类",
+      "target": "n_K_means",
+      "relation": "包含"
+    },
+    {
+      "source": "n_聚类",
+      "target": "n_层次聚类",
+      "relation": "包含"
+    },
+    {
+      "source": "n_聚类",
+      "target": "n_DBSCAN",
+      "relation": "包含"
+    },
+    {
+      "source": "n_聚类",
+      "target": "n_高斯混合模型",
+      "relation": "包含"
+    },
+    {
+      "source": "n_降维",
+      "target": "n_PCA",
+      "relation": "包含"
+    },
+    {
+      "source": "n_降维",
+      "target": "n_t_SNE",
+      "relation": "包含"
+    },
+    {
+      "source": "n_降维",
+      "target": "n_UMAP",
+      "relation": "包含"
+    },
+    {
+      "source": "n_降维",
+      "target": "n_自编码器",
+      "relation": "神经方法"
+    },
+    {
+      "source": "n_异常检测",
+      "target": "n_高斯混合模型",
+      "relation": "可基于"
+    },
+    {
+      "source": "old_36",
+      "target": "n_文本预处理",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_词表示",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_序列建模",
+      "relation": "包含"
+    },
+    {
+      "source": "n_序列建模",
+      "target": "old_35",
+      "relation": "发展到"
+    },
+    {
+      "source": "old_36",
+      "target": "n_语言模型",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_信息抽取",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_机器翻译",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_问答系统",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_文本分类",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_文本生成",
+      "relation": "包含"
+    },
+    {
+      "source": "old_36",
+      "target": "n_多模态理解",
+      "relation": "扩展"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_分词",
+      "relation": "包含"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_规范化",
+      "relation": "包含"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_停用词处理",
+      "relation": "包含"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_词干提取",
+      "relation": "包含"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_词形还原",
+      "relation": "包含"
+    },
+    {
+      "source": "n_文本预处理",
+      "target": "n_子词切分",
+      "relation": "包含"
+    },
+    {
+      "source": "n_子词切分",
+      "target": "n_BPE",
+      "relation": "包含"
+    },
+    {
+      "source": "n_子词切分",
+      "target": "n_WordPiece",
+      "relation": "包含"
+    },
+    {
+      "source": "n_子词切分",
+      "target": "n_SentencePiece",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_独热词表示",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_TF_IDF",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_Word2Vec",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_GloVe",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_FastText",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_上下文词向量",
+      "relation": "包含"
+    },
+    {
+      "source": "n_词表示",
+      "target": "n_句向量",
+      "relation": "包含"
+    },
+    {
+      "source": "n_上下文词向量",
+      "target": "n_位置编码",
+      "relation": "结合"
+    },
+    {
+      "source": "n_序列建模",
+      "target": "old_37",
+      "relation": "包含"
+    },
+    {
+      "source": "old_37",
+      "target": "n_LSTM",
+      "relation": "包含"
+    },
+    {
+      "source": "old_37",
+      "target": "n_GRU",
+      "relation": "包含"
+    },
+    {
+      "source": "n_序列建模",
+      "target": "old_39",
+      "relation": "引入"
+    },
+    {
+      "source": "old_39",
+      "target": "old_35",
+      "relation": "发展为"
+    },
+    {
+      "source": "n_序列建模",
+      "target": "n_编码器解码器",
+      "relation": "常用结构"
+    },
+    {
+      "source": "n_序列建模",
+      "target": "n_CRF",
+      "relation": "结构化预测"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_N_gram",
+      "relation": "早期方法"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_自回归语言模型",
+      "relation": "包含"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_掩码语言模型",
+      "relation": "包含"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_指令微调",
+      "relation": "后训练"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_检索增强生成",
+      "relation": "增强"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_提示工程",
+      "relation": "交互"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_对齐学习",
+      "relation": "安全对齐"
+    },
+    {
+      "source": "n_语言模型",
+      "target": "n_文本生成",
+      "relation": "用于"
     }
   ],
   "categories": [

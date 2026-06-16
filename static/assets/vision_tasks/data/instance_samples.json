@@ -1,46 +1,47 @@
 {
-  "version": 1,
+  "version": 2,
+  "default_sample": "crosswalk_people",
   "samples": [
     {
-      "id": "overlapping-objects-01",
-      "image_size": [640, 420],
-      "mask_threshold": 0.5,
-      "instances": [
-        {
-          "instance_id": 1,
-          "class_id": 0,
-          "class_name": "person",
-          "score": 0.93,
-          "bbox_xyxy": [84, 46, 286, 382],
-          "mask_encoding": "polygon",
-          "mask_polygon": [[128, 48], [194, 72], [231, 156], [266, 246], [241, 378], [126, 351], [93, 232]],
-          "mask_area_px": 18642,
-          "contour_points": 416
-        },
-        {
-          "instance_id": 2,
-          "class_id": 0,
-          "class_name": "person",
-          "score": 0.89,
-          "bbox_xyxy": [331, 58, 558, 390],
-          "mask_encoding": "polygon",
-          "mask_polygon": [[378, 61], [452, 86], [518, 174], [501, 251], [542, 386], [371, 354], [342, 223]],
-          "mask_area_px": 20118,
-          "contour_points": 452
-        },
-        {
-          "instance_id": 3,
-          "class_id": 1,
-          "class_name": "bicycle",
-          "score": 0.82,
-          "bbox_xyxy": [164, 248, 494, 398],
-          "mask_encoding": "polygon",
-          "mask_polygon": [[178, 323], [239, 269], [319, 298], [387, 258], [478, 314], [439, 381], [310, 393], [211, 371]],
-          "mask_area_px": 15804,
-          "contour_points": 388
-        }
+      "id": "crosswalk_people",
+      "name": "Crosswalk People",
+      "image": "/static/assets/img/crosswalk_people.jpg",
+      "width": 640,
+      "height": 427,
+      "maskAP": 0.613,
+      "semantic_regions": [
+        {"class": "person", "color": "#EF4444", "polygon": [[28, 174], [105, 174], [112, 417], [25, 417]]},
+        {"class": "vehicle", "color": "#2563EB", "polygon": [[390, 60], [566, 58], [590, 198], [372, 212]]},
+        {"class": "road", "color": "#7E3F98", "polygon": [[0, 282], [640, 252], [640, 427], [0, 427]]}
       ],
-      "metrics": {"ap_box": 0.78, "ap_mask": 0.71}
+      "instances": [
+        {"id": 1, "class": "person", "score": 0.93, "bbox": [28, 174, 105, 417], "color": "#F97316", "polygon": [[48, 174], [86, 182], [103, 278], [101, 417], [42, 417], [28, 278]]},
+        {"id": 2, "class": "person", "score": 0.90, "bbox": [122, 148, 188, 413], "color": "#22C55E", "polygon": [[145, 148], [177, 160], [188, 279], [180, 413], [132, 412], [120, 260]]},
+        {"id": 3, "class": "person", "score": 0.86, "bbox": [265, 168, 343, 420], "color": "#8B5CF6", "polygon": [[292, 168], [330, 181], [343, 312], [333, 420], [278, 418], [265, 293]]},
+        {"id": 4, "class": "car", "score": 0.82, "bbox": [520, 118, 636, 272], "color": "#2563EB", "polygon": [[520, 156], [562, 121], [624, 118], [636, 214], [615, 270], [528, 260]]},
+        {"id": 5, "class": "traffic light", "score": 0.95, "bbox": [26, 48, 71, 128], "color": "#EAB308", "polygon": [[28, 48], [70, 48], [71, 128], [25, 128]]}
+      ]
+    },
+    {
+      "id": "classroom_students",
+      "name": "Classroom Students",
+      "image": "/static/assets/img/classroom_students.jpg",
+      "width": 1200,
+      "height": 800,
+      "maskAP": 0.587,
+      "semantic_regions": [
+        {"class": "person", "color": "#EF4444", "polygon": [[545, 255], [610, 255], [615, 410], [540, 410]]},
+        {"class": "desk", "color": "#F59E0B", "polygon": [[370, 550], [705, 550], [705, 785], [370, 785]]},
+        {"class": "chair", "color": "#22C55E", "polygon": [[960, 505], [1128, 505], [1128, 785], [960, 785]]}
+      ],
+      "instances": [
+        {"id": 1, "class": "person", "score": 0.94, "bbox": [545, 255, 610, 410], "color": "#F97316", "polygon": [[565, 255], [598, 266], [610, 338], [600, 410], [552, 408], [542, 335]]},
+        {"id": 2, "class": "person", "score": 0.91, "bbox": [1020, 372, 1120, 672], "color": "#22C55E", "polygon": [[1060, 372], [1100, 390], [1120, 535], [1102, 672], [1035, 662], [1018, 510]]},
+        {"id": 3, "class": "person", "score": 0.89, "bbox": [210, 492, 365, 790], "color": "#8B5CF6", "polygon": [[260, 492], [335, 520], [365, 670], [340, 790], [230, 780], [210, 620]]},
+        {"id": 4, "class": "screen", "score": 0.87, "bbox": [0, 163, 128, 322], "color": "#2563EB", "polygon": [[0, 163], [128, 164], [126, 322], [0, 320]]},
+        {"id": 5, "class": "desk", "score": 0.82, "bbox": [370, 550, 705, 785], "color": "#EAB308", "polygon": [[382, 560], [690, 552], [705, 735], [650, 785], [390, 770]]},
+        {"id": 6, "class": "bag", "score": 0.76, "bbox": [64, 582, 142, 790], "color": "#EC4899", "polygon": [[78, 585], [132, 602], [142, 740], [116, 790], [66, 765], [64, 640]]}
+      ]
     }
   ]
 }
