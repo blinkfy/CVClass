@@ -2596,12 +2596,13 @@
     color: #64748b;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0 2px;
+    padding: 0 17px;
 }
 
 .detection-real-stage {
     position: relative;
-    width: 100%;
+    width: calc(100% - 34px);
+    margin: 0 auto;
     overflow: hidden;
     border-radius: 10px;
     background: #e2e8f0;
@@ -2669,6 +2670,7 @@
     display: grid;
     gap: 8px;
     overflow: auto;
+    padding: 0 17px 17px 17px;
 }
 
 .det-table-header {
@@ -3008,7 +3010,8 @@
 
 .detection-stat-list {
     display: grid;
-    gap: 7px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 16px;
     margin: 0;
 }
 
@@ -3019,6 +3022,18 @@
     gap: 10px;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 6px;
+}
+
+@media (max-width: 1200px) {
+    .detection-stat-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .detection-stat-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 .detection-stat-list dt,
