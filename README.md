@@ -6,6 +6,8 @@
 - 第二节：卷积计算过程可视化实验
 - 第三节：CNN 前向传播与反向传播可视化实验
 - 第四节：图像边缘检测过程可视化实验
+- 第五节：图像特征提取与匹配实验
+- 第六节：高级视觉任务与前沿模型应用实验（基于 ONNX Runtime Web）
 
 前端使用原生 HTML、CSS、JavaScript，后端使用 Python Flask。图像处理部分使用 NumPy 手动计算，不使用 OpenCV/cv2；卷积可视化部分在前端使用 JavaScript 完成矩阵卷积计算和逐步演示。
 
@@ -217,3 +219,40 @@ b_new = b_old - lr × db
 - 在卷积核算子模式中查看局部卷积探针和响应强度
 - 在 Canny 模式中按步骤查看中间结果和阈值逻辑
 - 在 TEED 模式中查看深度边缘检测结构示意与输出说明
+
+## 第五节 图像特征提取与匹配实验
+
+访问地址：
+
+```text
+http://127.0.0.1:5000/feature-detection
+```
+
+第五节用于展示特征提取算法和特征匹配技术。提供多个子模块全方位解析：
+
+- 特征检测 (Feature Detection)：并排展示 Harris角点、FAST、ORB、SIFT 等特征点检测算法。通过调整参数(如 Harris block size / k，FAST 阈值，SIFT 对比度阈值等)直接观察特征分布的变化。
+- SIFT尺度空间 (Scale Space)：可视化 DoG (高斯差分金字塔) 生成过程，帮助直观理解 SIFT 如何在多尺度下搜索极值点以获得尺度不变性。
+- SIFT特征描述 (Descriptor)：展示 128 维方向梯度直方图计算方式，说明如何将邻域的梯度信息编码为对光照、旋转具备强鲁棒性的特征向量。
+- 特征匹配 (Feature Matching)：提供基于多种度量方法的匹配演示（Brute-Force、FLANN）。提供交互界面筛选优秀匹配对并过滤噪声。
+- 图像全景拼接 (Panorama)：展示基于特征点匹配求解单应性/仿射变换矩阵，进一步完成视角映射与图像拼接的过程。
+
+## 第六节 高级视觉任务与前沿模型应用实验（基于 ONNX Runtime Web）
+
+访问地址：
+
+```text
+http://127.0.0.1:5000/vision-tasks
+```
+
+该模块完全运行在前端浏览器中，借助 WebAssembly (WASM) / WebGL 加速，不依赖后端的 GPU 与重度环境依赖。系统以教学体验为核心，将“黑盒推理”过程白盒化。
+
+涵盖三大模块：
+
+- 目标检测 (Object Detection)
+  集成先进的 YOLOv8 模型结构。不仅输出最终预测框，还可以分步了解推理全流程结构——从基础图片解码、预处理 (长宽比缩放填白、RGB/标准化)，到模型 Inference，再到边界框解码 (BBox Decoding) ，以及基于 Score 和 IoU 阈值交互控制的纯手写非极大值抑制 (NMS, Non-Maximum Suppression) 计算流程。
+
+- 语义分割 (Semantic Segmentation)
+  引入基于 Transformer 的 SegFormer 模型作为教学载体。演示如何对图像进行全景视角的像素级分类，包含张量预处理以及网络前向传播后得到的通道激活，结合 ArgMax 将分类结果叠加还原映射为彩色的分割 Mask 图层。支持透明度滑动交互以便印证底图与色块贴合。
+
+- 实例分割 (Instance Segmentation)
+  基于 YOLOv8-Seg 等结构概念，演示比语义分割更高阶的要求——既需要区分“是什么类”，还要区分“是同类里的哪一个个体”。讲解分割掩码和 Bounding Box 联合输出机制，并在前端解析渲染独立实例的彩色 Mask，帮助理解实例级特征隔离的实质。

@@ -408,7 +408,8 @@
         const step = result.steps[state.step] || result.steps[0];
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, s.width)} / ${Math.max(1, s.height)}`);
         els.image.src = s.image.startsWith("blob:") ? s.image : window.cvclassUrl(s.image);
-        els.missing.textContent = s.image.startsWith("blob:") ? "上传图片无法显示" : `请放入 ${s.image.split("/").pop()}`;
+        els.missing.textContent = "";
+        els.missing.style.display = "none";
         els.confOut.textContent = state.conf.toFixed(2);
         els.iouOut.textContent = state.iou.toFixed(2);
         els.total.textContent = String(result.candidates.length + result.low.length);
@@ -609,6 +610,8 @@
         };
         image.onerror = () => {
             els.inferenceMessage.textContent = "上传图片读取失败。";
+            els.missing.textContent = "上传图片读取失败";
+            els.missing.style.display = "flex";
             URL.revokeObjectURL(url);
             if (state.customUrl === url) state.customUrl = null;
         };
