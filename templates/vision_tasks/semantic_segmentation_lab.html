@@ -1,0 +1,150 @@
+{% extends "vision_tasks_base.html" %}
+
+{% block vision_badge %}STATION 08 · SEMANTIC SEGMENTATION{% endblock %}
+{% block vision_title %}语义分割：Pixel-wise Mask{% endblock %}
+{% block vision_subtitle %}在真实图像上展示预设 Semantic Mask 与浏览器端 SegFormer-B0 推理结果，理解 H×W×C logits 到 H×W class map 的转换。{% endblock %}
+
+{% block vision_content %}
+<section class="vision-workbench semantic-lab-workbench" data-semantic-lab aria-label="语义分割教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>Mask 参数</h3><p>Input &amp; Params</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例图选择</span>
+            <select data-sem-sample></select>
+        </label>
+
+        <div class="semantic-control-section">
+            <span class="semantic-section-title">结果来源</span>
+            <div class="overview-segmented-control semantic-source-toggle">
+                <button class="is-active" type="button" data-sem-source="preset">预设 mask</button>
+                <button type="button" data-sem-source="model">前端模型推理</button>
+            </div>
+        </div>
+
+        <div class="overview-segmented-control semantic-view-modes">
+            <button class="is-active" type="button" data-sem-mode="overlay">叠加图</button>
+            <button type="button" data-sem-mode="image">原图</button>
+            <button type="button" data-sem-mode="mask">纯 mask</button>
+        </div>
+
+        <label class="vision-field">
+            <span>Mask Opacity <output data-sem-opacity-output>65%</output></span>
+            <input data-sem-opacity type="range" min="0" max="100" value="65">
+        </label>
+
+        <label class="vision-toggle-row">
+            <span>类别边界线</span>
+            <input type="checkbox" data-sem-boundaries checked>
+        </label>
+
+        <div class="vision-control-stack" data-sem-class-filter></div>
+
+        <div class="semantic-model-panel" data-sem-model-panel>
+            <div class="semantic-panel-head">
+                <span class="semantic-section-title">模型状态</span>
+                <strong data-sem-model-status>未加载</strong>
+            </div>
+            <div class="vision-kv-grid semantic-runtime-grid">
+                <div><span>模型名称</span><strong>SegFormer-B0 Semantic Segmentation</strong></div>
+                <div><span>模型路径</span><strong>static/assets/data/segformer_b0_ade/</strong></div>
+                <div><span>后端</span><strong>WASM / WebGPU</strong></div>
+                <div><span>输入尺寸</span><strong data-sem-input-size>512 × 512</strong></div>
+                <div><span>类别数量</span><strong data-sem-class-count>--</strong></div>
+                <div><span>模型推理耗时</span><strong data-sem-inference-time>--</strong></div>
+                <div><span>后处理耗时</span><strong data-sem-postprocess-time>--</strong></div>
+                <div><span>当前 backend</span><strong data-sem-active-backend>--</strong></div>
+            </div>
+            <label class="vision-field semantic-backend-field">
+                <span>推理后端</span>
+                <select data-sem-backend>
+                    <option value="webgpu">WebGPU 优先，自动回退 WASM</option>
+                    <option value="wasm">WASM</option>
+                </select>
+            </label>
+            <div class="semantic-actions">
+                <button type="button" data-sem-load-model>加载模型</button>
+                <button type="button" data-sem-run-model>运行语义分割</button>
+                <button type="button" data-sem-use-preset>切回预设 mask</button>
+            </div>
+            <p class="semantic-model-message" data-sem-model-message>默认使用预设 mask；切换到前端模型推理后再按需加载本地模型。</p>
+        </div>
+
+        <div class="vision-shape-card">
+            <span>Unified Semantic Mask</span>
+            <strong>source · classMap · classes · distribution · meta</strong>
+            <small>预设 polygon 和模型输出都会转换为同一个 H × W class index map 后再渲染。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel semantic-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>VISUALIZATION</span><h3>Semantic Mask Overlay</h3></div>
+            <span class="vision-status-chip" data-sem-miou>mIoU --</span>
+        </div>
+        <div class="semantic-stage-strip" data-sem-stage-strip>
+            <span>Source: <strong data-sem-strip-source>Preset Mask</strong></span>
+            <span>Model: <strong data-sem-strip-model>--</strong></span>
+            <span>Backend: <strong data-sem-strip-backend>--</strong></span>
+            <span>Inference: <strong data-sem-strip-inference>--</strong></span>
+            <span>Postprocess: <strong data-sem-strip-postprocess>--</strong></span>
+            <span>Mask: <strong data-sem-strip-mask>--</strong></span>
+            <span>Classes: <strong data-sem-strip-classes>--</strong></span>
+        </div>
+        <div class="vision-image-stage semantic-real-stage" data-sem-stage>
+            <img data-sem-image alt="语义分割样例图">
+            <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-sem-missing></span></div>
+            <canvas data-sem-canvas></canvas>
+            <div class="semantic-probe-card" data-sem-probe></div>
+        </div>
+        <div class="semantic-detail-grid">
+            <div class="vision-panel-lite">
+                <h4>类别图例</h4>
+                <div class="overview-legend" data-sem-legend></div>
+            </div>
+            <div class="vision-panel-lite">
+                <h4>类别占比</h4>
+                <div class="semantic-ratio-list" data-sem-ratios></div>
+            </div>
+        </div>
+        <div class="semantic-tensor-flow" data-sem-flow>
+            <div data-flow-phase="image"><strong>Image</strong><span>H×W×3 input</span></div>
+            <b>→</b>
+            <div data-flow-phase="preprocess"><strong>Preprocess</strong><span>resize / normalize</span></div>
+            <b>→</b>
+            <div data-flow-phase="inference"><strong>Model</strong><span>SegFormer forward</span></div>
+            <b>→</b>
+            <div data-flow-phase="argmax"><strong>Argmax</strong><span>C-channel decision</span></div>
+            <b>→</b>
+            <div data-flow-phase="mask"><strong>Mask</strong><span>H×W class map</span></div>
+            <b>→</b>
+            <div data-flow-phase="overlay"><strong>Overlay</strong><span>metrics + probe</span></div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-sem-notes-title>Process Notes</h3><p data-sem-notes-subtitle>Pixel Probe</p></div>
+        </div>
+        <div class="semantic-notes-tutorial" data-sem-notes-tutorial></div>
+        <div class="semantic-notes-data" data-sem-notes></div>
+        <div class="vision-output-schema">
+            <span>输出结构</span>
+            <code data-sem-output-schema>H × W class index map</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper semantic-stepper" aria-label="语义分割处理流程" data-sem-stepper>
+    <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3 input</small></div></li>
+    <li data-sem-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Resize / Normalize</small></div></li>
+    <li data-sem-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>SegFormer / Frontend Runtime</small></div></li>
+    <li data-sem-phase="argmax"><span>4</span><div><strong>Logits / Argmax</strong><small>C-channel decision</small></div></li>
+    <li data-sem-phase="mask"><span>5</span><div><strong>Semantic Mask</strong><small>H×W class map</small></div></li>
+    <li data-sem-phase="overlay"><span>6</span><div><strong>Overlay &amp; Metrics</strong><small>Color mask + distribution</small></div></li>
+</ol>
+{% endblock %}

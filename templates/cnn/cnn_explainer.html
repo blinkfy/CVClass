@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}CNN 如何学习图像{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cnn/explainer_port.css') }}">
+{% endblock %}
+
+{% block content %}
+<section
+    id="cnnExplainerPort"
+    class="cnn-explainer-port"
+    data-assets-base="{{ url_for('static', filename='assets/img/') }}"
+    data-model-url="{{ url_for('static', filename='assets/data/cnn_explainer/model.json') }}"
+>
+    <header class="ce-course-header station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h1 class="station-title">CNN 如何学习图像</h1>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
+        </div>
+        <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+    </header>
+
+    <nav class="ce-third-tabs station-tabs" aria-label="CNN 实验模块">
+        <a href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
+        <a class="is-active" href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
+        <a href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
+        <a href="{{ url_for('digit_recognition_page') }}">手写数字识别</a>
+    </nav>
+
+    <div class="ce-controls" aria-label="CNN Explainer controls">
+        <div class="ce-image-strip" id="ceImageStrip"></div>
+        <input id="ceImageUpload" class="ce-image-upload-input" type="file" accept="image/*">
+        <div class="ce-digit-drawer" id="ceDigitDrawer" hidden>
+            <canvas id="ceDigitCanvas" width="280" height="280" aria-label="手写数字绘图区"></canvas>
+            <div class="ce-digit-actions">
+                <button type="button" id="ceClearDigit">清空</button>
+                <span id="ceDigitStatus">在绘图区写一个 0~9 数字</span>
+            </div>
+        </div>
+        <div class="ce-control-spacer"></div>
+        <div class="ce-mode-switch" id="ceModeSwitch" aria-label="层级计算模式">
+            <button class="active" type="button" data-ce-mode="forward">前向计算</button>
+            <button type="button" data-ce-mode="backward">反向梯度</button>
+            <button type="button" data-ce-mode="update">参数更新</button>
+        </div>
+        <button class="ce-gradient-clear" id="ceClearGrad" type="button">清除梯度热力</button>
+        <div class="ce-hover-pill" id="ceHoverPill" aria-live="polite">悬停特征图</div>
+        <button class="ce-detail-button" id="ceDetailToggle" type="button">显示细节</button>
+        <label class="ce-model-select">
+            <span>当前模型</span>
+            <select id="ceModelSelect">
+                <option value="image">Tiny VGG 图片分类模型</option>
+                <option value="digit">手写数字识别模型</option>
+            </select>
+        </label>
+        <label class="ce-scale-select">
+            <span>归一化范围</span>
+            <select id="ceScaleSelect">
+                <option value="local">单元</option>
+                <option value="module">模块</option>
+                <option value="global">全局</option>
+            </select>
+        </label>
+    </div>
+
+    <section class="ce-principle-panel" id="cePrinciplePanel" hidden>
+        <div id="cePrincipleContent"></div>
+    </section>
+
+    <main class="ce-main">
+        <section class="ce-network-panel" aria-label="CNN 网络总览">
+            <svg id="ceNetworkSvg" class="ce-network-svg" role="img" aria-label="可交互 CNN Explainer 网络"></svg>
+        </section>
+
+        <aside class="ce-side-panel" aria-label="当前选中层说明">
+            <h2 id="ceLayerTitle">Input</h2>
+            <div class="ce-side-tabs" id="ceSideTabs" aria-label="Layer inspector tabs">
+                <button class="active" type="button" data-ce-side-tab="info">层说明</button>
+                <button type="button" data-ce-side-tab="params">参数</button>
+                <button type="button" data-ce-side-tab="grads">梯度/更新</button>
+            </div>
+            <div id="ceLayerInfo" class="ce-side-tab-panel">
+                <dl class="ce-layer-meta">
+                    <div>
+                        <dt>输入尺寸</dt>
+                        <dd id="ceLayerInput">64 × 64 × 3</dd>
+                    </div>
+                    <div>
+                        <dt>输出尺寸</dt>
+                        <dd id="ceLayerOutput">64 × 64 × 3</dd>
+                    </div>
+                </dl>
+                <p id="ceLayerDesc"></p>
+                <div class="ce-formula-box">
+                    <span>核心公式</span>
+                    <div id="ceLayerFormula" class="ce-latex-block"></div>
+                </div>
+            </div>
+            <div class="ce-mini-view" id="ceMiniView"></div>
+        </aside>
+    </main>
+
+    <section class="ce-bottom-panel">
+        <div>
+            <span class="ce-eyebrow">交互说明</span>
+            <p id="ceInteractionText">点击或悬停网络中的 feature map，可以高亮该层与相关连接，并在右侧查看层说明。</p>
+        </div>
+        <div class="ce-legend" id="ceLegend"></div>
+    </section>
+    <div id="ceDetailOverlay" class="ce-detail-overlay" hidden></div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="{{ url_for('static', filename='js/convolution/client_digit_model.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cnn/explainer_port.js') }}"></script>
+{% endblock %}

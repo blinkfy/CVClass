@@ -1,7 +1,7 @@
 importScripts("/static/js/inference/ort_loader.js", "/static/js/inference/image_preprocess.js");
 
-const MODEL_URL = "/static/assets/data/yolo_detection.onnx";
-const LABELS_URL = "/static/models/detection/labels_coco.json";
+const MODEL_URL = "/static/assets/data/detection/yolo_detection.onnx";
+const LABELS_URL = "/static/assets/data/detection/labels_coco.json";
 const INPUT_SIZE = 640;
 const MODEL_SCORE_THRESHOLD = 0.25;
 const MODEL_NMS_IOU_THRESHOLD = 0.45;

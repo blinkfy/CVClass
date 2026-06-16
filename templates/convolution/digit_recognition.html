@@ -1,0 +1,96 @@
+﻿{% extends "base.html" %}
+{% block title %}卷积与滤波：局部计算如何提取视觉特征{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/convolution.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/advanced.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/digit_recognition.css') }}">
+{% endblock %}
+{% block content %}
+<section class="digit-page">
+    <section class="conv-hero digit-page-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 02 · CONVOLUTION &amp; FILTERING</span>
+            <h2 class="station-title">卷积与滤波：局部计算如何提取视觉特征</h2>
+            <p class="station-summary">卷积核、Patch、Stride、Padding、Dilation、多通道卷积与图像滤波过程可视化。</p>
+        </div>
+        <div class="conv-actions station-hero-actions">
+            <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+            <div class="model-status digit-hero-status {{ 'ready' if model_ready else 'missing' }}">
+                <span>模型状态</span>
+                <strong>{{ model_message }}</strong>
+            </div>
+        </div>
+    </section>
+
+    <nav class="conv-subtabs station-tabs" aria-label="卷积实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积过程</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('image_convolution_page') }}">图像滤波</a>
+        <span class="conv-subtab is-active">卷积模型应用</span>
+    </nav>
+
+    <section class="digit-layout">
+        <article class="digit-card draw-card">
+            <div class="digit-card-title">
+                <div>
+                    <span class="section-label">Canvas</span>
+                    <h2>手写数字画布</h2>
+                </div>
+                <span id="digitMessage" class="digit-message">在画布中写一个 0~9 的数字</span>
+            </div>
+            <div class="canvas-wrap">
+                <canvas id="digitCanvas" width="280" height="280" aria-label="手写数字画布"></canvas>
+            </div>
+            <div class="digit-actions">
+                <button id="recognizeBtn" class="primary-button" type="button">识别数字</button>
+                <button id="loadExampleBtn" class="ghost-button" type="button">加载示例数字</button>
+                <button id="clearDigitBtn" class="download-button" type="button">清空画布</button>
+                <label class="auto-recognize">
+                    <input id="autoRecognize" type="checkbox" checked>
+                    <span>自动识别</span>
+                </label>
+            </div>
+        </article>
+
+        <article class="digit-card result-card">
+            <span class="section-label">Prediction</span>
+            <h2>识别结果</h2>
+            <div class="prediction-box">
+                <span>预测数字</span>
+                <strong id="predictionDigit">-</strong>
+                <small id="confidenceText">置信度：-</small>
+            </div>
+            <div class="preprocess-preview">
+                <div>
+                    <h3>28×28 预处理输入</h3>
+                    <p>黑底白字，NCHW = (1, 1, 28, 28)</p>
+                </div>
+                <img id="preprocessedImage" alt="28×28 预处理结果">
+            </div>
+        </article>
+
+        <article class="digit-card probability-card">
+            <span class="section-label">Probabilities</span>
+            <h2>0~9 概率分布</h2>
+            <div id="probabilityBars" class="probability-bars"></div>
+        </article>
+    </section>
+
+    <article class="digit-card model-flow-card">
+        <div class="model-flow-head">
+            <div>
+                <span class="section-label">CNN Pipeline</span>
+                <h2>CNN 模型结构</h2>
+            </div>
+            <p>输入经过两层卷积和池化，再连接全连接层完成 10 类分类。</p>
+        </div>
+        <figure class="model-flow-figure">
+            <img src="{{ url_for('static', filename='assets/img/mnist-cnn.webp') }}" alt="CNN 模型结构流程图">
+            <figcaption>Input 1×28×28 → Conv → ReLU → Pool → Conv → ReLU → Pool → FC → Softmax</figcaption>
+        </figure>
+    </article>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/convolution/client_digit_model.js') }}"></script>
+<script src="{{ url_for('static', filename='js/convolution/digit_recognition.js') }}"></script>
+{% endblock %}

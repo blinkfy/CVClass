@@ -49,7 +49,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/feature_detection.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/feature/feature_detection.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -97,7 +97,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="{{ url_for('static', filename='js/feature_common.js') }}"></script>
-<script src="{{ url_for('static', filename='js/feature_compute_frontend.js') }}"></script>
+<script src="{{ url_for('static', filename='js/feature/feature_common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/feature/feature_compute_frontend.js') }}"></script>
 {% block feature_js %}{% endblock %}
 {% endblock %}

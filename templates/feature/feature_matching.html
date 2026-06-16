@@ -1,0 +1,177 @@
+{% extends "feature_base.html" %}
+{% block feature_content %}
+<section class="feature-layout feature-matching-layout">
+    <aside class="feature-panel feature-controls match-controls">
+        <div><span class="section-label">Input & Params</span><h2>匹配实验参数</h2></div>
+        <form id="featureMatchForm">
+            <input type="hidden" name="example" data-example-input value="book">
+            <label class="feature-upload">
+                <input type="file" name="image_a" accept="image/*">
+                <span>上传图像 A</span>
+                <small data-file-name>不上传时使用示例图</small>
+            </label>
+            <label class="feature-upload">
+                <input type="file" name="image_b" accept="image/*">
+                <span>上传图像 B</span>
+                <small>不上传时自动生成旋转图</small>
+            </label>
+            <div class="feature-samples" data-samples></div>
+
+            <div class="match-algorithm-grid" aria-label="匹配算法">
+                <button type="button" class="match-algorithm-card is-active" data-match-algorithm="sift">
+                    <b>SIFT</b><span>128D float</span><small>尺度与旋转稳定 · L2</small>
+                </button>
+                <button type="button" class="match-algorithm-card" data-match-algorithm="surf">
+                    <b>SURF</b><span>64D float</span><small>Hessian 响应 · L2</small>
+                </button>
+                <button type="button" class="match-algorithm-card" data-match-algorithm="fast-brief">
+                    <b>FAST + BRIEF</b><span>256 bit</span><small>速度优先 · Hamming</small>
+                </button>
+                <button type="button" class="match-algorithm-card" data-match-algorithm="orb-lite">
+                    <b>ORB-lite</b><span>旋转 BRIEF</span><small>方向补偿 · Hamming</small>
+                </button>
+            </div>
+
+            <div class="feature-control-group">
+                <label>匹配算法
+                    <select id="matchAlgorithm" name="match_algorithm">
+                        <option value="sift">SIFT</option>
+                        <option value="surf">SURF</option>
+                        <option value="fast-brief">FAST + BRIEF</option>
+                        <option value="orb-lite">ORB-lite</option>
+                    </select>
+                </label>
+                <label>距离度量<input id="matchDistanceLabel" value="L2 欧氏距离" disabled></label>
+                <label>Ratio Test 阈值<input name="ratio_threshold" value="0.75" type="number" min="0.4" max="0.95" step="0.05"></label>
+                <label>RANSAC 误差阈值<input name="ransac_threshold" value="4" type="number" min="1" max="20" step="0.5"></label>
+                <label>RANSAC 迭代次数<input name="ransac_iterations" value="80" type="number" min="20" max="400" step="10"></label>
+                <label>最大匹配数<input name="max_matches" value="80" type="number" min="10" max="200"></label>
+                <button class="feature-primary" type="submit">执行完整匹配流程</button>
+            </div>
+        </form>
+    </aside>
+
+    <main class="feature-workspace">
+        <section class="feature-panel feature-stage match-main-stage">
+            <div class="feature-stage-head">
+                <div><span id="matchStageLabel" class="section-label">Matching Lines</span><h2 id="matchStageTitle">描述子匹配与筛选</h2></div>
+                <span id="matchElapsed" class="status-pill">等待运行</span>
+            </div>
+
+            <div class="match-nav-block">
+                <span class="match-nav-label">显示视图</span>
+                <div class="match-view-toolbar" role="group" aria-label="显示主图视图">
+                    <button type="button" class="is-active" data-match-view="matches">Ratio Test 视图</button>
+                    <button type="button" data-match-view="ransac">RANSAC 验证视图</button>
+                    <button type="button" data-match-view="warp">配准预览</button>
+                </div>
+            </div>
+            <div class="match-nav-block">
+                <span class="match-nav-label">算法流程快捷跳转</span>
+                <div class="match-phase-strip" aria-label="算法流程快捷跳转">
+                <button type="button" class="is-active" data-phase-step="0"><b>01</b><span>匹配形成</span><small>Detect → 2-NN</small></button>
+                <button type="button" data-phase-step="4"><b>02</b><span>描述子筛选</span><small>Ratio Test</small></button>
+                <button type="button" data-phase-step="5"><b>03</b><span>几何验证</span><small>RANSAC → H</small></button>
+                <button type="button" data-phase-step="7"><b>04</b><span>配准应用</span><small>Warp Preview</small></button>
+                </div>
+            </div>
+            <label id="warpOpacityControl" class="match-warp-opacity" hidden>
+                <span>变换图 A 叠加透明度</span>
+                <input id="warpOpacity" type="range" min="0" max="100" value="46">
+                <b id="warpOpacityValue">46%</b>
+            </label>
+
+            <div class="feature-canvas-frame feature-match-frame match-canvas-shell">
+                <canvas id="matchCanvas" aria-label="特征匹配结果"></canvas>
+                <div id="matchTooltip" class="match-tooltip" hidden></div>
+                <div id="matchEmptyState" class="match-empty-state">正在准备匹配结果...</div>
+            </div>
+            <div class="match-legend">
+                <span><i class="blue"></i>Ratio 通过</span>
+                <span><i class="red"></i>红短虚线：Ratio 失败 · 红长虚线：几何外点</span>
+                <span><i class="green"></i>RANSAC 内点</span>
+                <span><i class="frame"></i>变换后 A 的目标定位边框</span>
+            </div>
+
+            <section class="match-stat-groups" aria-label="匹配统计">
+                <article><header><span>01</span><div><b>Descriptor</b><small>特征与描述子</small></div></header><div id="descriptorStats" class="feature-stat-list"></div></article>
+                <article><header><span>02</span><div><b>Matching</b><small>2-NN 与 Ratio Test</small></div></header><div id="matchingStats" class="feature-stat-list"></div></article>
+                <article><header><span>03</span><div><b>Geometry</b><small>RANSAC 与变换</small></div></header><div id="geometryStats" class="feature-stat-list"></div></article>
+            </section>
+
+            <section class="match-ransac-lab">
+                <div class="feature-chain-head">
+                    <div><span class="section-label">RANSAC Teaching Motion</span><h3>随机采样到最佳模型</h3></div>
+                    <div class="match-motion-controls">
+                        <button type="button" data-ransac-action="toggle">暂停</button>
+                        <button type="button" data-ransac-action="restart">重播</button>
+                    </div>
+                </div>
+                <div class="match-ransac-layout">
+                    <div class="match-ransac-canvas-wrap">
+                        <canvas id="ransacCanvas" width="920" height="300" aria-label="RANSAC 教学动画"></canvas>
+                        <div class="match-ransac-phase" id="ransacPhase">采样 3 对匹配点</div>
+                    </div>
+                    <div class="match-ransac-side">
+                        <div id="ransacStepChips" class="match-ransac-steps"></div>
+                        <div class="match-inlier-meter">
+                            <span>当前内点 <b id="ransacCurrentCount">0</b></span>
+                            <div><i id="ransacCurrentBar"></i></div>
+                        </div>
+                        <div class="match-inlier-meter best">
+                            <span>Best 内点 <b id="ransacBestCount">0</b></span>
+                            <div><i id="ransacBestBar"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="ransacMotionMetrics" class="feature-stat-list match-ransac-bottom-metrics"></div>
+            </section>
+
+            <section class="match-probe-card">
+                <div class="feature-chain-head">
+                    <div><span class="section-label">Local Match Probe</span><h3>单个匹配对判定链</h3></div>
+                    <label>观察匹配
+                        <select id="matchProbeSelect" aria-label="选择匹配对"></select>
+                    </label>
+                </div>
+                <div class="match-probe-grid">
+                    <article class="match-distance-probe">
+                        <h4>2-NN 距离</h4>
+                        <div class="match-descriptor-signature">
+                            <span>左图描述子签名</span>
+                            <canvas id="probeDescriptorCanvas" width="280" height="58" aria-label="当前左图关键点描述子"></canvas>
+                        </div>
+                        <div class="distance-bar"><span>d1</span><div><i id="probeD1Bar"></i></div><b id="probeD1Value">-</b></div>
+                        <div class="distance-bar second"><span>d2</span><div><i id="probeD2Bar"></i></div><b id="probeD2Value">-</b></div>
+                        <p id="probeRatioFormula">ratio = d1 / d2</p>
+                    </article>
+                    <article><h4>局部距离热力矩阵</h4><canvas id="probeHeatmap" width="280" height="170"></canvas></article>
+                    <article><h4>对应点与投影</h4><canvas id="probeLinkCanvas" width="300" height="170"></canvas></article>
+                    <article class="match-gates">
+                        <h4>双重 Gate</h4>
+                        <div id="probeRatioGate" class="match-gate"><span>Ratio Gate</span><b>等待</b><small>d1 / d2 &lt; τ</small></div>
+                        <div id="probeRansacGate" class="match-gate"><span>RANSAC Gate</span><b>等待</b><small>重投影误差 ≤ ε</small></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="match-table-section">
+                <div class="feature-chain-head">
+                    <div><span class="section-label">Match Records</span><h3>匹配对明细</h3></div>
+                    <small id="matchTableSummary">默认显示前 10 条；更多匹配可在 Local Match Probe 下拉选择。</small>
+                </div>
+                <div class="table-wrap match-table-wrap">
+                    <table id="matchTable">
+                        <thead><tr><th>#</th><th>左图点</th><th>右图点</th><th>d1</th><th>d2</th><th>ratio</th><th>RANSAC</th><th>重投影误差</th><th>状态</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    {{ feature_info_panel('match') }}
+</section>
+{{ feature_timeline('matching') }}
+{% endblock %}
+{% block feature_js %}<script src="{{ url_for('static', filename='js/feature/feature_matching.js') }}"></script>{% endblock %}

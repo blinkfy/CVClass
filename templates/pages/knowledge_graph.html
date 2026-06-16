@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}CV 算法知识图谱{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/knowledge_graph.css') }}?v=4">
+{% endblock %}
+{% block content %}
+<div class="knowledge-graph-page" data-graph-data-url="{{ url_for('static', filename='assets/data/common/knowledge_graph.json') }}">
+    <section class="kg-workspace" aria-label="CV 算法知识图谱交互区">
+        <div class="kg-main-panel">
+            <div class="kg-toolbar">
+                <h1 class="kg-view-title" id="kgViewTitle">机器学习</h1>
+                <div class="kg-actions" aria-label="图谱操作">
+                    <button class="kg-tool-button" id="kgBackButton" type="button">返回上一级</button>
+                    <button class="kg-tool-button" id="kgRootButton" type="button">回到根节点</button>
+                    <button class="kg-tool-button kg-tool-button--primary" id="kgFullButton" type="button">查看全量图谱</button>
+                </div>
+                <div class="kg-stats" id="kgStats">0 个节点 · 0 条关系</div>
+            </div>
+            <div class="kg-full-hint" id="kgFullHint" hidden>全量图谱节点较多，可拖拽、滚轮缩放查看。</div>
+            <div class="kg-chart-shell" id="kgChartShell">
+                <div id="knowledgeGraphChart" class="kg-chart" role="img" aria-label="CV 算法知识图谱"></div>
+                <div class="kg-loading" id="kgLoading" hidden>正在加载图谱数据...</div>
+                <div class="kg-chart-tip" aria-hidden="true">拖拽空白处平移画布，滚轮缩放，点击节点查看详情</div>
+            </div>
+        </div>
+
+        <aside class="kg-info-panel" aria-labelledby="kgInfoTitle">
+            <div class="kg-info-head">
+                <div class="kg-panel-kicker">NODE DETAIL</div>
+                <span class="kg-status-pill" id="kgDetailBadge">浏览中</span>
+            </div>
+            <h2 id="kgInfoTitle">当前视图</h2>
+            <p id="kgInfoDescription">默认显示当前视图说明。点击节点后可查看节点类别、状态、说明和可进入的实验模块。</p>
+
+            <div class="kg-path-card">
+                <span class="kg-path-icon" aria-hidden="true"></span>
+                <div>
+                    <span>路径</span>
+                    <strong id="kgBreadcrumb">机器学习</strong>
+                </div>
+            </div>
+
+            <div class="kg-metric-grid" aria-label="当前视图统计">
+                <div class="kg-metric-card kg-metric-card--blue">
+                    <span class="kg-metric-icon" aria-hidden="true"></span>
+                    <strong id="kgMetricNodes">0</strong>
+                    <span>节点数</span>
+                </div>
+                <div class="kg-metric-card kg-metric-card--green">
+                    <span class="kg-metric-icon" aria-hidden="true"></span>
+                    <strong id="kgMetricLinks">0</strong>
+                    <span>关系数</span>
+                </div>
+                <div class="kg-metric-card kg-metric-card--orange">
+                    <span class="kg-metric-icon" aria-hidden="true"></span>
+                    <strong id="kgMetricDrillable">0</strong>
+                    <span>可展开</span>
+                </div>
+                <div class="kg-metric-card kg-metric-card--purple">
+                    <span class="kg-metric-icon" aria-hidden="true"></span>
+                    <strong id="kgMetricEnterable">0</strong>
+                    <span>可进入模块</span>
+                </div>
+            </div>
+
+            <div class="kg-section-title">属性信息</div>
+            <dl class="kg-attribute-list">
+                <div>
+                    <dt>类型</dt>
+                    <dd id="kgInfoType">当前视图</dd>
+                </div>
+                <div>
+                    <dt>状态</dt>
+                    <dd id="kgInfoStatus">-</dd>
+                </div>
+                <div>
+                    <dt>分类</dt>
+                    <dd id="kgInfoCategory">-</dd>
+                </div>
+                <div>
+                    <dt>视图 ID</dt>
+                    <dd id="kgInfoViewId">-</dd>
+                </div>
+                <div>
+                    <dt>关联模块</dt>
+                    <dd id="kgInfoModules">-</dd>
+                </div>
+            </dl>
+
+            <div class="kg-section-title">操作</div>
+            <div class="kg-panel-actions">
+                <button class="kg-panel-button kg-panel-button--primary" id="kgDrillButton" type="button" disabled>展开节点</button>
+                <a class="kg-panel-button" id="kgEnterButton" href="#" aria-disabled="true">进入模块</a>
+                <button class="kg-panel-button" id="kgPanelFullButton" type="button">查看全量图谱</button>
+            </div>
+            <div class="kg-panel-tip" id="kgPlanBadge">提示：点击图谱中的节点查看详细信息</div>
+        </aside>
+    </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="{{ url_for('static', filename='js/pages/knowledge_graph.js') }}?v=5"></script>
+{% endblock %}

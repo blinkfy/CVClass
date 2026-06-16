@@ -126,47 +126,48 @@ def format_file_size(size):
 
 @app.route("/")
 def home():
-    return render_template("home.html", active_page="home")
+    return render_template("pages/home.html", active_page="home")
 
 @app.route("/knowledge-graph", methods=["GET"])
 def knowledge_graph_page():
-    return render_template("knowledge_graph.html", active_page="knowledge_graph")
+    return render_template("pages/knowledge_graph.html", active_page="knowledge_graph")
 
 @app.route("/grayscale", methods=["GET"])
 def grayscale_page():
-    return render_template("grayscale.html", active_page="grayscale")
+    return render_template("pages/grayscale.html", active_page="grayscale")
 
 @app.route("/convolution", methods=["GET"])
 def convolution_page():
-    return render_template("convolution.html", active_page="convolution", active_sub_page="visual")
+    return render_template("convolution/convolution.html", active_page="convolution", active_sub_page="visual")
 
 @app.route("/image-convolution", methods=["GET"])
 def image_convolution_page():
-    return render_template("image_convolution.html", active_page="convolution", active_sub_page="image")
+    return render_template("convolution/image_convolution.html", active_page="convolution", active_sub_page="image")
 
 @app.route("/digit-recognition", methods=["GET"])
 def digit_recognition_page():
     model_ready, model_message = get_model_status()
     return render_template(
-        "digit_recognition.html",
+        "convolution/digit_recognition.html",
         active_page="convolution",
         active_sub_page="digit",
         model_ready=model_ready,
         model_message=model_message,
+        digit_mode="numpy",
     )
 
 @app.route("/cnn-visualization", methods=["GET"])
 def cnn_visualization_page():
-    return render_template("cnn_visualization.html", active_page="cnn", active_sub_page="cnn_train")
+    return render_template("cnn/cnn_visualization.html", active_page="cnn", active_sub_page="cnn_train")
 
 @app.route("/cnn-explainer", methods=["GET"])
 def cnn_explainer_page():
-    return render_template("cnn_explainer.html", active_page="cnn", active_sub_page="cnn_explainer")
+    return render_template("cnn/cnn_explainer.html", active_page="cnn", active_sub_page="cnn_explainer")
 
 @app.route("/conv-gradient-lab", methods=["GET"])
 def conv_gradient_lab_page():
     return render_template(
-        "conv_gradient_lab.html",
+        "cnn/conv_gradient_lab.html",
         active_page="cnn",
         active_sub_page="conv_gradient_lab"
     )
@@ -180,7 +181,7 @@ def vision_tasks_page():
 @app.route("/vision-tasks/overview", methods=["GET"])
 def vision_tasks_overview_page():
     return render_template(
-        "vision_tasks_overview.html",
+        "vision_tasks/vision_tasks_overview.html",
         active_page="vision_tasks",
         active_sub_page="overview",
     )
@@ -189,7 +190,7 @@ def vision_tasks_overview_page():
 @app.route("/vision-tasks/detection", methods=["GET"])
 def detection_lab_page():
     return render_template(
-        "detection_lab.html",
+        "vision_tasks/detection_lab.html",
         active_page="vision_tasks",
         active_sub_page="detection",
     )
@@ -198,7 +199,7 @@ def detection_lab_page():
 @app.route("/vision-tasks/semantic", methods=["GET"])
 def semantic_segmentation_lab_page():
     return render_template(
-        "semantic_segmentation_lab.html",
+        "vision_tasks/semantic_segmentation_lab.html",
         active_page="vision_tasks",
         active_sub_page="semantic",
     )
@@ -207,7 +208,7 @@ def semantic_segmentation_lab_page():
 @app.route("/vision-tasks/instance", methods=["GET"])
 def instance_segmentation_lab_page():
     return render_template(
-        "instance_segmentation_lab.html",
+        "vision_tasks/instance_segmentation_lab.html",
         active_page="vision_tasks",
         active_sub_page="instance",
     )
@@ -220,12 +221,12 @@ def edge_detection_page():
 @app.route("/edge-detection/<mode>", methods=["GET"])
 def edge_detection_mode_page(mode):
     if mode == "teed":
-        return render_template("edge_teed.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
+        return render_template("edge/edge_teed.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
     if mode == "applications":
-        return render_template("edge_applications.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
+        return render_template("edge/edge_applications.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
     if mode not in {"compare", "kernel", "canny"}:
         return redirect(url_for("edge_detection_mode_page", mode="compare"))
-    return render_template("edge_detection.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
+    return render_template("edge/edge_detection.html", active_page="edge", active_sub_page=mode, edge_mode=mode)
 
 @app.route("/feature-detection", methods=["GET"])
 def feature_detection_page():
@@ -238,12 +239,13 @@ def feature_detection_mode_page(mode):
         return redirect(url_for("feature_detection_mode_page", mode="corner"))
     if mode in {"sift_scale", "sift_descriptor"}:
         return redirect(url_for("feature_detection_mode_page", mode="sift"))
+
     feature_templates = {
-        "compare": "feature_compare.html",
-        "corner": "feature_harris.html",
-        "sift": "feature_sift.html",
-        "matching": "feature_matching.html",
-        "panorama": "feature_panorama.html",
+        "compare": "feature/feature_compare.html",
+        "corner": "feature/feature_harris.html",
+        "sift": "feature/feature_sift.html",
+        "matching": "feature/feature_matching.html",
+        "panorama": "feature/feature_panorama.html",
     }
     if mode not in feature_templates:
         return redirect(url_for("feature_detection_mode_page", mode="compare"))

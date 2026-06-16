@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}卷积与滤波：局部计算如何提取视觉特征{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/convolution.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/advanced.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/convolution/image_convolution.css') }}">
+{% endblock %}
+{% block content %}
+<section class="image-conv-page">
+    <section class="conv-hero image-conv-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 02 · CONVOLUTION &amp; FILTERING</span>
+            <h2 class="station-title">卷积与滤波：局部计算如何提取视觉特征</h2>
+            <p class="station-summary">卷积核、Patch、Stride、Padding、Dilation、多通道卷积与图像滤波过程可视化。</p>
+        </div>
+        <div class="conv-actions station-hero-actions">
+            <strong class="station-badge">KERNEL · PATCH · FEATURE MAP</strong>
+            <a class="ghost-button" href="{{ url_for('convolution_page') }}">返回卷积可视化</a>
+        </div>
+    </section>
+
+    <nav class="conv-subtabs station-tabs" aria-label="卷积实验模块">
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}">卷积过程</a>
+        <span class="conv-subtab is-active">图像滤波</span>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('convolution_page') }}#convAdvancedPanel">卷积结构调研</a>
+        <a class="conv-subtab conv-subtab-link" href="{{ url_for('digit_recognition_page') }}">卷积模型应用</a>
+    </nav>
+
+    <section class="image-conv-layout">
+        <aside class="conv-panel image-kernel-panel">
+            <div>
+                <span class="section-label">Kernel Settings</span>
+                <h3>卷积核设置</h3>
+            </div>
+
+            <label>卷积核类型
+                <select id="imageKernelTemplate">
+                    <option value="identity">Identity 原图保持</option>
+                    <option value="box_blur" selected>Box Blur 均值模糊</option>
+                    <option value="sharpen">Sharpen 锐化</option>
+                    <option value="edge">Edge 边缘检测</option>
+                    <option value="sobel_x">Sobel X</option>
+                    <option value="sobel_y">Sobel Y</option>
+                    <option value="emboss">Emboss 浮雕</option>
+                    <option value="gaussian_5">Gaussian 5×5</option>
+                    <option value="custom">自定义卷积核</option>
+                </select>
+            </label>
+
+            <div class="image-kernel-controls">
+                <label>核大小
+                    <select id="imageKernelSize">
+                        <option value="1">1 × 1</option>
+                        <option value="3" selected>3 × 3</option>
+                        <option value="5">5 × 5</option>
+                    </select>
+                </label>
+                <label>padding
+                    <select id="imageConvPadding">
+                        <option value="0">0</option>
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                    </select>
+                </label>
+                <label>stride
+                    <select id="imageConvStride">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                    </select>
+                </label>
+                <label>结果显示
+                    <select id="imageConvDisplayMode">
+                        <option value="auto" selected>自动</option>
+                        <option value="normalize">归一化</option>
+                        <option value="clip">截断</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="kernel-edit-head">
+                <strong>当前卷积核</strong>
+                <button id="imageKernelRandomBtn" class="download-button" type="button">随机核</button>
+            </div>
+            <div class="kernel-summary">
+                <span>当前模板</span>
+                <strong id="imageConvKernelName">Box Blur 均值模糊</strong>
+            </div>
+            <div id="imageKernelGrid" class="image-kernel-grid" aria-label="可编辑卷积核"></div>
+            <p id="imageKernelHint" class="image-helper-text">非负卷积核会自动按权重和归一化，避免整体变暗或过曝。</p>
+            <div class="kernel-action-footer">
+                <p>选择卷积核 → 查看当前卷积核 → 上传图片 → 应用卷积</p>
+                <button id="imageConvApplyBtn" class="primary-button" type="button">应用卷积</button>
+            </div>
+        </aside>
+
+        <article class="conv-panel image-compare-panel">
+            <div class="image-compare-head">
+                <div>
+                    <span class="section-label">Image Flow</span>
+                    <h3>图像处理对比</h3>
+                </div>
+                <div class="image-head-right">
+                    <div class="view-switch" role="tablist" aria-label="图像对比视图切换">
+                        <button class="view-switch-btn is-active" type="button" data-view-mode="side">并排对比</button>
+                        <button class="view-switch-btn" type="button" data-view-mode="result">只看结果</button>
+                        <button class="view-switch-btn" type="button" data-view-mode="slider">滑块对比</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="imageCompareStage" class="image-compare-stage">
+                <div id="imageCompareGrid" class="image-compare-grid">
+                    <section class="compare-card compare-original">
+                        <div class="compare-card-head">
+                            <strong>Original</strong>
+                            <span>原图</span>
+                        </div>
+                        <label id="imageConvDrop" class="image-preview-card image-drop-zone">
+                            <input id="imageConvInput" type="file" accept="image/*">
+                            <img id="imageConvOriginal" alt="原图预览">
+                            <span id="imageOriginalEmpty">点击或拖拽上传图片</span>
+                        </label>
+                    </section>
+
+                    <section class="compare-card compare-result">
+                        <div class="compare-card-head">
+                            <strong>Result</strong>
+                            <span id="imageConvSize">等待处理</span>
+                        </div>
+                        <div class="image-preview-card result">
+                            <img id="imageConvResult" alt="图像卷积结果">
+                            <div class="result-placeholder">
+                                <span class="result-icon">◌</span>
+                                <strong id="imageResultEmpty">等待卷积处理：请上传图片并点击应用卷积</strong>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="imageSliderStage" class="image-slider-stage is-hidden" aria-label="滑块对比区域">
+                    <div class="image-slider-layer slider-original">
+                        <img id="imageSliderOriginal" alt="原图滑块层">
+                    </div>
+                    <div class="image-slider-layer slider-result">
+                        <img id="imageSliderResult" alt="结果图滑块层">
+                    </div>
+                    <div id="imageSliderHandle" class="image-slider-handle" aria-hidden="true"></div>
+                    <input id="imageSliderRange" class="image-slider-range" type="range" min="0" max="100" value="50" aria-label="滑块对比位置">
+                    <div class="image-slider-labels">
+                        <span>Original</span>
+                        <span>Result</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="image-result-info">
+                <div id="imageConvMessage" class="image-status">等待上传图片。</div>
+                <div id="imageConvMeta" class="image-meta-grid">
+                    <span>当前卷积核：-</span>
+                    <span>kernel size：-</span>
+                    <span>padding：1</span>
+                    <span>stride：1</span>
+                    <span>输出范围：-</span>
+                    <span>处理耗时：-</span>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <section class="conv-panel kernel-notes-panel">
+        <span class="section-label">Kernel Notes</span>
+        <h3>卷积核作用说明</h3>
+        <div class="kernel-note-grid">
+            <article>
+                <strong>均值 / 高斯模糊</strong>
+                <p>邻域加权平均，削弱噪声和细节，输出更平滑。</p>
+            </article>
+            <article>
+                <strong>锐化</strong>
+                <p>增强中心像素与邻域差异，让边缘和纹理更明显。</p>
+            </article>
+            <article>
+                <strong>边缘检测</strong>
+                <p>使用正负权重突出灰度变化剧烈的位置，结果通常需归一化显示。</p>
+            </article>
+            <article>
+                <strong>Sobel X / Y</strong>
+                <p>分别强调水平或垂直方向的梯度变化，常用于边缘方向分析。</p>
+            </article>
+        </div>
+    </section>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/convolution/image_convolution.js') }}"></script>
+{% endblock %}

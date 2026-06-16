@@ -35,13 +35,66 @@
 CVClass/
 ├─ app.py
 ├─ README.md
-├─ extra_features.md
+├─ docs/
+│  ├─ 技术说明_关键技术.md
+│  └─ diagrams/
+│     ├─ pic.mmd
+│     └─ pic.puml
 ├─ templates/
-│  └─ index.html
-└─ static/
-   ├─ css/
-   ├─ js/
-   └─ assets/
+│  ├─ base.html
+│  ├─ feature_base.html
+│  ├─ vision_tasks_base.html
+│  ├─ pages/
+│  ├─ convolution/
+│  ├─ cnn/
+│  ├─ edge/
+│  ├─ feature/
+│  ├─ vision_tasks/
+│  └─ legacy/
+├─ static/
+│  ├─ css/
+│  │  ├─ core/
+│  │  ├─ pages/
+│  │  ├─ convolution/
+│  │  ├─ cnn/
+│  │  ├─ edge/
+│  │  ├─ feature/
+│  │  ├─ vision_tasks/
+│  │  └─ legacy/
+│  ├─ js/
+│  │  ├─ core/
+│  │  ├─ pages/
+│  │  ├─ convolution/
+│  │  ├─ cnn/
+│  │  ├─ edge/
+│  │  ├─ feature/
+│  │  ├─ vision_tasks/
+│  │  ├─ legacy/
+│  │  └─ inference/
+│  └─ assets/
+│     ├─ data/
+│     │  ├─ common/
+│     │  ├─ cnn/
+│     │  ├─ cnn_explainer/
+│     │  ├─ edge/
+│     │  ├─ detection/
+│     │  └─ segformer_b0_ade/
+│     ├─ img/
+│     └─ vision_tasks/
+│        ├─ data/
+│        ├─ images/
+│        ├─ masks/
+│        └─ ASSET_CREDITS.md
+├─ models/
+│  ├─ data/
+│  ├─ artifacts/
+│  ├─ digit_infer_numpy.py
+│  ├─ edge_visualization.py
+│  ├─ feature_utils.py
+│  ├─ image_utils.py
+│  └─ mycnn.py
+├─ reference/
+└─ tools/
 ```
 
 ## 运行方式
