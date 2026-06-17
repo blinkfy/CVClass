@@ -638,20 +638,35 @@
 
         async function open() {
             isOpen = true;
-            drawer.classList.add('open');
-            overlay.hidden = false;
             fab.classList.add('hide');
             renderContextCard(getContext());
             renderActions(handleAction);
             await mountScreenshotUI();
-            
-            // Auto take screenshot if not present
-            const btn = document.getElementById('aiTakeScreenshotBtn');
+
+            // 先截图（此时 drawer 尚未打开，截图干净且不会闪烁）
             const preview = document.getElementById('aiScreenshotPreview');
-            // Allow auto screenshot when button is empty or hidden
-            if (btn && preview && !preview.dataset.image) {
-                btn.click();
+            if (preview && !preview.dataset.image) {
+                const btn = document.getElementById('aiTakeScreenshotBtn');
+                if (btn) {
+                    btn.textContent = '⏳ 正在截取...';
+                    btn.disabled = true;
+                }
+                const base64Img = await captureScreenshot();
+                if (btn) {
+                    btn.textContent = '📷 重新截取本页';
+                    btn.disabled = false;
+                }
+                if (base64Img) {
+                    preview.dataset.image = base64Img;
+                    preview.querySelector('img').src = base64Img;
+                    preview.style.display = 'inline-block';
+                    if (btn) btn.style.display = 'none';
+                }
             }
+
+            // 截图完成后再丝滑打开抽屉
+            drawer.classList.add('open');
+            overlay.hidden = false;
         }
 
         function close() {
