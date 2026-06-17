@@ -1,167 +1,197 @@
-﻿{% extends "base.html" %}
-{% block title %}图像基础：计算机如何表示图像{% endblock %}
+{% extends "base.html" %}
+{% block title %}Station 01 · Image Basics{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/grayscale.css') }}">
 {% endblock %}
 {% block content %}
-<section class="page-heading station-hero">
-    <div>
-        <span class="section-label station-eyebrow">STATION 01 · IMAGE BASICS</span>
-        <h1 class="station-title">图像基础：计算机如何表示图像</h1>
-        <p class="station-summary">RGB、灰度化、二值化、通道分离、直方图与基础图像处理过程可视化。</p>
-    </div>
-    <strong class="station-badge">PIXEL · COLOR · HISTOGRAM</strong>
-</section>
-        <section id="imageLesson" class="grayscale-page">
-        <section class="hero-card">
-            <div id="dropZone" class="drop-zone">
-                <input id="imageInput" type="file" accept="image/*">
-                <div class="upload-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" role="img">
-                        <path d="M12 3l4.4 4.4-1.4 1.4-2-2V16h-2V6.8l-2 2-1.4-1.4L12 3z"></path>
-                        <path d="M5 15h2v3h10v-3h2v5H5v-5z"></path>
-                    </svg>
-                </div>
-                <h2>拖拽图片到这里</h2>
-                <p>支持 PNG、JPG、JPEG、BMP、GIF，最大 10MB</p>
-                <button id="chooseButton" class="ghost-button" type="button">选择本地图片</button>
+<section class="station-page">
+    <header class="station-hero">
+        <div class="station-hero-copy">
+            <p class="station-eyebrow">STATION 01 · IMAGE BASICS</p>
+            <h1>图像基础：像素、颜色空间与基础预处理</h1>
+            <p class="station-summary">探索图像的像素基础、颜色空间与基础处理方法，理解图像灰度化、二值化、直方图均衡化等经典操作原理。</p>
+        </div>
+        <strong class="station-badge">PIXEL · COLOR · HISTOGRAM</strong>
+    </header>
+
+    <section class="station-grid">
+        <aside class="panel panel-left">
+            <div class="panel-head">
+                <span class="panel-eyebrow">INPUT & PARAMS</span>
+                <h2>参数面板</h2>
             </div>
 
-            <aside class="control-panel">
-                <div>
-                    <span class="section-label">Operation</span>
-                    <label for="operationSelect">图像处理功能</label>
-                    <select id="operationSelect">
-                        <option value="grayscale">灰度化</option>
-                        <option value="channel">RGB 通道分离</option>
-                        <option value="binary">图像二值化</option>
-                        <option value="invert">颜色反转</option>
-                        <option value="flip_horizontal">水平翻转</option>
-                        <option value="flip_vertical">垂直翻转</option>
-                        <option value="rotate_90">逆时针旋转 90°</option>
-                        <option value="equalize">灰度直方图均衡化</option>
-                    </select>
+            <section class="panel-block">
+                <div class="block-title">
+                    <span>1. 上传图片</span>
                 </div>
-
-                <div id="methodControl" class="option-control">
-                    <span class="section-label">Algorithm</span>
-                    <label for="methodSelect">灰度化算法</label>
-                    <select id="methodSelect">
-                        <option value="weighted">加权平均法 0.299R + 0.587G + 0.114B</option>
-                        <option value="average">平均值法 (R + G + B) / 3</option>
-                        <option value="max">最大值法 max(R, G, B)</option>
-                        <option value="min">最小值法 min(R, G, B)</option>
-                    </select>
-                </div>
-
-                <div id="channelControl" class="option-control is-hidden">
-                    <label for="channelSelect">RGB 通道</label>
-                    <select id="channelSelect">
-                        <option value="red">红色通道</option>
-                        <option value="green">绿色通道</option>
-                        <option value="blue">蓝色通道</option>
-                    </select>
-                </div>
-
-                <div id="thresholdControl" class="option-control is-hidden">
-                    <div class="range-header">
-                        <label for="thresholdInput">二值化阈值</label>
-                        <strong id="thresholdValue">128</strong>
+                <label class="drop-zone" id="dropZone" for="imageInput">
+                    <input id="imageInput" type="file" accept="image/png,image/jpeg,image/bmp">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h1v-2H5a1 1 0 0 1 0-2h2V8a3 3 0 0 1 6 0v3h2V8a5 5 0 0 0-3-4.58V3h-2v.42A5 5 0 0 0 12 3z"></path>
+                            <path d="M7 14h10v2H7zM10 12l2-2 2 2h-2v4h-2v-4z"></path>
+                        </svg>
                     </div>
-                    <input id="thresholdInput" type="range" min="0" max="255" value="128">
+                    <strong>点击或拖拽图片到此处</strong>
+                    <span>支持 JPG / PNG / BMP，最大 10MB</span>
+                </label>
+                <div class="sample-strip" id="sampleStrip" aria-label="示例图列表"></div>
+                <button id="reloadSamplesButton" class="ghost-button" type="button">重新加载示例图</button>
+            </section>
+
+            <section class="panel-block">
+                <div class="block-title">
+                    <span>2. 处理类型</span>
                 </div>
+                <div id="operationList" class="operation-list" role="listbox" aria-label="处理类型"></div>
+            </section>
 
-                <button id="grayButton" class="primary-button" type="button" disabled>
-                    <span class="button-glow"></span>
-                    <span id="grayButtonText">开始处理</span>
-                </button>
+            <section class="panel-block">
+                <div class="block-title">
+                    <span>3. 当前任务参数</span>
+                </div>
+                <div id="paramsArea" class="params-area"></div>
+            </section>
 
-                <p id="message" class="message">等待上传图像</p>
-            </aside>
-        </section>
+            <section class="tip-card">
+                <p>图片上传后将自动开始处理。过程完成后，结果会自动显示在中间主舞台和右侧统计区。</p>
+            </section>
+        </aside>
 
-        <section class="compare-section">
-            <div class="section-heading">
-                <span class="section-label">前后对比</span>
-                <h2>拖动滑块，查看图像从彩色到灰度的过渡</h2>
+        <main class="panel panel-center">
+            <div class="panel-head">
+                <span class="panel-eyebrow">IMAGE PLAYGROUND</span>
+                <h2>图像处理可视化</h2>
             </div>
 
-            <div class="compare-workspace">
-                <div id="compareSlider" class="compare-slider empty" style="--split: 50%;">
-                    <div class="empty-state">
-                        <strong>图像对比区</strong>
-                        <span>上传并处理后将在这里显示叠加对比效果</span>
-                    </div>
-                    <img id="beforeImage" class="compare-image before-image" alt="原图">
-                    <div id="afterLayer" class="after-layer">
-                        <img id="afterImage" class="compare-image after-image" alt="灰度图">
-                    </div>
-                    <div id="sliderHandle" class="slider-handle" role="slider" aria-label="图像对比滑块" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-                        <span></span>
-                    </div>
-                    <span class="compare-badge compare-badge-left">原图</span>
-                    <span id="methodBadge" class="compare-badge compare-badge-right">灰度化</span>
+            <div class="status-bar">
+                <div class="status-item"><span>当前任务</span><strong id="statusTask">灰度化（加权平均法）</strong></div>
+                <div class="status-item"><span>图像尺寸</span><strong id="statusSize">800 × 600</strong></div>
+                <div class="status-item"><span>处理时间</span><strong id="statusTime">24 ms</strong></div>
+                <div class="status-actions">
+                    <button id="compareToggle" class="ghost-button" type="button">对比视图</button>
+                    <button id="downloadButton" class="ghost-button" type="button">导出结果</button>
                 </div>
+            </div>
+            <div id="messageBar" class="message-bar">等待上传示例图</div>
 
-                <article class="experiment-card pixel-card">
-                    <div>
-                        <span class="section-label">Pixel Demo</span>
-                        <h2>像素计算示例</h2>
+            <section class="compare-stage" aria-label="图像对比区">
+                <div id="compareStage" class="compare-stage-inner" style="--split: 50%;">
+                    <div class="compare-label compare-label-left">原图（RGB）</div>
+                    <div class="compare-label compare-label-right" id="resultLabel">处理结果（灰度图）</div>
+                    <div class="compare-frame">
+                        <img id="beforeImage" alt="原图" class="compare-image before">
+                        <div id="afterLayer" class="after-layer">
+                            <img id="afterImage" alt="处理结果" class="compare-image after">
+                        </div>
                     </div>
-                    <div class="pixel-readout">
-                        <span id="pixelPosition">坐标：-</span>
-                        <strong id="pixelRgb">R = -, G = -, B = -</strong>
-                        <code id="pixelFormula">将鼠标移入图片区域，查看单个像素的灰度化计算过程。</code>
+                    <div class="compare-handle" id="compareHandle" role="slider" aria-label="对比拖拽按钮" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                        <span>↔</span>
+                    </div>
+                    <div class="compare-empty" id="compareEmpty">
+                        <strong>IMAGE COMPARISON</strong>
+                        <span>上传图片后将显示原图与处理结果对比</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="preview-row">
+                <div class="section-row-head">
+                    <span class="panel-eyebrow">RESULT PREVIEW</span>
+                    <h3>结果速览</h3>
+                </div>
+                <div id="previewStrip" class="preview-strip"></div>
+            </section>
+
+            <section class="stats-grid">
+                <article class="chart-card">
+                    <div class="card-head">
+                        <h3>灰度直方图</h3>
+                    </div>
+                    <div id="histogramChart" class="histogram-chart"></div>
+                </article>
+
+                <article class="info-card">
+                    <div class="card-head">
+                        <h3>图像信息</h3>
+                    </div>
+                    <dl class="info-list">
+                        <div><dt>文件名</dt><dd id="infoName">-</dd></div>
+                        <div><dt>分辨率</dt><dd id="infoResolution">-</dd></div>
+                        <div><dt>通道数</dt><dd id="infoChannels">-</dd></div>
+                        <div><dt>文件大小</dt><dd id="infoSize">-</dd></div>
+                        <div><dt>像素总数</dt><dd id="infoPixels">-</dd></div>
+                        <div><dt>当前任务</dt><dd id="infoTask">-</dd></div>
+                        <div><dt>处理耗时</dt><dd id="infoTimeStat">-</dd></div>
+                    </dl>
+                </article>
+
+                <article class="history-card">
+                    <div class="card-head">
+                        <h3>处理历史</h3>
+                        <button id="clearHistoryButton" class="text-button" type="button">清空</button>
+                    </div>
+                    <div class="history-head">
+                        <span>时间</span>
+                        <span>任务</span>
+                        <span>参数</span>
+                        <span>耗时</span>
+                    </div>
+                    <div id="historyList" class="history-list">
+                        <div class="history-empty">暂无处理记录</div>
                     </div>
                 </article>
+            </section>
+        </main>
+
+        <aside class="panel panel-right">
+            <div class="panel-head">
+                <span class="panel-eyebrow">PROCESS NOTES</span>
+                <h2>处理说明与分析</h2>
             </div>
-        </section>
 
-        <section class="dashboard">
-            <article class="chart-card">
-                <div class="section-heading compact">
-                    <span class="section-label">Histogram</span>
-                    <h2>灰度直方图</h2>
-                </div>
-                <div id="histogramChart" class="histogram-chart"></div>
-            </article>
+            <div id="notesPanel" class="notes-panel"></div>
 
-            <aside class="meta-grid">
-                <div class="meta-card">
-                    <span>文件名</span>
-                    <strong id="infoName">-</strong>
+            <section class="pixel-probe">
+                <div class="card-head">
+                    <h3>当前像素探针</h3>
                 </div>
-                <div class="meta-card">
-                    <span>分辨率</span>
-                    <strong id="infoResolution">-</strong>
+                <div class="probe-grid">
+                    <div><span>坐标</span><strong id="probeCoord">-</strong></div>
+                    <div><span>R</span><strong id="probeR">-</strong></div>
+                    <div><span>G</span><strong id="probeG">-</strong></div>
+                    <div><span>B</span><strong id="probeB">-</strong></div>
+                    <div><span>灰度</span><strong id="probeGray">-</strong></div>
+                    <div><span>HSV</span><strong id="probeHsv">-</strong></div>
                 </div>
-                <div class="meta-card">
-                    <span>文件大小</span>
-                    <strong id="infoSize">-</strong>
-                </div>
-                <div class="meta-card accent">
-                    <span>处理耗时</span>
-                    <strong id="infoTime">-</strong>
-                </div>
-            </aside>
-        </section>
+            </section>
+        </aside>
+    </section>
 
-        <footer class="footer-actions">
-            <a id="downloadButton" class="download-button disabled" href="#" download="gray_result.png">下载灰度图</a>
-            <span id="infoFormat">格式：-</span>
-        </footer>
-
-        <section class="history-section experiment-card">
-            <div>
-                <span class="section-label">Records</span>
-                <h2>处理记录</h2>
-            </div>
-            <div id="historyList" class="history-list">
-                <p class="history-empty">暂无处理记录</p>
-            </div>
-        </section>
-        </section>
-
+    <section class="stepper">
+        <div class="step-item is-active">
+            <strong>1. 输入图像</strong>
+            <span>上传或选择图片</span>
+        </div>
+        <div class="step-item">
+            <strong>2. 选择任务与参数</strong>
+            <span>选择处理任务并设置参数</span>
+        </div>
+        <div class="step-item">
+            <strong>3. 图像处理与可视化</strong>
+            <span>查看结果与过程信息</span>
+        </div>
+        <div class="step-item">
+            <strong>4. 结果分析</strong>
+            <span>查看统计与直方图</span>
+        </div>
+        <div class="step-item">
+            <strong>5. 导出结果</strong>
+            <span>下载或继续其他操作</span>
+        </div>
+    </section>
+</section>
 {% endblock %}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>

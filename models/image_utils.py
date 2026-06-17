@@ -72,8 +72,41 @@ def rgb_to_gray_array(rgba_array, method="weighted"):
 def gray_array_to_rgba(gray_array, alpha):
     return np.dstack([gray_array, gray_array, gray_array, alpha]).astype(np.uint8)
 
+
+def otsu_threshold(gray_array):
+    histogram = np.bincount(gray_array.ravel(), minlength=256).astype(np.float64)
+    total = gray_array.size
+    if total == 0:
+        return 128
+
+    sum_total = np.dot(np.arange(256), histogram)
+    sum_background = 0.0
+    weight_background = 0.0
+    max_variance = -1.0
+    threshold = 128
+
+    for value in range(256):
+        weight_background += histogram[value]
+        if weight_background == 0:
+            continue
+
+        weight_foreground = total - weight_background
+        if weight_foreground == 0:
+            break
+
+        sum_background += value * histogram[value]
+        mean_background = sum_background / weight_background
+        mean_foreground = (sum_total - sum_background) / weight_foreground
+        variance = weight_background * weight_foreground * (mean_background - mean_foreground) ** 2
+
+        if variance > max_variance:
+            max_variance = variance
+            threshold = value
+
+    return int(threshold)
+
 # 分离 RGB 通道
-def split_rgb_channel(image, channel):
+def split_rgb_channel(image, channel, display_mode="color"):
     rgba_array = image_to_rgba_array(image)
     result = np.zeros_like(rgba_array)
     channel_indexes = {"red": 0, "green": 1, "blue": 2}
@@ -82,21 +115,33 @@ def split_rgb_channel(image, channel):
         raise ValueError("invalid rgb channel")
 
     channel_index = channel_indexes[channel]
-    result[:, :, channel_index] = rgba_array[:, :, channel_index]
+    channel_array = rgba_array[:, :, channel_index]
+    if display_mode == "gray":
+        result[:, :, :3] = channel_array[:, :, np.newaxis]
+    else:
+        result[:, :, channel_index] = channel_array
     result[:, :, 3] = rgba_array[:, :, 3]
-    return rgb_to_gray_array(result), rgba_array_to_image(result)
+    return channel_array, rgba_array_to_image(result)
 
 # 二值化
-def binary_image(image, threshold=128, method="weighted"):
+def binary_image(image, threshold=128, method="weighted", binary_mode="manual"):
     rgba_array = image_to_rgba_array(image)
     gray_array = rgb_to_gray_array(rgba_array, method)
+    if binary_mode == "otsu":
+        threshold = otsu_threshold(gray_array)
     binary_array = np.where(gray_array >= threshold, 255, 0).astype(np.uint8)
     result = gray_array_to_rgba(binary_array, rgba_array[:, :, 3])
     return binary_array, rgba_array_to_image(result)
 
 # 反色
-def invert_image(image):
+def invert_image(image, invert_mode="rgb"):
     rgba_array = image_to_rgba_array(image)
+    if invert_mode == "gray":
+        gray_array = rgb_to_gray_array(rgba_array)
+        inverted = 255 - gray_array
+        result = gray_array_to_rgba(inverted, rgba_array[:, :, 3])
+        return inverted, rgba_array_to_image(result)
+
     result = rgba_array.copy()
     result[:, :, :3] = 255 - result[:, :, :3]
     return rgb_to_gray_array(result), rgba_array_to_image(result)
@@ -118,6 +163,13 @@ def rotate_left_90(image):
     result = np.rot90(rgba_array, k=1)
     return rgb_to_gray_array(result), rgba_array_to_image(result)
 
+
+# 顺时针旋转 90 度
+def rotate_right_90(image):
+    rgba_array = image_to_rgba_array(image)
+    result = np.rot90(rgba_array, k=-1)
+    return rgb_to_gray_array(result), rgba_array_to_image(result)
+
 # def rotate_left_90(image):
 #     rgba_array = image_to_rgba_array(image)
 #     H, W, C = rgba_array.shape
@@ -128,49 +180,145 @@ def rotate_left_90(image):
 #     result = result_flat.reshape(W, H, C)
 #     return rgb_to_gray_array(result), rgba_array_to_image(result)
 
-# 直方图均衡化
-def equalize_gray_histogram(image, method="weighted"):
+def rgb_to_hsv_arrays(rgba_array):
+    rgb = rgba_array[:, :, :3].astype(np.float32) / 255.0
+    r = rgb[:, :, 0]
+    g = rgb[:, :, 1]
+    b = rgb[:, :, 2]
+    maxc = np.max(rgb, axis=2)
+    minc = np.min(rgb, axis=2)
+    delta = maxc - minc
+
+    hue = np.zeros_like(maxc)
+    mask = delta > 0
+    red_max = mask & (maxc == r)
+    green_max = mask & (maxc == g)
+    blue_max = mask & (maxc == b)
+    hue[red_max] = ((g[red_max] - b[red_max]) / delta[red_max]) % 6
+    hue[green_max] = ((b[green_max] - r[green_max]) / delta[green_max]) + 2
+    hue[blue_max] = ((r[blue_max] - g[blue_max]) / delta[blue_max]) + 4
+    hue = hue / 6.0
+
+    saturation = np.zeros_like(maxc)
+    nonzero = maxc > 0
+    saturation[nonzero] = delta[nonzero] / maxc[nonzero]
+    value = maxc
+    return hue, saturation, value
+
+
+def hsv_to_rgb_array(hue, saturation, value, alpha):
+    hue6 = (hue % 1.0) * 6.0
+    sector = np.floor(hue6).astype(np.int32)
+    fraction = hue6 - sector
+    p = value * (1.0 - saturation)
+    q = value * (1.0 - fraction * saturation)
+    t = value * (1.0 - (1.0 - fraction) * saturation)
+
+    r = np.zeros_like(value)
+    g = np.zeros_like(value)
+    b = np.zeros_like(value)
+
+    mask = sector == 0
+    r[mask], g[mask], b[mask] = value[mask], t[mask], p[mask]
+    mask = sector == 1
+    r[mask], g[mask], b[mask] = q[mask], value[mask], p[mask]
+    mask = sector == 2
+    r[mask], g[mask], b[mask] = p[mask], value[mask], t[mask]
+    mask = sector == 3
+    r[mask], g[mask], b[mask] = p[mask], q[mask], value[mask]
+    mask = sector == 4
+    r[mask], g[mask], b[mask] = t[mask], p[mask], value[mask]
+    mask = sector == 5
+    r[mask], g[mask], b[mask] = value[mask], p[mask], q[mask]
+
+    rgb = np.dstack([r, g, b]) * 255.0
+    return np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), alpha])
+
+
+def hsv_image(image, hsv_channel="h"):
     rgba_array = image_to_rgba_array(image)
-    gray_array = rgb_to_gray_array(rgba_array, method)
-    histogram = np.bincount(gray_array.ravel(), minlength=256)
+    alpha = rgba_array[:, :, 3]
+    hue, saturation, value = rgb_to_hsv_arrays(rgba_array)
+
+    if hsv_channel == "s":
+        channel_array = np.clip(saturation * 255, 0, 255).astype(np.uint8)
+        return channel_array, rgba_array_to_image(gray_array_to_rgba(channel_array, alpha))
+    if hsv_channel == "v":
+        channel_array = np.clip(value * 255, 0, 255).astype(np.uint8)
+        return channel_array, rgba_array_to_image(gray_array_to_rgba(channel_array, alpha))
+    if hsv_channel == "composite":
+        result = hsv_to_rgb_array(hue, saturation, value, alpha)
+        return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+    channel_array = np.clip(hue * 255, 0, 255).astype(np.uint8)
+    return channel_array, rgba_array_to_image(gray_array_to_rgba(channel_array, alpha))
+
+
+def equalize_uint8_channel(channel):
+    histogram = np.bincount(channel.ravel(), minlength=256)
     cdf = histogram.cumsum()
     nonzero_cdf = cdf[cdf > 0]
 
     if nonzero_cdf.size == 0:
-        equalized = gray_array
-    else:
-        cdf_min = nonzero_cdf[0]
-        total_pixels = gray_array.size
-        denominator = total_pixels - cdf_min
-        if denominator == 0:
-            equalized = gray_array
-        else:
-            mapping = np.round((cdf - cdf_min) / denominator * 255)
-            mapping = np.clip(mapping, 0, 255).astype(np.uint8)
-            equalized = mapping[gray_array]
+        return channel
 
+    cdf_min = nonzero_cdf[0]
+    denominator = channel.size - cdf_min
+    if denominator == 0:
+        return channel
+
+    mapping = np.round((cdf - cdf_min) / denominator * 255)
+    mapping = np.clip(mapping, 0, 255).astype(np.uint8)
+    return mapping[channel]
+
+
+# 直方图均衡化
+def equalize_gray_histogram(image, method="weighted", equalize_mode="gray"):
+    rgba_array = image_to_rgba_array(image)
+    if equalize_mode == "rgb":
+        result = rgba_array.copy()
+        for channel_index in range(3):
+            result[:, :, channel_index] = equalize_uint8_channel(result[:, :, channel_index])
+        return rgb_to_gray_array(result), rgba_array_to_image(result)
+
+    gray_array = rgb_to_gray_array(rgba_array, method)
+    equalized = equalize_uint8_channel(gray_array)
     result = gray_array_to_rgba(equalized, rgba_array[:, :, 3])
-    result[:,:,:3]=(rgba_array[:,:,:3].astype(np.float32)*(equalized.astype(np.float32)/255)[:, :, np.newaxis]).astype(np.uint8)
     return equalized, rgba_array_to_image(result)
 
 
-def process_image(image, operation="grayscale", method="weighted", channel="red", threshold=128):
+def process_image(
+    image,
+    operation="grayscale",
+    method="weighted",
+    channel="red",
+    threshold=128,
+    binary_mode="manual",
+    channel_mode="color",
+    hsv_channel="h",
+    equalize_mode="gray",
+    invert_mode="rgb",
+):
     if operation == "grayscale":
         return image_to_gray(image, method)
     if operation == "channel":
-        return split_rgb_channel(image, channel)
+        return split_rgb_channel(image, channel, channel_mode)
+    if operation == "hsv":
+        return hsv_image(image, hsv_channel)
     if operation == "binary":
-        return binary_image(image, threshold, method)
+        return binary_image(image, threshold, method, binary_mode)
     if operation == "invert":
-        return invert_image(image)
+        return invert_image(image, invert_mode)
     if operation == "flip_horizontal":
         return flip_image(image, "horizontal")
     if operation == "flip_vertical":
         return flip_image(image, "vertical")
     if operation == "rotate_90":
         return rotate_left_90(image)
+    if operation == "rotate_right_90":
+        return rotate_right_90(image)
     if operation == "equalize":
-        return equalize_gray_histogram(image, method)
+        return equalize_gray_histogram(image, method, equalize_mode)
 
     raise ValueError("invalid image operation")
 

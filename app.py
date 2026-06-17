@@ -30,15 +30,21 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "gif"}
 ALLOWED_OPERATIONS = {
     "grayscale",
     "channel",
+    "hsv",
     "binary",
     "invert",
     "flip_horizontal",
     "flip_vertical",
     "rotate_90",
+    "rotate_right_90",
     "equalize",
 }
 ALLOWED_GRAY_METHODS = {"weighted", "average", "max", "min"}
 ALLOWED_CHANNELS = {"red", "green", "blue"}
+ALLOWED_CHANNEL_MODES = {"color", "gray"}
+ALLOWED_HSV_CHANNELS = {"h", "s", "v", "composite"}
+ALLOWED_EQUALIZE_MODES = {"gray", "rgb"}
+ALLOWED_INVERT_MODES = {"rgb", "gray"}
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 COMPUTE_CONFIG_PATH = os.path.join(app.root_path, "compute_config.json")
@@ -278,6 +284,11 @@ def handle_process_request(default_operation="grayscale", allow_operation_param=
     operation = request.form.get("operation", default_operation) if allow_operation_param else default_operation
     method = request.form.get("method", "weighted")
     channel = request.form.get("channel", "red")
+    channel_mode = request.form.get("channel_mode", "color")
+    hsv_channel = request.form.get("hsv_channel", "h")
+    equalize_mode = request.form.get("equalize_mode", "gray")
+    invert_mode = request.form.get("invert_mode", "rgb")
+    binary_mode = request.form.get("binary_mode", "manual")
 
     if file.filename == "":
         return jsonify({"error": "未选择文件"}), 400
@@ -293,6 +304,21 @@ def handle_process_request(default_operation="grayscale", allow_operation_param=
 
     if channel not in ALLOWED_CHANNELS:
         return jsonify({"error": "RGB 通道参数非法"}), 400
+
+    if channel_mode not in ALLOWED_CHANNEL_MODES:
+        return jsonify({"error": "RGB 通道显示模式非法"}), 400
+
+    if hsv_channel not in ALLOWED_HSV_CHANNELS:
+        return jsonify({"error": "HSV 通道参数非法"}), 400
+
+    if equalize_mode not in ALLOWED_EQUALIZE_MODES:
+        return jsonify({"error": "直方图均衡化模式非法"}), 400
+
+    if invert_mode not in ALLOWED_INVERT_MODES:
+        return jsonify({"error": "反色模式非法"}), 400
+
+    if binary_mode not in {"manual", "otsu"}:
+        return jsonify({"error": "二值化模式非法"}), 400
 
     try:
         threshold = parse_threshold(request.form.get("threshold", 128))
@@ -311,6 +337,11 @@ def handle_process_request(default_operation="grayscale", allow_operation_param=
             method=method,
             channel=channel,
             threshold=threshold,
+            binary_mode=binary_mode,
+            channel_mode=channel_mode,
+            hsv_channel=hsv_channel,
+            equalize_mode=equalize_mode,
+            invert_mode=invert_mode,
         )
         histogram = make_histogram(result_gray_array)
         result_base64 = image_to_base64(result_image)
@@ -331,6 +362,11 @@ def handle_process_request(default_operation="grayscale", allow_operation_param=
                     "operation": operation,
                     "channel": channel,
                     "threshold": threshold,
+                    "binary_mode": binary_mode,
+                    "channel_mode": channel_mode,
+                    "hsv_channel": hsv_channel,
+                    "equalize_mode": equalize_mode,
+                    "invert_mode": invert_mode,
                 },
             }
         )

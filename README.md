@@ -216,7 +216,7 @@ Input 1×28×28 -> Conv -> ReLU -> Pool -> Conv -> ReLU -> Pool -> FC -> Softmax
 http://127.0.0.1:5000/cnn-visualization
 ```
 
-第三节用于解释 CNN 训练时的一次完整前向传播、反向传播和参数更新。该页面优先在前端完成教学计算，不新增复杂后端 API，避免影响第一节、第二节和手写数字识别模块。
+第三节用于解释 CNN 训练时的一次完整前向传播、反向传播和参数更新。该页面优先在前端完成教学计算，不新增复杂后端 API，避免影响第一节、第二节和卷积模型应用模块。
 
 教学 CNN 结构固定为：
 
@@ -242,7 +242,6 @@ Input 6×6
 - 模型总览：展示 Input、Conv、ReLU、MaxPool、Flatten、FC、Softmax、Loss 的层级关系、输入输出尺寸、作用和主要公式。
 - 前向传播：逐步展示输入初始化、卷积滑窗、ReLU 截断、MaxPool 取最大值、Flatten、FC、Softmax 和 Cross Entropy Loss。
 - 反向传播：逐步展示 `dlogits = probs - y`、FC 梯度、Flatten reshape、MaxPool 梯度路由、ReLU mask、卷积核梯度 `dK` 累加、bias 梯度和参数更新。
-- 模型应用：提供进入 `/digit-recognition` 手写数字识别模块的入口，说明小 CNN 负责解释计算细节，真实手写识别模块展示 CNN 在实际分类任务中的应用。
 
 参数更新展示公式：
 

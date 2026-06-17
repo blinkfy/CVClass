@@ -1816,7 +1816,7 @@ body.home-page-shell .content-shell {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 18px;
+    padding: 5px 13px;
     border: none;
     border-radius: 28px;
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -1841,8 +1841,8 @@ body.home-page-shell .content-shell {
 
 .ai-fab-icon { display: inline-flex; align-items: center; justify-content: center; }
 .ai-fab-icon img {
-    width: 24px;
-    height: 24px;
+    width: 35px;
+    height: 35px;
     display: block;
     object-fit: contain;
 }

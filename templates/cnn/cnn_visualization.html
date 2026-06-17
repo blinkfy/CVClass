@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cnn/cnn_visualization.css') }}?v=landscape-lr-compare-1">
 {% endblock %}
 {% block content %}
-<section id="cnnVizPage" class="cnn-viz-page" data-digit-url="{{ url_for('digit_recognition_page') }}">
+<section id="cnnVizPage" class="cnn-viz-page">
     <header class="cnn-viz-header station-hero">
         <div>
             <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
@@ -22,7 +22,6 @@
         <a class="is-active" href="{{ url_for('cnn_visualization_page') }}">前向与反向传播</a>
         <a href="{{ url_for('cnn_explainer_page') }}">数据传播细节</a>
         <a href="{{ url_for('conv_gradient_lab_page') }}">卷积梯度显微镜</a>
-        <a href="{{ url_for('digit_recognition_page') }}">手写数字识别</a>
     </nav>
 
     <section class="cnn-command-bar" aria-label="第三节操作栏">
