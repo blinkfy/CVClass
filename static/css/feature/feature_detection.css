@@ -14,7 +14,7 @@
 }
 
 .content-shell:has(> .feature-page) {
-    width: min(1760px, calc(100% - 24px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
 }
 
 .feature-page {

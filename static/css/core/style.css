@@ -1,4 +1,6 @@
 :root {
+    --lab-shell-max: 1760px;
+    --lab-shell-gutter: 24px;
     --slate-50: #f8fafc;
     --slate-100: #f1f5f9;
     --slate-200: #e2e8f0;
@@ -33,7 +35,7 @@ input {
 }
 
 .page-shell {
-    width: min(1120px, calc(100% - 28px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
     margin: 0 auto;
     padding: 24px 0 24px;
 }
@@ -686,7 +688,7 @@ input[type="range"] {
 
 @media (max-width: 620px) {
     .page-shell {
-        width: min(100% - 18px, 1120px);
+        width: min(100% - 16px, var(--lab-shell-max));
         padding-top: 18px;
     }
 

@@ -22,7 +22,7 @@
 }
 
 .content-shell:has(.cnn-explainer-port) {
-    width: min(1840px, calc(100% - 20px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
     padding: 18px 0;
 }
 

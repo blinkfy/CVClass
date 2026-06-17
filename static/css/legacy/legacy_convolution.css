@@ -3,7 +3,7 @@ body {
 }
 
 .page-shell {
-    width: min(1480px, calc(100% - 20px));
+    width: min(var(--lab-shell-max, 1760px), calc(100% - var(--lab-shell-gutter, 24px)));
     padding: 22px 0 34px;
 }
 
@@ -1299,7 +1299,7 @@ body {
 
 @media (max-width: 680px) {
     .page-shell {
-        width: min(100% - 20px, 1320px);
+        width: min(100% - 16px, var(--lab-shell-max, 1760px));
     }
 
     .lesson-panel {

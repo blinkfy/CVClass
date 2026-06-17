@@ -1,5 +1,7 @@
 :root {
     --sidebar-width: 240px;
+    --lab-shell-max: 1760px;
+    --lab-shell-gutter: 24px;
     --page-bg: #f8fafc;
     --text-main: #0f172a;
     --text-muted: #64748b;
@@ -157,7 +159,7 @@ body:not(.sidebar-collapsed) .main-content {
 }
 
 .content-shell {
-    width: min(1480px, calc(100% - 40px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
     margin: 0 auto;
     padding: 28px 0 44px;
 }
@@ -387,7 +389,7 @@ body:not(.sidebar-collapsed) .main-content {
     }
 
     .content-shell {
-        width: min(100% - 24px, 1480px);
+        width: min(100% - 16px, var(--lab-shell-max));
         padding-top: 72px;
     }
 

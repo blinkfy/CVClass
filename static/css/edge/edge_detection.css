@@ -9,7 +9,7 @@
 }
 
 .content-shell:has(.edge-page) {
-    width: min(1760px, calc(100% - 24px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
 }
 
 .edge-page * {
@@ -4431,7 +4431,7 @@
 
 @media (max-width: 620px) {
     .content-shell:has(.edge-page) {
-        width: min(100% - 16px, 1760px);
+        width: min(100% - 16px, var(--lab-shell-max));
     }
 
     .edge-method-row,
@@ -5412,7 +5412,7 @@
 
 /* TEED target layout override: keep the standalone TEED page close to the wide 3-column reference. */
 .content-shell:has(.edge-teed-page) {
-    width: min(1760px, calc(100% - 64px));
+    width: min(var(--lab-shell-max), calc(100% - var(--lab-shell-gutter)));
 }
 
 .edge-teed-page {
@@ -5625,7 +5625,7 @@
 
 @media (max-width: 1480px) {
     .content-shell:has(.edge-teed-page) {
-        width: min(100% - 32px, 1760px);
+        width: min(100% - 16px, var(--lab-shell-max));
     }
 
     .edge-teed-layout {
@@ -5660,7 +5660,7 @@
 
 @media (max-width: 900px) {
     .content-shell:has(.edge-teed-page) {
-        width: min(100% - 16px, 1760px);
+        width: min(100% - 16px, var(--lab-shell-max));
     }
 
     .edge-teed-results {

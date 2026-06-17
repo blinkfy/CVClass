@@ -4,192 +4,200 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/grayscale.css') }}">
 {% endblock %}
 {% block content %}
-<section class="station-page">
-    <header class="station-hero">
-        <div class="station-hero-copy">
-            <p class="station-eyebrow">STATION 01 · IMAGE BASICS</p>
+<section class="station01-page">
+    <header class="station01-hero">
+        <div class="station01-hero-copy">
+            <p class="station01-eyebrow">STATION 01 · IMAGE BASICS</p>
             <h1>图像基础：像素、颜色空间与基础预处理</h1>
-            <p class="station-summary">探索图像的像素基础、颜色空间与基础处理方法，理解图像灰度化、二值化、直方图均衡化等经典操作原理。</p>
+            <p>探索图像的像素矩阵、颜色空间与基础预处理方法，理解图像灰度化、二值化与直方图均衡化的原理。</p>
         </div>
-        <strong class="station-badge">PIXEL · COLOR · HISTOGRAM</strong>
+        <strong class="station01-badge">PIXEL · COLOR · HISTOGRAM</strong>
     </header>
 
-    <section class="station-grid">
-        <aside class="panel panel-left">
-            <div class="panel-head">
-                <span class="panel-eyebrow">INPUT & PARAMS</span>
-                <h2>参数面板</h2>
+    <section class="station01-grid">
+        <aside class="station01-panel station01-left" aria-label="输入与参数">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">INPUT & PARAMS</span>
+                <h2>输入与参数</h2>
             </div>
 
-            <section class="panel-block">
-                <div class="block-title">
-                    <span>1. 上传图片</span>
-                </div>
-                <label class="drop-zone" id="dropZone" for="imageInput">
+            <section class="station01-block">
+                <div class="station01-block-title">1. 上传图片</div>
+                <label class="station01-drop-zone" id="dropZone" for="imageInput">
                     <input id="imageInput" type="file" accept="image/png,image/jpeg,image/bmp">
-                    <div class="drop-zone-icon" aria-hidden="true">
+                    <span class="station01-upload-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24">
-                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h1v-2H5a1 1 0 0 1 0-2h2V8a3 3 0 0 1 6 0v3h2V8a5 5 0 0 0-3-4.58V3h-2v.42A5 5 0 0 0 12 3z"></path>
-                            <path d="M7 14h10v2H7zM10 12l2-2 2 2h-2v4h-2v-4z"></path>
+                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h2v-2H5a1 1 0 0 1 0-2h4V8a3 3 0 0 1 6 0v3h4a1 1 0 0 1 0 2h-2v2h2a3 3 0 0 0 0-6h-2V8a5 5 0 0 0-5-5Z"></path>
+                            <path d="M11 11h2v7h-2z"></path>
+                            <path d="m8.5 13.5 3.5-3.5 3.5 3.5-1.4 1.4-2.1-2.1-2.1 2.1z"></path>
                         </svg>
-                    </div>
+                    </span>
                     <strong>点击或拖拽图片到此处</strong>
-                    <span>支持 JPG / PNG / BMP，最大 10MB</span>
+                    <small>支持 JPG / PNG / BMP，最大 10MB</small>
                 </label>
-                <div class="sample-strip" id="sampleStrip" aria-label="示例图列表"></div>
-                <button id="reloadSamplesButton" class="ghost-button" type="button">重新加载示例图</button>
+                <div class="station01-samples" id="sampleStrip" aria-label="示例图"></div>
+                <button id="reloadSamplesButton" class="station01-button station01-button-ghost" type="button">重新加载示例图</button>
             </section>
 
-            <section class="panel-block">
-                <div class="block-title">
-                    <span>2. 处理类型</span>
-                </div>
-                <div id="operationList" class="operation-list" role="listbox" aria-label="处理类型"></div>
+            <section class="station01-block">
+                <div class="station01-block-title">2. 处理类型</div>
+                <div id="operationList" class="station01-operation-list" role="listbox" aria-label="处理类型"></div>
             </section>
 
-            <section class="panel-block">
-                <div class="block-title">
-                    <span>3. 当前任务参数</span>
-                </div>
-                <div id="paramsArea" class="params-area"></div>
+            <section class="station01-block">
+                <div class="station01-block-title">3. 当前任务参数</div>
+                <div id="paramsArea" class="station01-params"></div>
             </section>
 
-            <section class="tip-card">
+            <section class="station01-tip">
                 <p>图片上传后将自动开始处理。过程完成后，结果会自动显示在中间主舞台和右侧统计区。</p>
             </section>
         </aside>
 
-        <main class="panel panel-center">
-            <div class="panel-head">
-                <span class="panel-eyebrow">IMAGE PLAYGROUND</span>
-                <h2>图像处理可视化</h2>
-            </div>
-
-            <div class="status-bar">
-                <div class="status-item"><span>当前任务</span><strong id="statusTask">灰度化（加权平均法）</strong></div>
-                <div class="status-item"><span>图像尺寸</span><strong id="statusSize">800 × 600</strong></div>
-                <div class="status-item"><span>处理时间</span><strong id="statusTime">24 ms</strong></div>
-                <div class="status-actions">
-                    <button id="compareToggle" class="ghost-button" type="button">对比视图</button>
-                    <button id="downloadButton" class="ghost-button" type="button">导出结果</button>
+        <main class="station01-panel station01-center" aria-label="图像处理可视化">
+            <div class="station01-panel-head station01-panel-head-inline">
+                <div>
+                    <span class="station01-section-label">IMAGE PLAYGROUND</span>
+                    <h2>图像处理可视化</h2>
                 </div>
+                <div id="messageBar" class="station01-message" hidden>正在加载示例图...</div>
             </div>
-            <div id="messageBar" class="message-bar" hidden>等待上传示例图</div>
 
-            <section class="compare-stage" aria-label="图像对比区">
-                <div id="compareStage" class="compare-stage-inner" style="--split: 50%;">
-                    <div class="compare-label compare-label-left">原图（RGB）</div>
-                    <div class="compare-label compare-label-right" id="resultLabel">处理结果（灰度图）</div>
-                    <div class="compare-frame">
-                        <img id="beforeImage" alt="原图" class="compare-image before">
-                        <div id="afterLayer" class="after-layer">
-                            <img id="afterImage" alt="处理结果" class="compare-image after">
+            <section class="station01-status" aria-label="处理状态">
+                <div><span>当前任务</span><strong id="statusTask">灰度化（加权平均法）</strong></div>
+                <div><span>图像尺寸</span><strong id="statusSize">-</strong></div>
+                <div><span>处理时间</span><strong id="statusTime">-</strong></div>
+                <div><span>输出类型</span><strong id="statusOutputType">灰度图像</strong></div>
+                <div class="station01-status-actions">
+                    <button id="compareToggle" class="station01-button station01-button-ghost" type="button">对比视图</button>
+                    <button id="downloadButton" class="station01-button station01-button-primary" type="button">导出结果</button>
+                </div>
+            </section>
+
+            <section class="station01-flow" aria-label="处理流程">
+                <div id="flowSteps" class="station01-flow-steps"></div>
+            </section>
+
+            <section class="station01-stage" aria-label="Before After 图像对比">
+                <div id="compareStage" class="station01-compare is-empty" style="--split: 50%; --probe-x: -100px; --probe-y: -100px;">
+                    <div class="station01-stage-label station01-label-left">原图（RGB）</div>
+                    <div class="station01-stage-label station01-label-right" id="resultLabel">结果：灰度图</div>
+                    <div class="station01-compare-frame">
+                        <img id="beforeImage" alt="原图" class="station01-compare-image station01-before">
+                        <div id="afterLayer" class="station01-after-layer">
+                            <img id="afterImage" alt="处理结果" class="station01-compare-image station01-after">
                         </div>
+                        <div id="probeCrosshair" class="station01-crosshair" aria-hidden="true"></div>
+                        <div id="probeBubble" class="station01-probe-bubble" aria-hidden="true">x -, y -</div>
                     </div>
-                    <div class="compare-handle" id="compareHandle" role="slider" aria-label="对比拖拽按钮" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-                        <span>↔</span>
+                    <div class="station01-compare-handle" id="compareHandle" role="slider" aria-label="对比滑块" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                        <span aria-hidden="true">‹ ›</span>
                     </div>
-                    <div class="compare-empty" id="compareEmpty">
+                    <div class="station01-empty" id="compareEmpty">
                         <strong>IMAGE COMPARISON</strong>
                         <span>上传图片后将显示原图与处理结果对比</span>
                     </div>
                 </div>
             </section>
 
-            <section class="preview-row">
-                <div class="section-row-head">
-                    <span class="panel-eyebrow">RESULT PREVIEW</span>
-                    <h3>结果速览</h3>
+            <section class="station01-preview-section">
+                <div class="station01-section-head">
+                    <div>
+                        <span class="station01-section-label">RESULT PREVIEW</span>
+                        <h3>结果预览</h3>
+                    </div>
                 </div>
-                <div id="previewStrip" class="preview-strip"></div>
+                <div id="previewStrip" class="station01-preview-strip"></div>
             </section>
 
-            <section class="stats-grid">
-                <article class="chart-card">
-                    <div class="card-head">
+            <section class="station01-stats-grid">
+                <article class="station01-card station01-histogram-card">
+                    <div class="station01-card-head">
                         <h3>灰度直方图</h3>
+                        <span id="histogramMeta">Mean - · Peak -</span>
                     </div>
-                    <div id="histogramChart" class="histogram-chart"></div>
+                    <div id="histogramChart" class="station01-histogram"></div>
                 </article>
 
-                <article class="info-card">
-                    <div class="card-head">
+                <article class="station01-card">
+                    <div class="station01-card-head">
                         <h3>图像信息</h3>
                     </div>
-                    <dl class="info-list">
+                    <dl class="station01-info-list">
                         <div><dt>文件名</dt><dd id="infoName">-</dd></div>
-                        <div><dt>分辨率</dt><dd id="infoResolution">-</dd></div>
+                        <div><dt>尺寸</dt><dd id="infoResolution">-</dd></div>
                         <div><dt>通道数</dt><dd id="infoChannels">-</dd></div>
                         <div><dt>文件大小</dt><dd id="infoSize">-</dd></div>
                         <div><dt>像素总数</dt><dd id="infoPixels">-</dd></div>
                         <div><dt>当前任务</dt><dd id="infoTask">-</dd></div>
-                        <div><dt>处理耗时</dt><dd id="infoTimeStat">-</dd></div>
+                        <div><dt>处理时间</dt><dd id="infoTimeStat">-</dd></div>
                     </dl>
                 </article>
 
-                <article class="history-card">
-                    <div class="card-head">
+                <article class="station01-card">
+                    <div class="station01-card-head">
                         <h3>处理历史</h3>
-                        <button id="clearHistoryButton" class="text-button" type="button">清空</button>
+                        <button id="clearHistoryButton" class="station01-text-button" type="button">清空记录</button>
                     </div>
-                    <div class="history-head">
-                        <span>时间</span>
-                        <span>任务</span>
-                        <span>参数</span>
-                        <span>耗时</span>
+                    <div class="station01-history-head">
+                        <span>时间</span><span>任务</span><span>参数</span><span>耗时</span>
                     </div>
-                    <div id="historyList" class="history-list">
-                        <div class="history-empty">暂无处理记录</div>
+                    <div id="historyList" class="station01-history-list">
+                        <div class="station01-history-empty">暂无处理记录</div>
                     </div>
                 </article>
             </section>
         </main>
 
-        <aside class="panel panel-right">
-            <div class="panel-head">
-                <span class="panel-eyebrow">PROCESS NOTES</span>
+        <aside class="station01-panel station01-right" aria-label="处理说明与分析">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">PROCESS NOTES</span>
                 <h2>处理说明与分析</h2>
             </div>
 
-            <div id="notesPanel" class="notes-panel"></div>
+            <div id="notesPanel" class="station01-notes"></div>
 
-            <section class="pixel-probe">
-                <div class="card-head">
+            <section class="station01-card station01-pixel-card">
+                <div class="station01-card-head">
                     <h3>当前像素探针</h3>
+                    <span id="probeLockState">实时</span>
                 </div>
-                <div class="probe-grid">
+                <div class="station01-probe-summary">
                     <div><span>坐标</span><strong id="probeCoord">-</strong></div>
-                    <div><span>R</span><strong id="probeR">-</strong></div>
-                    <div><span>G</span><strong id="probeG">-</strong></div>
-                    <div><span>B</span><strong id="probeB">-</strong></div>
-                    <div><span>灰度</span><strong id="probeGray">-</strong></div>
                     <div><span>HSV</span><strong id="probeHsv">-</strong></div>
                 </div>
+                <div class="station01-channel-bars">
+                    <div class="station01-channel-bar is-red"><span>R · 0.299</span><strong id="probeR">-</strong><i id="probeRBar"></i></div>
+                    <div class="station01-channel-bar is-green"><span>G · 0.587</span><strong id="probeG">-</strong><i id="probeGBar"></i></div>
+                    <div class="station01-channel-bar is-blue"><span>B · 0.114</span><strong id="probeB">-</strong><i id="probeBBar"></i></div>
+                    <div class="station01-channel-bar is-gray"><span>Gray</span><strong id="probeGray">-</strong><i id="probeGrayBar"></i></div>
+                </div>
+                <div class="station01-gray-calc" id="grayCalc">RGB → Gray</div>
+            </section>
+
+            <section class="station01-card">
+                <div class="station01-card-head">
+                    <h3>统计摘要</h3>
+                </div>
+                <dl class="station01-info-list station01-summary-list">
+                    <div><dt>通道数</dt><dd id="summaryChannels">-</dd></div>
+                    <div><dt>像素总数</dt><dd id="summaryPixels">-</dd></div>
+                    <div><dt>平均灰度</dt><dd id="summaryMean">-</dd></div>
+                    <div><dt>最小灰度</dt><dd id="summaryMin">-</dd></div>
+                    <div><dt>最大灰度</dt><dd id="summaryMax">-</dd></div>
+                    <div><dt>标准差</dt><dd id="summaryStd">-</dd></div>
+                    <div><dt>直方图峰值</dt><dd id="summaryPeak">-</dd></div>
+                </dl>
             </section>
         </aside>
     </section>
 
-    <section class="stepper">
-        <div class="step-item is-active">
-            <strong>1. 输入图像</strong>
-            <span>上传或选择图片</span>
-        </div>
-        <div class="step-item">
-            <strong>2. 选择任务与参数</strong>
-            <span>选择处理任务并设置参数</span>
-        </div>
-        <div class="step-item">
-            <strong>3. 图像处理与可视化</strong>
-            <span>查看结果与过程信息</span>
-        </div>
-        <div class="step-item">
-            <strong>4. 结果分析</strong>
-            <span>查看统计与直方图</span>
-        </div>
-        <div class="step-item">
-            <strong>5. 导出结果</strong>
-            <span>下载或继续其他操作</span>
-        </div>
+    <section class="station01-stepper" aria-label="实验流程">
+        <div class="is-active"><strong>1. 输入图像</strong><span>上传或选择示例</span></div>
+        <div><strong>2. 参数选择</strong><span>任务与参数</span></div>
+        <div><strong>3. 处理可视化</strong><span>对比与流程</span></div>
+        <div><strong>4. 统计分析</strong><span>直方图与摘要</span></div>
+        <div><strong>5. 导出结果</strong><span>下载当前结果</span></div>
     </section>
 </section>
 {% endblock %}

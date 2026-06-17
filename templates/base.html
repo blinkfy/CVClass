@@ -57,8 +57,8 @@
             <a class="{{ 'active' if active_page == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">CV 算法知识图谱</a>
 
             <div class="sidebar-category">基础视觉</div>
-            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础：计算机如何表示图像</a>
-            <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">卷积与滤波：局部计算如何提取视觉特征</a>
+            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础</a>
+            <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
                 <a class="{{ 'active' if active_sub_page|default('') == 'visual' else '' }}" href="{{ url_for('convolution_page') }}">卷积可视化</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'image' else '' }}" href="{{ url_for('image_convolution_page') }}">图像卷积应用</a>
