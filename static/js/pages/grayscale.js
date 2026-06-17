@@ -587,6 +587,7 @@ function activeTaskTitle() {
 
 function setMessage(text, type = "normal") {
     els.messageBar.textContent = text;
+    els.messageBar.hidden = type !== "error";
     els.messageBar.classList.toggle("is-error", type === "error");
     els.messageBar.classList.toggle("is-success", type === "success");
 }
