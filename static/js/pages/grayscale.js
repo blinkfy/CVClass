@@ -35,6 +35,8 @@
         historyList: $("historyList"),
         clearHistoryButton: $("clearHistoryButton"),
         notesPanel: $("notesPanel"),
+        processVizLabel: $("processVizLabel"),
+        processVizCaption: $("processVizCaption"),
         probeLockState: $("probeLockState"),
         probeCoord: $("probeCoord"),
         probeR: $("probeR"),
@@ -853,10 +855,32 @@
         return `<section class="station01-note-card ${extraClass}"><h4>${title}</h4>${body}</section>`;
     }
 
+    const processVizMap = {
+        grayscale: { label: "RGB → Gray", caption: ["三通道颜色流按权重汇入", "合成单通道亮度"] },
+        binary: { label: "Gray → Binary", caption: ["灰度流与阈值线碰撞", "划分为黑白两极"] },
+        channel: { label: "RGB → Channel", caption: ["从 RGB 矩阵中抽取一路", "聚焦单通道结构"] },
+        hsv: { label: "RGB → HSV", caption: ["颜色空间坐标变换", "色相 / 饱和度 / 明度"] },
+        equalize: { label: "Hist → Equalize", caption: ["统计分布重新拉伸", "灰度范围展开"] },
+        invert: { label: "RGB → Invert", caption: ["每一路颜色反向流动", "互补色碰撞输出"] },
+        geometry: { label: "Coord → Map", caption: ["像素坐标矩阵映射", "几何位置重组"] }
+    };
+
     function renderNotes() {
         const stats = histogramStats(state.currentResult?.histogram || []);
         const task = state.selectedTask;
         let html = "";
+
+        // 更新右侧计算过程可视化卡片的标签与主题
+        const viz = processVizMap[task] || processVizMap.grayscale;
+        const processViz = document.getElementById("processViz");
+        if (processViz) {
+            processViz.className = `station01-card station01-process-viz is-${task}`;
+        }
+        if (els.processVizLabel) els.processVizLabel.textContent = viz.label;
+        if (els.processVizCaption) {
+            els.processVizCaption.innerHTML = `<span>${viz.caption[0]}</span><strong>${viz.caption[1]}</strong>`;
+        }
+
         if (task === "grayscale") {
             html += noteCard("当前算法说明", "<p>将 RGB 三通道按感知权重合成为单通道亮度图。</p>");
             html += noteCard("核心公式", "<code>Gray(x,y) = 0.299R + 0.587G + 0.114B</code>");
@@ -1199,9 +1223,19 @@
         }
     }
 
+    function mapPreviewKeyToTask(key) {
+        if (key === "original") return "original";
+        if (key.startsWith("channel-")) return "channel";
+        return key;
+    }
+
     async function handlePreviewClick(key) {
         if (!state.selectedFile) return;
         state.previewKey = key;
+        const task = mapPreviewKeyToTask(key);
+        if (task !== "original") {
+            state.selectedTask = task;
+        }
         if (key === "original") {
             const data = {
                 image: state.imageUrl,
@@ -1221,6 +1255,8 @@
             els.compareStage.classList.remove("is-geometry");
             drawHistogram(state.originalHistogram);
             updateLabelsAndInfo();
+            renderOperations();
+            renderParams();
             renderNotes();
             renderPreviewStrip();
             sweepCompare();
@@ -1230,6 +1266,8 @@
         const cached = resultCache.get(key);
         if (cached) {
             applyResult(cached, key, false);
+            renderOperations();
+            renderParams();
             return;
         }
 
@@ -1242,6 +1280,8 @@
             const data = await requestProcess(params, requestId);
             if (!data) return;
             applyResult(data, key, true);
+            renderOperations();
+            renderParams();
         } catch (error) {
             if (requestId !== state.requestId) return;
             setMessage(error.message || "结果预览生成失败。", "error");
