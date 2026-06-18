@@ -1,0 +1,1303 @@
+.banana-hero,
+.banana-section,
+.banana-note {
+    border: 1px solid rgba(219, 232, 248, 0.92);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.075);
+    backdrop-filter: blur(18px);
+}
+
+.banana-hero {
+    display: grid;
+    grid-template-columns: minmax(380px, 0.86fr) minmax(620px, 1.14fr);
+    gap: 24px;
+    align-items: center;
+    min-height: 350px;
+    padding: clamp(24px, 4vw, 46px);
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(238,247,255,0.92)),
+        linear-gradient(120deg, rgba(245, 158, 11, 0.08), transparent 44%);
+}
+
+.banana-back-link {
+    justify-self: start;
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 7px;
+    padding: 0 11px;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 950;
+    text-decoration: none;
+    background: #ffffff;
+}
+
+.banana-hero-copy {
+    display: grid;
+    gap: 12px;
+}
+
+.banana-hero-copy h1 {
+    max-width: 800px;
+    margin: 0;
+    color: #071536;
+    font-size: clamp(34px, 4.7vw, 60px);
+    line-height: 1.06;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.banana-hero-copy p {
+    margin: 0;
+    color: var(--frontier-muted);
+    font-size: 18px;
+    line-height: 1.7;
+    font-weight: 700;
+}
+
+.banana-flow {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) 54px minmax(120px, 1fr) 54px minmax(120px, 1fr) 54px minmax(120px, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 210px;
+}
+
+.banana-flow-node {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-height: 104px;
+    place-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.24);
+    border-radius: 8px;
+    padding: 12px;
+    color: #0f2548;
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 950;
+    text-align: center;
+    background: rgba(255,255,255,0.94);
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.08);
+}
+
+.banana-flow-node--core {
+    color: #ffffff;
+    background:
+        linear-gradient(135deg, #1d5cff, #06b6d4 68%, #20b56b);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.5), 0 18px 38px rgba(37, 99, 235, 0.23);
+    animation: bananaCoreGlow 2.6s ease-in-out infinite;
+}
+
+.banana-flow-line {
+    position: relative;
+    height: 2px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(29,92,255,0.18), rgba(6,182,212,0.8));
+}
+
+.banana-flow-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 22px;
+    background: #ffffff;
+    box-shadow: 0 0 16px #06b6d4;
+    animation: bananaLineRun 1.8s linear infinite;
+}
+
+.banana-section {
+    margin-top: 18px;
+    padding: clamp(20px, 2.4vw, 30px);
+}
+
+.banana-mechanism-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.banana-mechanism-grid article {
+    display: grid;
+    gap: 11px;
+    border: 1px solid #dbe8f8;
+    border-radius: 8px;
+    padding: 18px;
+    background: rgba(255,255,255,0.88);
+}
+
+.banana-mechanism-grid span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 950;
+    background: linear-gradient(135deg, #1d5cff, #06b6d4);
+}
+
+.banana-mechanism-grid h3,
+.banana-decode-panel h3,
+.banana-system-link h2 {
+    margin: 0;
+    color: #0f2548;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.banana-mechanism-grid h3 {
+    font-size: 20px;
+}
+
+.banana-mechanism-grid p,
+.banana-decode-panel p,
+.banana-system-link p,
+.banana-note {
+    margin: 0;
+    color: var(--frontier-muted);
+    line-height: 1.7;
+    font-weight: 650;
+}
+
+.banana-demo-shell {
+    display: grid;
+    grid-template-columns: 190px minmax(260px, 0.78fr) minmax(360px, 1.1fr) 300px;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.banana-task-tabs,
+.banana-prompt-panel,
+.banana-rgb-panel,
+.banana-decode-panel {
+    border: 1px solid rgba(219, 232, 248, 0.92);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.86);
+    overflow: hidden;
+}
+
+.banana-task-tabs {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 12px;
+}
+
+.banana-prompt-panel {
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.banana-prompt-panel p {
+    margin: 0;
+    padding: 18px;
+    color: #0f2548;
+    font-size: 16px;
+    line-height: 1.8;
+    font-weight: 750;
+}
+
+.prompt-keyword {
+    display: inline;
+    border-radius: 5px;
+    padding: 1px 4px;
+    color: #1d4ed8;
+    background: rgba(219, 234, 254, 0.74);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.prompt-keyword.is-active {
+    color: #065f46;
+    background: rgba(167, 243, 208, 0.96);
+    box-shadow: 0 0 0 1px rgba(34,197,94,0.24), 0 0 18px rgba(6,182,212,0.16);
+}
+
+.banana-rgb-panel {
+    display: grid;
+    grid-template-rows: auto minmax(360px, 1fr);
+}
+
+.banana-output-visual {
+    position: relative;
+    overflow: hidden;
+    min-height: 360px;
+}
+
+.banana-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.25s ease, clip-path 0.42s ease;
+    clip-path: inset(0 100% 0 0);
+}
+
+.banana-layer--semantic {
+    background:
+        linear-gradient(180deg, rgba(6, 182, 212, 0.86) 0 36%, rgba(59, 130, 246, 0.78) 36% 58%, rgba(99, 102, 241, 0.7) 58%),
+        radial-gradient(circle at 28% 64%, rgba(245,158,11,0.95) 0 12%, transparent 12.5%),
+        radial-gradient(circle at 55% 63%, rgba(255,255,255,0.98) 0 5%, transparent 5.5%);
+    mix-blend-mode: multiply;
+}
+
+.banana-layer--instance {
+    background:
+        radial-gradient(ellipse at 28% 62%, rgba(244, 114, 182, 0.82) 0 14%, transparent 14.5%),
+        radial-gradient(ellipse at 55% 63%, rgba(16, 185, 129, 0.88) 0 6%, transparent 6.5%),
+        radial-gradient(ellipse at 70% 62%, rgba(251, 191, 36, 0.86) 0 10%, transparent 10.5%),
+        rgba(4, 11, 24, 0.82);
+}
+
+.banana-layer--referring {
+    background:
+        radial-gradient(ellipse at 55% 63%, rgba(255,255,255,1) 0 7%, transparent 7.5%),
+        rgba(0,0,0,0.92);
+}
+
+.banana-layer--depth {
+    background: linear-gradient(120deg, #f97316 0%, #facc15 28%, #22c55e 48%, #06b6d4 66%, #1d5cff 100%);
+    mix-blend-mode: color;
+}
+
+.banana-layer--normal {
+    background:
+        linear-gradient(135deg, rgba(236, 72, 153, 0.88), rgba(37, 99, 235, 0.9) 46%, rgba(34, 197, 94, 0.86)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0 7px, transparent 7px 15px);
+    mix-blend-mode: hue;
+}
+
+.banana-layer--edge {
+    background:
+        linear-gradient(28deg, transparent 0 47%, rgba(255,255,255,0.95) 48% 49%, transparent 50%),
+        linear-gradient(-18deg, transparent 0 42%, rgba(255,255,255,0.9) 43% 44%, transparent 45%),
+        radial-gradient(ellipse at 30% 66%, transparent 0 11%, rgba(255,255,255,0.92) 11.4% 12%, transparent 12.4%),
+        radial-gradient(ellipse at 63% 65%, transparent 0 4%, rgba(255,255,255,0.95) 4.4% 5%, transparent 5.4%),
+        #020617;
+}
+
+.banana-layer--background {
+    background:
+        linear-gradient(45deg, #dbeafe 25%, transparent 25% 75%, #dbeafe 75%),
+        linear-gradient(45deg, #dbeafe 25%, #ffffff 25% 75%, #dbeafe 75%);
+    background-position: 0 0, 12px 12px;
+    background-size: 24px 24px;
+}
+
+.banana-layer--edit {
+    background:
+        linear-gradient(180deg, transparent 0 49%, rgba(6, 182, 212, 0.74) 49% 100%);
+    mix-blend-mode: color;
+}
+
+.banana-output-visual.is-task-semantic .banana-layer--semantic,
+.banana-output-visual.is-task-instance .banana-layer--instance,
+.banana-output-visual.is-task-referring .banana-layer--referring,
+.banana-output-visual.is-task-depth .banana-layer--depth,
+.banana-output-visual.is-task-normal .banana-layer--normal,
+.banana-output-visual.is-task-edge .banana-layer--edge,
+.banana-output-visual.is-task-background .banana-layer--background,
+.banana-output-visual.is-task-edit .banana-layer--edit {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+}
+
+.banana-output-visual.is-task-background .frontier-scene--output > :not(.banana-layer--background):not(.scene-bus):not(.scene-car):not(.scene-person),
+.banana-output-visual.is-task-edge .frontier-scene--output > :not(.banana-layer--edge),
+.banana-output-visual.is-task-referring .frontier-scene--output > :not(.banana-layer--referring) {
+    opacity: 0;
+}
+
+.banana-decode-panel {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 18px;
+}
+
+.banana-decode-panel > span {
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.banana-decode-panel h3 {
+    font-size: 24px;
+    line-height: 1.16;
+}
+
+.banana-figure-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.banana-figure-card {
+    display: grid;
+    grid-template-rows: 220px 1fr;
+    overflow: hidden;
+    border: 1px solid #dbe8f8;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.92);
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.banana-figure-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #f8fafc;
+}
+
+.banana-figure-card div {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+}
+
+.banana-figure-card span {
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.banana-figure-card h3 {
+    margin: 0;
+    color: #0f2548;
+    font-size: 17px;
+    line-height: 1.25;
+    font-weight: 950;
+}
+
+.banana-figure-card p {
+    margin: 0;
+    color: var(--frontier-muted);
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 650;
+}
+
+.banana-figure-card button,
+.banana-lightbox-close {
+    justify-self: start;
+    min-height: 34px;
+    border: 1px solid rgba(29, 92, 255, 0.24);
+    border-radius: 7px;
+    padding: 0 12px;
+    color: #1d4ed8;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 950;
+    cursor: pointer;
+    background: #eff6ff;
+}
+
+.banana-system-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.banana-system-link h2 {
+    margin: 8px 0;
+    font-size: 28px;
+}
+
+.banana-system-link p {
+    max-width: 860px;
+}
+
+.banana-system-link a {
+    flex: 0 0 auto;
+}
+
+.banana-note {
+    margin-top: 18px;
+    padding: 16px 18px;
+    color: #7c4a03;
+    font-size: 14px;
+    font-weight: 850;
+    background: rgba(255, 251, 235, 0.9);
+}
+
+.banana-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 34px;
+    background: rgba(8, 18, 38, 0.74);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+.banana-lightbox.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.banana-lightbox figure {
+    display: grid;
+    gap: 12px;
+    width: min(1180px, 96vw);
+    max-height: 90vh;
+    margin: 0;
+    transform: translateY(14px) scale(0.98);
+    transition: transform 0.22s ease;
+}
+
+.banana-lightbox.is-open figure {
+    transform: translateY(0) scale(1);
+}
+
+.banana-lightbox img {
+    width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+}
+
+.banana-lightbox figcaption {
+    padding-bottom: 6px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.banana-lightbox-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    z-index: 2;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    padding: 0;
+    color: #ffffff;
+    font-size: 30px;
+    line-height: 1;
+    background: rgba(15, 23, 42, 0.72);
+}
+
+.banana-page {
+    position: relative;
+    isolation: auto;
+}
+
+.banana-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(29, 92, 255, 0.028) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.86), transparent 72%);
+}
+
+.banana-hero,
+.banana-section {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.banana-hero {
+    min-height: 472px;
+    background:
+        radial-gradient(circle at 72% 48%, rgba(6, 182, 212, 0.16), transparent 28%),
+        radial-gradient(circle at 37% 20%, rgba(29, 92, 255, 0.13), transparent 26%),
+        linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,247,255,0.94)),
+        linear-gradient(120deg, rgba(245, 158, 11, 0.08), transparent 44%);
+    box-shadow:
+        0 26px 70px rgba(15, 23, 42, 0.09),
+        inset 0 1px 0 rgba(255,255,255,0.96);
+}
+
+.banana-hero::before,
+.banana-section::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(120deg, rgba(0,0,0,0.18), transparent 68%);
+}
+
+.banana-hero::after,
+.banana-section::after {
+    content: "";
+    position: absolute;
+    top: -30%;
+    left: -38%;
+    width: 38%;
+    height: 160%;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.68), transparent);
+    transform: rotate(12deg) translateX(-80%);
+    animation: bananaPanelSheen 8.4s ease-in-out infinite;
+}
+
+.banana-hero-copy,
+.banana-flow,
+.banana-section > * {
+    position: relative;
+    z-index: 1;
+}
+
+.banana-back-link {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.banana-back-link::after,
+.banana-figure-card button::after,
+.banana-system-link a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(110deg, transparent 0 34%, rgba(255,255,255,0.82) 48%, transparent 62%);
+    transform: translateX(-110%);
+    transition: transform 0.46s ease;
+}
+
+.banana-back-link:hover {
+    border-color: rgba(29, 92, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.14);
+}
+
+.banana-back-link:hover::after,
+.banana-figure-card button:hover::after,
+.banana-system-link a:hover::after {
+    transform: translateX(110%);
+}
+
+.banana-flow {
+    min-height: 340px;
+    border: 1px solid rgba(191, 219, 254, 0.86);
+    border-radius: 8px;
+    padding: 28px 26px 94px;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(29, 92, 255, 0.14), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.74), rgba(240,249,255,0.7));
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.9),
+        0 24px 52px rgba(37, 99, 235, 0.1);
+}
+
+.banana-flow::before {
+    content: "";
+    position: absolute;
+    inset: 16px;
+    z-index: -1;
+    border: 1px solid rgba(29, 92, 255, 0.08);
+    border-radius: 8px;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+.banana-flow::after {
+    content: "";
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 50%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.65), rgba(29, 92, 255, 0.5), transparent);
+    filter: blur(0.2px);
+    transform: translateY(-50%);
+}
+
+.banana-flow-node {
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.92)),
+        radial-gradient(circle at 80% 0%, rgba(6, 182, 212, 0.15), transparent 38%);
+    box-shadow:
+        0 16px 30px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255,255,255,0.96);
+    animation: bananaNodeFloat 5.8s ease-in-out infinite;
+}
+
+.banana-flow-node:nth-of-type(5) {
+    animation-delay: 0.16s;
+}
+
+.banana-flow-node:nth-of-type(7) {
+    animation-delay: 0.32s;
+}
+
+.banana-flow-node:nth-of-type(9) {
+    animation-delay: 0.48s;
+}
+
+.banana-flow-node::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 0 36%, rgba(255,255,255,0.8) 50%, transparent 64%);
+    transform: translateX(-120%);
+    animation: bananaNodeSheen 5.4s ease-in-out infinite;
+}
+
+.banana-flow-node--core {
+    transform: translateY(-8px);
+    background:
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,0.32), transparent 22%),
+        linear-gradient(135deg, #1d5cff, #06b6d4 68%, #20b56b);
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.58),
+        0 0 0 8px rgba(6, 182, 212, 0.08),
+        0 22px 52px rgba(37, 99, 235, 0.27);
+    animation: bananaCoreGlow 2.6s ease-in-out infinite, bananaCoreFloat 5.8s ease-in-out infinite;
+}
+
+.banana-flow-node--core::after {
+    content: "";
+    position: absolute;
+    inset: 11px;
+    border: 1px solid rgba(255,255,255,0.36);
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.banana-flow-node--rgb small {
+    display: block;
+    margin-top: 8px;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.banana-flow-line {
+    z-index: 2;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(29,92,255,0.18), rgba(6,182,212,0.92), rgba(32,181,107,0.38));
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.2);
+}
+
+.banana-orbit {
+    position: absolute;
+    z-index: 0;
+    left: 49%;
+    top: 45%;
+    width: 250px;
+    height: 104px;
+    border: 1px solid rgba(29, 92, 255, 0.16);
+    border-radius: 999px;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    animation: bananaOrbitTrace 9s linear infinite;
+}
+
+.banana-orbit::after {
+    content: "";
+    position: absolute;
+    top: 10%;
+    left: 12%;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.82), 0 0 0 4px rgba(6, 182, 212, 0.14);
+}
+
+.banana-orbit--b {
+    width: 318px;
+    height: 142px;
+    transform: translate(-50%, -50%) rotate(21deg);
+    animation-duration: 11.5s;
+    animation-direction: reverse;
+}
+
+.banana-output-dock {
+    position: absolute;
+    right: 24px;
+    bottom: 22px;
+    left: 24px;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dock-tile {
+    position: relative;
+    min-height: 54px;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.09);
+    animation: bananaDockFloat 5.6s ease-in-out infinite;
+}
+
+.dock-tile:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.dock-tile:nth-child(3) {
+    animation-delay: 0.24s;
+}
+
+.dock-tile:nth-child(4) {
+    animation-delay: 0.36s;
+}
+
+.dock-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15), transparent 55%);
+}
+
+.dock-tile--semantic {
+    background:
+        linear-gradient(180deg, #7dd3fc 0 35%, #60a5fa 35% 62%, #818cf8 62%),
+        radial-gradient(circle at 36% 68%, #f59e0b 0 15%, transparent 16%);
+}
+
+.dock-tile--depth {
+    background: linear-gradient(120deg, #f97316, #facc15 28%, #22c55e 52%, #06b6d4 72%, #1d5cff);
+}
+
+.dock-tile--normal {
+    background:
+        linear-gradient(135deg, #ec4899, #2563eb 48%, #22c55e),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.28) 0 5px, transparent 5px 12px);
+}
+
+.dock-tile--edit {
+    background:
+        linear-gradient(180deg, #dbeafe 0 48%, #06b6d4 48%),
+        radial-gradient(circle at 54% 42%, #ffffff 0 11%, transparent 12%);
+}
+
+.banana-section {
+    background:
+        radial-gradient(circle at 88% 0%, rgba(6, 182, 212, 0.08), transparent 32%),
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,251,255,0.86));
+    box-shadow:
+        0 20px 48px rgba(15, 23, 42, 0.07),
+        inset 0 1px 0 rgba(255,255,255,0.94);
+}
+
+.banana-mechanism-grid article,
+.banana-task-tabs,
+.banana-prompt-panel,
+.banana-rgb-panel,
+.banana-decode-panel,
+.banana-figure-card {
+    box-shadow:
+        0 16px 34px rgba(15, 23, 42, 0.055),
+        inset 0 1px 0 rgba(255,255,255,0.92);
+}
+
+.banana-mechanism-grid article {
+    position: relative;
+    overflow: hidden;
+    min-height: 166px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,251,255,0.86)),
+        radial-gradient(circle at 88% 6%, rgba(29, 92, 255, 0.1), transparent 34%);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.banana-mechanism-grid article::after {
+    content: "";
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    width: 68px;
+    height: 22px;
+    border-radius: 999px;
+    background:
+        linear-gradient(90deg, rgba(29,92,255,0.12) 0 30%, transparent 30% 42%, rgba(6,182,212,0.16) 42% 72%, transparent 72%),
+        linear-gradient(90deg, transparent, rgba(29,92,255,0.16), transparent);
+    opacity: 0.86;
+}
+
+.banana-mechanism-grid article:hover {
+    border-color: rgba(29, 92, 255, 0.36);
+    transform: translateY(-3px);
+    box-shadow: 0 24px 46px rgba(37, 99, 235, 0.12);
+}
+
+.banana-demo-shell {
+    position: relative;
+}
+
+.banana-task-tabs,
+.banana-prompt-panel,
+.banana-rgb-panel,
+.banana-decode-panel {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,251,255,0.82)),
+        radial-gradient(circle at 88% 6%, rgba(29, 92, 255, 0.08), transparent 32%);
+}
+
+.banana-task-tabs button {
+    position: relative;
+    overflow: hidden;
+}
+
+.banana-task-tabs button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-left: 3px solid transparent;
+    transition: border-color 0.18s ease;
+}
+
+.banana-task-tabs button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(110deg, transparent 0 36%, rgba(255,255,255,0.72) 50%, transparent 64%);
+    transform: translateX(-120%);
+    transition: transform 0.42s ease;
+}
+
+.banana-task-tabs button:hover::after,
+.banana-task-tabs button.is-active::after {
+    transform: translateX(120%);
+}
+
+.banana-task-tabs button.is-active::before {
+    border-left-color: #06b6d4;
+}
+
+.banana-prompt-panel p {
+    min-height: 248px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0), rgba(239,246,255,0.56)),
+        repeating-linear-gradient(90deg, rgba(29,92,255,0.035) 0 1px, transparent 1px 18px);
+}
+
+.prompt-keyword {
+    position: relative;
+}
+
+.prompt-keyword.is-active {
+    animation: bananaKeywordPulse 1.18s ease;
+}
+
+.banana-rgb-panel {
+    position: relative;
+}
+
+.banana-output-visual {
+    background:
+        radial-gradient(circle at 50% 18%, rgba(255,255,255,0.84), transparent 34%),
+        linear-gradient(180deg, #eff6ff, #f8fbff);
+}
+
+.banana-output-visual::before,
+.banana-output-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.banana-output-visual::before {
+    height: 34%;
+    background: linear-gradient(180deg, transparent, rgba(6, 182, 212, 0.22), transparent);
+    transform: translateY(-120%);
+}
+
+.banana-output-visual::after {
+    background:
+        linear-gradient(90deg, rgba(255,255,255,0.26) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.24) 1px, transparent 1px);
+    background-size: 14px 14px;
+    mix-blend-mode: screen;
+}
+
+.banana-output-visual.is-switching::before {
+    opacity: 1;
+    animation: bananaOutputSweep 0.62s ease;
+}
+
+.banana-output-visual.is-switching::after {
+    opacity: 1;
+    animation: bananaPixelFade 0.62s ease;
+}
+
+.banana-output-visual.is-switching .banana-layer {
+    animation: bananaLayerReveal 0.62s ease;
+}
+
+.banana-decode-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.banana-decode-panel::before {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    height: 46px;
+    border: 1px solid rgba(29, 92, 255, 0.12);
+    border-radius: 8px;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(29,92,255,0.12), rgba(6,182,212,0.18), rgba(32,181,107,0.12)),
+        repeating-linear-gradient(90deg, transparent 0 12px, rgba(255,255,255,0.5) 12px 14px);
+    opacity: 0.52;
+    animation: bananaDecodeBreath 2.8s ease-in-out infinite;
+}
+
+.banana-research-gallery {
+    background:
+        radial-gradient(circle at 12% 0%, rgba(29, 92, 255, 0.09), transparent 30%),
+        radial-gradient(circle at 94% 22%, rgba(6, 182, 212, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,250,255,0.88));
+}
+
+.banana-figure-card {
+    position: relative;
+    border-color: rgba(191, 219, 254, 0.9);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.9)),
+        radial-gradient(circle at 82% 8%, rgba(29, 92, 255, 0.12), transparent 30%);
+    transform: translateY(0);
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.banana-figure-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.banana-figure-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.72), inset 0 0 42px rgba(6, 182, 212, 0.08);
+}
+
+.banana-figure-card:hover {
+    border-color: rgba(29, 92, 255, 0.42);
+    transform: translateY(-6px);
+    box-shadow: 0 30px 62px rgba(37, 99, 235, 0.16);
+}
+
+.banana-figure-card:hover::before {
+    transform: translateX(110%);
+}
+
+.banana-figure-card img {
+    transition: transform 0.42s ease, filter 0.42s ease;
+}
+
+.banana-figure-card:hover img {
+    transform: scale(1.035);
+    filter: saturate(1.05) contrast(1.02);
+}
+
+.banana-figure-card span {
+    display: inline-flex;
+    width: fit-content;
+    border: 1px solid rgba(29, 92, 255, 0.16);
+    border-radius: 6px;
+    padding: 3px 7px;
+    background: rgba(239, 246, 255, 0.8);
+}
+
+.banana-figure-card button,
+.banana-system-link a {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(29, 92, 255, 0.3);
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.1);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.banana-figure-card button:hover,
+.banana-system-link a:hover {
+    border-color: rgba(29, 92, 255, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 15px 28px rgba(37, 99, 235, 0.14);
+}
+
+.banana-system-link {
+    background:
+        linear-gradient(100deg, rgba(255,255,255,0.94), rgba(239,246,255,0.86)),
+        radial-gradient(circle at 92% 18%, rgba(6, 182, 212, 0.1), transparent 28%);
+}
+
+.banana-lightbox {
+    backdrop-filter: blur(18px);
+    background:
+        radial-gradient(circle at 50% 18%, rgba(29, 92, 255, 0.22), transparent 34%),
+        rgba(8, 18, 38, 0.78);
+}
+
+.banana-lightbox figure {
+    padding: 14px;
+    border: 1px solid rgba(191, 219, 254, 0.2);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.36);
+    box-shadow: 0 30px 90px rgba(0,0,0,0.34);
+}
+
+.banana-lightbox img {
+    box-shadow: 0 22px 68px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+.banana-lightbox-close {
+    border-color: rgba(255,255,255,0.28);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.banana-lightbox-close:hover {
+    transform: translateY(-1px);
+    background: rgba(29, 92, 255, 0.82);
+}
+
+[data-reveal-section] {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+[data-reveal-section].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@keyframes bananaPanelSheen {
+    0%, 58% {
+        transform: rotate(12deg) translateX(-95%);
+    }
+    72%, 100% {
+        transform: rotate(12deg) translateX(360%);
+    }
+}
+
+@keyframes bananaNodeFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes bananaCoreFloat {
+    0%, 100% {
+        transform: translateY(-8px);
+    }
+    50% {
+        transform: translateY(-13px);
+    }
+}
+
+@keyframes bananaNodeSheen {
+    0%, 46% {
+        transform: translateX(-125%);
+    }
+    62%, 100% {
+        transform: translateX(125%);
+    }
+}
+
+@keyframes bananaOrbitTrace {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+@keyframes bananaDockFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes bananaKeywordPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.24);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(6, 182, 212, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+    }
+}
+
+@keyframes bananaOutputSweep {
+    from {
+        transform: translateY(-120%);
+    }
+    to {
+        transform: translateY(310%);
+    }
+}
+
+@keyframes bananaPixelFade {
+    0% {
+        opacity: 0;
+    }
+    28% {
+        opacity: 0.86;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes bananaLayerReveal {
+    0% {
+        filter: saturate(0.7) blur(2px);
+        transform: scale(1.012);
+    }
+    100% {
+        filter: saturate(1) blur(0);
+        transform: scale(1);
+    }
+}
+
+@keyframes bananaDecodeBreath {
+    0%, 100% {
+        opacity: 0.42;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 0.72;
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes bananaCoreGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.5), 0 18px 38px rgba(37, 99, 235, 0.23);
+    }
+    50% {
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.72), 0 18px 44px rgba(6, 182, 212, 0.34);
+    }
+}
+
+@keyframes bananaLineRun {
+    from {
+        transform: translateX(-120%);
+    }
+    to {
+        transform: translateX(350%);
+    }
+}
+
+@media (max-width: 1320px) {
+    .banana-hero,
+    .banana-demo-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .banana-flow {
+        grid-template-columns: 1fr;
+        padding: 24px;
+    }
+
+    .banana-flow-line {
+        width: 2px;
+        height: 34px;
+        justify-self: center;
+    }
+
+    .banana-flow::after {
+        display: none;
+    }
+
+    .banana-orbit {
+        left: 50%;
+        top: 40%;
+        opacity: 0.45;
+    }
+
+    .banana-output-dock {
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .banana-figure-grid,
+    .banana-mechanism-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .banana-hero-copy h1 {
+        font-size: 33px;
+    }
+
+    .banana-figure-grid,
+    .banana-mechanism-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .banana-task-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .banana-output-dock {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .banana-system-link {
+        display: grid;
+    }
+
+    .banana-lightbox {
+        padding: 18px;
+    }
+}

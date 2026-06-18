@@ -238,6 +238,16 @@ def instance_segmentation_lab_page():
     )
 
 
+@app.route("/frontier", methods=["GET"])
+def frontier_page():
+    return render_template("frontier.html", active_page="frontier", active_sub_page="overview")
+
+
+@app.route("/frontier/vision-banana", methods=["GET"])
+def vision_banana_page():
+    return render_template("vision_banana.html", active_page="frontier", active_sub_page="vision_banana")
+
+
 @app.route("/edge-detection", methods=["GET"])
 def edge_detection_page():
     return redirect(url_for("edge_detection_mode_page", mode="compare"))
@@ -569,6 +579,8 @@ NAVIGATION_CATALOG = [
     {"path": "/vision-tasks/semantic", "label": "语义分割", "keywords": ["语义分割", "fcn", "segformer", "semantic"]},
     {"path": "/vision-tasks/detection", "label": "目标检测", "keywords": ["目标检测", "检测", "yolo", "iou", "nms", "r-cnn", "detection"]},
     {"path": "/vision-tasks/instance", "label": "实例分割", "keywords": ["实例分割", "mask r-cnn", "yolo-seg", "instance"]},
+    {"path": "/frontier", "label": "CV 前沿探索", "keywords": ["前沿", "前沿探索", "基础模型", "统一视觉模型", "clip", "dino", "sam", "vlm", "frontier"]},
+    {"path": "/frontier/vision-banana", "label": "Vision Banana 案例", "keywords": ["vision banana", "banana", "图像生成器", "生成式视觉", "rgb输出", "统一生成式视觉接口"]},
     {"path": "/edge-detection", "label": "边缘、轮廓与形态学", "keywords": ["边缘", "轮廓", "形态学", "edge"]},
     {"path": "/edge-detection/compare", "label": "边缘检测方法对比", "keywords": ["方法对比", "边缘对比", "compare"]},
     {"path": "/edge-detection/kernel", "label": "局部卷积响应", "keywords": ["局部卷积", "卷积响应", "kernel"]},

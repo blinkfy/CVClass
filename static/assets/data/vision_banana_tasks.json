@@ -1,0 +1,74 @@
+[
+  {
+    "id": "semantic",
+    "label": "语义分割",
+    "prompt": "Generate a semantic segmentation visualization of this street image. Use cyan for sky, blue for road, yellow for vehicles, green for trees, and white for people.",
+    "keywords": ["semantic segmentation", "cyan", "blue", "yellow", "green", "white"],
+    "rgbTitle": "RGB Semantic Map",
+    "decodeTitle": "按颜色表解码像素类别",
+    "decode": "输出不是类别张量，而是一张可视化 RGB 图；系统再按 prompt 中约定的颜色映射恢复类别图。"
+  },
+  {
+    "id": "instance",
+    "label": "实例分割",
+    "prompt": "Generate an instance segmentation visualization. Color each vehicle and person with a unique solid RGB color; keep the background dark.",
+    "keywords": ["instance segmentation", "unique", "solid RGB", "background"],
+    "rgbTitle": "Unique Instance Colors",
+    "decodeTitle": "颜色连通域转成实例 ID",
+    "decode": "每个实例被编码成不同颜色，解码时通过颜色聚类和连通域得到 mask、bbox 与 instance id。"
+  },
+  {
+    "id": "referring",
+    "label": "指代表达分割",
+    "prompt": "Segment the person crossing near the bus and render only that referred person in white. Everything else should be black.",
+    "keywords": ["person", "near the bus", "white", "black"],
+    "rgbTitle": "Referred Object Mask",
+    "decodeTitle": "语言条件决定被分割对象",
+    "decode": "prompt 中的指代表达限定目标，RGB 图只显示被指代主体，解码后得到二值 mask。"
+  },
+  {
+    "id": "depth",
+    "label": "深度估计",
+    "prompt": "Generate a metric depth visualization. Use warm colors for nearby objects and cool colors for far regions; keep the mapping smooth.",
+    "keywords": ["metric depth", "warm", "cool", "smooth"],
+    "rgbTitle": "Depth Color Ramp",
+    "decodeTitle": "颜色梯度恢复稠密深度",
+    "decode": "模型把远近关系编码为连续色带，解码器按色带标尺恢复相对或度量深度。"
+  },
+  {
+    "id": "normal",
+    "label": "表面法线",
+    "prompt": "Generate a surface normal map. Encode x, y, and z directions as RGB channels with clean object boundaries.",
+    "keywords": ["surface normal", "x", "y", "z", "RGB"],
+    "rgbTitle": "Normal RGB Field",
+    "decodeTitle": "RGB 通道表示空间方向",
+    "decode": "每个像素的 RGB 值对应三维法线分量，因此输出图本身就是可解码的方向场。"
+  },
+  {
+    "id": "edge",
+    "label": "边缘图",
+    "prompt": "Generate an edge visualization of this image. Draw crisp white contours and important structural lines on a dark background.",
+    "keywords": ["edge", "white contours", "structural lines", "dark"],
+    "rgbTitle": "Crisp Edge Map",
+    "decodeTitle": "亮度阈值转成边缘概率",
+    "decode": "白色线条表示高边缘概率，暗背景表示非边缘区域，可进一步阈值化成二值边缘图。"
+  },
+  {
+    "id": "background",
+    "label": "背景移除",
+    "prompt": "Remove the background and keep the bus and pedestrians as the foreground. Render transparent regions with a checkerboard style.",
+    "keywords": ["Remove", "background", "foreground", "checkerboard"],
+    "rgbTitle": "Foreground Cutout",
+    "decodeTitle": "前景区域转 Alpha Mask",
+    "decode": "背景区域被统一编码，前景保留原始颜色，解码时得到可用于合成的 alpha mask。"
+  },
+  {
+    "id": "edit",
+    "label": "图像编辑",
+    "prompt": "Edit the image by turning the road into a clean blue lane while preserving the people, vehicles, and scene geometry.",
+    "keywords": ["Edit", "blue lane", "preserving", "geometry"],
+    "rgbTitle": "Instruction-guided Edit",
+    "decodeTitle": "生成式接口保留视觉结构",
+    "decode": "图像编辑不再输出离散标签，而是把指令转成新的 RGB 图像，同时保持主体和几何关系。"
+  }
+]

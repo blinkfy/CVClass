@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }}">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph', 'frontier'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
@@ -19,7 +19,7 @@
         window.CVCLASS_ACTIVE_SUB_PAGE = {{ active_sub_page|default('')|tojson }};
         window.CVCLASS_AI_ENABLED = {{ ai_assistant_enabled|tojson }};
     </script>
-    {% if active_page|default('') in ['home', 'knowledge_graph'] %}
+    {% if active_page|default('') in ['home', 'knowledge_graph', 'frontier'] %}
     <header class="site-header" aria-label="主页导航">
         <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉实验平台首页">
             <span class="site-brand-icon" aria-hidden="true">
@@ -35,6 +35,7 @@
             <a href="{{ url_for('home') }}#core-modules">实验模块</a>
             <a href="{{ url_for('home') }}#learning-path">学习路径</a>
             <a class="{{ 'active' if active_page|default('') == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">知识图谱</a>
+            <a class="{{ 'active' if active_page|default('') == 'frontier' else '' }}" href="{{ url_for('frontier_page') }}">前沿探索</a>
             <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">关于我们</a>
         </nav>
         <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
@@ -101,6 +102,11 @@
                 <a class="{{ 'active' if active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">语义分割</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
                 <a class="{{ 'active' if active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">实例分割</a>
+            </div>
+            <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">前沿总览</a>
+                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'vision_banana' else '' }}" href="{{ url_for('vision_banana_page') }}">Vision Banana 案例</a>
             </div>
         </nav>
     </aside>

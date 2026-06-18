@@ -164,7 +164,7 @@
 
             <article class="module-card" data-learn-module="semantic-segmentation">
                 <div class="module-card-head">
-                    <span class="module-number">08</span>
+                    <span class="module-number">07A</span>
                     <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
                 </div>
                 <h3>语义分割：Pixel-wise Mask</h3>
@@ -177,7 +177,7 @@
 
             <article class="module-card" data-learn-module="instance-segmentation">
                 <div class="module-card-head">
-                    <span class="module-number">09</span>
+                    <span class="module-number">07B</span>
                     <span class="module-mini-icon mini-icon--instance" aria-hidden="true"></span>
                 </div>
                 <h3>实例分割：Instance Mask</h3>
@@ -190,14 +190,14 @@
 
             <article class="module-card" data-learn-module="frontier">
                 <div class="module-card-head">
-                    <span class="module-number">10</span>
+                    <span class="module-number">08</span>
                     <span class="module-mini-icon mini-icon--globe" aria-hidden="true"></span>
                 </div>
                 <h3>CV 前沿探索</h3>
                 <p>SAM、CLIP、DINO、VLM、Vision Banana 与统一视觉模型方向</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
-                    <span class="module-action module-action--disabled" aria-disabled="true">查看方向 <span aria-hidden="true">&rarr;</span></span>
+                    <a class="module-action" data-learn-link="frontier" href="{{ url_for('frontier_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
         </div>
@@ -230,7 +230,9 @@
                         <span>&rarr;</span>
                         <a href="{{ url_for('cnn_visualization_page') }}"><span class="path-icon mini-icon--cnn"></span>CNN 学习</a>
                         <span>&rarr;</span>
-                        <span class="path-step-muted"><span class="path-icon mini-icon--detect"></span>检测分割</span>
+                        <a href="{{ url_for('vision_tasks_overview_page') }}"><span class="path-icon mini-icon--detect"></span>检测分割</a>
+                        <span>&rarr;</span>
+                        <a href="{{ url_for('frontier_page') }}"><span class="path-icon mini-icon--globe"></span>前沿探索</a>
                     </div>
                 </div>
 

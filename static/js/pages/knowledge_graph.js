@@ -55,6 +55,8 @@
         "/feature-detection/sift": "SIFT 特征",
         "/feature-detection/matching": "特征匹配",
         "/feature-detection/panorama": "图像拼接与全景拍照",
+        "/frontier": "CV 前沿探索",
+        "/frontier/vision-banana": "Vision Banana 案例",
     };
     const COMPLETED_NODE_ROUTES = {
         图像基础: "/grayscale",
@@ -71,6 +73,10 @@
         CLAHE: "/grayscale",
         镜像翻转: "/grayscale",
         切割缩放: "/grayscale",
+        视觉前沿探索: "/frontier",
+        前沿探索: "/frontier",
+        统一视觉模型: "/frontier",
+        VisionBanana: "/frontier/vision-banana",
 
         卷积与滤波: "/convolution",
         "卷积核组": "/convolution",
@@ -190,7 +196,7 @@
             卷积层: "/cnn-visualization",
         },
     };
-    const UNAVAILABLE_ROUTES = new Set(["/detection", "/segmentation", "/frontier"]);
+    const UNAVAILABLE_ROUTES = new Set(["/detection", "/segmentation"]);
     const FALLBACK_COLORS = {
         root: "#2563eb",
         machine_learning: "#4f46e5",
