@@ -54,6 +54,16 @@
             </select>
         </label>
 
+        <div class="vision-field">
+            <span>检测视图</span>
+            <div class="overview-segmented-control detection-mode-toggle" aria-label="检测视图">
+                <button class="is-active" type="button" data-det-mode="yolo">YOLO 推理与 NMS</button>
+                <button type="button" data-det-mode="rcnn">R-CNN 流程</button>
+                <button type="button" data-det-mode="roi">ROI Pooling</button>
+                <button type="button" data-det-mode="rpn">RPN Anchor</button>
+            </div>
+        </div>
+
         <!-- Runtime metrics -->
         <div class="vision-kv-grid">
             <div><span>模型状态</span><strong data-det-model-status>未加载</strong></div>
@@ -121,6 +131,8 @@
             <div data-det-overlay class="det-overlay"></div>
             <div class="det-missing-hint" data-det-missing></div>
         </div>
+
+        <div class="detection-rcnn-stage" data-det-rcnn-stage hidden></div>
 
         <!-- Candidate table -->
         <div class="det-table-wrap detection-table-wrap">

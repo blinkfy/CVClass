@@ -7,6 +7,7 @@
     const api = {
         page: root.dataset.visionPage || "overview",
         dataRoot: window.cvclassUrl("/static/assets/data/vision_tasks"),
+        moduleDataRoot: window.cvclassUrl("/static/assets/vision_tasks/data"),
     };
     window.CVClassVisionTasks = Object.freeze(api);
 

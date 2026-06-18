@@ -359,7 +359,8 @@ function makeInstance(candidate, index, prototypeTensor, preMeta) {
         center: maskInfo.center,
         contourLength: maskInfo.contourLength,
         source: "model",
-        maskDecodeFailed: maskInfo.maskDecodeFailed
+        maskDecodeFailed: maskInfo.maskDecodeFailed,
+        coeffs: Array.from(candidate.coeffs)
     };
 }
 
@@ -394,6 +395,10 @@ async function runInstanceInference(image) {
         height: meta.originalHeight,
         instances,
         semantic_regions: [],
+        prototypes: {
+            data: prototypeTensor.data,
+            dims: rawShape(prototypeTensor)
+        },
         meta: {
             modelName: "YOLO11n-seg",
             backend: activeBackend,
@@ -416,6 +421,9 @@ function transferList(result) {
     (result.instances || []).forEach((item) => {
         if (item.mask?.data?.buffer) buffers.push(item.mask.data.buffer);
     });
+    if (result.prototypes?.data?.buffer) {
+        buffers.push(result.prototypes.data.buffer);
+    }
     return buffers;
 }
 

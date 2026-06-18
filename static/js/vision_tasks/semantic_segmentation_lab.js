@@ -20,6 +20,7 @@
         enabled: new Set(),
         presetMasks: new Map(),
         modelMask: null,
+        fcnMask: null,
         currentMask: null,
         phase: "image",
         modelStatus: "未加载",
@@ -30,12 +31,14 @@
         inferenceClient: null,
         busy: false,
         probeInfo: null,
+        fcnClassId: null,
         sampler: null,
         samplerKey: ""
     };
 
     const els = {
         sample: $("[data-sem-sample]"),
+        sourceButtons: $$("[data-sem-source]"),
         modes: $$("[data-sem-mode]"),
         opacity: $("[data-sem-opacity]"),
         opacityOut: $("[data-sem-opacity-output]"),
@@ -67,7 +70,15 @@
         stripMask: $("[data-sem-strip-mask]"),
         stripClasses: $("[data-sem-strip-classes]"),
         stepperItems: [...document.querySelectorAll("[data-sem-stepper] [data-sem-phase]")],
-        flowItems: $$("[data-flow-phase]")
+        flowItems: $$("[data-flow-phase]"),
+        fcnDemo: $("[data-sem-fcn-demo]"),
+        fcnStages: $$("[data-fcn-stage]"),
+        fcnChannelStack: $("[data-fcn-channel-stack]"),
+        fcnUpsample: $("[data-fcn-upsample]"),
+        fcnSkipCompare: $("[data-fcn-skip-compare]"),
+        fcnNotesPanel: $("[data-fcn-notes-panel]"),
+        fcnLogits: $("[data-fcn-logits]"),
+        fcnMiouTable: $("[data-fcn-miou-table]")
     };
     const ctx = els.canvas.getContext("2d", {willReadFrequently: true});
 
@@ -108,6 +119,21 @@
             count: counts.get(Number(item.id)) || 0,
             ratio: total ? (counts.get(Number(item.id)) || 0) / total : 0
         }));
+    }
+
+    function buildFcnMiouRows(classes) {
+        return classes.slice(0, 6).map((item, index) => {
+            const intersection = 520 - index * 38;
+            const union = intersection + 115 + index * 29;
+            return {
+                id: Number(item.id),
+                className: label(item),
+                color: item.color,
+                intersection,
+                union,
+                iou: intersection / union
+            };
+        });
     }
 
     function buildPresetMask(s) {
@@ -183,14 +209,60 @@
         return buildPresetMask(sample());
     }
 
+    function buildFcnMask() {
+        const base = presetMask();
+        const classMap = new Uint16Array(base.classMap);
+        const scoreMap = new Float32Array(base.scoreMap || base.classMap.length);
+        const counts = new Map();
+        for (let i = 0; i < classMap.length; i += 1) {
+            const id = classMap[i];
+            if (id !== UNKNOWN) {
+                counts.set(id, (counts.get(id) || 0) + 1);
+                if (!scoreMap[i]) scoreMap[i] = 0.72 + ((i % 17) / 100);
+            }
+        }
+        const classes = base.classes.map((item) => ({...item}));
+        const mask = {
+            source: "fcn",
+            sampleId: state.sampleId,
+            width: base.width,
+            height: base.height,
+            classMap,
+            scoreMap,
+            classes,
+            distribution: buildDistribution(classes, counts, base.width * base.height),
+            meta: {
+                modelName: "FCN Principle Demo",
+                backend: "preset feature maps",
+                inputSize: `${base.width} × ${base.height}`,
+                rawOutputShape: `[1, ${classes.length}, ${Math.ceil(base.height / 32)}, ${Math.ceil(base.width / 32)}] logits`,
+                rawOutputSummary: "Backbone feature map -> 1×1 conv logits -> upsample -> skip fusion -> argmax classMap",
+                preprocessTime: 0,
+                inferenceTime: null,
+                postprocessTime: 0,
+                classCount: classes.length,
+                miouRows: buildFcnMiouRows(classes)
+            }
+        };
+        state.fcnMask = mask;
+        return mask;
+    }
+
+    function fcnMask() {
+        return state.fcnMask?.sampleId === state.sampleId ? state.fcnMask : buildFcnMask();
+    }
+
     function currentUsableMask() {
-        return state.selectedSource === "model" && state.modelMask?.sampleId === state.sampleId ? state.modelMask : presetMask();
+        if (state.selectedSource === "fcn") return fcnMask();
+        if (state.selectedSource === "model" && state.modelMask?.sampleId === state.sampleId) return state.modelMask;
+        return presetMask();
     }
 
     function setPhase(phase) {
         state.phase = phase;
         els.stepperItems.forEach((item) => item.classList.toggle("is-active", item.dataset.semPhase === phase));
         els.flowItems.forEach((item) => item.classList.toggle("is-active", item.dataset.flowPhase === phase));
+        els.fcnStages.forEach((item) => item.classList.toggle("is-active", item.dataset.fcnStage === phase));
         renderNotes();
     }
 
@@ -218,13 +290,34 @@
         els.classCount.textContent = String(meta.classCount || state.modelInfo?.classCount || mask?.classes?.length || "--");
         els.inferenceTime.textContent = fmtMs(meta.inferenceTime);
         els.postprocessTime.textContent = fmtMs(meta.postprocessTime);
-        els.stripSource.textContent = mask?.source === "model" ? "Frontend Model" : "Preset Mask";
+        els.stripSource.textContent = mask?.source === "model" ? "Frontend Model" : mask?.source === "fcn" ? "FCN Principle Demo" : "Preset Mask";
         els.stripModel.textContent = meta.modelName || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
         els.stripPostprocess.textContent = fmtMs(meta.postprocessTime);
         els.stripMask.textContent = mask ? `${mask.height} × ${mask.width}` : "--";
         els.stripClasses.textContent = String(mask?.classes?.length || "--");
-        els.miou.textContent = mask?.source === "preset" ? `mIoU ${((sample()?.miou || 0) * 100).toFixed(1)}%` : "Model Mask";
+        els.miou.textContent = mask?.source === "preset" ? `mIoU ${((sample()?.miou || 0) * 100).toFixed(1)}%` : mask?.source === "fcn" ? `mIoU ${fcnMeanIoU(mask).toFixed(1)}%` : "Model Mask";
+        updateSourceButtons();
+        renderFcnVisibility();
+    }
+
+    function fcnMeanIoU(mask) {
+        const rows = mask?.meta?.miouRows || [];
+        if (!rows.length) return (sample()?.miou || 0) * 100;
+        return rows.reduce((sum, row) => sum + row.iou, 0) / rows.length * 100;
+    }
+
+    function updateSourceButtons() {
+        els.sourceButtons.forEach((button) => {
+            button.classList.toggle("is-active", button.dataset.semSource === state.selectedSource);
+        });
+    }
+
+    function renderFcnVisibility() {
+        const isFcn = state.selectedSource === "fcn";
+        if (els.fcnDemo) els.fcnDemo.hidden = !isFcn;
+        if (els.fcnNotesPanel) els.fcnNotesPanel.hidden = !isFcn;
+        if (isFcn) renderFcnDemo();
     }
 
     function visibleClasses(mask) {
@@ -278,6 +371,64 @@
                 <strong>${pct.toFixed(1)}%</strong>
             </div>`).join("") || `<p class="semantic-empty-text">当前 mask 没有可显示类别。</p>`;
         els.outputSchema.textContent = `${mask.height} × ${mask.width} class index map`;
+    }
+
+    function renderFcnDemo() {
+        const mask = state.currentMask?.source === "fcn" ? state.currentMask : null;
+        if (!mask) return;
+        const rows = mask.meta?.miouRows || [];
+        const selected = state.fcnClassId ?? rows[0]?.id;
+        state.fcnClassId = selected;
+        const selectedInfo = classById(mask, selected) || mask.classes[0];
+        const selectedColor = selectedInfo?.color || "#2563eb";
+        if (els.fcnChannelStack) {
+            els.fcnChannelStack.innerHTML = `
+                <div class="fcn-feature-cube"><span>Backbone</span>${Array.from({length: 6}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+                <b>1×1</b>
+                <div class="fcn-logit-cube"><span>${mask.classes.length} class logits</span>${mask.classes.slice(0, 6).map((item) => `<i style="background:${esc(item.color)}"></i>`).join("")}</div>
+            `;
+        }
+        if (els.fcnUpsample) {
+            els.fcnUpsample.innerHTML = `
+                <div class="fcn-lowres-grid">${Array.from({length: 16}, (_, i) => `<i style="background:${esc(mask.classes[i % mask.classes.length]?.color || "#2563eb")}"></i>`).join("")}</div>
+                <b>×32</b>
+                <div class="fcn-highres-grid">${Array.from({length: 64}, (_, i) => `<i style="background:${esc(mask.classes[(i + Math.floor(i / 8)) % mask.classes.length]?.color || "#2563eb")}"></i>`).join("")}</div>
+            `;
+        }
+        if (els.fcnSkipCompare) {
+            els.fcnSkipCompare.innerHTML = `
+                <div class="fcn-skip-tile is-coarse"><strong>without skip</strong><span style="background:${esc(selectedColor)}"></span></div>
+                <div class="fcn-skip-plus">+</div>
+                <div class="fcn-skip-tile is-fine"><strong>with skip</strong><span style="background:${esc(selectedColor)}"></span></div>
+            `;
+        }
+        if (els.fcnLogits) {
+            const classIndex = mask.classes.findIndex((item) => Number(item.id) === Number(selected));
+            const safeIndex = Math.max(0, classIndex);
+            const logits = [0.1, 0.2, 0.7].map((v, i) => i === 2 ? 0.62 + safeIndex * 0.03 : v).map((v) => v.toFixed(2));
+            els.fcnLogits.textContent = `pixel(h,w): [${logits.join(", ")}] → class=${selected}`;
+        }
+        if (els.fcnMiouTable) {
+            els.fcnMiouTable.innerHTML = `
+                <div class="semantic-miou-head"><span>class</span><span>intersection</span><span>union</span><span>IoU</span></div>
+                ${rows.map((row) => `
+                    <button type="button" class="${Number(row.id) === Number(selected) ? "is-active" : ""}" data-fcn-miou-class="${row.id}">
+                        <span><i style="background:${esc(row.color)}"></i>${esc(row.className)}</span>
+                        <span>${row.intersection}</span>
+                        <span>${row.union}</span>
+                        <strong>${row.iou.toFixed(3)}</strong>
+                    </button>
+                `).join("")}
+            `;
+            els.fcnMiouTable.querySelectorAll("[data-fcn-miou-class]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    state.fcnClassId = Number(button.dataset.fcnMiouClass);
+                    setPhase("miou");
+                    renderFcnDemo();
+                    renderNotes();
+                });
+            });
+        }
     }
 
     function parseColor(hex) {
@@ -485,6 +636,26 @@
             els.notes.innerHTML = `<dl><div><dt>Pixel(x,y)</dt><dd>${p.x}, ${p.y}</dd></div><div><dt>RGB</dt><dd>${p.rgb}</dd></div><div><dt>Class ID</dt><dd>${p.classId}</dd></div><div><dt>Class Name</dt><dd>${esc(p.className)}</dd></div><div><dt>Probability / score</dt><dd>${p.score}</dd></div><div><dt>当前类别颜色</dt><dd><span class="semantic-note-swatch" style="background:${esc(p.color)}"></span>${esc(p.color)}</dd></div></dl>`;
             return;
         }
+        if (state.selectedSource === "fcn") {
+            const rows = mask?.meta?.miouRows || [];
+            const selected = rows.find((row) => Number(row.id) === Number(state.fcnClassId)) || rows[0];
+            const phaseCopy = {
+                image: ["Semantic Segmentation = Pixel-wise Classification", "每个像素输出一个 class id，最终得到 H × W class index map。"],
+                feature: ["Patch-wise 分类的问题", "滑窗 patch 分类重复计算多、局部信息有限，且不是端到端 dense prediction。"],
+                conv: ["FCN 关键点 1：卷积替换全连接", "1×1 Conv 将每个空间位置的特征通道映射到 C 个类别 logits。"],
+                heatmap: ["低分辨率 heatmap", "深层特征语义强但空间分辨率低，类别热图边界通常比较粗。"],
+                upsample: ["FCN 关键点 2：上采样 / 反卷积", "通过 deconvolution 或双线性插值把低分辨率 heatmap 放大回原图尺寸。"],
+                skip: ["FCN 关键点 3：跳跃连接", "浅层特征定位准，深层特征语义强，融合后边界更精细。"],
+                argmax: ["logits → argmax", "对每个像素执行 argmax_c logits[c,h,w]，得到最终 class id。"],
+                miou: ["mIoU 公式", "IoU_c = intersection_c / union_c，mIoU 是所有类别 IoU 的平均。"]
+            };
+            const [title, desc] = phaseCopy[state.phase] || phaseCopy.image;
+            els.notesTitle.textContent = "FCN 原理演示";
+            els.notesSubtitle.textContent = title;
+            els.notesTutorial.innerHTML = `<p>${desc}</p>`;
+            els.notes.innerHTML = `<dl><div><dt>当前阶段</dt><dd>${esc(state.phase)}</dd></div><div><dt>逐像素分类</dt><dd>H × W pixels → H × W class ids</dd></div><div><dt>1×1 Conv 输出</dt><dd>${mask?.classes?.length || "--"} 个类别通道</dd></div><div><dt>Skip Connection</dt><dd>coarse semantic + fine boundary</dd></div><div><dt>当前类别 IoU</dt><dd>${selected ? `${esc(selected.className)}: ${selected.intersection}/${selected.union} = ${selected.iou.toFixed(3)}` : "--"}</dd></div><div><dt>mIoU</dt><dd>${mask ? `${fcnMeanIoU(mask).toFixed(1)}%` : "--"}</dd></div></dl>`;
+            return;
+        }
         if (state.phase === "preprocess") {
             els.notesTitle.textContent = "Preprocess";
             els.notesSubtitle.textContent = "Resize / Normalize";
@@ -562,7 +733,11 @@
     function renderAll(resetClasses = false) {
         renderImage();
         activateMask(currentUsableMask(), resetClasses);
-        setPhase(state.currentMask?.source === "model" ? "overlay" : "image");
+        if (state.currentMask?.source === "fcn") {
+            setPhase("image");
+        } else {
+            setPhase(state.currentMask?.source === "model" ? "miou" : "image");
+        }
     }
 
     fetch(`${dataRoot}/semantic_samples.json`)
@@ -575,7 +750,7 @@
             renderAll(true);
             clearProbe();
             // 自动运行或加载模型推理
-            runModel();
+            if (state.selectedSource === "model") runModel();
         })
         .catch(() => {
             els.probe.innerHTML = `<strong>样例数据加载失败</strong>`;
@@ -587,8 +762,31 @@
         renderAll(true);
         clearProbe();
         // 自动完成对新样例的运行
-        runModel();
+        state.fcnMask = null;
+        if (state.selectedSource === "model") runModel();
     });
+
+    els.sourceButtons.forEach((button) => button.addEventListener("click", () => {
+        state.selectedSource = button.dataset.semSource;
+        state.probeInfo = null;
+        clearProbe();
+        if (state.selectedSource === "model") {
+            renderAll(true);
+            runModel();
+            return;
+        }
+        renderAll(true);
+    }));
+
+    els.fcnStages.forEach((item) => item.addEventListener("click", () => {
+        if (state.selectedSource !== "fcn") return;
+        setPhase(item.dataset.fcnStage);
+    }));
+
+    els.stepperItems.forEach((item) => item.addEventListener("click", () => {
+        if (state.selectedSource !== "fcn") return;
+        setPhase(item.dataset.semPhase);
+    }));
 
     els.modes.forEach((button) => button.addEventListener("click", () => {
         state.mode = button.dataset.semMode;

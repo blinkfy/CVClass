@@ -77,7 +77,12 @@
         notesTutorial: $("[data-inst-notes-tutorial]"),
         notes: $("[data-inst-notes]"),
         stepperItems: [...document.querySelectorAll("[data-inst-stepper] [data-inst-phase]")],
-        flowItems: $$("[data-inst-flow-phase]")
+        flowItems: $$("[data-inst-flow-phase]"),
+        blenderContainer: $("[data-inst-blender-container]"),
+        blenderPlayBtn: $("[data-inst-blender-play-btn]"),
+        blenderCanvas: $("[data-inst-blender-canvas]"),
+        blenderOverlayText: $("[data-inst-blender-overlay-text]"),
+        blenderGrid: $("[data-inst-blender-grid]")
     };
     const ctx = els.canvas.getContext("2d", {willReadFrequently: true});
 
@@ -136,7 +141,8 @@
             center,
             contourLength: Number.isFinite(item.contourLength) ? item.contourLength : contourLength(poly),
             source,
-            maskDecodeFailed: Boolean(item.maskDecodeFailed)
+            maskDecodeFailed: Boolean(item.maskDecodeFailed),
+            coeffs: item.coeffs || null
         };
     }
 
@@ -453,6 +459,438 @@
         renderStats();
         renderRuntime();
         renderNotes();
+        renderBlender();
+    }
+
+    // ==========================================
+    // YOLO11n-seg 原理融合演示 (Prototype Blender)
+    // ==========================================
+    let blenderAnimationTimer = null;
+    let blenderAnimationActive = false;
+
+    function sigmoid(value) {
+        return 1 / (1 + Math.exp(-value));
+    }
+
+    function renderBlender() {
+        if (blenderAnimationTimer) {
+            clearTimeout(blenderAnimationTimer);
+            blenderAnimationTimer = null;
+        }
+        blenderAnimationActive = false;
+        
+        if (els.blenderCanvas && els.blenderCanvas.parentNode) {
+            els.blenderCanvas.parentNode.classList.remove("blending");
+        }
+
+        const scene = state.currentScene;
+        const item = selectedInstance();
+        
+        if (!els.blenderPlayBtn || !els.blenderOverlayText || !els.blenderGrid) return;
+
+        if (!scene || !item) {
+            els.blenderPlayBtn.disabled = true;
+            els.blenderOverlayText.classList.remove("hidden");
+            els.blenderOverlayText.textContent = "未激活实例。请在左列表点击实例或在图上点击物体使其被选中";
+            els.blenderGrid.innerHTML = `<div class="blender-channel-placeholder">等待激活实例检测特征层...</div>`;
+            return;
+        }
+
+        els.blenderPlayBtn.disabled = false;
+        els.blenderOverlayText.classList.add("hidden");
+
+        // 提取或虚拟 coefficients
+        let coeffs = item.coeffs;
+        let isSimulated = false;
+
+        if (!coeffs || coeffs.length === 0) {
+            isSimulated = true;
+            coeffs = [];
+            for (let i = 0; i < 32; i++) {
+                coeffs.push((Math.sin(item.id * 1.7 + i * 2.1) * 0.12));
+            }
+            // 设计两个强正值，一个强负值，对应关键特征表达
+            coeffs[2] = 0.85;  
+            coeffs[5] = -0.72; 
+            coeffs[7] = 0.58;  
+            if (item.classId % 2 === 0) {
+                coeffs[14] = 0.64;
+                coeffs[22] = -0.55;
+            } else {
+                coeffs[11] = 0.76;
+                coeffs[19] = 0.61;
+            }
+        }
+
+        // 获取或虚拟 prototype data ( Float32Array 32x160x160 )
+        let protoData = null;
+        let protoWidth = 160;
+        let protoHeight = 160;
+
+        if (scene.prototypes?.data && scene.prototypes?.dims) {
+            protoData = scene.prototypes.data;
+            const dims = scene.prototypes.dims; 
+            if (dims.length === 4) {
+                if (dims[1] === 32) {
+                    protoWidth = dims[3];
+                    protoHeight = dims[2];
+                } else if (dims[3] === 32) {
+                    protoWidth = dims[2];
+                    protoHeight = dims[1];
+                }
+            }
+        }
+
+        if (!protoData) {
+            isSimulated = true;
+            protoData = new Float32Array(32 * protoWidth * protoHeight);
+            
+            const [bx1, by1, bx2, by2] = item.bbox;
+            const px1 = Math.round((bx1 / scene.width) * protoWidth);
+            const py1 = Math.round((by1 / scene.height) * protoHeight);
+            const px2 = Math.round((bx2 / scene.width) * protoWidth);
+            const py2 = Math.round((by2 / scene.height) * protoHeight);
+            const pcx = (px1 + px2) / 2;
+            const pcy = (py1 + py2) / 2;
+            const pw = Math.max(1, px2 - px1);
+            const ph = Math.max(1, py2 - py1);
+
+            for (let k = 0; k < 32; k++) {
+                const offset = k * protoWidth * protoHeight;
+                const mode = k % 5;
+                for (let y = 0; y < protoHeight; y++) {
+                    for (let x = 0; x < protoWidth; x++) {
+                        const idx = offset + y * protoWidth + x;
+                        const inBox = x >= px1 && x <= px2 && y >= py1 && y <= py2;
+                        
+                        let val = 0;
+                        if (mode === 0) {
+                            if (inBox) {
+                                const dx = (x - pcx) / (pw / 2);
+                                const dy = (y - pcy) / (ph / 2);
+                                val = Math.max(0, 1.2 - (dx * dx + dy * dy) * 0.5);
+                            }
+                        } else if (mode === 1) {
+                            if (inBox) {
+                                const dx = Math.abs(x - pcx) / (pw / 2);
+                                const dy = Math.abs(y - pcy) / (ph / 2);
+                                val = Math.exp(-Math.pow(Math.max(dx, dy) - 0.88, 2) * 25) * 1.1;
+                            }
+                        } else if (mode === 2) {
+                            if (inBox) {
+                                val = y < pcy ? 0.95 : 0.05;
+                            }
+                        } else if (mode === 3) {
+                            if (!inBox) {
+                                val = 0.45 + Math.sin(x * 0.15) * Math.cos(y * 0.15) * 0.2;
+                            }
+                        } else {
+                            val = Math.sin(x * 0.3 + k) * Math.cos(y * 0.3 - k) * 0.4;
+                            if (inBox) val += 0.25;
+                        }
+                        
+                        val += (Math.random() - 0.5) * 0.08;
+                        protoData[idx] = Math.max(-2, Math.min(2, val));
+                    }
+                }
+            }
+        }
+
+        // 排序挑选前 8 个主要活跃通道
+        const indexedCoeffs = coeffs.map((coeff, idx) => ({ idx, coeff }));
+        indexedCoeffs.sort((a, b) => Math.abs(b.coeff) - Math.abs(a.coeff));
+        const activeChannels = indexedCoeffs.slice(0, 8);
+
+        // 渲染活跃通道 UI 网格
+        const colorHex = item.color || "#2563eb";
+        els.blenderGrid.innerHTML = activeChannels.map(({ idx, coeff }) => {
+            const isPos = coeff >= 0;
+            const absCoeff = Math.abs(coeff);
+            const pct = Math.round(Math.min(1, absCoeff / 1.5) * 50); 
+            return `
+                <div class="blender-channel-cell" data-inst-blender-ch="${idx}" data-coeff="${coeff.toFixed(3)}">
+                    <span class="blender-channel-title">CH ${idx} (P<sub>${idx}</sub>)</span>
+                    <div class="blender-channel-canvas-wrap">
+                        <canvas data-ch-canvas="${idx}" width="60" height="60"></canvas>
+                    </div>
+                    <div class="blender-channel-coeff-row">
+                        <div class="blender-coeff-header">
+                            <span>权重 C<sub>${idx}</sub></span>
+                            <span class="${isPos ? "positive" : "negative"}">${isPos ? "+" : ""}${coeff.toFixed(3)}</span>
+                        </div>
+                        <div class="blender-coeff-bar-bg">
+                            <div class="blender-coeff-bar-fill ${isPos ? "positive" : "negative"}" style="width: ${pct}%; ${isPos ? "left: 50%" : "right: 50%; left: auto"}"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        // 绘制小通道原型图
+        activeChannels.forEach(({ idx }) => {
+            const chCanvas = els.blenderGrid.querySelector(`[data-ch-canvas="${idx}"]`);
+            if (chCanvas) {
+                drawPrototypeChannelToCanvas(chCanvas, protoData, idx, protoWidth, protoHeight);
+            }
+        });
+
+        // 大 Canvas 先行绘制最终静态融合好的 Alpha Mask
+        drawFinalBlendedToCanvas(els.blenderCanvas, protoData, coeffs, item.bbox, scene.width, scene.height, colorHex);
+
+        // 重组 Play 按钮以解绑旧事件
+        const newBtn = els.blenderPlayBtn.cloneNode(true);
+        els.blenderPlayBtn.parentNode.replaceChild(newBtn, els.blenderPlayBtn);
+        els.blenderPlayBtn = newBtn;
+
+        els.blenderPlayBtn.addEventListener("click", () => {
+            if (blenderAnimationActive) return;
+            playBlenderAnimation(protoData, coeffs, activeChannels, item.bbox, scene.width, scene.height, colorHex);
+        });
+
+        // 给活跃卡片绑定鼠标 Hover 行为
+        const cells = els.blenderGrid.querySelectorAll(".blender-channel-cell");
+        cells.forEach((cell) => {
+            cell.addEventListener("mouseenter", () => {
+                if (blenderAnimationActive) return;
+                const chId = Number(cell.dataset.instBlenderCh);
+                const cVal = Number(cell.dataset.coeff);
+                showSingleChannelContribution(chId, cVal, protoData, item.bbox, scene.width, scene.height, colorHex);
+            });
+            cell.addEventListener("mouseleave", () => {
+                if (blenderAnimationActive) return;
+                drawFinalBlendedToCanvas(els.blenderCanvas, protoData, coeffs, item.bbox, scene.width, scene.height, colorHex);
+                els.blenderOverlayText.classList.add("hidden");
+            });
+        });
+    }
+
+    function drawPrototypeChannelToCanvas(canvas, protoData, chIdx, width, height) {
+        const c = canvas.getContext("2d");
+        canvas.width = 60;
+        canvas.height = 60;
+        const imgData = c.createImageData(60, 60);
+        const data = imgData.data;
+        
+        const offset = chIdx * width * height;
+        let min = 999;
+        let max = -999;
+        for (let i = 0; i < width * height; i++) {
+            const v = protoData[offset + i];
+            if (v < min) min = v;
+            if (v > max) max = v;
+        }
+        const range = max - min || 1;
+
+        for (let dy = 0; dy < 60; dy++) {
+            for (let dx = 0; dx < 60; dx++) {
+                const sx = Math.floor((dx / 60) * width);
+                const sy = Math.floor((dy / 60) * height);
+                const val = protoData[offset + sy * width + sx];
+                
+                const n = (val - min) / range;
+                const r = Math.round(n * n * 255);
+                const g = Math.round(Math.sin(n * Math.PI) * 160 + n * 85);
+                const b = Math.round((1 - n) * 90 + n * 255);
+                
+                const p = (dy * 60 + dx) * 4;
+                data[p] = r;
+                data[p+1] = g;
+                data[p+2] = b;
+                data[p+3] = 255;
+            }
+        }
+        c.putImageData(imgData, 0, 0);
+    }
+
+    function showSingleChannelContribution(chId, coeff, protoData, bbox, sceneWidth, sceneHeight, colorHex) {
+        const canvas = els.blenderCanvas;
+        canvas.width = 160;
+        canvas.height = 160;
+        const c = canvas.getContext("2d");
+        const imgData = c.createImageData(160, 160);
+        const out = imgData.data;
+        const [r, g, b] = parseColor(colorHex);
+
+        const offset = chId * 160 * 160;
+        for (let y = 0; y < 160; y++) {
+            for (let x = 0; x < 160; x++) {
+                const idx = offset + y * 160 + x;
+                const s = sigmoid(protoData[idx] * coeff);
+                const p = (y * 160 + x) * 4;
+                out[p] = Math.round(r * s + (1 - s) * 15);
+                out[p+1] = Math.round(g * s + (1 - s) * 23);
+                out[p+2] = Math.round(b * s + (1 - s) * 42);
+                out[p+3] = 255;
+            }
+        }
+        c.putImageData(imgData, 0, 0);
+        
+        els.blenderOverlayText.classList.remove("hidden");
+        els.blenderOverlayText.innerHTML = `
+            <span style="color:#3b82f6;font-weight:700">预览活跃通道 P<sub>${chId}</sub> × C<sub>${chId}</sub></span><br/>
+            特征分量: ${coeff >= 0 ? "+" : ""}${coeff.toFixed(2)} × P<sub>${chId}</sub>
+        `;
+    }
+
+    function drawFinalBlendedToCanvas(canvas, protoData, coeffs, bbox, sceneWidth, sceneHeight, colorHex) {
+        canvas.width = 160;
+        canvas.height = 160;
+        const c = canvas.getContext("2d");
+        const imgData = c.createImageData(160, 160);
+        const out = imgData.data;
+        const [r, g, b] = parseColor(colorHex);
+
+        for (let y = 0; y < 160; y++) {
+            for (let x = 0; x < 160; x++) {
+                let sum = 0;
+                for (let k = 0; k < 32; k++) {
+                    sum += coeffs[k] * protoData[k * 160 * 160 + y * 160 + x];
+                }
+                const score = sigmoid(sum);
+                const p = (y * 160 + x) * 4;
+                if (score >= 0.5) {
+                    out[p] = r;
+                    out[p+1] = g;
+                    out[p+2] = b;
+                    out[p+3] = 235;
+                } else {
+                    out[p] = Math.round(r * score * 0.4 + 10);
+                    out[p+1] = Math.round(g * score * 0.4 + 20);
+                    out[p+2] = Math.round(b * score * 0.4 + 35);
+                    out[p+3] = 180;
+                }
+            }
+        }
+        c.putImageData(imgData, 0, 0);
+    }
+
+    function playBlenderAnimation(protoData, coeffs, activeChannels, bbox, sceneWidth, sceneHeight, colorHex) {
+        blenderAnimationActive = true;
+        els.blenderPlayBtn.disabled = true;
+        els.blenderOverlayText.classList.remove("hidden");
+        els.blenderCanvas.parentNode.classList.add("blending");
+
+        const canvas = els.blenderCanvas;
+        const c = canvas.getContext("2d");
+        const pmWidth = 160;
+        const pmHeight = 160;
+        const accumulator = new Float32Array(pmWidth * pmHeight);
+        
+        let step = 0;
+        
+        const renderStep = () => {
+            if (step === 0) {
+                c.fillStyle = "#0f172a";
+                c.fillRect(0, 0, pmWidth, pmHeight);
+                els.blenderOverlayText.innerHTML = `
+                    <span style="color:#3b82f6;font-weight:700">开始融合前向特征层...</span><br/>
+                    特征矩阵初始化为 0 矢量
+                `;
+                
+                els.blenderGrid.querySelectorAll(".blender-channel-cell").forEach((el) => {
+                    el.classList.remove("active-highlight", "blending-pulse");
+                });
+                
+                step++;
+                blenderAnimationTimer = setTimeout(renderStep, 800);
+                return;
+            }
+
+            if (step <= 8) {
+                const targetCh = activeChannels[step - 1];
+                const chId = targetCh.idx;
+                const coeff = targetCh.coeff;
+                
+                const cell = els.blenderGrid.querySelector(`[data-inst-blender-ch="${chId}"]`);
+                if (cell) {
+                    cell.classList.add("active-highlight", "blending-pulse");
+                }
+                
+                els.blenderOverlayText.innerHTML = `
+                    <span style="color:#10b981;font-weight:700">正在融合: 通道 P<sub>${chId}</sub></span><br/>
+                    累加因子 C<sub>${chId}</sub> = <b>${coeff.toFixed(3)}</b>
+                `;
+                
+                const offset = chId * pmWidth * pmHeight;
+                for (let i = 0; i < pmWidth * pmHeight; i++) {
+                    accumulator[i] += coeff * protoData[offset + i];
+                }
+                
+                const imgData = c.createImageData(pmWidth, pmHeight);
+                const out = imgData.data;
+                const [r, g, b] = parseColor(colorHex);
+                
+                for (let i = 0; i < pmWidth * pmHeight; i++) {
+                    const score = sigmoid(accumulator[i]);
+                    const p = i * 4;
+                    out[p] = Math.round(r * score);
+                    out[p+1] = Math.round(g * score);
+                    out[p+2] = Math.round(b * score);
+                    out[p+3] = 255;
+                }
+                c.putImageData(imgData, 0, 0);
+                
+                step++;
+                blenderAnimationTimer = setTimeout(renderStep, 900);
+                return;
+            }
+
+            if (step === 9) {
+                const activeSet = new Set(activeChannels.map(c => c.idx));
+                for (let k = 0; k < 32; k++) {
+                    if (activeSet.has(k)) continue;
+                    const offset = k * pmWidth * pmHeight;
+                    const coeff = coeffs[k];
+                    for (let i = 0; i < pmWidth * pmHeight; i++) {
+                        accumulator[i] += coeff * protoData[offset + i];
+                    }
+                }
+                
+                els.blenderOverlayText.innerHTML = `
+                    <span style="color:#8b5cf6;font-weight:700">融合剩余 24 个次特征通道</span><br/>
+                    正在重构多通道全局掩膜空间...
+                `;
+                
+                const imgData = c.createImageData(pmWidth, pmHeight);
+                const out = imgData.data;
+                const [r, g, b] = parseColor(colorHex);
+                
+                for (let i = 0; i < pmWidth * pmHeight; i++) {
+                    const score = sigmoid(accumulator[i]);
+                    const p = i * 4;
+                    out[p] = Math.round(r * score);
+                    out[p+1] = Math.round(g * score);
+                    out[p+2] = Math.round(b * score);
+                    out[p+3] = 255;
+                }
+                c.putImageData(imgData, 0, 0);
+                
+                step++;
+                blenderAnimationTimer = setTimeout(renderStep, 800);
+                return;
+            }
+
+            if (step === 10) {
+                els.blenderOverlayText.innerHTML = `
+                    <span style="color:#eab308;font-weight:700">二值截断后处理 (Crop & BBox)</span><br/>
+                    提取 $\\sigma(\\sum) \\ge 0.5$ 得到最终 Instance Mask。
+                `;
+                
+                drawFinalBlendedToCanvas(canvas, protoData, coeffs, bbox, sceneWidth, sceneHeight, colorHex);
+                
+                step++;
+                blenderAnimationTimer = setTimeout(renderStep, 1300);
+                return;
+            }
+
+            els.blenderPlayBtn.disabled = false;
+            els.blenderOverlayText.classList.add("hidden");
+            els.blenderCanvas.parentNode.classList.remove("blending");
+            blenderAnimationActive = false;
+            blenderAnimationTimer = null;
+        };
+
+        renderStep();
     }
 
     function findHitInstance(clientX, clientY) {
@@ -583,7 +1021,8 @@
                 maskAP: null,
                 instances: (result.instances || []).map((item, index) => normalizeInstance(item, index, "model")),
                 semantic_regions: [],
-                meta: result.meta || {}
+                meta: result.meta || {},
+                prototypes: result.prototypes || null
             };
             state.modelScene = modelScene;
             setModelStatus("推理完成", `实例分割完成：保留 ${modelScene.instances.length} 个实例。`);

@@ -193,6 +193,24 @@ def vision_tasks_overview_page():
     )
 
 
+@app.route("/vision-tasks/classification", methods=["GET"])
+def classification_lab_page():
+    return render_template(
+        "vision_tasks/classification_lab.html",
+        active_page="vision_tasks",
+        active_sub_page="classification",
+    )
+
+
+@app.route("/vision-tasks/segmentation-basic", methods=["GET"])
+def segmentation_basic_lab_page():
+    return render_template(
+        "vision_tasks/segmentation_basic_lab.html",
+        active_page="vision_tasks",
+        active_sub_page="segmentation_basic",
+    )
+
+
 @app.route("/vision-tasks/detection", methods=["GET"])
 def detection_lab_page():
     return render_template(
@@ -546,9 +564,11 @@ NAVIGATION_CATALOG = [
     {"path": "/cnn-explainer", "label": "CNN 数据传播细节", "keywords": ["cnn解释", "cnn细节", "传播细节", "解释器"]},
     {"path": "/conv-gradient-lab", "label": "卷积梯度显微镜", "keywords": ["梯度", "反向传播", "卷积梯度", "显微镜"]},
     {"path": "/vision-tasks/overview", "label": "视觉任务谱系", "keywords": ["高级视觉", "视觉任务", "vision tasks", "任务谱系", "总览"]},
-    {"path": "/vision-tasks/detection", "label": "目标检测", "keywords": ["目标检测", "检测", "detection"]},
-    {"path": "/vision-tasks/semantic", "label": "语义分割", "keywords": ["语义分割", "分割", "semantic"]},
-    {"path": "/vision-tasks/instance", "label": "实例分割", "keywords": ["实例分割", "instance"]},
+    {"path": "/vision-tasks/classification", "label": "图像分类", "keywords": ["图像分类", "分类", "classification", "bovw", "cnn"]},
+    {"path": "/vision-tasks/segmentation-basic", "label": "传统图像分割", "keywords": ["图像分割", "传统分割", "k-means", "graph cut", "segmentation"]},
+    {"path": "/vision-tasks/semantic", "label": "语义分割", "keywords": ["语义分割", "fcn", "segformer", "semantic"]},
+    {"path": "/vision-tasks/detection", "label": "目标检测", "keywords": ["目标检测", "检测", "yolo", "iou", "nms", "r-cnn", "detection"]},
+    {"path": "/vision-tasks/instance", "label": "实例分割", "keywords": ["实例分割", "mask r-cnn", "yolo-seg", "instance"]},
     {"path": "/edge-detection", "label": "边缘、轮廓与形态学", "keywords": ["边缘", "轮廓", "形态学", "edge"]},
     {"path": "/edge-detection/compare", "label": "边缘检测方法对比", "keywords": ["方法对比", "边缘对比", "compare"]},
     {"path": "/edge-detection/kernel", "label": "局部卷积响应", "keywords": ["局部卷积", "卷积响应", "kernel"]},

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "topic": "Instance Segmentation Mask R-CNN",
+  "status": "course-method-data",
+  "pipeline": [
+    {"id": "image", "title": "Image", "detail": "H×W×3 input image"},
+    {"id": "backbone", "title": "Backbone + FPN", "detail": "multi-scale feature pyramid"},
+    {"id": "rpn", "title": "RPN", "detail": "class-agnostic object proposals"},
+    {"id": "roiAlign", "title": "RoI Align", "detail": "sub-pixel aligned region features"},
+    {"id": "heads", "title": "Box / Class / Mask Heads", "detail": "parallel predictions for each instance"},
+    {"id": "instances", "title": "Instance Masks", "detail": "N separated masks with bbox, class and score"}
+  ],
+  "outputContract": {
+    "id": "instance id",
+    "classId": "number",
+    "className": "string",
+    "score": "number",
+    "bbox": "[x1,y1,x2,y2]",
+    "mask": "binary bitmap or mask map",
+    "polygon": "optional contour polygon",
+    "source": "preset-or-model"
+  }
+}

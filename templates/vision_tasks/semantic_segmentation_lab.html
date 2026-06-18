@@ -22,6 +22,12 @@
             <select data-sem-sample></select>
         </label>
 
+        <div class="overview-segmented-control semantic-source-toggle" aria-label="语义分割结果来源">
+            <button type="button" data-sem-source="preset">预设 mask</button>
+            <button class="is-active" type="button" data-sem-source="model">前端模型推理</button>
+            <button type="button" data-sem-source="fcn">FCN 原理演示</button>
+        </div>
+
         <div class="overview-segmented-control semantic-view-modes">
             <button class="is-active" type="button" data-sem-mode="overlay">叠加图</button>
             <button type="button" data-sem-mode="image">原图</button>
@@ -82,6 +88,32 @@
             <canvas data-sem-canvas></canvas>
             <div class="semantic-probe-card" data-sem-probe></div>
         </div>
+        <div class="semantic-fcn-demo" data-sem-fcn-demo hidden>
+            <div class="semantic-fcn-pipeline">
+                <article data-fcn-stage="image"><strong>输入图像</strong><span>H×W×3 pixels</span><i></i></article>
+                <article data-fcn-stage="feature"><strong>Backbone feature map</strong><span>低分辨率语义特征</span><i></i></article>
+                <article data-fcn-stage="conv"><strong>1×1 Conv 分类热图</strong><span>C-channel logits</span><i></i></article>
+                <article data-fcn-stage="heatmap"><strong>低分辨率 heatmap</strong><span>coarse class score</span><i></i></article>
+                <article data-fcn-stage="upsample"><strong>Upsampling / Deconv</strong><span>恢复空间尺寸</span><i></i></article>
+                <article data-fcn-stage="skip"><strong>Skip Connection</strong><span>浅层定位 + 深层语义</span><i></i></article>
+                <article data-fcn-stage="argmax"><strong>H×W class map</strong><span>argmax per pixel</span><i></i></article>
+                <article data-fcn-stage="miou"><strong>Semantic Mask Overlay</strong><span>mIoU metrics</span><i></i></article>
+            </div>
+            <div class="semantic-fcn-visual-grid">
+                <section>
+                    <h4>1×1 Conv: channel → class logits</h4>
+                    <div class="semantic-fcn-channel-stack" data-fcn-channel-stack></div>
+                </section>
+                <section>
+                    <h4>Upsampling / Deconvolution</h4>
+                    <div class="semantic-fcn-upsample" data-fcn-upsample></div>
+                </section>
+                <section>
+                    <h4>Skip connection 对比</h4>
+                    <div class="semantic-skip-compare" data-fcn-skip-compare></div>
+                </section>
+            </div>
+        </div>
         <div class="semantic-detail-grid">
             <div class="vision-panel-lite">
                 <h4>类别图例</h4>
@@ -95,15 +127,19 @@
         <div class="semantic-tensor-flow" data-sem-flow>
             <div data-flow-phase="image"><strong>Image</strong><span>H×W×3 input</span></div>
             <b>→</b>
-            <div data-flow-phase="preprocess"><strong>Preprocess</strong><span>resize / normalize</span></div>
+            <div data-flow-phase="feature"><strong>Feature Map</strong><span>backbone output</span></div>
             <b>→</b>
-            <div data-flow-phase="inference"><strong>Model</strong><span>SegFormer forward</span></div>
+            <div data-flow-phase="conv"><strong>1×1 Conv</strong><span>C logits</span></div>
             <b>→</b>
-            <div data-flow-phase="argmax"><strong>Argmax</strong><span>C-channel decision</span></div>
+            <div data-flow-phase="heatmap"><strong>Heatmap</strong><span>low-res scores</span></div>
             <b>→</b>
-            <div data-flow-phase="mask"><strong>Mask</strong><span>H×W class map</span></div>
+            <div data-flow-phase="upsample"><strong>Upsampling</strong><span>deconv / bilinear</span></div>
             <b>→</b>
-            <div data-flow-phase="overlay"><strong>Overlay</strong><span>metrics + probe</span></div>
+            <div data-flow-phase="skip"><strong>Skip Fusion</strong><span>fine boundary</span></div>
+            <b>→</b>
+            <div data-flow-phase="argmax"><strong>Argmax Mask</strong><span>class id</span></div>
+            <b>→</b>
+            <div data-flow-phase="miou"><strong>mIoU</strong><span>mean IoU</span></div>
         </div>
     </div>
 
@@ -114,6 +150,21 @@
         </div>
         <div class="semantic-notes-tutorial" data-sem-notes-tutorial></div>
         <div class="semantic-notes-data" data-sem-notes></div>
+
+        <div class="semantic-fcn-notes-panel" data-fcn-notes-panel hidden>
+            <div class="semantic-fcn-mini-card">
+                <h5>logits → argmax 示例</h5>
+                <code data-fcn-logits>pixel(h,w): [0.1, 0.2, 0.7] → class=2</code>
+            </div>
+            <div class="semantic-fcn-mini-card">
+                <h5>mIoU 计算卡</h5>
+                <div class="semantic-miou-table" data-fcn-miou-table></div>
+            </div>
+            <div class="semantic-fcn-mini-card">
+                <h5>Skip Connection</h5>
+                <p>without skip：边界粗糙；with skip：融合浅层空间细节后边界更精细。</p>
+            </div>
+        </div>
 
         <!-- 语义分割评价指标 IoU 交互实验室 -->
         <div class="semantic-iou-toy-card">
@@ -170,6 +221,17 @@
         </div>
     </aside>
 </section>
+
+<ol class="vision-stepper semantic-stepper" aria-label="FCN 语义分割流程" data-sem-stepper>
+    <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
+    <li data-sem-phase="feature"><span>2</span><div><strong>Feature Map</strong><small>backbone</small></div></li>
+    <li data-sem-phase="conv"><span>3</span><div><strong>1×1 Conv</strong><small>C logits</small></div></li>
+    <li data-sem-phase="heatmap"><span>4</span><div><strong>Heatmap</strong><small>low-res</small></div></li>
+    <li data-sem-phase="upsample"><span>5</span><div><strong>Upsampling</strong><small>deconv</small></div></li>
+    <li data-sem-phase="skip"><span>6</span><div><strong>Skip Fusion</strong><small>fine edges</small></div></li>
+    <li data-sem-phase="argmax"><span>7</span><div><strong>Argmax Mask</strong><small>class id</small></div></li>
+    <li data-sem-phase="miou"><span>8</span><div><strong>mIoU</strong><small>mean IoU</small></div></li>
+</ol>
 {% endblock %}
 
 {% block extra_js %}

@@ -102,7 +102,44 @@
             <b>→</b>
             <div data-inst-flow-phase="masks"><strong>Instances</strong><span>crop + stats</span></div>
         </div>
-        <section class="instance-current-card" data-inst-stats></section>
+        
+        <div class="instance-interactive-deck">
+            <section class="instance-current-card" data-inst-stats></section>
+            
+            <div class="instance-prototype-blender-card" data-inst-blender-container>
+                <div class="blender-header">
+                    <div class="blender-header-left">
+                        <span class="blender-title-badge">Model Feature Internals</span>
+                        <h4>YOLO11n-seg 原型特征融合演示仪 (Prototype Blender)</h4>
+                    </div>
+                    <button class="blender-play-btn" data-inst-blender-play-btn disabled>
+                        <i class="blender-icon">⚡</i> 融合过程动态解码演示
+                    </button>
+                </div>
+                <div class="blender-body">
+                    <!-- 融合过程的图示和大融合 Canvas -->
+                    <div class="blender-canvas-section">
+                        <div class="blender-canvas-wrapper">
+                            <canvas data-inst-blender-canvas width="160" height="160"></canvas>
+                            <div class="blender-canvas-overlay" data-inst-blender-overlay-text>未选择实例，请点击或激活一个实例进行融合</div>
+                        </div>
+                        <div class="blender-formula-card">
+                            <div class="blender-formula-expr" data-inst-formula-math>
+                                \text{Mask}(x,y) = \sigma\left( \sum_{i=1}^{32} C_i \times P_i(x,y) \right)
+                            </div>
+                            <span class="blender-formula-tip">利用神经网络提取的32个共享原型(Prototypes)与各自的掩膜系数(Coefficients)进行线性组合，求和后对其经过激活函数和BBox掩盖最终截断输出。</span>
+                        </div>
+                    </div>
+                    
+                    <div class="blender-grid-section">
+                        <span class="blender-grid-title">活跃的原型通道 (Active Prototypes $P_{1..8}$) </span>
+                        <div class="blender-channels-grid" data-inst-blender-grid>
+                            <div class="blender-channel-placeholder">正在等待提取通道特征...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <aside class="vision-panel vision-notes-panel">

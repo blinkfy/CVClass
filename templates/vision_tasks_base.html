@@ -3,7 +3,7 @@
 {% block title %}高级视觉任务实验室{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260618-instance-auto2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260618-vision-structure1">
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <div>
             <span class="section-label station-eyebrow">STATION 06–09 · ADVANCED VISION TASKS</span>
             <h1 class="station-title">高级视觉任务实验室</h1>
-            <p class="station-summary">围绕 Classification、Detection、Semantic Segmentation、Instance Segmentation 展示高级视觉任务的输出结构、核心机制和评价指标。</p>
+            <p class="station-summary">围绕 Classification、Segmentation、Detection、Semantic Segmentation、Instance Segmentation 展示高级视觉任务的输出结构、核心机制和评价指标。</p>
         </div>
         <div class="station-hero-actions">
             <strong class="station-badge">OUTPUT · METRIC · POST-PROCESS</strong>
@@ -21,8 +21,10 @@
 
     <nav class="vision-tabs station-tabs" aria-label="高级视觉任务实验模块">
         <a class="{{ 'is-active' if active_sub_page == 'overview' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">任务谱系</a>
-        <a class="{{ 'is-active' if active_sub_page == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
+        <a class="{{ 'is-active' if active_sub_page == 'classification' else '' }}" href="{{ url_for('classification_lab_page') }}">图像分类</a>
+        <a class="{{ 'is-active' if active_sub_page == 'segmentation_basic' else '' }}" href="{{ url_for('segmentation_basic_lab_page') }}">图像分割</a>
         <a class="{{ 'is-active' if active_sub_page == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">语义分割</a>
+        <a class="{{ 'is-active' if active_sub_page == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
         <a class="{{ 'is-active' if active_sub_page == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">实例分割</a>
     </nav>
 
@@ -40,8 +42,12 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260618-instance-auto2"></script>
-{% if active_sub_page == 'detection' %}
+<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260618-vision-structure1"></script>
+{% if active_sub_page == 'classification' %}
+<script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260618-vision-structure1"></script>
+{% elif active_sub_page == 'segmentation_basic' %}
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260618-vision-structure1"></script>
+{% elif active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}"></script>
 {% elif active_sub_page == 'semantic' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260618-instance-auto2"></script>

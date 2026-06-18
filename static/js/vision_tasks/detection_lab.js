@@ -3,18 +3,22 @@
     if (!root) return;
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
+    const moduleDataRoot = window.CVClassVisionTasks?.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
     const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/detection_inference.js");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const state = {
         data: null,
+        rcnnData: null,
         sampleId: "",
         source: "inference",
+        detMode: "yolo",
         conf: 0.25,
         iou: 0.5,
         showLow: true,
         classes: new Set(),
         step: 0,
+        rcnnStep: 0,
         playing: false,
         timer: null,
         backend: "wasm",
@@ -32,6 +36,7 @@
     const els = {
         sample: $("[data-det-sample]"),
         upload: $("[data-det-upload]"),
+        modeButtons: $$("[data-det-mode]"),
         sourceReadout: $("[data-det-source-readout]"),
         backend: $("[data-det-backend]"),
         modelStatus: $("[data-det-model-status]"),
@@ -51,6 +56,7 @@
         image: $("[data-det-image]"),
         missing: $("[data-det-missing]"),
         overlay: $("[data-det-overlay]"),
+        rcnnStage: $("[data-det-rcnn-stage]"),
         sourceNote: $("[data-det-source-note]"),
         notes: $("[data-det-notes]"),
         notesTutorial: $("[data-det-notes-tutorial]"),
@@ -68,11 +74,90 @@
         candidateTable: $("[data-det-candidate-table]"),
         runtimeStats: $("[data-det-runtime-stats]"),
         classStats: $("[data-det-class-stats]"),
+        stepper: document.querySelector("[data-det-stepper]"),
         stepperItems: [...document.querySelectorAll("[data-det-stepper] [data-det-phase]")]
+    };
+
+    const yoloStepper = [
+        {id: "image", title: "Image", detail: "Image Loaded"},
+        {id: "preprocess", title: "Preprocess", detail: "Letterbox Resize"},
+        {id: "inference", title: "Model Inference", detail: "ONNX Forward"},
+        {id: "candidate", title: "Candidate Boxes", detail: "Decoded Anchors"},
+        {id: "confidence", title: "Confidence Filter", detail: "Score Threshold"},
+        {id: "nms", title: "IoU / NMS", detail: "Final Detections"}
+    ];
+
+    const modeSteppers = {
+        rcnn: [
+            {id: "image", title: "Image", detail: "input"},
+            {id: "proposals", title: "Proposals", detail: "selective search"},
+            {id: "features", title: "CNN Features", detail: "per proposal"},
+            {id: "classifier", title: "Classifier", detail: "SVM scores"},
+            {id: "regression", title: "BBox Regression", detail: "dx dy dw dh"},
+            {id: "nms", title: "NMS", detail: "final boxes"}
+        ],
+        roi: [
+            {id: "image", title: "Image", detail: "candidate box"},
+            {id: "feature", title: "Feature Map", detail: "shared conv"},
+            {id: "roi", title: "ROI Pooling", detail: "quantized ROI"},
+            {id: "head", title: "Class + BBox", detail: "fixed feature"},
+            {id: "nms", title: "NMS", detail: "deduplicate"}
+        ],
+        rpn: [
+            {id: "image", title: "Image", detail: "input"},
+            {id: "feature", title: "Feature Map", detail: "sliding window"},
+            {id: "anchors", title: "Anchors", detail: "k boxes / cell"},
+            {id: "rpn", title: "RPN", detail: "objectness + offset"},
+            {id: "proposals", title: "Proposals", detail: "positive anchors"},
+            {id: "head", title: "Fast R-CNN Head", detail: "class + bbox"},
+            {id: "final", title: "Final", detail: "NMS output"}
+        ]
     };
 
     function esc(value) {
         return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    }
+
+    function updateModeButtons() {
+        els.modeButtons.forEach((button) => {
+            const active = button.dataset.detMode === state.detMode;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-pressed", String(active));
+        });
+    }
+
+    function setStepper(items, activeId) {
+        if (!els.stepper) return;
+        els.stepper.innerHTML = items.map((item, index) => `
+            <li data-det-phase="${esc(item.id)}" class="${item.id === activeId ? "is-active" : ""}">
+                <span>${index + 1}</span><div><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></div>
+            </li>
+        `).join("");
+        els.stepperItems = [...els.stepper.querySelectorAll("[data-det-phase]")];
+    }
+
+    function boxStyle(box, width, height) {
+        const [x1, y1, x2, y2] = box.bbox;
+        return `left:${(x1 / width) * 100}%;top:${(y1 / height) * 100}%;width:${((x2 - x1) / width) * 100}%;height:${((y2 - y1) / height) * 100}%;`;
+    }
+
+    function demoData() {
+        return state.rcnnData || {};
+    }
+
+    function demoImageSample() {
+        const s = selectedPresetSample();
+        return { width: s?.width || demoData().image?.width || 640, height: s?.height || demoData().image?.height || 427, image: s?.image || "" };
+    }
+
+    function activeRcnnSteps() {
+        return modeSteppers[state.detMode] || modeSteppers.rcnn;
+    }
+
+    function activeRcnnStep() {
+        const steps = activeRcnnSteps();
+        state.rcnnStep = Math.max(0, Math.min(state.rcnnStep, steps.length - 1));
+        return steps[state.rcnnStep] || steps[0];
     }
 
     function selectedPresetSample() {
@@ -339,10 +424,7 @@
     }
 
     function renderStepper(step) {
-        els.stepperItems.forEach((item) => {
-            const active = item.dataset.detPhase === step.phase;
-            item.classList.toggle("is-active", active);
-        });
+        setStepper(yoloStepper, step.phase);
     }
 
     function renderNotes(step, result) {
@@ -401,7 +483,218 @@
         }
     }
 
+    function demoBox(box, sample, kind, label) {
+        return `<div class="vision-bbox detection-demo-box detection-demo-box--${esc(kind)}" style="${boxStyle(box, sample.width, sample.height)}"><span>${esc(label)}</span></div>`;
+    }
+
+    function renderFeatureGrid(values = [], active = []) {
+        const activeSet = new Set(active);
+        return `<div class="detection-feature-grid">${values.map((row, r) => row.map((value, c) => {
+            const isActive = activeSet.has(`${r}-${c}`);
+            return `<i class="${isActive ? "is-active" : ""}" style="--v:${Math.max(0.08, Number(value) || 0)}">${Number(value).toFixed(2)}</i>`;
+        }).join("")).join("")}</div>`;
+    }
+
+    function renderRcnnFlow(demo, step) {
+        const proposals = demo.proposals || [];
+        const activeProposal = proposals[0] || {};
+        const offset = activeProposal.offset || {};
+        const cards = [
+            ["Selective Search", "2k 类别无关候选区域", `${proposals.length} demo proposals`],
+            ["Crop / Warp", "每个 proposal 单独裁剪成 CNN 输入", "重复计算"],
+            ["CNN + SVM", "区域特征送入分类器", "class scores"],
+            ["BBox Regression", "用 dx,dy,dw,dh 修正框位置", `dx ${offset.dx ?? "--"} · dy ${offset.dy ?? "--"}`],
+            ["NMS", "对修正后的同类框做最终去重", "final detections"]
+        ];
+        return `
+            <div class="detection-demo-flow">
+                ${cards.map((card, index) => `<article class="${index <= state.rcnnStep ? "is-active" : ""}"><strong>${esc(card[0])}</strong><span>${esc(card[1])}</span><em>${esc(card[2])}</em></article>`).join("")}
+            </div>
+            <div class="detection-regression-card">
+                <div><b>proposal</b><code>[${(activeProposal.bbox || []).join(", ")}]</code></div>
+                <div><b>ground truth</b><code>[${(demo.groundTruth?.[0]?.bbox || []).join(", ")}]</code></div>
+                <div><b>refined box</b><code>[${(activeProposal.refined || []).join(", ")}]</code></div>
+                <dl>
+                    <div><dt>dx</dt><dd>${offset.dx ?? "--"}</dd></div>
+                    <div><dt>dy</dt><dd>${offset.dy ?? "--"}</dd></div>
+                    <div><dt>dw</dt><dd>${offset.dw ?? "--"}</dd></div>
+                    <div><dt>dh</dt><dd>${offset.dh ?? "--"}</dd></div>
+                </dl>
+            </div>`;
+    }
+
+    function renderRoiFlow(demo, step) {
+        const roi = demo.roiPooling || {};
+        const bins = roi.bins || [];
+        const feature = roi.featureMap || [];
+        return `
+            <div class="detection-roi-board">
+                <section>
+                    <h4>ROI 坐标映射</h4>
+                    <dl>
+                        <div><dt>image ROI</dt><dd>[${(roi.roi?.bbox || []).join(", ")}]</dd></div>
+                        <div><dt>feature stride</dt><dd>${roi.featureStride || 16}</dd></div>
+                        <div><dt>feature ROI</dt><dd>[${(roi.roi?.featureBox || []).join(", ")}]</dd></div>
+                        <div><dt>pooled size</dt><dd>${(roi.pooledSize || [3, 3]).join(" × ")}</dd></div>
+                    </dl>
+                </section>
+                <section>
+                    <h4>Feature Map + ROI bins</h4>
+                    ${renderFeatureGrid(feature, ["2-3", "3-4", "4-4"])}
+                </section>
+                <section>
+                    <h4>Max Pooling 输出</h4>
+                    <div class="detection-pooled-grid">${bins.map((bin) => `<i style="--v:${bin.max}"><b>${Number(bin.max).toFixed(2)}</b><span>${esc(bin.id)}</span></i>`).join("")}</div>
+                </section>
+            </div>`;
+    }
+
+    function renderRpnFlow(demo, step) {
+        const anchors = demo.anchors || [];
+        const positives = anchors.filter((anchor) => anchor.label === "positive").length;
+        const negatives = anchors.filter((anchor) => anchor.label === "negative").length;
+        return `
+            <div class="detection-rpn-board">
+                <section>
+                    <h4>Feature map sliding window</h4>
+                    <div class="detection-anchor-grid">${Array.from({length: 24}, (_, i) => `<i class="${i % 5 === 0 ? "is-hot" : ""}"><span>${i % 5 === 0 ? "k anchors" : ""}</span></i>`).join("")}</div>
+                </section>
+                <section>
+                    <h4>Anchor 判定规则</h4>
+                    <dl>
+                        <div><dt>positive</dt><dd>${esc(demo.rpnRules?.positive || "IoU >= 0.70")}</dd></div>
+                        <div><dt>negative</dt><dd>${esc(demo.rpnRules?.negative || "IoU < 0.30")}</dd></div>
+                        <div><dt>ignore</dt><dd>${esc(demo.rpnRules?.ignore || "middle IoU")}</dd></div>
+                    </dl>
+                </section>
+                <section>
+                    <h4>RPN 输出</h4>
+                    <div class="detection-rpn-score">
+                        <span><b>${positives}</b> positive anchors</span>
+                        <span><b>${negatives}</b> negative anchors</span>
+                        <span><b>${anchors.length}</b> total demo anchors</span>
+                    </div>
+                </section>
+            </div>`;
+    }
+
+    function renderRcnnOverlay(demo, sample, step) {
+        const gts = demo.groundTruth || [];
+        const proposals = demo.proposals || [];
+        const anchors = demo.anchors || [];
+        if (state.detMode === "roi") {
+            const roi = demo.roiPooling?.roi;
+            return [
+                roi ? demoBox({bbox: roi.bbox}, sample, "proposal", "image ROI") : "",
+                ...gts.slice(0, 2).map((box) => demoBox(box, sample, "gt", `GT ${box.class}`))
+            ].join("");
+        }
+        if (state.detMode === "rpn") {
+            const active = step.id === "proposals" || step.id === "head" || step.id === "final";
+            return [
+                ...gts.map((box) => demoBox(box, sample, "gt", `GT ${box.class}`)),
+                ...anchors.filter((anchor) => active ? anchor.label === "positive" : true).map((anchor) => demoBox(anchor, sample, `anchor-${anchor.label}`, `${anchor.id} ${anchor.label} IoU ${anchor.iou.toFixed(2)}`))
+            ].join("");
+        }
+        if (step.id === "regression") {
+            const p = proposals[0];
+            const gt = gts.find((item) => item.id === p?.target) || gts[0];
+            return [
+                p ? demoBox(p, sample, "proposal", "proposal before") : "",
+                gt ? demoBox(gt, sample, "gt", "ground truth") : "",
+                p?.refined ? demoBox({bbox: p.refined}, sample, "refined", "refined prediction") : ""
+            ].join("");
+        }
+        if (step.id === "nms") {
+            return proposals.slice(0, 4).map((p) => demoBox({bbox: p.refined || p.bbox}, sample, "refined", `${p.class} ${p.score.toFixed(2)}`)).join("");
+        }
+        return proposals.map((box) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`)).join("");
+    }
+
+    function renderRcnnTable(demo) {
+        if (state.detMode === "roi") {
+            const bins = demo.roiPooling?.bins || [];
+            els.candidateTable.innerHTML = `<thead><tr><th>BIN</th><th>FEATURE RANGE</th><th>MAX</th><th>OUTPUT</th><th>STATUS</th></tr></thead><tbody>${bins.map((bin) => `<tr><td>${esc(bin.id)}</td><td>${esc(bin.range)}</td><td>${Number(bin.max).toFixed(2)}</td><td>pooled cell</td><td><span>max</span></td></tr>`).join("")}</tbody>`;
+            return;
+        }
+        if (state.detMode === "rpn") {
+            const anchors = demo.anchors || [];
+            els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>GT</th><th>IoU</th><th>OBJECTNESS / OFFSET</th><th>LABEL</th></tr></thead><tbody>${anchors.map((a) => `<tr class="is-${a.label === "positive" ? "kept" : a.label === "negative" ? "suppressed" : "candidate"}"><td>${esc(a.id)}</td><td>${esc(a.gt || "background")}</td><td>${a.iou.toFixed(2)}</td><td>${a.objectness.toFixed(2)} / (${a.offset.dx}, ${a.offset.dy}, ${a.offset.dw}, ${a.offset.dh})</td><td><span>${esc(a.label)}</span></td></tr>`).join("")}</tbody>`;
+            return;
+        }
+        const proposals = demo.proposals || [];
+        els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX / REFINED</th><th>STATUS</th></tr></thead><tbody>${proposals.map((p) => `<tr class="is-${p.class === "background" ? "low-confidence" : "candidate"}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] → [${(p.refined || p.bbox).join(", ")}]</td><td><span>${p.class === "background" ? "background" : "proposal"}</span></td></tr>`).join("")}</tbody>`;
+    }
+
+    function renderRcnnNotes(demo, step) {
+        const proposals = demo.proposals || [];
+        const anchors = demo.anchors || [];
+        const p = proposals[0] || {};
+        const copy = {
+            rcnn: {
+                title: "R-CNN 系列机制",
+                tutorial: `<p><strong>滑动窗口为什么慢：</strong>窗口位置、尺度和长宽比组合爆炸。R-CNN 用 proposal 先筛掉大量背景区域，但早期 R-CNN 仍要对每个 proposal 单独跑 CNN，重复特征计算很重。</p>`,
+                subtitle: step.title,
+                data: `<dl><div><dt>proposal count</dt><dd>${proposals.length}</dd></div><div><dt>当前 proposal</dt><dd>${esc(p.id || "--")} ${esc(p.class || "")}</dd></div><div><dt>bbox regression</dt><dd>dx ${p.offset?.dx ?? "--"}, dy ${p.offset?.dy ?? "--"}, dw ${p.offset?.dw ?? "--"}, dh ${p.offset?.dh ?? "--"}</dd></div><div><dt>NMS 作用</dt><dd>最终同类重复框去重</dd></div></dl>`
+            },
+            roi: {
+                title: "Fast R-CNN / ROI Pooling",
+                tutorial: `<p><strong>Fast R-CNN 提速点：</strong>整张图只跑一次 CNN 得到 shared feature map，再把每个 ROI 映射到 feature map，通过 ROI Pooling 变成固定尺寸特征，避免 proposal 逐个重复卷积。</p>`,
+                subtitle: step.title,
+                data: `<dl><div><dt>feature stride</dt><dd>${demo.roiPooling?.featureStride || 16}</dd></div><div><dt>image ROI</dt><dd>[${(demo.roiPooling?.roi?.bbox || []).join(", ")}]</dd></div><div><dt>feature ROI</dt><dd>[${(demo.roiPooling?.roi?.featureBox || []).join(", ")}]</dd></div><div><dt>pooling</dt><dd>${(demo.roiPooling?.pooledSize || [3, 3]).join(" × ")} max pooling</dd></div></dl>`
+            },
+            rpn: {
+                title: "Faster R-CNN / RPN Anchor",
+                tutorial: `<p><strong>Faster R-CNN 的核心：</strong>RPN 在 feature map 上滑动，每个位置预测多个 anchor 的 objectness 和 bbox offset，用学习到的网络替代传统 proposal 生成。正负锚框由 anchor 与 ground truth 的 IoU 决定。</p>`,
+                subtitle: step.title,
+                data: `<dl><div><dt>anchor count</dt><dd>${anchors.length}</dd></div><div><dt>positive rule</dt><dd>${esc(demo.rpnRules?.positive || "")}</dd></div><div><dt>negative rule</dt><dd>${esc(demo.rpnRules?.negative || "")}</dd></div><div><dt>output structure</dt><dd>proposal = anchor + bbox offset</dd></div></dl>`
+            }
+        }[state.detMode];
+        els.notesTitle.textContent = copy.title;
+        els.notesSubtitle.textContent = copy.subtitle;
+        els.notesTutorial.innerHTML = copy.tutorial;
+        els.notes.innerHTML = copy.data;
+    }
+
+    function renderRcnnMode() {
+        updateModeButtons();
+        const demo = demoData();
+        const sample = demoImageSample();
+        const step = activeRcnnStep();
+        const steps = activeRcnnSteps();
+        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
+        if (sample.image) els.image.src = sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image);
+        els.missing.textContent = "";
+        els.missing.style.display = "none";
+        els.rcnnStage.hidden = false;
+        els.overlay.innerHTML = demo.version ? renderRcnnOverlay(demo, sample, step) : "";
+        els.total.textContent = String(state.detMode === "rpn" ? (demo.anchors || []).length : (demo.proposals || []).length);
+        els.kept.textContent = String(state.detMode === "rpn" ? (demo.anchors || []).filter((a) => a.label === "positive").length : (demo.proposals || []).filter((p) => p.class !== "background").length);
+        els.stageSource.textContent = state.detMode === "rcnn" ? "R-CNN mechanism" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN RPN";
+        els.stageBackend.textContent = "Backend: preset demo data";
+        els.stageInference.textContent = "Inference: concept";
+        els.stageCandidates.textContent = `Candidates: ${els.total.textContent}`;
+        els.stageFinal.textContent = `Final: ${els.kept.textContent}`;
+        els.stepLabel.textContent = `${step.title.toUpperCase()} · STEP ${state.rcnnStep + 1} / ${steps.length}`;
+        els.runtimeStats.innerHTML = `<div><dt>method</dt><dd>${esc(state.detMode)}</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>ground truth boxes</dt><dd>${(demo.groundTruth || []).length}</dd></div><div><dt>NMS</dt><dd>final duplicate removal</dd></div>`;
+        els.classStats.innerHTML = `<span><i style="background:#2563eb"></i>proposal<strong>${(demo.proposals || []).length}</strong></span><span><i style="background:#22c55e"></i>positive anchor<strong>${(demo.anchors || []).filter((a) => a.label === "positive").length}</strong></span><span><i style="background:#ef4444"></i>negative anchor<strong>${(demo.anchors || []).filter((a) => a.label === "negative").length}</strong></span>`;
+        renderRcnnTable(demo);
+        setStepper(steps, step.id);
+        renderRcnnNotes(demo, step);
+        if (!demo.version) {
+            els.rcnnStage.innerHTML = `<div class="vision-empty-result">R-CNN demo data loading...</div>`;
+            return;
+        }
+        els.rcnnStage.innerHTML = state.detMode === "roi" ? renderRoiFlow(demo, step) : state.detMode === "rpn" ? renderRpnFlow(demo, step) : renderRcnnFlow(demo, step);
+    }
+
     function render() {
+        if (state.detMode !== "yolo") {
+            renderRcnnMode();
+            return;
+        }
+        updateModeButtons();
+        if (els.rcnnStage) els.rcnnStage.hidden = true;
         const result = compute();
         const s = result.sample;
         state.step = Math.min(state.step, result.steps.length - 1);
@@ -554,7 +847,7 @@
     }
 
     async function autoLoadAndRun() {
-        if (!state.data) return;
+        if (!state.data || state.detMode !== "yolo") return;
         const token = state.autoToken + 1;
         state.autoToken = token;
         stop();
@@ -618,6 +911,16 @@
         image.src = url;
     }
 
+    fetch(`${moduleDataRoot}/detection_rcnn_demo.json`)
+        .then((response) => response.json())
+        .then((data) => {
+            state.rcnnData = data;
+            if (state.detMode !== "yolo" && state.data) render();
+        })
+        .catch(() => {
+            state.rcnnData = null;
+        });
+
     fetch(`${dataRoot}/detection_samples.json`)
         .then((response) => response.json())
         .then((data) => {
@@ -650,11 +953,11 @@
         state.inferenceScene = sceneFromPreset(s, []);
         state.inferenceResult = null;
         state.inferenceError = null;
-        state.step = 0;
-        renderClassControls(true);
-        render();
-        autoLoadAndRun();
-    });
+            state.step = 0;
+            renderClassControls(true);
+            render();
+            if (state.detMode === "yolo") autoLoadAndRun();
+        });
     els.backend.addEventListener("change", () => {
         state.backend = els.backend.value;
         state.inferenceClient?.dispose?.();
@@ -665,7 +968,7 @@
         state.activeBackend = "--";
         setModelStatus("未加载", "后端已切换，正在自动重新加载并推理。");
         renderRuntimeMetrics(compute());
-        autoLoadAndRun();
+        if (state.detMode === "yolo") autoLoadAndRun();
     });
     els.upload.addEventListener("change", () => {
         const file = els.upload.files?.[0];
@@ -675,18 +978,41 @@
         }
         setInferenceSceneFromUpload(file);
     });
+    els.modeButtons.forEach((button) => button.addEventListener("click", () => {
+        const nextMode = button.dataset.detMode || "yolo";
+        if (state.detMode === nextMode) return;
+        stop();
+        state.detMode = nextMode;
+        state.rcnnStep = 0;
+        state.step = 0;
+        render();
+        if (state.detMode === "yolo") autoLoadAndRun();
+    }));
     els.conf.addEventListener("input", () => { state.conf = Number(els.conf.value); state.step = 4; render(); });
-    els.iou.addEventListener("input", () => { state.iou = Number(els.iou.value); state.step = Math.min(state.step, compute().steps.length - 1); render(); });
+    els.iou.addEventListener("input", () => { state.iou = Number(els.iou.value); state.step = state.detMode === "yolo" ? Math.min(state.step, compute().steps.length - 1) : state.step; render(); });
     els.showLow.addEventListener("change", () => { state.showLow = els.showLow.checked; render(); });
-    els.prev.addEventListener("click", () => { state.step = Math.max(0, state.step - 1); render(); });
-    els.next.addEventListener("click", () => { state.step = Math.min(compute().steps.length - 1, state.step + 1); render(); });
+    els.prev.addEventListener("click", () => {
+        if (state.detMode === "yolo") state.step = Math.max(0, state.step - 1);
+        else state.rcnnStep = Math.max(0, state.rcnnStep - 1);
+        render();
+    });
+    els.next.addEventListener("click", () => {
+        if (state.detMode === "yolo") state.step = Math.min(compute().steps.length - 1, state.step + 1);
+        else state.rcnnStep = Math.min(activeRcnnSteps().length - 1, state.rcnnStep + 1);
+        render();
+    });
     els.play.addEventListener("click", () => {
         if (state.playing) return stop();
         state.playing = true;
         els.play.textContent = "暂停播放";
         state.timer = setInterval(() => {
-            const max = compute().steps.length - 1;
-            state.step = state.step >= max ? 0 : state.step + 1;
+            if (state.detMode === "yolo") {
+                const max = compute().steps.length - 1;
+                state.step = state.step >= max ? 0 : state.step + 1;
+            } else {
+                const max = activeRcnnSteps().length - 1;
+                state.rcnnStep = state.rcnnStep >= max ? 0 : state.rcnnStep + 1;
+            }
             render();
         }, 1200);
     });

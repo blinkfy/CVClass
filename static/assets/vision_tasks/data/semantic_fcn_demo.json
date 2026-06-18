@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "topic": "Semantic Segmentation FCN",
+  "status": "course-method-data",
+  "pipeline": [
+    {"id": "image", "title": "Image", "detail": "H×W×3 input image"},
+    {"id": "encoder", "title": "Fully Convolutional Encoder", "detail": "replace dense layers with convolutional feature maps"},
+    {"id": "logits", "title": "Per-pixel Class Logits", "detail": "C-channel score map"},
+    {"id": "upsample", "title": "Upsample", "detail": "recover spatial resolution by deconvolution or interpolation"},
+    {"id": "mask", "title": "Semantic Mask", "detail": "argmax over class channels for each pixel"}
+  ],
+  "outputContract": {
+    "source": "preset-or-model",
+    "width": "number",
+    "height": "number",
+    "classMap": "H×W class index map",
+    "classes": "class metadata",
+    "distribution": "per-class pixel ratio",
+    "meta": "runtime and output summary"
+  }
+}
