@@ -2,7 +2,7 @@
 
 {% block vision_badge %}STATION 09 · INSTANCE SEGMENTATION{% endblock %}
 {% block vision_title %}实例分割：Instance Mask{% endblock %}
-{% block vision_subtitle %}在真实图像上绘制每个实例的 polygon mask、bbox 与 instance id，并计算实例几何统计。{% endblock %}
+{% block vision_subtitle %}在真实图像上绘制每个实例的 mask、bbox 与 instance id，并在浏览器端演示 YOLO11n-seg 的候选框、NMS、prototype mask 与实例统计流程。{% endblock %}
 
 {% block vision_content %}
 <section class="vision-workbench instance-lab-workbench" data-instance-lab aria-label="实例分割教学工作台">
@@ -11,10 +11,23 @@
             <span class="vision-panel-index">01</span>
             <div><h3>输入与显示设置</h3><p>Input &amp; Display</p></div>
         </div>
+
         <label class="vision-field">
             <span>样例图选择</span>
             <select data-inst-sample></select>
         </label>
+
+        <div class="vision-field">
+            <span>上传图片（模型模式）</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="instUploadInput">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span data-inst-upload-name>选择文件</span>
+                </label>
+                <input id="instUploadInput" type="file" accept="image/*" data-inst-upload class="sr-only">
+            </div>
+        </div>
+
         <label class="vision-toggle-row"><span>显示 instance mask</span><input data-inst-show-mask type="checkbox" checked></label>
         <label class="vision-toggle-row"><span>显示 bbox</span><input data-inst-show-box type="checkbox" checked></label>
         <label class="vision-toggle-row"><span>显示 instance id</span><input data-inst-show-id type="checkbox" checked></label>
@@ -23,22 +36,71 @@
             <span>Mask Opacity <output data-inst-opacity-output>55%</output></span>
             <input data-inst-opacity type="range" min="0" max="100" value="55">
         </label>
+
         <div class="overview-segmented-control">
             <button class="is-active" type="button" data-inst-view="instance">实例分割视图</button>
             <button type="button" data-inst-view="semantic">语义分割对比</button>
         </div>
+
+        <div class="instance-model-panel" data-inst-model-panel>
+            <div class="instance-panel-head">
+                <span class="instance-section-title">模型状态</span>
+                <strong data-inst-model-status>未加载</strong>
+            </div>
+            <div class="vision-kv-grid instance-runtime-grid">
+                <div><span>Model</span><strong>YOLO11n-seg</strong></div>
+                <div><span>Backend</span><strong data-inst-active-backend>--</strong></div>
+                <div><span>Input</span><strong data-inst-input-size>640 × 640</strong></div>
+                <div><span>Inference Time</span><strong data-inst-inference-time>--</strong></div>
+                <div><span>Postprocess Time</span><strong data-inst-postprocess-time>--</strong></div>
+                <div><span>Instances</span><strong data-inst-count>--</strong></div>
+            </div>
+            <label class="vision-field">
+                <span>推理后端</span>
+                <select data-inst-backend>
+                    <option value="wasm">WASM</option>
+                    <option value="webgpu">WebGPU（自动回退）</option>
+                </select>
+            </label>
+            <p class="instance-model-message" data-inst-model-message>页面会自动运行本地 YOLO11n-seg；预设实例数据仅作为 fallback。</p>
+        </div>
+
         <div class="instance-list" data-inst-list></div>
     </aside>
 
-    <div class="vision-stage-panel">
+    <div class="vision-stage-panel instance-stage-panel">
         <div class="vision-stage-header">
             <div><span>INSTANCE SEGMENTATION VISUALIZATION</span><h3>真实图像实例分割可视化</h3></div>
             <span class="vision-status-chip" data-inst-map>Mask AP --</span>
         </div>
-        <div class="vision-image-stage instance-real-stage">
+        <div class="instance-stage-strip">
+            <span>Source: <strong data-inst-strip-source>Auto Model / Fallback</strong></span>
+            <span>Model: <strong data-inst-strip-model>--</strong></span>
+            <span>Backend: <strong data-inst-strip-backend>--</strong></span>
+            <span>Inference: <strong data-inst-strip-inference>--</strong></span>
+            <span>Postprocess: <strong data-inst-strip-postprocess>--</strong></span>
+            <span>Instances: <strong data-inst-strip-count>--</strong></span>
+        </div>
+        <div class="vision-image-stage instance-real-stage" data-inst-stage>
             <img data-inst-image alt="实例分割样例图">
             <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-inst-missing></span></div>
+            <canvas data-inst-mask-canvas aria-label="实例 mask 覆盖层"></canvas>
             <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
+        </div>
+        <div class="instance-seg-flow" data-inst-flow>
+            <div data-inst-flow-phase="image"><strong>Image</strong><span>H×W×3</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="preprocess"><strong>Preprocess</strong><span>Letterbox 640</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="inference"><strong>Inference</strong><span>YOLO11n-seg</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="decode"><strong>Decode</strong><span>boxes + coeffs</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="nms"><strong>NMS</strong><span>filter overlaps</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="prototype"><strong>Prototype</strong><span>32 masks blend</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="masks"><strong>Instances</strong><span>crop + stats</span></div>
         </div>
         <section class="instance-current-card" data-inst-stats></section>
     </div>
@@ -46,24 +108,24 @@
     <aside class="vision-panel vision-notes-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>Process Notes</h3><p>Instance Statistics</p></div>
+            <div><h3 data-inst-notes-title>Process Notes</h3><p data-inst-notes-subtitle>Instance Statistics</p></div>
         </div>
-        <div class="vision-note-list">
-            <article><span>01</span><div><strong>Detection + Mask</strong><p>每个实例同时包含 bbox、class、score 与独立 mask。</p></div></article>
-            <article><span>02</span><div><strong>实例身份</strong><p>同类目标通过 instance id 区分，可逐实例统计。</p></div></article>
-            <article><span>03</span><div><strong>几何统计</strong><p>面积、中心、轮廓长度由前端根据 bbox 和 polygon 计算。</p></div></article>
-        </div>
+        <div class="instance-notes-tutorial" data-inst-notes-tutorial></div>
+        <div class="instance-notes-data" data-inst-notes></div>
         <div class="vision-output-schema">
             <span>输出结构</span>
-            <code>{bbox, class, score, mask, instance_id}</code>
+            <code>N × {bbox, class, score, mask, instance_id}</code>
         </div>
     </aside>
 </section>
 
-<ol class="vision-stepper" aria-label="实例分割处理流程">
-    <li class="is-active"><span>1</span><div><strong>Detection</strong><small>Class + BBox</small></div></li>
-    <li><span>2</span><div><strong>Mask Prediction</strong><small>Per-instance Polygon</small></div></li>
-    <li><span>3</span><div><strong>Instance Assignment</strong><small>ID + Score</small></div></li>
-    <li><span>4</span><div><strong>Final Instance Masks</strong><small>Area + Contour</small></div></li>
+<ol class="vision-stepper instance-stepper" aria-label="实例分割处理流程" data-inst-stepper>
+    <li class="is-active" data-inst-phase="image"><span>1</span><div><strong>Image</strong><small>Current / Uploaded</small></div></li>
+    <li data-inst-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Letterbox + CHW</small></div></li>
+    <li data-inst-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>ONNX Runtime Web</small></div></li>
+    <li data-inst-phase="decode"><span>4</span><div><strong>Decode Boxes</strong><small>scores + coeffs</small></div></li>
+    <li data-inst-phase="nms"><span>5</span><div><strong>NMS</strong><small>IoU suppression</small></div></li>
+    <li data-inst-phase="prototype"><span>6</span><div><strong>Mask Prototype</strong><small>coeff × proto</small></div></li>
+    <li data-inst-phase="masks"><span>7</span><div><strong>Instance Masks</strong><small>crop + statistics</small></div></li>
 </ol>
 {% endblock %}

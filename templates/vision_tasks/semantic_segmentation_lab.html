@@ -1,5 +1,10 @@
 {% extends "vision_tasks_base.html" %}
 
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+{% endblock %}
+
 {% block vision_badge %}STATION 08 · SEMANTIC SEGMENTATION{% endblock %}
 {% block vision_title %}语义分割：Pixel-wise Mask{% endblock %}
 {% block vision_subtitle %}在真实图像上展示预设 Semantic Mask 与浏览器端 SegFormer-B0 推理结果，理解 H×W×C logits 到 H×W class map 的转换。{% endblock %}
@@ -109,19 +114,79 @@
         </div>
         <div class="semantic-notes-tutorial" data-sem-notes-tutorial></div>
         <div class="semantic-notes-data" data-sem-notes></div>
+
+        <!-- 语义分割评价指标 IoU 交互实验室 -->
+        <div class="semantic-iou-toy-card">
+            <div class="toy-card-header">
+                <h5>IoU 交互评测</h5>
+                <span class="toy-badge">Metrics Lab</span>
+            </div>
+            <p class="toy-card-desc">拖动下方滑块控制<b>预测区域 (Prediction)</b> 与<b>真实标注 (Ground Truth)</b> 的重合程度，直观了解分割评价算法的数学推断过程：</p>
+            
+            <div class="toy-flex-canvas">
+                <div class="toy-canvas-grid-bg"></div>
+                <div class="toy-visual-box toy-box-gt">
+                    <span class="toy-label">GT 真实</span>
+                </div>
+                <div class="toy-visual-box toy-box-pred" data-toy-pred>
+                    <span class="toy-label">Pred 预测</span>
+                </div>
+                <div class="toy-visual-box toy-box-intersection" data-toy-intersection>
+                    <span class="toy-label">Overlap</span>
+                </div>
+            </div>
+
+            <div class="toy-slider-section">
+                <div class="toy-slider-label">
+                    <span>相交距离偏移量</span>
+                    <strong data-toy-offset-text>50%</strong>
+                </div>
+                <div class="toy-input-wrapper">
+                    <input type="range" class="toy-range-input" data-toy-slider min="0" max="100" value="50" aria-label="IoU 重叠度控制器">
+                </div>
+            </div>
+
+            <div class="toy-math-panel">
+                <div class="toy-math-row">
+                    <span>交集部分 (Intersection)</span>
+                    <code data-toy-math-inter>50 px²</code>
+                </div>
+                <div class="toy-math-row">
+                    <span>并集部分 (Union)</span>
+                    <code data-toy-math-union>150 px²</code>
+                </div>
+                <div class="toy-math-formula-card">
+                    <div class="toy-math-label-mini">数学计算公式</div>
+                    <div class="toy-math-formula-expr" data-toy-formula>
+                        $IoU = \frac{|GT \cap Pred|}{|GT \cup Pred|} = \frac{50}{150} \approx 0.333$
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="vision-output-schema">
             <span>输出结构</span>
             <code data-sem-output-schema>H × W class index map</code>
         </div>
     </aside>
 </section>
+{% endblock %}
 
-<ol class="vision-stepper semantic-stepper" aria-label="语义分割处理流程" data-sem-stepper>
-    <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3 input</small></div></li>
-    <li data-sem-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Resize / Normalize</small></div></li>
-    <li data-sem-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>SegFormer / Frontend Runtime</small></div></li>
-    <li data-sem-phase="argmax"><span>4</span><div><strong>Logits / Argmax</strong><small>C-channel decision</small></div></li>
-    <li data-sem-phase="mask"><span>5</span><div><strong>Semantic Mask</strong><small>H×W class map</small></div></li>
-    <li data-sem-phase="overlay"><span>6</span><div><strong>Overlay &amp; Metrics</strong><small>Color mask + distribution</small></div></li>
-</ol>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+    // 在子脚本运行前先初始化全局 auto-render 配置，支持行内公式 $...$ 的识别
+    document.addEventListener("DOMContentLoaded", function() {
+        if (window.renderMathInElement) {
+            window.renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+        }
+    });
+</script>
+{{ super() }}
 {% endblock %}

@@ -3,7 +3,7 @@
 {% block title %}高级视觉任务实验室{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260616-semantic-model2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260618-instance-auto2">
 {% endblock %}
 
 {% block content %}
@@ -40,12 +40,12 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260616-semantic-model2"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260618-instance-auto2"></script>
 {% if active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}"></script>
 {% elif active_sub_page == 'semantic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260616-semantic-model2"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260618-instance-auto2"></script>
 {% elif active_sub_page == 'instance' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260618-instance-auto2"></script>
 {% endif %}
 {% endblock %}

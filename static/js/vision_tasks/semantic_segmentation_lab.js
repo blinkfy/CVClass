@@ -610,4 +610,81 @@
         els.missing.textContent = "图像加载失败，请检查静态资源。";
         setModelStatus(state.modelStatus, "图像加载失败，无法运行真实模型推理。");
     });
+
+    // ==========================================================================
+    // IoU (交并比) 算法教学微型交互模拟器控制逻辑
+    // ==========================================================================
+    const iouSlider = document.querySelector("[data-toy-slider]");
+    const iouPredBox = document.querySelector("[data-toy-pred]");
+    const iouInterBox = document.querySelector("[data-toy-intersection]");
+    const iouOffText = document.querySelector("[data-toy-offset-text]");
+    const iouMathInter = document.querySelector("[data-toy-math-inter]");
+    const iouMathUnion = document.querySelector("[data-toy-math-union]");
+    const iouMathFormula = document.querySelector("[data-toy-formula]");
+
+    function updateIoUToy() {
+        if (!iouSlider || !iouPredBox || !iouInterBox) return;
+        const val = Number(iouSlider.value); // 0 到 100 的偏移百分比值
+        
+        // 映射设定：
+        // GT 固定于 left = 50px ($50), width = 60px ($60) [区间 50 ~ 110]
+        // Pred 固定于 width = 60px ($60)；left 随 value 增加从左向右平移 (偏移范围 0px 到 100px)
+        const offsetPx = (val / 100) * 100;
+        const gtLeft = 50;
+        const gtWidth = 60;
+        const predWidth = 60;
+        const predLeft = gtLeft + offsetPx;
+        
+        // 更新 Pred 盒子的 UI 坐标
+        iouPredBox.style.left = `${predLeft}px`;
+        
+        // 计算重叠宽度
+        const overlapLeft = Math.max(gtLeft, predLeft);
+        const overlapRight = Math.min(gtLeft + gtWidth, predLeft + predWidth);
+        const overlapWidth = Math.max(0, overlapRight - overlapLeft);
+        
+        // 计算面积 (高度统一定为 54px)
+        const height = 54;
+        const gtArea = gtWidth * height; // 3240
+        const predArea = predWidth * height; // 3240
+        
+        const intersectionArea = overlapWidth * height;
+        const unionArea = gtArea + predArea - intersectionArea;
+        const iou = unionArea > 0 ? (intersectionArea / unionArea) : 0;
+        
+        // 更新 Overlap 盒子的 UI
+        if (overlapWidth > 0) {
+            iouInterBox.style.display = "flex";
+            iouInterBox.style.left = `${overlapLeft}px`;
+            iouInterBox.style.width = `${overlapWidth}px`;
+        } else {
+            iouInterBox.style.display = "none";
+        }
+        
+        // 更新文本数据及渲染公式
+        iouOffText.textContent = `${val}%`;
+        iouMathInter.textContent = `${intersectionArea.toFixed(0)} px²`;
+        iouMathUnion.textContent = `${unionArea.toFixed(0)} px²`;
+        
+        if (iouMathFormula) {
+            if (window.katex) {
+                try {
+                    window.katex.render(`\\text{IoU} = \\frac{|\\text{GT} \\cap \\text{Pred}|}{|\\text{GT} \\cup \\text{Pred}|} = \\frac{${intersectionArea.toFixed(0)}}{${unionArea.toFixed(0)}} \\approx ${iou.toFixed(3)}`, iouMathFormula, {
+                        displayMode: true,
+                        throwOnError: false
+                    });
+                } catch (e) {
+                    iouMathFormula.innerHTML = `$$IoU = \\frac{|GT \\cap Pred|}{|GT \\cup Pred|} = \\frac{${intersectionArea.toFixed(0)}}{${unionArea.toFixed(0)}} \\approx ${iou.toFixed(3)}$$`;
+                }
+            } else {
+                iouMathFormula.innerHTML = `$$IoU = \\frac{|GT \\cap Pred|}{|GT \\cup Pred|} = \\frac{${intersectionArea.toFixed(0)}}{${unionArea.toFixed(0)}} \\approx ${iou.toFixed(3)}$$`;
+            }
+        }
+    }
+
+    if (iouSlider) {
+        iouSlider.addEventListener("input", updateIoUToy);
+        // 初始化计算一次
+        updateIoUToy();
+    }
 }());
