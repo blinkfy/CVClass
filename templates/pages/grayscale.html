@@ -157,6 +157,48 @@
 
             <div id="notesPanel" class="station01-notes"></div>
 
+            <section class="station01-card station01-process-viz is-grayscale" id="processViz" aria-label="计算过程可视化">
+                <div class="station01-card-head">
+                    <h3>像素计算流</h3>
+                    <span id="processVizLabel">RGB → Gray</span>
+                </div>
+                <div class="station01-process-scene">
+                    <div class="station01-process-field station01-process-field--input">
+                        <i class="station01-process-node" data-channel="r"></i>
+                        <i class="station01-process-node" data-channel="g"></i>
+                        <i class="station01-process-node" data-channel="b"></i>
+                        <i class="station01-process-node" data-channel="r2"></i>
+                        <i class="station01-process-node" data-channel="g2"></i>
+                    </div>
+                    <div class="station01-process-beams" aria-hidden="true">
+                        <i class="station01-process-beam" data-beam="r"></i>
+                        <i class="station01-process-beam" data-beam="g"></i>
+                        <i class="station01-process-beam" data-beam="b"></i>
+                    </div>
+                    <div class="station01-process-core">
+                        <div class="station01-process-core-glow"></div>
+                        <div class="station01-process-core-ring"></div>
+                        <div class="station01-process-core-ring station01-process-core-ring--outer"></div>
+                        <div class="station01-process-core-shape"></div>
+                        <div class="station01-process-core-scan"></div>
+                    </div>
+                    <div class="station01-process-field station01-process-field--output">
+                        <i class="station01-process-node" data-channel="gray"></i>
+                        <i class="station01-process-node" data-channel="gray2"></i>
+                        <i class="station01-process-node" data-channel="gray3"></i>
+                        <i class="station01-process-node" data-channel="gray4"></i>
+                        <i class="station01-process-node" data-channel="gray5"></i>
+                    </div>
+                    <div class="station01-process-dust" aria-hidden="true">
+                        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="station01-process-caption" id="processVizCaption">
+                    <span>三通道颜色流按权重汇入</span>
+                    <strong>合成单通道亮度</strong>
+                </div>
+            </section>
+
             <section class="station01-card station01-pixel-card">
                 <div class="station01-card-head">
                     <h3>当前像素探针</h3>
