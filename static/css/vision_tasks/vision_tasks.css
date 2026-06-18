@@ -91,14 +91,14 @@
 }
 
 .vision-panel {
-    padding: 17px;
+    padding: 14px;
 }
 
 .vision-control-panel,
 .vision-notes-panel {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
 }
 
 .vision-panel-heading {
@@ -221,8 +221,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    min-height: 66px;
-    padding: 13px 17px;
+    min-height: 56px;
+    padding: 11px 16px;
     border-bottom: 1px solid #e8eef6;
     background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
@@ -3286,35 +3286,36 @@
 
 .semantic-detail-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 12px;
-    padding: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: 10px;
+    padding: 10px 12px;
     background: #ffffff;
 }
 
 .vision-panel-lite {
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 12px;
+    padding: 10px 11px;
     background: #fbfdff;
 }
 
 .vision-panel-lite h4 {
-    margin: 0 0 9px;
+    margin: 0 0 8px;
     color: #1e3a8a;
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 950;
 }
 
 .semantic-ratio-list {
     display: grid;
-    gap: 7px;
+    gap: 5px;
 }
 
 .semantic-ratio-list div {
     display: grid;
-    grid-template-columns: 76px minmax(0, 1fr) 42px;
+    grid-template-columns: 70px minmax(0, 1fr) 38px;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     font-size: 10px;
 }
 
@@ -3354,24 +3355,24 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     border-top: 1px solid #e8eef6;
-    padding: 12px;
+    padding: 10px 12px;
     background: #fbfdff;
 }
 
 .semantic-tensor-flow div {
     display: grid;
-    gap: 3px;
+    gap: 2px;
     border: 1px solid #dbeafe;
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 9px;
+    padding: 7px 9px;
     background: #eff6ff;
 }
 
 .semantic-tensor-flow strong {
     color: #1e3a8a;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .semantic-tensor-flow span {
@@ -3385,7 +3386,19 @@
 
 /* Semantic segmentation model inference mode */
 .semantic-lab-workbench {
-    grid-template-columns: minmax(250px, 276px) minmax(0, 1fr) minmax(286px, 326px);
+    grid-template-columns: minmax(240px, 264px) minmax(0, 1fr) minmax(272px, 310px);
+    gap: 12px;
+    align-items: start;
+}
+
+/* 类别筛选列表 — 限高可滚动 */
+.semantic-lab-workbench [data-sem-class-filter] {
+    max-height: 160px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #bfdbfe transparent;
 }
 
 .semantic-control-section,
@@ -3409,7 +3422,7 @@
 .semantic-model-panel {
     border: 1px solid #dbeafe;
     border-radius: 14px;
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, #f8fbff, #ffffff);
 }
 
@@ -3418,87 +3431,72 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    margin-bottom: 2px;
 }
 
 .semantic-panel-head strong {
     border: 1px solid #bfdbfe;
     border-radius: 999px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     color: #1d4ed8;
     font-size: 10px;
     background: #eff6ff;
 }
 
 .semantic-runtime-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
 }
 
 .semantic-runtime-grid > div {
-    min-height: 42px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 5px 8px;
+    min-height: unset;
+}
+
+.semantic-runtime-grid > div span {
+    font-size: 9.5px;
+    color: #94a3b8;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .semantic-runtime-grid strong {
     overflow-wrap: anywhere;
-    text-align: right;
-}
-
-.semantic-backend-field select {
-    min-height: 34px;
-}
-
-.semantic-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 7px;
-}
-
-.semantic-actions button {
-    min-height: 34px;
-    border: 1px solid #bfdbfe;
-    border-radius: 9px;
-    padding: 7px 9px;
-    color: #1d4ed8;
-    font-size: 11px;
+    text-align: left;
+    font-size: 10.5px;
     font-weight: 900;
-    cursor: pointer;
-    background: #eff6ff;
-    transition: background 0.16s ease, transform 0.16s ease;
-}
-
-.semantic-actions button:hover:not(:disabled) {
-    background: #dbeafe;
-    transform: translateY(-1px);
-}
-
-.semantic-actions button:disabled {
-    cursor: wait;
-    opacity: 0.68;
-}
-
-.semantic-actions button.is-loading {
-    background-image: linear-gradient(90deg, #eff6ff 0, #dbeafe 48%, #eff6ff 96%);
-    background-size: 220% 100%;
-    animation: semantic-loading-sheen 1.1s linear infinite;
+    color: #1e3a8a;
 }
 
 .semantic-model-message,
 .semantic-empty-text {
-    margin: 0;
-    color: #64748b;
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    color: #475569;
     font-size: 10px;
     line-height: 1.55;
+    background: #f1f5f9;
 }
 
 .semantic-stage-panel {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .semantic-stage-strip {
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
+    gap: 5px;
     border-bottom: 1px solid #e8eef6;
-    padding: 9px 12px;
+    padding: 7px 12px;
     background: #f8fbff;
 }
 
@@ -3506,10 +3504,10 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-height: 24px;
+    min-height: 22px;
     border: 1px solid #dbeafe;
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 2px 8px;
     color: #64748b;
     font-size: 10px;
     font-weight: 850;
@@ -3522,7 +3520,8 @@
 
 .semantic-real-stage {
     flex: 0 0 auto;
-    min-height: 330px;
+    min-height: 300px;
+    max-height: 460px;
     aspect-ratio: var(--sem-aspect, 4 / 3);
 }
 
@@ -3559,8 +3558,8 @@
     padding: 10px 12px;
     color: #334155;
     font-size: 11px;
-    line-height: 1.62;
-    background: #f8fbff;
+    line-height: 1.65;
+    background: linear-gradient(145deg, #f8fbff, #eff6ff);
 }
 
 .semantic-notes-tutorial p {

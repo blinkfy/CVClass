@@ -17,14 +17,6 @@
             <select data-sem-sample></select>
         </label>
 
-        <div class="semantic-control-section">
-            <span class="semantic-section-title">结果来源</span>
-            <div class="overview-segmented-control semantic-source-toggle">
-                <button class="is-active" type="button" data-sem-source="preset">预设 mask</button>
-                <button type="button" data-sem-source="model">前端模型推理</button>
-            </div>
-        </div>
-
         <div class="overview-segmented-control semantic-view-modes">
             <button class="is-active" type="button" data-sem-mode="overlay">叠加图</button>
             <button type="button" data-sem-mode="image">原图</button>
@@ -49,28 +41,14 @@
                 <strong data-sem-model-status>未加载</strong>
             </div>
             <div class="vision-kv-grid semantic-runtime-grid">
-                <div><span>模型名称</span><strong>SegFormer-B0 Semantic Segmentation</strong></div>
-                <div><span>模型路径</span><strong>static/assets/data/segformer_b0_ade/</strong></div>
-                <div><span>后端</span><strong>WASM / WebGPU</strong></div>
+                <div><span>模型</span><strong>SegFormer-B0 ADE20K</strong></div>
+                <div><span>后端</span><strong>WASM</strong></div>
                 <div><span>输入尺寸</span><strong data-sem-input-size>512 × 512</strong></div>
-                <div><span>类别数量</span><strong data-sem-class-count>--</strong></div>
-                <div><span>模型推理耗时</span><strong data-sem-inference-time>--</strong></div>
-                <div><span>后处理耗时</span><strong data-sem-postprocess-time>--</strong></div>
-                <div><span>当前 backend</span><strong data-sem-active-backend>--</strong></div>
+                <div><span>类别数</span><strong data-sem-class-count>--</strong></div>
+                <div><span>推理耗时</span><strong data-sem-inference-time>--</strong></div>
+                <div><span>后处理</span><strong data-sem-postprocess-time>--</strong></div>
             </div>
-            <label class="vision-field semantic-backend-field">
-                <span>推理后端</span>
-                <select data-sem-backend>
-                    <option value="webgpu">WebGPU 优先，自动回退 WASM</option>
-                    <option value="wasm">WASM</option>
-                </select>
-            </label>
-            <div class="semantic-actions">
-                <button type="button" data-sem-load-model>加载模型</button>
-                <button type="button" data-sem-run-model>运行语义分割</button>
-                <button type="button" data-sem-use-preset>切回预设 mask</button>
-            </div>
-            <p class="semantic-model-message" data-sem-model-message>默认使用预设 mask；切换到前端模型推理后再按需加载本地模型。</p>
+            <p class="semantic-model-message" data-sem-model-message>本地 ONNX 模型实时在浏览器端执行推理，计算完成后自动叠加油画蒙版。</p>
         </div>
 
         <div class="vision-shape-card">
@@ -88,7 +66,6 @@
         <div class="semantic-stage-strip" data-sem-stage-strip>
             <span>Source: <strong data-sem-strip-source>Preset Mask</strong></span>
             <span>Model: <strong data-sem-strip-model>--</strong></span>
-            <span>Backend: <strong data-sem-strip-backend>--</strong></span>
             <span>Inference: <strong data-sem-strip-inference>--</strong></span>
             <span>Postprocess: <strong data-sem-strip-postprocess>--</strong></span>
             <span>Mask: <strong data-sem-strip-mask>--</strong></span>

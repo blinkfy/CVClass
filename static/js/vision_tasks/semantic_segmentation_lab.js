@@ -5,7 +5,7 @@
     const UNKNOWN = 65535;
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const modelBaseUrl = window.cvclassUrl("/static/assets/data/segformer_b0_ade/");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260616-segformer3");
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260618-pure-wasm");
     const requiredModelFiles = ["config.json", "preprocessor_config.json", "quantize_config.json", "model_quantized.onnx"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
@@ -13,7 +13,7 @@
     const state = {
         data: null,
         sampleId: "",
-        selectedSource: "preset",
+        selectedSource: "model",
         mode: "overlay",
         opacity: 0.65,
         boundaries: true,
@@ -36,23 +36,17 @@
 
     const els = {
         sample: $("[data-sem-sample]"),
-        sourceButtons: $$("[data-sem-source]"),
         modes: $$("[data-sem-mode]"),
         opacity: $("[data-sem-opacity]"),
         opacityOut: $("[data-sem-opacity-output]"),
         boundaries: $("[data-sem-boundaries]"),
         filter: $("[data-sem-class-filter]"),
-        backend: $("[data-sem-backend]"),
-        loadModel: $("[data-sem-load-model]"),
-        runModel: $("[data-sem-run-model]"),
-        usePreset: $("[data-sem-use-preset]"),
         modelStatus: $("[data-sem-model-status]"),
         modelMessage: $("[data-sem-model-message]"),
         inputSize: $("[data-sem-input-size]"),
         classCount: $("[data-sem-class-count]"),
         inferenceTime: $("[data-sem-inference-time]"),
         postprocessTime: $("[data-sem-postprocess-time]"),
-        activeBackend: $("[data-sem-active-backend]"),
         image: $("[data-sem-image]"),
         missing: $("[data-sem-missing]"),
         canvas: $("[data-sem-canvas]"),
@@ -68,7 +62,6 @@
         outputSchema: $("[data-sem-output-schema]"),
         stripSource: $("[data-sem-strip-source]"),
         stripModel: $("[data-sem-strip-model]"),
-        stripBackend: $("[data-sem-strip-backend]"),
         stripInference: $("[data-sem-strip-inference]"),
         stripPostprocess: $("[data-sem-strip-postprocess]"),
         stripMask: $("[data-sem-strip-mask]"),
@@ -209,15 +202,13 @@
 
     function setBusy(busy) {
         state.busy = busy;
-        els.loadModel.disabled = busy;
-        els.runModel.disabled = busy;
-        els.backend.disabled = busy;
-        els.loadModel.classList.toggle("is-loading", busy);
-        els.runModel.classList.toggle("is-loading", busy);
     }
 
-    function renderSourceButtons() {
-        els.sourceButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.semSource === state.selectedSource));
+    function fallbackToPreset(message = "加载/推理失败，已自动降级为预设 Mask。") {
+        state.selectedSource = "preset";
+        setPhase("overlay");
+        setModelStatus(state.modelStatus, message);
+        activateMask(presetMask(), true);
     }
 
     function renderRuntime() {
@@ -227,10 +218,8 @@
         els.classCount.textContent = String(meta.classCount || state.modelInfo?.classCount || mask?.classes?.length || "--");
         els.inferenceTime.textContent = fmtMs(meta.inferenceTime);
         els.postprocessTime.textContent = fmtMs(meta.postprocessTime);
-        els.activeBackend.textContent = state.activeBackend || meta.backend || "--";
         els.stripSource.textContent = mask?.source === "model" ? "Frontend Model" : "Preset Mask";
         els.stripModel.textContent = meta.modelName || "--";
-        els.stripBackend.textContent = meta.backend || state.activeBackend || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
         els.stripPostprocess.textContent = fmtMs(meta.postprocessTime);
         els.stripMask.textContent = mask ? `${mask.height} × ${mask.width}` : "--";
@@ -363,14 +352,6 @@
         els.missing.textContent = `请放入 ${s.image.split("/").pop()}`;
     }
 
-    function switchToPreset(message = "已切回预设 mask 模式。") {
-        state.selectedSource = "preset";
-        renderSourceButtons();
-        setPhase("overlay");
-        setModelStatus(state.modelStatus, message);
-        activateMask(presetMask(), true);
-    }
-
     async function fetchHeadOrGet(url) {
         let response = await fetch(url, {method: "HEAD", cache: "no-store"});
         if (response.status === 405 || response.status === 501) response = await fetch(url, {cache: "no-store"});
@@ -415,39 +396,36 @@
     async function loadModel() {
         if (state.busy) return;
         state.selectedSource = "model";
-        renderSourceButtons();
         setBusy(true);
         setPhase("preprocess");
         setModelStatus("加载中", "正在检查本地模型文件...");
         try {
             const missing = await checkModelFiles();
             if (missing.length) {
-                const message = `模型文件未安装，请切换到预设 mask 模式。缺失：${missing.join(", ")}`;
+                const message = `模型文件未完全准备好，已自动为您使用预设 mask。缺失文件：${missing.join(", ")}`;
                 state.modelError = message;
                 state.activeBackend = "--";
                 setModelStatus("加载失败", message);
-                els.loadModel.textContent = "模型文件未安装";
                 renderRuntime();
-                setPhase("image");
+                fallbackToPreset(message);
                 return;
             }
-            els.loadModel.textContent = "加载模型";
             setModelStatus("加载中", "正在加载 SegFormer-B0 本地 ONNX 模型...");
             const client = await getInferenceClient();
-            const info = await client.loadSemanticModel({backend: els.backend.value, modelBaseUrl});
+            const info = await client.loadSemanticModel({modelBaseUrl});
             state.modelInfo = {...info, inputSizeText: `${info.inputSize.width} × ${info.inputSize.height}`};
             state.activeBackend = info.backend;
             state.modelError = "";
-            setModelStatus("已加载", info.backend === "wasm" && els.backend.value === "webgpu" ? "WebGPU 不可用或加载失败，已自动回退 WASM。" : "模型已加载，可以运行语义分割。");
+            setModelStatus("已加载", "模型已加载。");
             renderRuntime();
             setPhase("inference");
         } catch (error) {
             const message = formatError(error);
             state.modelError = message;
             state.activeBackend = "--";
-            setModelStatus("加载失败", `${message} 请切回预设 mask 模式。`);
-            setPhase("image");
+            setModelStatus("加载失败", message);
             renderRuntime();
+            fallbackToPreset(`加载失败：${message}`);
         } finally {
             setBusy(false);
         }
@@ -456,11 +434,9 @@
     async function runModel() {
         if (state.busy) return;
         state.selectedSource = "model";
-        renderSourceButtons();
         if (state.modelStatus !== "已加载" && state.modelStatus !== "推理完成") {
-            setModelStatus(state.modelStatus, "请先加载模型。");
-            setPhase("image");
-            return;
+            await loadModel();
+            if (state.modelStatus !== "已加载") return;
         }
         setBusy(true);
         try {
@@ -477,16 +453,15 @@
             state.activeBackend = result.meta.backend;
             state.modelMask = result;
             state.enabled = new Set(result.classes.map((item) => Number(item.id)));
-            setModelStatus("推理完成", `语义分割完成：mask=${result.height} × ${result.width}，classes=${result.classes.length}。`);
+            setModelStatus("推理完成", `语义分割推理完成。`);
             setPhase("mask");
             activateMask(result, true);
             setPhase("overlay");
         } catch (error) {
             const message = formatError(error);
             state.modelError = message;
-            setModelStatus("加载失败", `${message} 已保留上一次可用 mask，可一键切回预设 mask。`);
-            setPhase("image");
-            activateMask(currentUsableMask(), false);
+            setModelStatus("加载失败", `${message}`);
+            fallbackToPreset(`推理失败：${message}`);
         } finally {
             setBusy(false);
         }
@@ -518,8 +493,8 @@
         } else if (state.phase === "inference") {
             els.notesTitle.textContent = "Model Inference";
             els.notesSubtitle.textContent = "SegFormer / Frontend Runtime";
-            els.notesTutorial.innerHTML = `<p>SegFormer-B0 在浏览器端执行前向计算。若 WebGPU 不可用，运行时自动回退 WASM。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>模型名称</dt><dd>SegFormer-B0 Semantic Segmentation</dd></div><div><dt>推理后端</dt><dd>${esc(meta.backend || state.activeBackend || "--")}</dd></div><div><dt>推理耗时</dt><dd>${fmtMs(meta.inferenceTime)}</dd></div><div><dt>输出结构摘要</dt><dd>${esc(meta.rawOutputSummary || "等待模型输出")}</dd></div></dl>`;
+            els.notesTutorial.innerHTML = `<p>SegFormer-B0 在浏览器端由于量化模型原因，使用稳定的 WASM 后端执行前向计算。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>模型名称</dt><dd>SegFormer-B0 Semantic Segmentation</dd></div><div><dt>推理后端</dt><dd>WASM</dd></div><div><dt>推理耗时</dt><dd>${fmtMs(meta.inferenceTime)}</dd></div><div><dt>输出结构摘要</dt><dd>${esc(meta.rawOutputSummary || "等待模型输出")}</dd></div></dl>`;
         } else if (state.phase === "argmax") {
             els.notesTitle.textContent = "Logits / Argmax";
             els.notesSubtitle.textContent = "C-channel decision";
@@ -534,7 +509,7 @@
         } else {
             els.notesTitle.textContent = "Image";
             els.notesSubtitle.textContent = "H×W×3 input";
-            els.notesTutorial.innerHTML = `<p>默认进入预设 mask 模式。切换到前端模型推理后，点击加载模型才会读取本地 SegFormer 文件。</p>`;
+            els.notesTutorial.innerHTML = `<p>默认进入预设 mask 模式。切换到前端模型推理后，会自动加载本地 SegFormer 模型并完成推理。</p>`;
             els.notes.innerHTML = `<dl><div><dt>Source</dt><dd>${mask?.source === "model" ? "Frontend Model" : "Preset Mask"}</dd></div><div><dt>图像尺寸</dt><dd>${s ? `${s.width} × ${s.height}` : "--"}</dd></div></dl>`;
         }
     }
@@ -597,9 +572,10 @@
             state.sampleId = data.default_sample || data.samples[0].id;
             els.sample.innerHTML = data.samples.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join("");
             els.sample.value = state.sampleId;
-            renderSourceButtons();
             renderAll(true);
             clearProbe();
+            // 自动运行或加载模型推理
+            runModel();
         })
         .catch(() => {
             els.probe.innerHTML = `<strong>样例数据加载失败</strong>`;
@@ -608,26 +584,10 @@
     els.sample.addEventListener("change", () => {
         state.sampleId = els.sample.value;
         state.probeInfo = null;
-        if (state.selectedSource === "model" && state.modelMask?.sampleId !== state.sampleId) {
-            setModelStatus(state.modelStatus, "当前样例尚未运行模型，暂显示预设 mask。");
-        }
         renderAll(true);
         clearProbe();
-    });
-
-    els.sourceButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            state.selectedSource = button.dataset.semSource;
-            renderSourceButtons();
-            if (state.selectedSource === "preset") {
-                switchToPreset();
-                return;
-            }
-            setPhase(state.modelStatus === "已加载" || state.modelStatus === "推理完成" ? "inference" : "image");
-            const mask = currentUsableMask();
-            activateMask(mask, mask.source !== state.currentMask?.source);
-            if (mask.source === "preset") setModelStatus(state.modelStatus, state.modelError || "请点击“加载模型”，再运行语义分割。");
-        });
+        // 自动完成对新样例的运行
+        runModel();
     });
 
     els.modes.forEach((button) => button.addEventListener("click", () => {
@@ -644,18 +604,6 @@
         state.boundaries = els.boundaries.checked;
         draw();
     });
-    els.backend.addEventListener("change", () => {
-        state.inferenceClient?.dispose?.();
-        state.inferenceClient = null;
-        state.inferenceModule = null;
-        state.modelInfo = null;
-        state.activeBackend = "--";
-        setModelStatus("未加载", "推理后端已切换，请重新加载模型。");
-        renderRuntime();
-    });
-    els.loadModel.addEventListener("click", loadModel);
-    els.runModel.addEventListener("click", runModel);
-    els.usePreset.addEventListener("click", () => switchToPreset());
     els.stage.addEventListener("mousemove", probe);
     els.stage.addEventListener("mouseleave", clearProbe);
     els.image.addEventListener("error", () => {

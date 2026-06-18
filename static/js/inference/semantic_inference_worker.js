@@ -62,39 +62,26 @@ async function fetchArrayBuffer(path) {
 }
 
 function providerFor(backend) {
-    return backend === "webgpu" ? "webgpu" : "wasm";
+    return "wasm";
 }
 
 async function createSession(modelBytes, backend) {
-    return self.ort.InferenceSession.create(modelBytes, {
-        executionProviders: [providerFor(backend)],
+    const options = {
+        executionProviders: ["wasm"],
         graphOptimizationLevel: "all"
-    });
+    };
+    return self.ort.InferenceSession.create(modelBytes, options);
 }
 
-async function loadSemanticModel({backend = "webgpu", modelBaseUrl: requestedBase = DEFAULT_MODEL_BASE} = {}) {
+async function loadSemanticModel({modelBaseUrl: requestedBase = DEFAULT_MODEL_BASE} = {}) {
     ensureOrtLoaded();
     modelBaseUrl = requestedBase || DEFAULT_MODEL_BASE;
     modelConfig = await fetchJson("config.json");
     preprocessorConfig = await fetchJson("preprocessor_config.json");
     const modelBytes = await fetchArrayBuffer("model_quantized.onnx");
 
-    let requestedBackend = backend;
-    if (requestedBackend === "webgpu" && !self.navigator?.gpu) {
-        requestedBackend = "wasm";
-    }
-
-    try {
-        session = await createSession(modelBytes, requestedBackend);
-        activeBackend = requestedBackend;
-    } catch (error) {
-        if (backend === "webgpu") {
-            session = await createSession(modelBytes, "wasm");
-            activeBackend = "wasm";
-        } else {
-            throw error;
-        }
-    }
+    session = await createSession(modelBytes, "wasm");
+    activeBackend = "wasm";
 
     return {
         backend: activeBackend,
@@ -171,9 +158,10 @@ function classInfo(id) {
     };
 }
 
-function argmaxLogits(output) {
+async function argmaxLogits(output) {
     const dims = rawOutputShape(output);
     const data = output?.data;
+    
     if (!data || !dims.length) {
         const error = new Error("模型输出为空，无法生成 semantic mask");
         error.rawOutputShape = dims;
@@ -301,7 +289,7 @@ async function runSemanticInference(image) {
     const inferenceTime = performance.now() - inferenceStarted;
     const output = firstOutput(results);
     const postStarted = performance.now();
-    const logits = argmaxLogits(output);
+    const logits = await argmaxLogits(output);
     const mask = upsampleMask(logits, pre.originalWidth, pre.originalHeight);
     const postprocessTime = performance.now() - postStarted;
 

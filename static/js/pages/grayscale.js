@@ -126,7 +126,6 @@
     };
 
     const previewDefinitions = [
-        { key: "original", title: "原图", desc: "RGB 输入" },
         { key: "grayscale", title: "灰度化", desc: "亮度结构" },
         { key: "binary", title: "二值化", desc: "前景 / 背景" },
         { key: "channel-red", title: "R 通道", desc: "红色贡献" },
