@@ -11,47 +11,53 @@
             <div class="home-hero-actions">
                 <a class="home-primary-button" href="#core-modules">进入系统 <span aria-hidden="true">&rsaquo;</span></a>
                 <a class="home-secondary-button" href="{{ url_for('knowledge_graph_page') }}">
-                    <span class="button-node-icon" aria-hidden="true"></span>
+                    <svg class="button-node-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="18" cy="5" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <circle cx="6" cy="12" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <circle cx="18" cy="19" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
                     查看知识图谱
                 </a>
             </div>
         </div>
 
         <div class="home-hero-visual" aria-label="计算机视觉流程示意">
-            <img class="hero-bg-image" src="{{ url_for('static', filename='assets/img/bg.png') }}" alt="" aria-hidden="true">
+            <img class="hero-bg-image" src="{{ url_for('static', filename='assets/img/bg.webp') }}" alt="" aria-hidden="true">
             <div class="hero-flow">
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home01.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home01.webp') }}" alt="" aria-hidden="true">
                     <strong>像素矩阵</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home02.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home02.webp') }}" alt="" aria-hidden="true">
                     <strong>卷积滤波</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home03.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home03.webp') }}" alt="" aria-hidden="true">
                     <strong>边缘轮廓</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home04.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home04.webp') }}" alt="" aria-hidden="true">
                     <strong>特征匹配</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home05.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home05.webp') }}" alt="" aria-hidden="true">
                     <strong>CNN 分类</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home06.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home06.webp') }}" alt="" aria-hidden="true">
                     <strong>检测分割</strong>
                 </div>
                 <span class="flow-arrow" aria-hidden="true">&rarr;</span>
                 <div class="flow-step">
-                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home07.png') }}" alt="" aria-hidden="true">
+                    <img class="flow-icon" src="{{ url_for('static', filename='assets/img/home07.webp') }}" alt="" aria-hidden="true">
                     <strong>前沿探索</strong>
                 </div>
             </div>
@@ -133,7 +139,7 @@
             <article class="module-card" data-learn-module="vision-task-overview">
                 <div class="module-card-head">
                     <span class="module-number">06</span>
-                    <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
+                    <span class="module-mini-icon mini-icon--tasks" aria-hidden="true"></span>
                 </div>
                 <h3>视觉任务谱系与图像分类</h3>
                 <p>从图像级分类出发，对比 Classification、Detection、Semantic Segmentation 和 Instance Segmentation 的输入、输出与评价指标。</p>
@@ -172,7 +178,7 @@
             <article class="module-card" data-learn-module="instance-segmentation">
                 <div class="module-card-head">
                     <span class="module-number">09</span>
-                    <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
+                    <span class="module-mini-icon mini-icon--instance" aria-hidden="true"></span>
                 </div>
                 <h3>实例分割：Instance Mask</h3>
                 <p>展示 Detection + Mask + Instance ID 的组合机制，对比语义分割与实例分割，并统计每个实例的 bbox、mask area 和轮廓属性。</p>
@@ -252,27 +258,93 @@
 
         <div id="knowledge-graph-entry" class="home-panel graph-entry" aria-labelledby="knowledgeGraphTitle">
             <h2 class="panel-title">
-                <span class="panel-title-icon panel-title-icon--nodes" aria-hidden="true"></span>
+                <span class="panel-title-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <circle cx="6" cy="12" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <circle cx="18" cy="19" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                </span>
                 知识图谱入口
             </h2>
             <div class="graph-entry-card">
                 <div>
                     <h3 id="knowledgeGraphTitle">CV 算法知识图谱</h3>
-                    <p>查看灰度化、卷积、边缘、特征、CNN、检测与分割之间的前置关系和任务关系。</p>
+                    <p>查看灰度化、卷积、边缘、特征、CNN、检测与分割之间的前置关系 and 任务关系。</p>
                     <a class="home-primary-button graph-button" href="{{ url_for('knowledge_graph_page') }}">打开知识图谱</a>
                 </div>
                 <div class="graph-illustration" aria-hidden="true">
-                    <span class="graph-line graph-line--one"></span>
-                    <span class="graph-line graph-line--two"></span>
-                    <span class="graph-line graph-line--three"></span>
-                    <span class="graph-line graph-line--four"></span>
-                    <span class="graph-node graph-node--one"></span>
-                    <span class="graph-node graph-node--two"></span>
-                    <span class="graph-node graph-node--three"></span>
-                    <span class="graph-node graph-node--four"></span>
-                    <span class="graph-node graph-node--five"></span>
-                    <span class="graph-node graph-node--six"></span>
-                    <span class="graph-node graph-node--seven"></span>
+                    <svg viewBox="0 0 160 80" width="160" height="80" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: auto;">
+                        <defs>
+                            <!-- 渐变色：科技蓝到青绿 -->
+                            <radialGradient id="node-glow-primary" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#1d5cff" stop-opacity="1" />
+                                <stop offset="100%" stop-color="#1d5cff" stop-opacity="0" />
+                            </radialGradient>
+                            <radialGradient id="node-glow-cyan" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#6cc7d8" stop-opacity="1" />
+                                <stop offset="100%" stop-color="#6cc7d8" stop-opacity="0" />
+                            </radialGradient>
+                            
+                            <!-- 线条渐变 -->
+                            <linearGradient id="line-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1c3e80" stop-opacity="0.6"/>
+                                <stop offset="100%" stop-color="#5ec0d1" stop-opacity="0.8"/>
+                            </linearGradient>
+                            <linearGradient id="line-grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#5ec0d1" stop-opacity="0.8"/>
+                                <stop offset="100%" stop-color="#1d5cff" stop-opacity="0.8"/>
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- 连线 -->
+                        <g stroke="currentColor" stroke-opacity="0.25" stroke-dasharray="none" fill="none">
+                            <line x1="21" y1="29" x2="74" y2="21" stroke="url(#line-grad-1)" stroke-width="1.8" />
+                            <line x1="40" y1="56" x2="87" y2="66" stroke="url(#line-grad-1)" stroke-width="1.8" />
+                            <line x1="74" y1="21" x2="102" y2="12" stroke="url(#line-grad-2)" stroke-width="1.8" />
+                            <line x1="87" y1="66" x2="129" y2="45" stroke="url(#line-grad-2)" stroke-width="1.8" />
+                            
+                            <!-- 虚线辅助拓扑连线 -->
+                            <line x1="21" y1="29" x2="40" y2="56" stroke="#6cc7d8" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3,3" />
+                            <line x1="74" y1="21" x2="87" y2="66" stroke="#1d5cff" stroke-opacity="0.3" stroke-width="1" />
+                            <line x1="102" y1="12" x2="129" y2="45" stroke="#b9cff7" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="4,2" />
+                            <line x1="129" y1="45" x2="145" y2="70" stroke="url(#line-grad-2)" stroke-width="1.8" />
+                        </g>
+                        
+                        <!-- 流动的数据光点 -->
+                        <g fill="none">
+                            <circle r="2" fill="#6cc7d8">
+                                <animateMotion dur="4s" repeatCount="indefinite" path="M 21,29 L 74,21" />
+                            </circle>
+                            <circle r="2" fill="#1d5cff">
+                                <animateMotion dur="3.2s" repeatCount="indefinite" path="M 87,66 L 129,45" />
+                            </circle>
+                        </g>
+                        
+                        <!-- 节点呼吸光环 -->
+                        <g opacity="0.6">
+                            <circle cx="21" cy="29" r="6" fill="url(#node-glow-primary)">
+                                <animate attributeName="r" values="4;8;4" dur="3s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="74" cy="21" r="7" fill="url(#node-glow-cyan)">
+                                <animate attributeName="r" values="5;9;5" dur="4s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="145" cy="70" r="8" fill="url(#node-glow-primary)">
+                                <animate attributeName="r" values="5;10;5" dur="3.5s" repeatCount="indefinite" />
+                            </circle>
+                        </g>
+                        
+                        <!-- 拓扑节点 -->
+                        <circle cx="21" cy="29" r="4" fill="#0b1b3d" stroke="#6cc7d8" stroke-width="1" />
+                        <circle cx="40" cy="56" r="4" fill="#6cc7d8" stroke="#ffffff" stroke-width="1" />
+                        <circle cx="74" cy="21" r="4.5" fill="#5ec0d1" stroke="#ffffff" stroke-width="1" />
+                        <circle cx="87" cy="66" r="3.5" fill="#0b1b3d" stroke="#1d5cff" stroke-width="1.2" />
+                        <circle cx="102" cy="12" r="3.5" fill="#b9cff7" stroke="#ffffff" stroke-width="1" />
+                        <circle cx="129" cy="45" r="4" fill="#5ec0d1" stroke="#ffffff" stroke-width="1" />
+                        <circle cx="145" cy="70" r="5" fill="#1d5cff" stroke="#ffffff" stroke-width="1" />
+                    </svg>
                 </div>
             </div>
         </div>

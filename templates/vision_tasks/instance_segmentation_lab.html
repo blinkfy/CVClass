@@ -37,6 +37,17 @@
             <input data-inst-opacity type="range" min="0" max="100" value="55">
         </label>
 
+        <div class="vision-field">
+            <span>实例分割视图</span>
+            <div class="overview-segmented-control instance-source-toggle" aria-label="实例分割视图">
+                <button type="button" data-inst-source="preset">预设实例结果</button>
+                <button class="is-active" type="button" data-inst-source="model">前端模型推理</button>
+                <button type="button" data-inst-source="maskrcnn">Mask R-CNN 机制</button>
+                <button type="button" data-inst-source="roiAlign">ROI Align 对比</button>
+                <button type="button" data-inst-source="maskMetric">Mask IoU / Mask AP</button>
+            </div>
+        </div>
+
         <div class="overview-segmented-control">
             <button class="is-active" type="button" data-inst-view="instance">实例分割视图</button>
             <button type="button" data-inst-view="semantic">语义分割对比</button>
@@ -58,8 +69,8 @@
             <label class="vision-field">
                 <span>推理后端</span>
                 <select data-inst-backend>
+                    <option value="webgpu" selected>WebGPU（自动回退）</option>
                     <option value="wasm">WASM</option>
-                    <option value="webgpu">WebGPU（自动回退）</option>
                 </select>
             </label>
             <p class="instance-model-message" data-inst-model-message>页面会自动运行本地 YOLO11n-seg；预设实例数据仅作为 fallback。</p>
@@ -87,6 +98,7 @@
             <canvas data-inst-mask-canvas aria-label="实例 mask 覆盖层"></canvas>
             <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
         </div>
+        <div class="instance-maskrcnn-demo" data-inst-maskrcnn-demo hidden></div>
         <div class="instance-seg-flow" data-inst-flow>
             <div data-inst-flow-phase="image"><strong>Image</strong><span>H×W×3</span></div>
             <b>→</b>

@@ -9,6 +9,7 @@
     const methodLabels = {
         "kmeans-rgb": "K-means RGB",
         "kmeans-rgbxy": "K-means RGB + XY",
+        "kmeans-compare": "RGB vs RGB+XY 对比",
         graphcut: "Graph Cut",
         ncut: "Normalized Cut",
     };
@@ -56,10 +57,12 @@
         time: $("[data-segb-time]"),
         statusText: $("[data-segb-status-text]"),
         status: $("[data-segb-status]"),
+        stageTitle: $("[data-segb-stage-title]"),
         stripMethod: $("[data-segb-strip-method]"),
         stripFeature: $("[data-segb-strip-feature]"),
         stripK: $("[data-segb-strip-k]"),
         stripIter: $("[data-segb-strip-iter]"),
+        stripOutput: $("[data-segb-strip-output]"),
         kmeansView: $("[data-segb-kmeans-view]"),
         graphView: $("[data-segb-graph-view]"),
         original: $("[data-segb-original]"),
@@ -68,17 +71,21 @@
         compareCard: $("[data-segb-compare-card]"),
         compareNote: $("[data-segb-compare-note]"),
         resultTitle: $("[data-segb-result-title]"),
+        thirdTitle: $("[data-segb-third-title]"),
+        featureSpace: $("[data-segb-feature-space]"),
         flowFeature: $("[data-segb-flow-feature]"),
         centerList: $("[data-segb-center-list]"),
         regionList: $("[data-segb-region-list]"),
+        iterationMonitor: $("[data-segb-iteration-monitor]"),
         graphStage: $("[data-segb-graph-stage]"),
         matrixStage: $("[data-segb-matrix-stage]"),
+        conceptDetail: $("[data-segb-concept-detail]"),
         notesSubtitle: $("[data-segb-notes-subtitle]"),
         formulaLabel: $("[data-segb-formula-label]"),
         formula: $("[data-segb-formula]"),
         formulaNote: $("[data-segb-formula-note]"),
         notes: $("[data-segb-notes]"),
-        stepper: $$("[data-segb-phase]"),
+        stepper: [...document.querySelectorAll("[data-segb-phase]")],
     };
 
     const escapeHtml = (value) => String(value ?? "")
@@ -90,6 +97,33 @@
 
     function setPhase(phase) {
         els.stepper.forEach((item) => item.classList.toggle("is-active", item.dataset.segbPhase === phase));
+    }
+
+    function renderStepper(kind) {
+        const steps = kind === "graph"
+            ? [
+                ["image", "Image / Nodes", "input graph"],
+                ["feature", "Build Graph", "S/T or W"],
+                ["assign", "Edge Weights", "similarity"],
+                ["update", "Min Cut / Ncut", "partition"],
+                ["map", "Region Split", "FG/BG"],
+                ["stats", "Statistics", "cut cost"],
+            ]
+            : [
+                ["image", "Image Pixels", "Canvas image data"],
+                ["feature", "Feature Vector", "RGB / RGB+XY"],
+                ["assign", "Assign Cluster", "nearest center"],
+                ["update", "Update Centers", "mean color"],
+                ["map", "Segmentation Map", "label map"],
+                ["stats", "Region Statistics", "counts and ratios"],
+            ];
+        els.stepper.forEach((item, index) => {
+            const step = steps[index];
+            item.dataset.segbPhase = step[0];
+            item.querySelector("strong").textContent = step[1];
+            item.querySelector("small").textContent = step[2];
+            item.classList.toggle("is-active", index === 0);
+        });
     }
 
     function setBusy(isBusy) {
@@ -333,6 +367,57 @@
         }).join("");
     }
 
+    function renderFeatureSpace(result, snapshot) {
+        const maxCount = Math.max(1, ...snapshot.counts);
+        return `
+            <div class="seg-basic-feature-cloud" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                ${snapshot.counts.map((count, index) => {
+                    const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
+                    const x = result.useXY ? Math.max(8, Math.min(92, (snapshot.centers[index * result.dims + 3] / Math.max(1, 255 * state.xyWeight)) * 100)) : 12 + (index % 3) * 34;
+                    const y = result.useXY ? Math.max(10, Math.min(90, (snapshot.centers[index * result.dims + 4] / Math.max(1, 255 * state.xyWeight)) * 100)) : 18 + Math.floor(index / 3) * 34;
+                    const size = 16 + (count / maxCount) * 22;
+                    return `<span style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:rgb(${r},${g},${b})"><b>C${index + 1}</b></span>`;
+                }).join("")}
+                <em>${result.useXY ? "XY position pulls centers into local regions" : "RGB distance only: same colors can merge across space"}</em>
+            </div>
+        `;
+    }
+
+    function renderContinuityMap(result, snapshot) {
+        const ctx = els.compareCanvas.getContext("2d");
+        const image = ctx.createImageData(result.width, result.height);
+        const data = image.data;
+        for (let y = 0; y < result.height; y += 1) {
+            for (let x = 0; x < result.width; x += 1) {
+                const i = y * result.width + x;
+                const label = snapshot.labels[i];
+                let mismatch = 0;
+                if (x > 0 && snapshot.labels[i - 1] !== label) mismatch += 1;
+                if (y > 0 && snapshot.labels[i - result.width] !== label) mismatch += 1;
+                if (x < result.width - 1 && snapshot.labels[i + 1] !== label) mismatch += 1;
+                if (y < result.height - 1 && snapshot.labels[i + result.width] !== label) mismatch += 1;
+                const smooth = Math.max(0, 255 - mismatch * 55);
+                const p = i * 4;
+                data[p] = 48;
+                data[p + 1] = Math.max(120, smooth);
+                data[p + 2] = 255 - smooth * 0.45;
+                data[p + 3] = 255;
+            }
+        }
+        ctx.putImageData(image, 0, 0);
+    }
+
+    function renderIterationMonitor(result) {
+        const movements = result.snapshots.map((snapshot) => snapshot.movement);
+        const maxMovement = Math.max(1, ...movements);
+        els.iterationMonitor.innerHTML = `
+            <div class="seg-basic-movement-bars">
+                ${movements.map((movement, index) => `<i class="${index === state.currentSnapshot ? "is-active" : ""}" style="height:${Math.max(8, Math.round((movement / maxMovement) * 100))}%"><span>${index + 1}</span></i>`).join("")}
+            </div>
+            <p>movement: ${result.snapshots[state.currentSnapshot]?.movement.toFixed(2) || "--"} · mean distance: ${result.snapshots[state.currentSnapshot]?.distance.toFixed(1) || "--"}</p>
+        `;
+    }
+
     function updateKMeansReadout(result, snapshot) {
         const counts = snapshot.counts;
         const maxCount = Math.max(...counts);
@@ -344,6 +429,8 @@
         els.stripK.textContent = String(result.k);
         els.regionList.innerHTML = regionRows(result, snapshot);
         els.centerList.innerHTML = centerRows(result, snapshot);
+        els.featureSpace.innerHTML = renderFeatureSpace(result, snapshot);
+        renderIterationMonitor(result);
         renderNotesForKMeans(result, snapshot, mainIndex, ratioText);
     }
 
@@ -358,12 +445,15 @@
             : "f(x) = [R,G,B]，只根据颜色距离聚类，空间上不连续的同色区域可能被分到同一类。";
         els.notes.innerHTML = `
             <dl>
+                <div><dt>公式</dt><dd>cluster(x)=argmin_k ||f(x)-c_k||²</dd></div>
                 <div><dt>当前输入</dt><dd>${escapeHtml(state.sourceName)} · ${result.width}×${result.height}</dd></div>
-                <div><dt>Feature Vector</dt><dd>${feature}${result.useXY ? ` · xyWeight=${state.xyWeight.toFixed(2)}` : ""}</dd></div>
+                <div><dt>Feature Vector</dt><dd>${result.useXY ? `f(x)=[R,G,B,λx,λy], xyWeight=${state.xyWeight.toFixed(2)}` : "f(x)=[R,G,B]"}</dd></div>
+                <div><dt>当前步骤</dt><dd>${state.playing ? (state.currentSnapshot % 2 ? "Update" : "Assignment") : "Assignment / Update complete"}</dd></div>
                 <div><dt>当前迭代次数</dt><dd>${snapshot.iter} / ${result.snapshots.length}</dd></div>
                 <div><dt>聚类中心变化</dt><dd>movement = ${snapshot.movement.toFixed(2)}, mean distance = ${snapshot.distance.toFixed(1)}</dd></div>
                 <div><dt>最大区域</dt><dd>Cluster ${mainIndex + 1} · ${ratioText}</dd></div>
                 <div><dt>每类像素比例</dt><dd>${ratios}</dd></div>
+                <div><dt>${result.useXY ? "空间连续性" : "局限性"}</dt><dd>${result.useXY ? "坐标项让空间相邻像素更容易保持同类，减少零散噪点。" : "颜色相近但空间不相邻的像素可能被分到同一类。"}</dd></div>
             </dl>
         `;
     }
@@ -380,6 +470,7 @@
             const compareSnapshot = state.compareResult.snapshots[state.compareResult.snapshots.length - 1];
             renderSnapshot(state.compareResult, compareSnapshot, els.compareCanvas);
         }
+        if (state.method === "kmeans-rgbxy") renderContinuityMap(result, snapshot);
     }
 
     function playSnapshots() {
@@ -411,7 +502,8 @@
         setBusy(true);
         setPhase("feature");
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const useXY = state.method === "kmeans-rgbxy";
+        const isCompare = state.method === "kmeans-compare";
+        const useXY = state.method === "kmeans-rgbxy" || isCompare;
         const started = performance.now();
         state.result = runKMeans(useXY);
         state.result.elapsed = performance.now() - started;
@@ -425,17 +517,73 @@
         els.time.textContent = `${elapsed.toFixed(1)} ms`;
         els.statusText.textContent = "分割完成";
         els.status.textContent = "Canvas K-means";
-        els.compareCard.hidden = !useXY;
-        els.compareNote.hidden = !useXY;
-        els.resultTitle.textContent = useXY ? "RGB+XY 分割结果" : "RGB 聚类分割结果";
+        els.compareCard.hidden = false;
+        els.compareNote.hidden = state.method !== "kmeans-rgbxy";
+        els.featureSpace.hidden = state.method !== "kmeans-rgb";
+        els.compareCanvas.hidden = state.method === "kmeans-rgb";
+        els.resultTitle.textContent = isCompare ? "RGB-only 分割" : useXY ? "K-means RGB+XY 分割结果" : "K-means RGB 分割结果";
+        els.thirdTitle.textContent = isCompare ? "RGB+XY 分割" : useXY ? "空间连续性热力图" : "RGB 聚类中心 / 特征空间示意";
         els.flowFeature.textContent = useXY ? "RGB + XY Vector" : "RGB Vector";
-        els.stripFeature.textContent = useXY ? "RGB + XY" : "RGB";
+        els.stripFeature.textContent = useXY ? "[R,G,B,λx,λy]" : "[R,G,B]";
         els.stripMethod.textContent = methodLabels[state.method];
         els.activeMethod.textContent = methodLabels[state.method];
+        els.stageTitle.textContent = `当前实验模式：${methodLabels[state.method]}`;
+        els.stripOutput.textContent = "label map";
+        renderStepper("kmeans");
         setPhase("map");
-        renderKMeansResult(state.showIterations ? 0 : -1);
+        renderKMeansResult(isCompare ? -1 : state.showIterations ? 0 : -1);
+        if (isCompare && state.compareResult?.snapshots?.length) {
+            renderSnapshot(state.compareResult, state.compareResult.snapshots[state.compareResult.snapshots.length - 1], els.resultCanvas);
+            renderSnapshot(state.result, state.result.snapshots[state.result.snapshots.length - 1], els.compareCanvas);
+        }
         setBusy(false);
-        if (state.showIterations) playSnapshots();
+        if (state.showIterations && !isCompare) playSnapshots();
+    }
+
+    function tinyPixelSvg(mode) {
+        const colors = mode === "graph"
+            ? ["#22c55e", "#22c55e", "#bfdbfe", "#60a5fa", "#22c55e", "#facc15", "#60a5fa", "#60a5fa", "#fed7aa"]
+            : ["#38bdf8", "#38bdf8", "#dbeafe", "#38bdf8", "#f8fafc", "#a78bfa", "#dbeafe", "#a78bfa", "#a78bfa"];
+        return `
+            <svg class="seg-concept-svg seg-pixel-svg" viewBox="0 0 300 210" role="img" aria-label="small pixel graph">
+                <rect x="28" y="24" width="244" height="162" rx="18" fill="#f8fafc" stroke="#dbeafe"/>
+                ${colors.map((color, index) => {
+                    const x = 68 + (index % 3) * 62;
+                    const y = 54 + Math.floor(index / 3) * 46;
+                    return `<rect x="${x}" y="${y}" width="38" height="30" rx="8" fill="${color}" stroke="#ffffff" stroke-width="4"/><text x="${x + 19}" y="${y + 20}" text-anchor="middle" class="seg-svg-note">p${index + 1}</text>`;
+                }).join("")}
+                <text x="150" y="202" text-anchor="middle" class="seg-svg-note">${mode === "graph" ? "small pixel grid as graph nodes" : "nodes grouped by spectral similarity"}</text>
+            </svg>
+        `;
+    }
+
+    function cutResultSvg() {
+        return `
+            <svg class="seg-concept-svg seg-cut-result-svg" viewBox="0 0 300 210" role="img" aria-label="cut region split">
+                <rect x="30" y="26" width="112" height="150" rx="18" fill="#dcfce7" stroke="#86efac"/>
+                <rect x="158" y="26" width="112" height="150" rx="18" fill="#dbeafe" stroke="#93c5fd"/>
+                <path d="M150 34 C126 70 174 100 150 170" class="seg-cut-edge"/>
+                <text x="86" y="104" text-anchor="middle" class="seg-svg-title">Foreground</text>
+                <text x="214" y="104" text-anchor="middle" class="seg-svg-title">Background</text>
+                <text x="150" y="200" text-anchor="middle" class="seg-svg-note">output: binary region split by cut edges</text>
+            </svg>
+        `;
+    }
+
+    function eigenResultSvg() {
+        return `
+            <svg class="seg-concept-svg seg-cut-result-svg" viewBox="0 0 300 210" role="img" aria-label="eigenvector split">
+                <line x1="42" y1="106" x2="258" y2="106" stroke="#dbeafe" stroke-width="4"/>
+                ${[-0.82, -0.55, -0.28, 0.24, 0.57, 0.86].map((v, index) => {
+                    const x = 58 + index * 36;
+                    const y = 106 - v * 70;
+                    const color = v < 0 ? "#38bdf8" : "#a78bfa";
+                    return `<line x1="${x}" y1="106" x2="${x}" y2="${y}" stroke="${color}" stroke-width="5" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="9" fill="${color}" stroke="#ffffff" stroke-width="3"/>`;
+                }).join("")}
+                <text x="150" y="28" text-anchor="middle" class="seg-svg-title">2nd eigenvector</text>
+                <text x="150" y="196" text-anchor="middle" class="seg-svg-note">threshold by sign → two balanced regions</text>
+            </svg>
+        `;
     }
 
     function graphCutSvg() {
@@ -513,16 +661,26 @@
         els.stripFeature.textContent = "nodes + weighted edges";
         els.stripK.textContent = "S/T graph";
         els.stripIter.textContent = "min cut";
-        els.graphStage.innerHTML = graphCutSvg();
+        els.stageTitle.textContent = "当前实验模式：Graph Cut";
+        els.stripOutput.textContent = "foreground / background";
+        renderStepper("graph");
+        els.graphStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>输入图 / 小型像素图</h4>
+                ${tinyPixelSvg("graph")}
+            </section>
+        `;
         els.matrixStage.innerHTML = `
             <section class="seg-concept-card">
-                <h4>Min Cut Energy</h4>
-                <p>E(A,B)= unary(source/sink) + pairwise(boundary penalty)</p>
-                <div class="seg-mini-equation">cut* = argmin cut(A,B)</div>
+                <h4>图结构：source / sink / edge weights</h4>
+                ${graphCutSvg()}
             </section>
+        `;
+        els.conceptDetail.innerHTML = `
             <section class="seg-concept-card">
-                <h4>边权含义</h4>
-                <p>颜色越相似、位置越接近，像素节点之间的边权越大；高权重边更不容易被切断。</p>
+                <h4>cut 后前景 / 背景划分</h4>
+                ${cutResultSvg()}
+                <div class="seg-mini-equation">cut cost = 2.4 + 1.8</div>
             </section>
         `;
         els.notesSubtitle.textContent = "Graph Cut / Min Cut";
@@ -533,11 +691,12 @@
             <dl>
                 <div><dt>图结构</dt><dd>像素或超像素作为节点，相似度作为边权。</dd></div>
                 <div><dt>Source / Sink</dt><dd>Source 代表前景，Sink 代表背景，节点通过 unary 边连接到两端。</dd></div>
+                <div><dt>边权与 cut cost</dt><dd>颜色越相似、位置越接近，边权越大；cut cost 是被切断边权之和。</dd></div>
                 <div><dt>Cut 边</dt><dd>红色虚线为切割边，切断后得到前景/背景两个连通区域。</dd></div>
                 <div><dt>课程重点</dt><dd>最小割倾向于沿着低相似度边界切开图结构。</dd></div>
             </dl>
         `;
-        setPhase("update");
+        setPhase("map");
         setBusy(false);
     }
 
@@ -557,7 +716,15 @@
         els.stripFeature.textContent = "W matrix + D matrix";
         els.stripK.textContent = "eigen split";
         els.stripIter.textContent = "spectral";
-        els.graphStage.innerHTML = ncutSvg();
+        els.stageTitle.textContent = "当前实验模式：Normalized Cut";
+        els.stripOutput.textContent = "balanced region split";
+        renderStepper("graph");
+        els.graphStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>节点图</h4>
+                ${ncutSvg()}
+            </section>
+        `;
         els.matrixStage.innerHTML = `
             <section class="seg-concept-card">
                 <h4>权重矩阵 W</h4>
@@ -576,6 +743,12 @@
                 <p>D 是每个节点连接强度的度矩阵；第二小特征向量的符号可用于二分割。</p>
             </section>
         `;
+        els.conceptDetail.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>第二小特征向量二分结果</h4>
+                ${eigenResultSvg()}
+            </section>
+        `;
         els.notesSubtitle.textContent = "Normalized Cut";
         els.formulaLabel.textContent = "Ncut";
         els.formula.textContent = "Ncut(A,B)=cut(A,B)/assoc(A,V)+cut(A,B)/assoc(B,V)";
@@ -588,7 +761,7 @@
                 <div><dt>二分割结果</dt><dd>图中左右两个节点团是 Ncut 倾向保留的平衡区域。</dd></div>
             </dl>
         `;
-        setPhase("update");
+        setPhase("map");
         setBusy(false);
     }
 

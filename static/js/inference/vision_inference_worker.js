@@ -213,9 +213,32 @@ function decodeYoloOutput(output, meta) {
     return boxes;
 }
 
-function firstOutput(results) {
-    const values = Object.values(results || {});
-    return values.find((value) => value?.data && value?.dims);
+/**
+ * WebGPU 后端的张量数据在 GPU 上，直接访问 .data 会得到错误结果。
+ * 必须调用 getData() 异步从 GPU 读回 CPU。
+ */
+async function readTensorData(tensor) {
+    if (!tensor) return tensor;
+    if (tensor.location === 'gpu-buffer' || typeof tensor.getData === 'function') {
+        try {
+            const cpuData = await tensor.getData();
+            return {
+                data: cpuData,
+                dims: tensor.dims,
+                type: tensor.type,
+                location: 'cpu'
+            };
+        } catch (_) {
+            // already on CPU — fall through
+        }
+    }
+    return tensor;
+}
+
+async function firstOutputAsync(results) {
+    const raw = Object.values(results || {}).find((value) => value?.dims);
+    if (!raw) return null;
+    return readTensorData(raw);
 }
 
 function serializeError(error) {
@@ -237,7 +260,8 @@ async function runDetectionInference(image) {
     const inferenceStarted = performance.now();
     const results = await session.run(feeds);
     const inferenceTime = performance.now() - inferenceStarted;
-    const output = firstOutput(results);
+    // IMPORTANT: download GPU tensor data to CPU before decoding
+    const output = await firstOutputAsync(results);
     const postStarted = performance.now();
     const decoded = decodeYoloOutput(output, {labels});
     const boxes = prefilterModelBoxes(self.scaleBoxesToOriginal(decoded, meta));

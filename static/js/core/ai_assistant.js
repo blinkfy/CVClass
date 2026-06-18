@@ -262,7 +262,7 @@
         fab.id = 'aiAssistantFab';
         fab.type = 'button';
         fab.setAttribute('aria-label', '打开 AI 学习助手');
-        fab.innerHTML = `<span class="ai-fab-icon"><img src="${BASE}/static/assets/img/ai.webp" alt="" aria-hidden="true"></span><span class="ai-fab-text">AI 助手</span>`;
+        fab.innerHTML = `<span class="ai-fab-icon"><img src="${BASE}/static/assets/img/ai.png" alt="" aria-hidden="true"></span><span class="ai-fab-text">AI 助手</span>`;
 
         // 遮罩
         const overlay = document.createElement('div');
@@ -277,7 +277,7 @@
         drawer.innerHTML = `
             <div class="ai-assistant-header">
                 <div class="ai-header-title">
-                    <span class="ai-header-icon"><img src="${BASE}/static/assets/img/ai.webp" alt="" aria-hidden="true"></span>
+                    <span class="ai-header-icon"><img src="${BASE}/static/assets/img/ai.png" alt="" aria-hidden="true"></span>
                     <div>
                         <strong>AI 学习助手</strong>
                         <small>基于当前页面上下文</small>

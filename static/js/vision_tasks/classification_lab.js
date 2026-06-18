@@ -227,35 +227,106 @@
     function renderOverlay() {
         if (state.method === "cnn") {
             els.featureOverlay.innerHTML = `
+                <defs>
+                    <filter id="clsGlow" x="-40%" y="-40%" width="180%" height="180%">
+                        <feGaussianBlur stdDeviation="1.4" result="blur"></feGaussianBlur>
+                        <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+                    </filter>
+                </defs>
                 <rect x="8" y="10" width="84" height="76" rx="3" fill="rgba(37,99,235,0.08)" stroke="#60a5fa" stroke-width="0.8"></rect>
                 ${Array.from({ length: 20 }, (_, i) => {
                     const x = 12 + (i % 5) * 16;
                     const y = 16 + Math.floor(i / 5) * 16;
-                    return `<rect x="${x}" y="${y}" width="10" height="10" rx="1.5" fill="#2563eb" opacity="${0.18 + (i % 4) * 0.12}"></rect>`;
+                    return `<rect class="cls-conv-cell" x="${x}" y="${y}" width="10" height="10" rx="1.5" fill="#2563eb" opacity="${0.18 + (i % 4) * 0.12}" style="--delay:${(i * 0.06).toFixed(2)}s"></rect>`;
                 }).join("")}
+                <path class="cls-scan-beam" d="M8 12 H92"></path>
                 <text x="50" y="94" text-anchor="middle" fill="#1e40af" font-size="5" font-weight="800">convolutional feature maps</text>
             `;
             return;
         }
-        const lineLimit = state.method === "pyramid" ? 30 : 24;
-        const lines = state.features.slice(0, lineLimit).map((feature, index) => {
+        const topWords = state.histogram
+            .map((count, id) => ({ count, id, word: state.words[id] }))
+            .filter((item) => item.count > 0)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+        const slotMap = new Map(topWords.map((item, index) => [item.id, {
+            x: 90,
+            y: 13 + index * 9.6,
+            word: item.word,
+            count: item.count,
+        }]));
+        const aggregateHalos = topWords.slice(0, 6).map((entry, index) => {
+            const members = state.features.filter((_, featureIndex) => state.assignments[featureIndex] === entry.id);
+            const cx = members.reduce((sum, feature) => sum + feature.x, 0) / Math.max(1, members.length);
+            const cy = members.reduce((sum, feature) => sum + feature.y, 0) / Math.max(1, members.length);
+            const radius = Math.min(12, 4 + Math.sqrt(entry.count) * 1.7);
+            return `<circle class="cls-word-field" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${radius.toFixed(2)}" fill="${entry.word.color}" style="--delay:${(index * 0.18).toFixed(2)}s"></circle>`;
+        }).join("");
+        const slots = topWords.map((entry, index) => {
+            const slot = slotMap.get(entry.id);
+            return `
+                <g class="cls-word-slot" style="--delay:${(index * 0.08).toFixed(2)}s">
+                    <rect x="${(slot.x - 5).toFixed(2)}" y="${(slot.y - 3.1).toFixed(2)}" width="9.5" height="6.2" rx="2" fill="rgba(255,255,255,0.78)" stroke="${entry.word.color}" stroke-width="0.55"></rect>
+                    <circle cx="${(slot.x - 2.9).toFixed(2)}" cy="${slot.y.toFixed(2)}" r="1.45" fill="${entry.word.color}"></circle>
+                    <text x="${(slot.x + 0.1).toFixed(2)}" y="${(slot.y + 1.25).toFixed(2)}" fill="#1e3a8a" font-size="2.6" font-weight="900">w${entry.id + 1}</text>
+                </g>
+            `;
+        }).join("");
+        const lineLimit = state.method === "pyramid" ? 38 : 34;
+        const paths = state.features.slice(0, lineLimit).map((feature, index) => {
             const word = state.words[state.assignments[index]];
-            const cx = 8 + (word.id % 8) * 4.5;
-            const cy = 8 + Math.floor(word.id % 16 / 8) * 4.5;
-            return `<line x1="${feature.x.toFixed(2)}" y1="${feature.y.toFixed(2)}" x2="${cx.toFixed(2)}" y2="${cy.toFixed(2)}" stroke="${word.color}" stroke-width="0.45" opacity="0.28"></line>`;
+            const slot = slotMap.get(word.id) || {
+                x: 88 + (word.id % 2) * 3,
+                y: 14 + (word.id % 8) * 8.8,
+            };
+            const c1x = feature.x + (slot.x - feature.x) * 0.38;
+            const c1y = Math.max(8, Math.min(92, feature.y - 12 + (index % 5) * 5));
+            const path = `M${feature.x.toFixed(2)} ${feature.y.toFixed(2)} Q${c1x.toFixed(2)} ${c1y.toFixed(2)} ${slot.x.toFixed(2)} ${slot.y.toFixed(2)}`;
+            const delay = (index * 0.055).toFixed(2);
+            return `
+                <path class="cls-assignment-path" d="${path}" stroke="${word.color}" style="--delay:${delay}s"></path>
+                ${index < 18 ? `<circle class="cls-flow-dot" r="0.72" fill="${word.color}" style="--delay:${delay}s"><animateMotion dur="2.6s" begin="${delay}s" repeatCount="indefinite" path="${path}"></animateMotion></circle>` : ""}
+            `;
         }).join("");
         const points = state.features.map((feature, index) => {
             const word = state.words[state.assignments[index]];
+            const delay = (index * 0.025).toFixed(2);
+            const radius = Math.max(1.15, feature.scale * 0.22);
             const shape = state.featureType === "orb"
-                ? `<rect x="${(feature.x - 1.15).toFixed(2)}" y="${(feature.y - 1.15).toFixed(2)}" width="2.3" height="2.3" transform="rotate(${feature.angle} ${feature.x} ${feature.y})" fill="${word.color}" stroke="#ffffff" stroke-width="0.4"></rect>`
-                : `<circle cx="${feature.x.toFixed(2)}" cy="${feature.y.toFixed(2)}" r="${Math.max(1.1, feature.scale * 0.22).toFixed(2)}" fill="${word.color}" fill-opacity="0.88" stroke="#ffffff" stroke-width="0.45"></circle>`;
-            return shape;
+                ? `<rect class="cls-keypoint-core" x="${(feature.x - 1.15).toFixed(2)}" y="${(feature.y - 1.15).toFixed(2)}" width="2.3" height="2.3" transform="rotate(${feature.angle} ${feature.x} ${feature.y})" fill="${word.color}" stroke="#ffffff" stroke-width="0.42"></rect>`
+                : `<circle class="cls-keypoint-core" cx="${feature.x.toFixed(2)}" cy="${feature.y.toFixed(2)}" r="${radius.toFixed(2)}" fill="${word.color}" fill-opacity="0.92" stroke="#ffffff" stroke-width="0.48"></circle>`;
+            return `
+                <g class="cls-keypoint" style="--delay:${delay}s">
+                    <circle class="cls-keypoint-ring" cx="${feature.x.toFixed(2)}" cy="${feature.y.toFixed(2)}" r="${(radius + 1.2).toFixed(2)}" stroke="${word.color}"></circle>
+                    <line class="cls-keypoint-orientation" x1="${feature.x.toFixed(2)}" y1="${feature.y.toFixed(2)}" x2="${(feature.x + Math.cos(feature.angle * Math.PI / 180) * (radius + 2.2)).toFixed(2)}" y2="${(feature.y + Math.sin(feature.angle * Math.PI / 180) * (radius + 2.2)).toFixed(2)}" stroke="${word.color}"></line>
+                    ${shape}
+                </g>
+            `;
         }).join("");
         const grid = state.method === "pyramid" ? `
             <path d="M50 0 V100 M0 50 H100" stroke="#ffffff" stroke-width="0.9" opacity="0.95"></path>
             ${[25, 75].map((v) => `<path d="M${v} 0 V100 M0 ${v} H100" stroke="#ffffff" stroke-width="0.45" opacity="0.55"></path>`).join("")}
         ` : "";
-        els.featureOverlay.innerHTML = `${grid}${lines}${points}`;
+        els.featureOverlay.innerHTML = `
+            <defs>
+                <filter id="clsGlow" x="-40%" y="-40%" width="180%" height="180%">
+                    <feGaussianBlur stdDeviation="1.35" result="blur"></feGaussianBlur>
+                    <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+                </filter>
+                <linearGradient id="clsOverlayFade" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0" stop-color="#ffffff" stop-opacity="0"></stop>
+                    <stop offset="0.72" stop-color="#ffffff" stop-opacity="0"></stop>
+                    <stop offset="1" stop-color="#eff6ff" stop-opacity="0.65"></stop>
+                </linearGradient>
+            </defs>
+            <rect class="cls-overlay-vignette" x="0" y="0" width="100" height="100" fill="url(#clsOverlayFade)"></rect>
+            <path class="cls-scan-beam" d="M4 9 H96"></path>
+            ${grid}
+            ${aggregateHalos}
+            <g class="cls-assignment-layer">${paths}</g>
+            <g class="cls-word-slot-layer">${slots}</g>
+            <g class="cls-keypoint-layer">${points}</g>
+        `;
     }
 
     function renderDictionary() {
@@ -270,12 +341,18 @@
             `).join("");
             return;
         }
-        els.dictionary.innerHTML = state.words.slice(0, maxVisible).map((word) => `
-            <div class="cls-word-chip">
+        els.dictionary.innerHTML = state.words.slice(0, maxVisible).map((word, index) => {
+            const count = state.histogram[word.id] || 0;
+            const strength = Math.min(100, Math.max(8, Math.round((count / Math.max(1, ...state.histogram)) * 100)));
+            const strengthScale = (strength / 100).toFixed(2);
+            return `
+            <div class="cls-word-chip" style="--word-color:${word.color}; --strength-scale:${strengthScale}; --delay:${(index * 0.025).toFixed(2)}s">
                 <i style="background:${word.color}"></i>
                 <span>w${word.id + 1}</span>
+                <b aria-hidden="true"></b>
             </div>
-        `).join("") + (state.vocabSize > maxVisible ? `<div class="cls-word-chip is-more">+${state.vocabSize - maxVisible}</div>` : "");
+        `;
+        }).join("") + (state.vocabSize > maxVisible ? `<div class="cls-word-chip is-more">+${state.vocabSize - maxVisible}</div>` : "");
     }
 
     function renderHistogram() {

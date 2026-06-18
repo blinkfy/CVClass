@@ -5,8 +5,8 @@
     const UNKNOWN = 65535;
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const modelBaseUrl = window.cvclassUrl("/static/assets/data/segformer_b0_ade/");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260618-pure-wasm");
-    const requiredModelFiles = ["config.json", "preprocessor_config.json", "quantize_config.json", "model_quantized.onnx"];
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260618-webgpu-fix2");
+    const requiredModelFiles = ["config.json", "preprocessor_config.json", "quantize_config.json", "model_quantized.onnx", "model_fp16.onnx"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
 
@@ -45,6 +45,7 @@
         boundaries: $("[data-sem-boundaries]"),
         filter: $("[data-sem-class-filter]"),
         modelStatus: $("[data-sem-model-status]"),
+        activeBackend: $("[data-sem-active-backend]"),
         modelMessage: $("[data-sem-model-message]"),
         inputSize: $("[data-sem-input-size]"),
         classCount: $("[data-sem-class-count]"),
@@ -290,6 +291,9 @@
         els.classCount.textContent = String(meta.classCount || state.modelInfo?.classCount || mask?.classes?.length || "--");
         els.inferenceTime.textContent = fmtMs(meta.inferenceTime);
         els.postprocessTime.textContent = fmtMs(meta.postprocessTime);
+        if (els.activeBackend) {
+            els.activeBackend.textContent = (state.activeBackend && state.activeBackend !== "--") ? state.activeBackend.toUpperCase() : (meta.backend || "--").toUpperCase();
+        }
         els.stripSource.textContent = mask?.source === "model" ? "Frontend Model" : mask?.source === "fcn" ? "FCN Principle Demo" : "Preset Mask";
         els.stripModel.textContent = meta.modelName || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
@@ -563,7 +567,7 @@
             }
             setModelStatus("加载中", "正在加载 SegFormer-B0 本地 ONNX 模型...");
             const client = await getInferenceClient();
-            const info = await client.loadSemanticModel({modelBaseUrl});
+            const info = await client.loadSemanticModel({modelBaseUrl, backend: "webgpu"});
             state.modelInfo = {...info, inputSizeText: `${info.inputSize.width} × ${info.inputSize.height}`};
             state.activeBackend = info.backend;
             state.modelError = "";

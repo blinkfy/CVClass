@@ -1,4 +1,4 @@
-const SEMANTIC_WORKER_URL = "/static/js/inference/semantic_inference_worker.js?v=20260618-pure-wasm";
+const SEMANTIC_WORKER_URL = "/static/js/inference/semantic_inference_worker.js?v=20260618-webgpu-fix2";
 
 let semanticSequence = 0;
 
@@ -39,8 +39,8 @@ export function createSemanticInferenceClient() {
         return promise;
     }
 
-    async function loadSemanticModel({modelBaseUrl}) {
-        return request("load", {modelBaseUrl});
+    async function loadSemanticModel({modelBaseUrl, backend}) {
+        return request("load", {modelBaseUrl, backend});
     }
 
     async function runSemanticInference(image) {

@@ -62,26 +62,47 @@ async function fetchArrayBuffer(path) {
 }
 
 function providerFor(backend) {
-    return "wasm";
+    return backend === "webgpu" ? "webgpu" : "wasm";
 }
 
 async function createSession(modelBytes, backend) {
+    const provider = providerFor(backend);
     const options = {
-        executionProviders: ["wasm"],
+        executionProviders: [provider],
         graphOptimizationLevel: "all"
     };
     return self.ort.InferenceSession.create(modelBytes, options);
 }
 
-async function loadSemanticModel({modelBaseUrl: requestedBase = DEFAULT_MODEL_BASE} = {}) {
+async function loadSemanticModel({modelBaseUrl: requestedBase = DEFAULT_MODEL_BASE, backend = "wasm"} = {}) {
     ensureOrtLoaded();
     modelBaseUrl = requestedBase || DEFAULT_MODEL_BASE;
     modelConfig = await fetchJson("config.json");
     preprocessorConfig = await fetchJson("preprocessor_config.json");
-    const modelBytes = await fetchArrayBuffer("model_quantized.onnx");
 
-    session = await createSession(modelBytes, "wasm");
-    activeBackend = "wasm";
+    let requested = backend;
+    if (requested === "webgpu" && !self.navigator?.gpu) {
+        requested = "wasm";
+    }
+
+    // WebGPU does NOT support INT8 quantized ops — use the FP16 float model instead.
+    // WASM runs fine with the smaller quantized model.
+    const modelFile = (requested === "webgpu") ? "model_fp16.onnx" : "model_quantized.onnx";
+    const modelBytes = await fetchArrayBuffer(modelFile);
+
+    try {
+        session = await createSession(modelBytes, requested);
+        activeBackend = requested;
+    } catch (error) {
+        if (backend === "webgpu") {
+            // Fall back to WASM with quantized model (lighter weight on CPU)
+            const wasmBytes = await fetchArrayBuffer("model_quantized.onnx");
+            session = await createSession(wasmBytes, "wasm");
+            activeBackend = "wasm";
+        } else {
+            throw error;
+        }
+    }
 
     return {
         backend: activeBackend,
@@ -130,8 +151,34 @@ function preprocessImage(image) {
     };
 }
 
-function firstOutput(results) {
-    return Object.values(results || {}).find((value) => value?.data && value?.dims);
+/**
+ * WebGPU 后端的张量数据存储在 GPU，必须用 getData() 异步读回 CPU 后才能正确访问。
+ * WASM 后端直接访问 .data 属性即可。
+ */
+async function readTensorData(tensor) {
+    if (!tensor) return tensor;
+    // WebGPU tensors have location === 'gpu-buffer' and require getData()
+    if (tensor.location === 'gpu-buffer' || typeof tensor.getData === 'function') {
+        try {
+            const cpuData = await tensor.getData();
+            // Return a plain object that mimics the tensor interface with CPU data
+            return {
+                data: cpuData,
+                dims: tensor.dims,
+                type: tensor.type,
+                location: 'cpu'
+            };
+        } catch (_) {
+            // getData not supported or already on CPU — fall through
+        }
+    }
+    return tensor;
+}
+
+async function firstOutputAsync(results) {
+    const raw = Object.values(results || {}).find((value) => value?.dims);
+    if (!raw) return null;
+    return readTensorData(raw);
 }
 
 function rawOutputShape(tensor) {
@@ -287,7 +334,8 @@ async function runSemanticInference(image) {
     const inferenceStarted = performance.now();
     const results = await session.run(feeds);
     const inferenceTime = performance.now() - inferenceStarted;
-    const output = firstOutput(results);
+    // IMPORTANT: download GPU tensor data to CPU before any data access
+    const output = await firstOutputAsync(results);
     const postStarted = performance.now();
     const logits = await argmaxLogits(output);
     const mask = upsampleMask(logits, pre.originalWidth, pre.originalHeight);

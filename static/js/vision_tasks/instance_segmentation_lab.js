@@ -3,7 +3,8 @@
     if (!root) return;
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/instance_inference.js?v=20260618-yoloseg1");
+    const moduleDataRoot = window.CVClassVisionTasks?.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/instance_inference.js?v=20260618-webgpu-fix1");
     const requiredModelFiles = ["yolo11n-seg.onnx", "labels_coco.json", "model_config.json"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
@@ -11,6 +12,7 @@
 
     const state = {
         data: null,
+        maskRcnnData: null,
         sampleId: "",
         selectedId: null,
         opacity: 0.55,
@@ -21,6 +23,7 @@
         view: "instance",
         sourceMode: "model",
         phase: "image",
+        maskRcnnStep: 0,
         presetScenes: new Map(),
         modelScene: null,
         currentScene: null,
@@ -45,6 +48,7 @@
         stage: $("[data-inst-stage]"),
         canvas: $("[data-inst-mask-canvas]"),
         svg: $("[data-inst-svg]"),
+        maskRcnnDemo: $("[data-inst-maskrcnn-demo]"),
         map: $("[data-inst-map]"),
         list: $("[data-inst-list]"),
         stats: $("[data-inst-stats]"),
@@ -76,6 +80,8 @@
         notesSubtitle: $("[data-inst-notes-subtitle]"),
         notesTutorial: $("[data-inst-notes-tutorial]"),
         notes: $("[data-inst-notes]"),
+        stepper: document.querySelector("[data-inst-stepper]"),
+        flow: $("[data-inst-flow]"),
         stepperItems: [...document.querySelectorAll("[data-inst-stepper] [data-inst-phase]")],
         flowItems: $$("[data-inst-flow-phase]"),
         blenderContainer: $("[data-inst-blender-container]"),
@@ -86,12 +92,70 @@
     };
     const ctx = els.canvas.getContext("2d", {willReadFrequently: true});
 
+    const yoloSteps = [
+        {id: "image", title: "Image", detail: "Current / Uploaded"},
+        {id: "preprocess", title: "Preprocess", detail: "Letterbox + CHW"},
+        {id: "inference", title: "Model Inference", detail: "ONNX Runtime Web"},
+        {id: "decode", title: "Decode Boxes", detail: "scores + coeffs"},
+        {id: "nms", title: "NMS", detail: "IoU suppression"},
+        {id: "prototype", title: "Mask Prototype", detail: "coeff × proto"},
+        {id: "masks", title: "Instance Masks", detail: "crop + statistics"}
+    ];
+
+    const maskRcnnSteps = [
+        {id: "image", title: "Image", detail: "input image"},
+        {id: "fpn", title: "Backbone + FPN", detail: "P2 / P3 / P4 / P5"},
+        {id: "rpn", title: "RPN Proposals", detail: "class-agnostic boxes"},
+        {id: "roiAlign", title: "ROI Align", detail: "bilinear sampling"},
+        {id: "heads", title: "Class / BBox Head", detail: "parallel branch"},
+        {id: "maskHead", title: "Mask Head", detail: "K × 28 × 28 logits"},
+        {id: "instances", title: "Instance Masks", detail: "per-instance binary"},
+        {id: "maskIou", title: "Mask IoU", detail: "Mask AP threshold"}
+    ];
+
+    function isMaskRcnnMode() {
+        return ["maskrcnn", "roiAlign", "maskMetric"].includes(state.sourceMode);
+    }
+
+    function activeSteps() {
+        return isMaskRcnnMode() ? maskRcnnSteps : yoloSteps;
+    }
+
     function esc(value) {
         return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     }
 
     function fmtMs(value) {
         return Number.isFinite(value) ? `${value.toFixed(1)} ms` : "--";
+    }
+
+    function setProcessSteps(activeId = state.phase) {
+        const steps = activeSteps();
+        if (els.stepper) {
+            els.stepper.innerHTML = steps.map((step, index) => `
+                <li class="${step.id === activeId ? "is-active" : ""}" data-inst-phase="${esc(step.id)}">
+                    <span>${index + 1}</span><div><strong>${esc(step.title)}</strong><small>${esc(step.detail)}</small></div>
+                </li>
+            `).join("");
+            els.stepperItems = [...els.stepper.querySelectorAll("[data-inst-phase]")];
+            els.stepperItems.forEach((item, index) => {
+                item.addEventListener("click", () => {
+                    if (!isMaskRcnnMode()) return;
+                    state.maskRcnnStep = index;
+                    setPhase(item.dataset.instPhase);
+                    render();
+                });
+            });
+        }
+        if (els.flow) {
+            els.flow.innerHTML = steps.map((step, index) => `
+                ${index ? "<b>→</b>" : ""}
+                <div class="${step.id === activeId ? "is-active" : ""}" data-inst-flow-phase="${esc(step.id)}">
+                    <strong>${esc(step.title)}</strong><span>${esc(step.detail)}</span>
+                </div>
+            `).join("");
+            els.flowItems = [...els.flow.querySelectorAll("[data-inst-flow-phase]")];
+        }
     }
 
     function sample() {
@@ -193,6 +257,7 @@
 
     function setPhase(phase) {
         state.phase = phase;
+        setProcessSteps(phase);
         els.stepperItems.forEach((item) => item.classList.toggle("is-active", item.dataset.instPhase === phase));
         els.flowItems.forEach((item) => item.classList.toggle("is-active", item.dataset.instFlowPhase === phase));
         renderNotes();
@@ -260,14 +325,15 @@
     function renderRuntime() {
         const scene = state.currentScene;
         const meta = scene?.meta || {};
-        els.map.textContent = scene?.source === "preset" ? `Mask AP ${((scene.maskAP || 0) * 100).toFixed(1)}%` : "Model Instances";
+        const metric = state.maskRcnnData?.metricSummary;
+        els.map.textContent = isMaskRcnnMode() ? `Mask AP ${((metric?.maskAP || 0) * 100).toFixed(1)}%` : scene?.source === "preset" ? `Mask AP ${((scene.maskAP || 0) * 100).toFixed(1)}%` : "Model Instances";
         els.activeBackend.textContent = state.activeBackend && state.activeBackend !== "--" ? state.activeBackend : (meta.backend || "--");
         els.inputSize.textContent = meta.inputSize || state.modelInfo?.inputSizeText || "640 × 640";
         els.inferenceTime.textContent = fmtMs(meta.inferenceTime);
         els.postprocessTime.textContent = fmtMs(meta.postprocessTime);
         els.count.textContent = String(scene?.instances?.length ?? "--");
-        els.stripSource.textContent = scene?.source === "model" ? "Frontend Model" : "Preset Data";
-        els.stripModel.textContent = meta.modelName || "--";
+        els.stripSource.textContent = isMaskRcnnMode() ? "Mask R-CNN Mechanism" : scene?.source === "model" ? "Frontend Model" : "Preset Data";
+        els.stripModel.textContent = isMaskRcnnMode() ? "Mask R-CNN" : (meta.modelName || "--");
         els.stripBackend.textContent = meta.backend || state.activeBackend || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
         els.stripPostprocess.textContent = fmtMs(meta.postprocessTime);
@@ -416,7 +482,173 @@
             </div>`;
     }
 
+    function activeMaskRcnnStep() {
+        const preferred = state.sourceMode === "roiAlign" ? "roiAlign" : state.sourceMode === "maskMetric" ? "maskIou" : null;
+        if (preferred && state.phase !== preferred) {
+            const index = maskRcnnSteps.findIndex((step) => step.id === preferred);
+            state.maskRcnnStep = Math.max(0, index);
+            state.phase = preferred;
+        }
+        state.maskRcnnStep = Math.max(0, Math.min(state.maskRcnnStep, maskRcnnSteps.length - 1));
+        return maskRcnnSteps[state.maskRcnnStep] || maskRcnnSteps[0];
+    }
+
+    function heatGrid(values = [], className = "") {
+        return `<div class="instance-heat-grid ${className}">${values.map((row) => row.map((value) => `<i style="--v:${Number(value) || 0}">${Number(value).toFixed(2)}</i>`).join("")).join("")}</div>`;
+    }
+
+    function maskGrid(values = []) {
+        return `<div class="instance-binary-grid">${values.map((row) => row.map((value) => `<i class="${value ? "is-on" : ""}"></i>`).join("")).join("")}</div>`;
+    }
+
+    function renderMaskRcnnOverlay(demo, scene, step) {
+        if (!scene || !els.svg) return;
+        const proposals = demo.proposals || [];
+        const overlay = proposals.map((proposal) => {
+            const rect = percentBox(proposal.bbox, scene);
+            const active = ["rpn", "roiAlign", "heads", "maskHead", "instances"].includes(step.id);
+            return `<rect class="instance-maskrcnn-box ${active ? "is-active" : ""}" x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="none" stroke="${esc(proposal.color)}" stroke-width="1.7" vector-effect="non-scaling-stroke"></rect>
+                <text class="instance-svg-label instance-maskrcnn-label" x="${rect.x}" y="${Math.max(4, rect.y - 1)}">${esc(proposal.id)} ${esc(proposal.level)}</text>`;
+        }).join("");
+        els.svg.innerHTML += overlay;
+    }
+
+    function renderFpnPanel(demo) {
+        return `<div class="instance-fpn-levels">
+            ${(demo.fpnLevels || []).map((level, index) => `
+                <article class="${index <= state.maskRcnnStep ? "is-active" : ""}">
+                    <strong>${esc(level.id)}</strong>
+                    <span>stride ${level.stride} · ${esc(level.resolution)}</span>
+                    <i style="height:${Math.round(level.activation * 58) + 18}px"></i>
+                    <em>${esc(level.target)} · ${esc(level.role)}</em>
+                </article>
+            `).join("")}
+        </div>`;
+    }
+
+    function renderMaskHeadPanel(demo) {
+        const head = demo.maskHead || {};
+        return `<div class="instance-mask-head-board">
+            <section>
+                <h4>Mask Head</h4>
+                <div class="instance-head-flow">
+                    <span>ROI feature<br>${esc(head.roiFeatureSize || "14 × 14 × 256")}</span>
+                    <b>4 conv</b><b>upsample</b><b>1×1 conv</b>
+                    <span>${esc(head.logitsShape || "K × 28 × 28")}</span>
+                </div>
+                <p>分类头、回归头、mask 分支并行；mask 分支为每个类别生成二值 mask logits。</p>
+            </section>
+            <section>
+                <h4>K 类 mask logits</h4>
+                ${heatGrid(head.logits || [])}
+            </section>
+            <section>
+                <h4>当前类别 binary mask</h4>
+                ${maskGrid(head.binaryMask || [])}
+                <dl><div><dt>BCE target/prob</dt><dd>${head.bceExample?.target ?? "--"} / ${head.bceExample?.probability ?? "--"}</dd></div><div><dt>pixel-wise BCE</dt><dd>${head.bceExample?.loss ?? "--"}</dd></div></dl>
+            </section>
+        </div>`;
+    }
+
+    function renderRoiAlignPanel(demo) {
+        const roi = demo.roiAlign || {};
+        return `<div class="instance-roi-align-board">
+            <section>
+                <h4>ROI Pooling</h4>
+                <div class="instance-roi-box is-pooling"><span>rounded ROI</span><code>[${(roi.poolingBox || []).join(", ")}]</code><i></i></div>
+                <p>坐标取整后再分 bin，ROI 边界会发生偏移，细小实例的 mask 边界更容易错位。</p>
+            </section>
+            <section>
+                <h4>ROI Align</h4>
+                <div class="instance-roi-box is-align"><span>float ROI</span><code>[${(roi.roi?.floatBox || []).join(", ")}]</code><div>${(roi.samplePoints || []).map((point) => `<b style="left:${(point.x % 18) * 5 + 8}%;top:${(point.y % 18) * 4 + 8}%"></b>`).join("")}</div></div>
+                <p>保留浮点坐标，用双线性插值采样，避免量化误差。</p>
+            </section>
+            <section>
+                <h4>Sample points</h4>
+                <dl>${(roi.samplePoints || []).slice(0, 6).map((point) => `<div><dt>${point.x.toFixed(2)}, ${point.y.toFixed(2)}</dt><dd>${point.value.toFixed(2)}</dd></div>`).join("")}</dl>
+            </section>
+        </div>`;
+    }
+
+    function renderMaskMetricPanel(demo) {
+        const rows = demo.maskIouExamples || [];
+        const summary = demo.metricSummary || {};
+        return `<div class="instance-mask-metric-board">
+            <section>
+                <h4>Mask IoU = intersection / union</h4>
+                <div class="instance-mask-overlap"><i class="pred"></i><i class="gt"></i><b></b></div>
+                <p>Mask IoU 衡量像素级 mask 重叠，不等同于 bbox IoU。</p>
+            </section>
+            <section>
+                <h4>Mask IoU / AP 阈值</h4>
+                <div class="instance-mask-iou-table">
+                    <div><span>class</span><span>inter</span><span>union</span><span>IoU</span><span>AP50</span></div>
+                    ${rows.map((row) => `<button type="button" data-mask-iou-row="${esc(row.id)}"><span><i style="background:${esc(row.color)}"></i>${esc(row.class)}</span><span>${row.intersection}</span><span>${row.union}</span><strong>${row.iou.toFixed(3)}</strong><em>${row.ap50 ? "hit" : "miss"}</em></button>`).join("")}
+                </div>
+            </section>
+            <section>
+                <h4>Mask AP summary</h4>
+                <dl><div><dt>AP50</dt><dd>${((summary.ap50 || 0) * 100).toFixed(1)}%</dd></div><div><dt>AP75</dt><dd>${((summary.ap75 || 0) * 100).toFixed(1)}%</dd></div><div><dt>Mask AP</dt><dd>${((summary.maskAP || 0) * 100).toFixed(1)}%</dd></div></dl>
+            </section>
+        </div>`;
+    }
+
+    function renderMaskRcnnDemo() {
+        if (!els.maskRcnnDemo) return;
+        const isDemo = isMaskRcnnMode();
+        els.maskRcnnDemo.hidden = !isDemo;
+        if (!isDemo) return;
+        const demo = state.maskRcnnData || {};
+        const step = activeMaskRcnnStep();
+        setProcessSteps(step.id);
+        if (!demo.version) {
+            els.maskRcnnDemo.innerHTML = `<div class="vision-empty-result">Mask R-CNN demo data loading...</div>`;
+            return;
+        }
+        const header = `<div class="instance-maskrcnn-pipeline">${maskRcnnSteps.map((item, index) => `<article class="${item.id === step.id ? "is-active" : ""}" data-maskrcnn-step="${esc(item.id)}"><strong>${esc(item.title)}</strong><span>${esc(item.detail)}</span><i>${index + 1}</i></article>`).join("")}</div>`;
+        let body = "";
+        if (state.sourceMode === "roiAlign") body = renderRoiAlignPanel(demo);
+        else if (state.sourceMode === "maskMetric") body = renderMaskMetricPanel(demo);
+        else body = `<div class="instance-maskrcnn-grid"><section><h4>Backbone + FPN 多尺度特征</h4>${renderFpnPanel(demo)}</section><section><h4>RPN proposals</h4><div class="instance-proposal-list">${(demo.proposals || []).map((p) => `<span style="--c:${esc(p.color)}"><b>${esc(p.id)}</b>${esc(p.class)} · ${esc(p.level)} · ${p.score.toFixed(2)}</span>`).join("")}</div></section><section><h4>并行 heads</h4>${renderMaskHeadPanel(demo)}</section></div>`;
+        els.maskRcnnDemo.innerHTML = header + body;
+        els.maskRcnnDemo.querySelectorAll("[data-maskrcnn-step]").forEach((node, index) => {
+            node.addEventListener("click", () => {
+                state.maskRcnnStep = index;
+                setPhase(node.dataset.maskrcnnStep);
+                render();
+            });
+        });
+    }
+
     function renderNotes() {
+        if (isMaskRcnnMode()) {
+            const demo = state.maskRcnnData || {};
+            const step = activeMaskRcnnStep();
+            const summary = demo.metricSummary || {};
+            const copy = {
+                image: ["Mask R-CNN 机制", "实例分割 = 检测 + 每个实例的 mask。Mask R-CNN 先检测 proposal，再为每个 proposal 预测独立二值 mask。"],
+                fpn: ["Backbone + FPN", "FPN 把高分辨率定位细节和低分辨率语义信息结合起来：小目标用 P2/P3，大目标用 P4/P5。"],
+                rpn: ["RPN Proposals", "RPN 在 FPN feature map 上生成类别无关 proposals，替代传统 Selective Search。"],
+                roiAlign: ["ROI Align", "ROI Align 保留浮点坐标并用双线性插值采样，避免 ROI Pooling 坐标取整造成的边界偏移。"],
+                heads: ["Class / BBox Head", "分类头输出类别概率，回归头修正 bbox；mask 分支与它们并行。"],
+                maskHead: ["Mask Head", "Mask Head 经过 4 层卷积、上采样和 1×1 conv 得到 K 类 mask logits，再取当前类别对应 binary mask。"],
+                instances: ["Instance Masks", "每个 detection 都有独立 mask，因此同类相邻目标不会像语义分割那样合并成一个区域。"],
+                maskIou: ["Mask IoU / Mask AP", "Mask IoU 使用像素交并比；AP50 表示 IoU ≥ 0.5 记为命中，Mask AP 是多个阈值下的平均。"]
+            }[step.id] || ["Mask R-CNN", "实例分割机制演示"];
+            els.notesTitle.textContent = copy[0];
+            els.notesSubtitle.textContent = step.title;
+            els.notesTutorial.innerHTML = `<p>${copy[1]}</p>`;
+            els.notes.innerHTML = `<dl>
+                <div><dt>当前模式</dt><dd>${state.sourceMode === "roiAlign" ? "ROI Align 对比" : state.sourceMode === "maskMetric" ? "Mask IoU / Mask AP" : "Mask R-CNN 机制"}</dd></div>
+                <div><dt>FPN levels</dt><dd>${(demo.fpnLevels || []).map((level) => level.id).join(" / ") || "--"}</dd></div>
+                <div><dt>proposals</dt><dd>${demo.proposals?.length ?? "--"}</dd></div>
+                <div><dt>ROI Align</dt><dd>${demo.roiAlign?.roi?.featureLevel || "--"} float ROI</dd></div>
+                <div><dt>Mask Head</dt><dd>${demo.maskHead?.roiFeatureSize || "--"} → ${demo.maskHead?.logitsShape || "--"}</dd></div>
+                <div><dt>Mask AP</dt><dd>${Number.isFinite(summary.maskAP) ? `${(summary.maskAP * 100).toFixed(1)}%` : "--"}</dd></div>
+                <div><dt>Mask IoU vs bbox IoU</dt><dd>${esc(summary.bboxIouContrast || "pixel overlap vs rectangle overlap")}</dd></div>
+            </dl>`;
+            return;
+        }
         const scene = state.currentScene;
         const meta = scene?.meta || {};
         const selected = selectedInstance();
@@ -455,11 +687,14 @@
         const items = visibleInstances();
         drawMaskBitmap(scene, items);
         renderSvg();
+        if (isMaskRcnnMode()) renderMaskRcnnOverlay(state.maskRcnnData || {}, scene, activeMaskRcnnStep());
         renderList();
         renderStats();
         renderRuntime();
         renderNotes();
-        renderBlender();
+        renderMaskRcnnDemo();
+        if (els.blenderContainer) els.blenderContainer.hidden = isMaskRcnnMode();
+        if (!isMaskRcnnMode()) renderBlender();
     }
 
     // ==========================================
@@ -1044,7 +1279,7 @@
     }
 
     async function autoLoadAndRun(reason = "auto") {
-        if (!state.data) return;
+        if (!state.data || state.sourceMode !== "model") return;
         const token = nextAutoToken();
         state.sourceMode = "model";
         renderSourceButtons();
@@ -1117,6 +1352,16 @@
         image.src = url;
     }
 
+    fetch(`${moduleDataRoot}/instance_maskrcnn_demo.json`)
+        .then((response) => response.json())
+        .then((data) => {
+            state.maskRcnnData = data;
+            if (isMaskRcnnMode() && state.currentScene) render();
+        })
+        .catch(() => {
+            state.maskRcnnData = null;
+        });
+
     fetch(`${dataRoot}/instance_samples.json`)
         .then((response) => response.json())
         .then((data) => {
@@ -1149,6 +1394,10 @@
             nextAutoToken();
             if (state.sourceMode === "preset") {
                 switchToPreset();
+            } else if (isMaskRcnnMode()) {
+                state.maskRcnnStep = state.sourceMode === "roiAlign" ? 3 : state.sourceMode === "maskMetric" ? 7 : 0;
+                activateScene(presetScene(), false);
+                setPhase(maskRcnnSteps[state.maskRcnnStep]?.id || "image");
             } else {
                 activateScene(currentScene(), false);
                 setModelStatus(state.modelStatus, state.modelScene?.instances?.length ? "当前显示模型推理结果。" : "正在自动加载并运行前端模型。");

@@ -98,6 +98,28 @@ function rawShape(tensor) {
     return tensor?.dims ? Array.from(tensor.dims) : [];
 }
 
+/**
+ * WebGPU 后端的张量数据存储在 GPU，直接访问 .data 属性会得到错误数据。
+ * 必须调用 getData() 异步把数据读回 CPU，再进行后处理。
+ */
+async function readTensorData(tensor) {
+    if (!tensor) return tensor;
+    if (tensor.location === 'gpu-buffer' || typeof tensor.getData === 'function') {
+        try {
+            const cpuData = await tensor.getData();
+            return {
+                data: cpuData,
+                dims: tensor.dims,
+                type: tensor.type,
+                location: 'cpu'
+            };
+        } catch (_) {
+            // already on CPU or getData not supported — fall through
+        }
+    }
+    return tensor;
+}
+
 function sigmoid(value) {
     return 1 / (1 + Math.exp(-value));
 }
@@ -380,6 +402,9 @@ async function runInstanceInference(image) {
         error.rawOutputShape = tensors.map((item) => ({name: item.name, dims: item.dims}));
         throw error;
     }
+    // IMPORTANT: download GPU tensor data to CPU before any .data access
+    predictions.tensor = await readTensorData(predictions.tensor);
+    prototypes.tensor = await readTensorData(prototypes.tensor);
     const decoded = decodeYoloSegOutput(predictions.tensor, prototypes.tensor, {
         classCount: labels.length,
         confidenceThreshold: config?.confidenceThreshold ?? 0.35
@@ -396,8 +421,8 @@ async function runInstanceInference(image) {
         instances,
         semantic_regions: [],
         prototypes: {
-            data: prototypeTensor.data,
-            dims: rawShape(prototypeTensor)
+            data: prototypes.tensor.data,
+            dims: rawShape(prototypes.tensor)
         },
         meta: {
             modelName: "YOLO11n-seg",

@@ -1,7 +1,7 @@
 {% extends "vision_tasks_base.html" %}
 
 {% block vision_badge %}Station 06 · Traditional Image Segmentation{% endblock %}
-{% block vision_title %}传统图像分割：K-means 与 Graph Cut{% endblock %}
+{% block vision_title %}传统图像分割实验室{% endblock %}
 {% block vision_subtitle %}从像素颜色聚类到图结构切割，理解传统图像分割如何在没有人工类别标签的情况下把图像划分为多个区域。{% endblock %}
 
 {% block vision_content %}
@@ -28,11 +28,22 @@
             </div>
         </div>
 
-        <div class="overview-segmented-control method-segmented-control seg-basic-methods" aria-label="分割方法选择">
-            <button class="is-active" type="button" data-segb-method="kmeans-rgb">K-means RGB</button>
-            <button type="button" data-segb-method="kmeans-rgbxy">K-means RGB + XY</button>
-            <button type="button" data-segb-method="graphcut">Graph Cut 概念演示</button>
-            <button type="button" data-segb-method="ncut">Normalized Cut 概念演示</button>
+        <div class="seg-basic-method-groups" aria-label="分割方法选择">
+            <section>
+                <strong>聚类分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button class="is-active" type="button" data-segb-method="kmeans-rgb">K-means RGB</button>
+                    <button type="button" data-segb-method="kmeans-rgbxy">K-means RGB + XY</button>
+                    <button type="button" data-segb-method="kmeans-compare">RGB / RGB+XY 对比</button>
+                </div>
+            </section>
+            <section>
+                <strong>图切割分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button type="button" data-segb-method="graphcut">Graph Cut 概念演示</button>
+                    <button type="button" data-segb-method="ncut">Normalized Cut 概念演示</button>
+                </div>
+            </section>
         </div>
 
         <div class="seg-basic-kmeans-controls" data-segb-kmeans-controls>
@@ -86,7 +97,7 @@
 
     <div class="vision-stage-panel method-stage-panel seg-basic-stage-panel">
         <div class="vision-stage-header">
-            <div><span>SEGMENTATION PLAYGROUND</span><h3>传统图像分割可视化</h3></div>
+            <div><span>SEGMENTATION PLAYGROUND</span><h3 data-segb-stage-title>当前实验模式：K-means RGB</h3></div>
             <span class="vision-status-chip" data-segb-status>Canvas K-means</span>
         </div>
 
@@ -95,7 +106,7 @@
             <span>Feature: <strong data-segb-strip-feature>RGB</strong></span>
             <span>K / Nodes: <strong data-segb-strip-k>4</strong></span>
             <span>Iteration: <strong data-segb-strip-iter>--</strong></span>
-            <span>Output: <strong>label map</strong></span>
+            <span>Output: <strong data-segb-strip-output>label map</strong></span>
         </div>
 
         <div class="seg-basic-playground" data-segb-kmeans-view>
@@ -109,8 +120,9 @@
                     <canvas data-segb-result width="256" height="180"></canvas>
                 </figure>
                 <figure class="seg-basic-compare-card" data-segb-compare-card>
-                    <figcaption>RGB-only 对照</figcaption>
+                    <figcaption data-segb-third-title>RGB 聚类中心 / 特征空间示意</figcaption>
                     <canvas data-segb-compare width="256" height="180"></canvas>
+                    <div class="seg-basic-feature-space" data-segb-feature-space></div>
                 </figure>
             </div>
 
@@ -122,20 +134,27 @@
                 <div class="flow-node is-score">Region Map</div>
             </div>
 
-            <div class="seg-basic-kmeans-summary">
+            <div class="seg-basic-kmeans-summary seg-basic-analysis-grid">
                 <section>
                     <div class="method-result-head">
-                        <strong>聚类中心颜色</strong>
-                        <span data-segb-center-subtitle>center RGB values</span>
+                        <strong>Iteration Monitor</strong>
+                        <span data-segb-center-subtitle>center movement</span>
                     </div>
-                    <div class="seg-basic-center-list" data-segb-center-list></div>
+                    <div class="seg-basic-iteration-monitor" data-segb-iteration-monitor></div>
                 </section>
                 <section>
                     <div class="method-result-head">
-                        <strong>每类像素数量</strong>
+                        <strong>Cluster Distribution</strong>
                         <span data-segb-ratio-subtitle>pixel count ratio</span>
                     </div>
                     <div class="seg-basic-region-list" data-segb-region-list></div>
+                </section>
+                <section>
+                    <div class="method-result-head">
+                        <strong>Feature Space</strong>
+                        <span data-segb-feature-subtitle>RGB centers</span>
+                    </div>
+                    <div class="seg-basic-center-list" data-segb-center-list></div>
                 </section>
             </div>
 
@@ -147,6 +166,7 @@
         <div class="seg-basic-concept-view" data-segb-graph-view hidden>
             <div class="seg-basic-graph-stage" data-segb-graph-stage></div>
             <div class="seg-basic-matrix-stage" data-segb-matrix-stage></div>
+            <div class="seg-basic-concept-detail" data-segb-concept-detail></div>
         </div>
     </div>
 
