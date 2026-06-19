@@ -28,7 +28,7 @@
 
         if (isTouchDevice) {
             page.querySelectorAll(".vb-reveal-hint").forEach((hint) => {
-                hint.textContent = "Tap reveal";
+                hint.textContent = "点击查看";
             });
         }
     }
@@ -36,8 +36,8 @@
     function openLightbox(src, title) {
         if (!lightbox || !lightboxImage || !lightboxCaption) return;
         lightboxImage.src = src;
-        lightboxImage.alt = title || "Vision Banana research figure";
-        lightboxCaption.textContent = title || "Vision Banana research figure";
+        lightboxImage.alt = title || "Vision Banana 研究图表";
+        lightboxCaption.textContent = title || "Vision Banana 研究图表";
         lightbox.classList.add("is-open");
         lightbox.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
@@ -93,41 +93,53 @@
         items.forEach((item) => observer.observe(item));
     }
 
-    function setupBibtexCopy() {
-        const button = page.querySelector("[data-vb-copy-bibtex]");
-        const source = page.querySelector("[data-vb-bibtex]");
-        if (!button || !source) return;
-
-        function fallbackCopy(text) {
-            const textarea = document.createElement("textarea");
-            textarea.value = text;
-            textarea.setAttribute("readonly", "");
-            textarea.style.position = "fixed";
-            textarea.style.opacity = "0";
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand("copy");
-            } finally {
-                textarea.remove();
-            }
+    function fallbackCopy(text) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand("copy");
+        } finally {
+            textarea.remove();
         }
+    }
 
-        button.addEventListener("click", async () => {
-            const text = source.textContent.trim();
-            try {
-                if (navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(text);
-                } else {
+    function setupBibtexCopy() {
+        const cards = page.querySelectorAll(".vb-bibtex-card");
+        cards.forEach((card) => {
+            const button = card.querySelector("[data-vb-copy-bibtex]");
+            const source = card.querySelector(".vb-bibtex-raw") || card.querySelector("[data-vb-bibtex]");
+            if (!button || !source) return;
+
+            button.addEventListener("click", async () => {
+                const text = source.textContent.trim();
+                const textSpan = button.querySelector(".vb-copy-text");
+                try {
+                    if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        fallbackCopy(text);
+                    }
+                    button.classList.add("is-copied");
+                    if (textSpan) textSpan.textContent = "已复制!";
+                    window.setTimeout(() => {
+                        button.classList.remove("is-copied");
+                        if (textSpan) textSpan.textContent = "复制 BibTeX";
+                    }, 1200);
+                } catch (error) {
                     fallbackCopy(text);
+                    button.classList.add("is-copied");
+                    if (textSpan) textSpan.textContent = "已复制!";
+                    window.setTimeout(() => {
+                        button.classList.remove("is-copied");
+                        if (textSpan) textSpan.textContent = "复制 BibTeX";
+                    }, 1200);
                 }
-                button.classList.add("is-copied");
-                window.setTimeout(() => button.classList.remove("is-copied"), 1200);
-            } catch (error) {
-                fallbackCopy(text);
-                button.classList.add("is-copied");
-                window.setTimeout(() => button.classList.remove("is-copied"), 1200);
-            }
+            });
         });
     }
 
@@ -334,7 +346,7 @@
             if (!key) return;
 
             dataButtons.forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
-            setLoading(true, "Loading point cloud...");
+            setLoading(true, "正在加载点云数据...");
 
             try {
                 if (!cache.has(key)) {
@@ -347,7 +359,7 @@
                 resetView(false);
                 setLoading(false);
             } catch (error) {
-                setLoading(true, "Point cloud failed to load.", true);
+                setLoading(true, "点云数据加载失败", true);
             }
         }
 
@@ -446,7 +458,7 @@
                 const activeButton = dataButtons.find((button) => button.classList.contains("is-active")) || dataButtons[0];
                 if (activeButton) loadCloud(activeButton);
             } catch (error) {
-                setLoading(true, "WebGL point cloud viewer is unavailable.", true);
+                setLoading(true, "WebGL 点云可视化不可用", true);
             }
         }
 

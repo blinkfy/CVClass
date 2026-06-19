@@ -28,36 +28,36 @@
                         <span class="mini-sky"></span><span class="mini-road"></span><span class="mini-bus"></span><span class="mini-person"></span>
                     </div>
                     <div class="hero-prompt-card">
-                        <span>Instruction Prompt</span>
+                        <span>指令提示语 (Instruction Prompt)</span>
                         <strong>segment depth normal edit</strong>
                     </div>
                 </div>
                 <span class="hero-flow-beam" aria-hidden="true"></span>
                 <div class="hero-vision-core">
                     <span class="core-ring" aria-hidden="true"></span>
-                    <strong>Vision Core</strong>
-                    <small>Generalist Model</small>
+                    <strong>视觉核心</strong>
+                    <small>通用多任务模型</small>
                 </div>
                 <span class="hero-flow-beam" aria-hidden="true"></span>
                 <div class="hero-output-cluster" aria-label="多任务输出缩略图">
-                    <span class="hero-output-tile hero-output-tile--semantic">semantic</span>
-                    <span class="hero-output-tile hero-output-tile--depth">depth</span>
-                    <span class="hero-output-tile hero-output-tile--normal">normal</span>
-                    <span class="hero-output-tile hero-output-tile--edit">edit</span>
+                    <span class="hero-output-tile hero-output-tile--semantic">语义</span>
+                    <span class="hero-output-tile hero-output-tile--depth">深度</span>
+                    <span class="hero-output-tile hero-output-tile--normal">法线</span>
+                    <span class="hero-output-tile hero-output-tile--edit">编辑</span>
                 </div>
                 <div class="hero-decode-card">
-                    <span>Decoded Result</span>
-                    <strong>mask · geometry · edit</strong>
+                    <span>解码结果</span>
+                    <strong>掩码 · 几何 · 编辑</strong>
                 </div>
             </div>
             <div class="frontier-mainline" aria-label="计算机视觉发展主线">
                 <ol>
                     <li style="--step: 0"><span></span><strong>手工特征</strong><small>SIFT / HOG</small></li>
-                    <li style="--step: 1"><span></span><strong>CNN 表征</strong><small>Learned feature</small></li>
-                    <li style="--step: 2"><span></span><strong>检测与分割</strong><small>Task heads</small></li>
+                    <li style="--step: 1"><span></span><strong>CNN 表征</strong><small>可学习特征</small></li>
+                    <li style="--step: 2"><span></span><strong>检测与分割</strong><small>多任务检测头</small></li>
                     <li style="--step: 3"><span></span><strong>视觉基础模型</strong><small>SAM / DINO</small></li>
                     <li style="--step: 4"><span></span><strong>多模态视觉模型</strong><small>VLM / CLIP</small></li>
-                    <li style="--step: 5"><span></span><strong>统一视觉模型</strong><small>Generalist</small></li>
+                    <li style="--step: 5"><span></span><strong>统一视觉模型</strong><small>通用多任务</small></li>
                 </ol>
             </div>
         </div>
@@ -65,7 +65,7 @@
 
     <section id="frontierTaskLab" class="frontier-section frontier-task-lab" data-reveal-section aria-labelledby="frontierTaskLabTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">UNIFIED TASK INTERFACE</span>
+            <span class="frontier-kicker">统一任务接口 · UNIFIED TASK INTERFACE</span>
             <h2 id="frontierTaskLabTitle">同一张图像，不同任务输出不同结果</h2>
             <p>输入图不变，只切换任务接口；输出以预设视觉层模拟，不调用真实模型。</p>
         </div>
@@ -75,17 +75,17 @@
 
             <div class="frontier-demo-core">
                 <div class="frontier-generation-strip" aria-label="Instruction Prompt 到 RGB Output 再到 Decode 的流程">
-                    <div><span>Instruction Prompt</span><strong data-frontier-task-prompt>Generate a visual task output.</strong></div>
+                    <div><span>指令提示语 (Instruction Prompt)</span><strong data-frontier-task-prompt>Generate a visual task output.</strong></div>
                     <i aria-hidden="true"></i>
-                    <div><span>RGB Output</span><strong data-frontier-output-title-inline>任务输出</strong></div>
+                    <div><span>生成图像结果 (RGB Output)</span><strong data-frontier-output-title-inline>任务输出</strong></div>
                     <i aria-hidden="true"></i>
-                    <div><span>Decode Result</span><strong data-frontier-decode-title>结构化结果</strong></div>
+                    <div><span>解码结构化结果 (Decode Result)</span><strong data-frontier-decode-title>结构化结果</strong></div>
                 </div>
                 <div class="frontier-io-stage">
                     <article class="frontier-image-panel" aria-label="输入图像">
                         <header>
-                            <span>INPUT IMAGE</span>
-                            <strong>City sample</strong>
+                            <span>输入图像 (INPUT IMAGE)</span>
+                            <strong>城市街道样例 (City sample)</strong>
                         </header>
                         <div class="frontier-scene frontier-scene--input" aria-hidden="true">
                             <span class="scene-sky"></span>
@@ -105,7 +105,7 @@
 
                     <article class="frontier-output-panel" aria-label="任务输出">
                         <header>
-                            <span>RGB OUTPUT</span>
+                            <span>生成图像结果 (RGB OUTPUT)</span>
                             <strong data-frontier-output-title>任务输出</strong>
                         </header>
                         <div class="frontier-output-visual" data-frontier-output>
@@ -135,18 +135,18 @@
                                 <div class="classification-result">
                                     <strong>street scene</strong>
                                     <span><b style="width: 91%"></b></span>
-                                    <small>open vocabulary label</small>
+                                    <small>开放词表标签 (open vocabulary label)</small>
                                 </div>
                             </div>
                             <span class="frontier-scanline" aria-hidden="true"></span>
                         </div>
-                        <footer><span data-frontier-output-meta>PRESET OUTPUT</span><b data-frontier-decode-summary>Decoded as visual result</b></footer>
+                        <footer><span data-frontier-output-meta>预设输出 (PRESET OUTPUT)</span><b data-frontier-decode-summary>解码结果 (Decoded result)</b></footer>
                     </article>
                 </div>
             </div>
 
             <aside class="frontier-task-explain" aria-live="polite">
-                <span data-frontier-task-subtitle>Task interface</span>
+                <span data-frontier-task-subtitle>任务接口与输出分析 / Task interface</span>
                 <h3 data-frontier-task-label>分类</h3>
                 <p data-frontier-task-description></p>
                 <div class="frontier-task-tags" data-frontier-task-tags></div>
@@ -160,41 +160,41 @@
 
     <section class="frontier-section" data-reveal-section aria-labelledby="frontierModelsTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">FOUNDATION MODELS</span>
+            <span class="frontier-kicker">前沿基础模型 / FOUNDATION MODELS</span>
             <h2 id="frontierModelsTitle">前沿模型卡片</h2>
         </div>
         <div class="frontier-model-grid">
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--clip" aria-hidden="true"></div>
-                <span>CLIP</span>
+                <span>CLIP / 对比图文对齐</span>
                 <h3>图文对齐与开放词表理解</h3>
                 <p>把图像和文本放进同一语义空间，使分类不再局限于固定标签。</p>
                 <dl><div><dt>代表任务</dt><dd>开放词表分类、检索</dd></div><div><dt>系统关系</dt><dd>CNN 表征进入语义对齐</dd></div></dl>
             </article>
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--dino" aria-hidden="true"></div>
-                <span>DINO</span>
+                <span>DINO / 自监督蒸馏</span>
                 <h3>自监督视觉表征</h3>
                 <p>不用人工标签也能学习稳定视觉特征，支撑迁移和密集预测。</p>
                 <dl><div><dt>代表任务</dt><dd>特征提取、聚类、检测预训练</dd></div><div><dt>系统关系</dt><dd>延伸角点特征与 CNN 学习</dd></div></dl>
             </article>
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--sam" aria-hidden="true"></div>
-                <span>SAM</span>
+                <span>SAM / 分割一切</span>
                 <h3>提示式分割</h3>
                 <p>用点、框或粗略区域作为提示，把分割变成可交互接口。</p>
                 <dl><div><dt>代表任务</dt><dd>交互分割、自动 mask</dd></div><div><dt>系统关系</dt><dd>连接检测框与分割 mask</dd></div></dl>
             </article>
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--vlm" aria-hidden="true"></div>
-                <span>VLM</span>
+                <span>VLM / 视觉语言模型</span>
                 <h3>视觉语言模型</h3>
                 <p>把图像理解、语言推理与任务指令组合到同一个对话式入口。</p>
                 <dl><div><dt>代表任务</dt><dd>视觉问答、指代表达</dd></div><div><dt>系统关系</dt><dd>从高层任务走向多模态推理</dd></div></dl>
             </article>
             <article class="frontier-model-card frontier-model-card--banana">
                 <div class="model-card-glyph model-card-glyph--banana" aria-hidden="true"></div>
-                <span>VISION BANANA</span>
+                <span>VISION BANANA / 统一任务模型</span>
                 <h3>把视觉任务输出统一为 RGB 图像式结果</h3>
                 <p>以图像生成器作为通用视觉学习器，将分割、深度、法线、边缘等任务转为可解码可视化图。</p>
                 <dl><div><dt>代表任务</dt><dd>RGB 任务图、解码评测、图像编辑</dd></div><div><dt>系统关系</dt><dd>承接检测分割并进入统一接口</dd></div></dl>
@@ -205,7 +205,7 @@
 
     <section class="frontier-section frontier-compare" data-reveal-section aria-labelledby="frontierCompareTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">SPECIALIST VS GENERALIST</span>
+            <span class="frontier-kicker">专用与通用模型 / SPECIALIST VS GENERALIST</span>
             <h2 id="frontierCompareTitle">专用模型 vs 统一模型</h2>
         </div>
 
@@ -213,30 +213,30 @@
             <article class="frontier-route-panel">
                 <h3>传统专用路线</h3>
                 <div class="specialist-flow" aria-label="Image to task specific model to output">
-                    <span class="flow-chip">Image</span>
+                    <span class="flow-chip">输入图像 (Image)</span>
                     <span class="flow-arrow"></span>
                     <div class="specialist-models">
-                        <span>Classifier</span>
-                        <span>Detector</span>
-                        <span>Segmenter</span>
-                        <span>Depth Net</span>
+                        <span>分类器 (Classifier)</span>
+                        <span>检测器 (Detector)</span>
+                        <span>分割器 (Segmenter)</span>
+                        <span>深度估计 (Depth Net)</span>
                     </div>
                     <span class="flow-arrow"></span>
-                    <span class="flow-chip">Task-specific Output</span>
+                    <span class="flow-chip">专属任务输出 (Specific Output)</span>
                 </div>
             </article>
             <article class="frontier-route-panel frontier-route-panel--unified">
                 <h3>统一模型路线</h3>
                 <div class="unified-flow" aria-label="Image plus prompt to generalist model to unified output">
-                    <span class="converge-token converge-token--a">seg</span>
-                    <span class="converge-token converge-token--b">box</span>
-                    <span class="converge-token converge-token--c">depth</span>
-                    <span class="converge-token converge-token--d">edge</span>
-                    <span class="flow-chip">Image + Prompt</span>
+                    <span class="converge-token converge-token--a">分割 (seg)</span>
+                    <span class="converge-token converge-token--b">框 (box)</span>
+                    <span class="converge-token converge-token--c">深度 (depth)</span>
+                    <span class="converge-token converge-token--d">边缘 (edge)</span>
+                    <span class="flow-chip">图像 + 提示词 (Image + Prompt)</span>
                     <span class="flow-arrow"></span>
-                    <span class="generalist-node">Generalist Vision Model</span>
+                    <span class="generalist-node">通用双阶段视觉模型 (Generalist Vision Model)</span>
                     <span class="flow-arrow"></span>
-                    <span class="flow-chip">Unified Output</span>
+                    <span class="flow-chip">统一输出 (Unified Output)</span>
                 </div>
             </article>
         </div>
@@ -244,7 +244,7 @@
 
     <section class="frontier-section" data-reveal-section aria-labelledby="frontierSystemTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">SYSTEM MAP</span>
+            <span class="frontier-kicker">知识系统演进 / SYSTEM MAP</span>
             <h2 id="frontierSystemTitle">与本系统的关系</h2>
         </div>
         <ol class="frontier-system-route">
@@ -260,7 +260,7 @@
 
     <section class="frontier-section frontier-rational" data-reveal-section aria-labelledby="frontierRationalTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">DISCUSSION</span>
+            <span class="frontier-kicker">技术探讨 / DISCUSSION</span>
             <h2 id="frontierRationalTitle">前沿模型并不替代基础算法</h2>
             <p>本板块不调用真实大模型，不声称复现论文结果，只做前沿思想和任务接口的可视化展示。</p>
         </div>
