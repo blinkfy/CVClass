@@ -2,182 +2,42 @@
     const page = document.querySelector("[data-banana-page]");
     if (!page) return;
 
-    const fallbackTasks = [
-        {
-            id: "semantic",
-            label: "语义分割",
-            prompt: "Generate a semantic segmentation visualization of this street image. Use cyan for sky, blue for road, yellow for vehicles, green for trees, and white for people.",
-            keywords: ["semantic segmentation", "cyan", "blue", "yellow", "green", "white"],
-            rgbTitle: "RGB Semantic Map",
-            decodeTitle: "按颜色表解码像素类别",
-            decode: "输出不是类别张量，而是一张可视化 RGB 图；系统再按 prompt 中约定的颜色映射恢复类别图。",
-        },
-        {
-            id: "instance",
-            label: "实例分割",
-            prompt: "Generate an instance segmentation visualization. Color each vehicle and person with a unique solid RGB color; keep the background dark.",
-            keywords: ["instance segmentation", "unique", "solid RGB", "background"],
-            rgbTitle: "Unique Instance Colors",
-            decodeTitle: "颜色连通域转成实例 ID",
-            decode: "每个实例被编码成不同颜色，解码时通过颜色聚类和连通域得到 mask、bbox 与 instance id。",
-        },
-        {
-            id: "referring",
-            label: "指代表达分割",
-            prompt: "Segment the person crossing near the bus and render only that referred person in white. Everything else should be black.",
-            keywords: ["person", "near the bus", "white", "black"],
-            rgbTitle: "Referred Object Mask",
-            decodeTitle: "语言条件决定被分割对象",
-            decode: "prompt 中的指代表达限定目标，RGB 图只显示被指代主体，解码后得到二值 mask。",
-        },
-        {
-            id: "depth",
-            label: "深度估计",
-            prompt: "Generate a metric depth visualization. Use warm colors for nearby objects and cool colors for far regions; keep the mapping smooth.",
-            keywords: ["metric depth", "warm", "cool", "smooth"],
-            rgbTitle: "Depth Color Ramp",
-            decodeTitle: "颜色梯度恢复稠密深度",
-            decode: "模型把远近关系编码为连续色带，解码器按色带标尺恢复相对或度量深度。",
-        },
-        {
-            id: "normal",
-            label: "表面法线",
-            prompt: "Generate a surface normal map. Encode x, y, and z directions as RGB channels with clean object boundaries.",
-            keywords: ["surface normal", "x", "y", "z", "RGB"],
-            rgbTitle: "Normal RGB Field",
-            decodeTitle: "RGB 通道表示空间方向",
-            decode: "每个像素的 RGB 值对应三维法线分量，因此输出图本身就是可解码的方向场。",
-        },
-        {
-            id: "edge",
-            label: "边缘图",
-            prompt: "Generate an edge visualization of this image. Draw crisp white contours and important structural lines on a dark background.",
-            keywords: ["edge", "white contours", "structural lines", "dark"],
-            rgbTitle: "Crisp Edge Map",
-            decodeTitle: "亮度阈值转成边缘概率",
-            decode: "白色线条表示高边缘概率，暗背景表示非边缘区域，可进一步阈值化成二值边缘图。",
-        },
-        {
-            id: "background",
-            label: "背景移除",
-            prompt: "Remove the background and keep the bus and pedestrians as the foreground. Render transparent regions with a checkerboard style.",
-            keywords: ["Remove", "background", "foreground", "checkerboard"],
-            rgbTitle: "Foreground Cutout",
-            decodeTitle: "前景区域转 Alpha Mask",
-            decode: "背景区域被统一编码，前景保留原始颜色，解码时得到可用于合成的 alpha mask。",
-        },
-        {
-            id: "edit",
-            label: "图像编辑",
-            prompt: "Edit the image by turning the road into a clean blue lane while preserving the people, vehicles, and scene geometry.",
-            keywords: ["Edit", "blue lane", "preserving", "geometry"],
-            rgbTitle: "Instruction-guided Edit",
-            decodeTitle: "生成式接口保留视觉结构",
-            decode: "图像编辑不再输出离散标签，而是把指令转成新的 RGB 图像，同时保持主体和几何关系。",
-        },
-    ];
-
-    const tabRoot = page.querySelector("[data-banana-task-tabs]");
-    const output = page.querySelector("[data-banana-output]");
-    const currentTask = page.querySelector("[data-banana-current-task]");
-    const promptNode = page.querySelector("[data-banana-prompt]");
-    const rgbTitle = page.querySelector("[data-banana-rgb-title]");
-    const decodeTitle = page.querySelector("[data-banana-decode-title]");
-    const decodeNode = page.querySelector("[data-banana-decode]");
+    const revealCards = page.querySelectorAll("[data-vb-reveal-card]");
     const lightbox = page.querySelector("[data-banana-lightbox]");
     const lightboxImage = page.querySelector("[data-lightbox-image]");
     const lightboxCaption = page.querySelector("[data-lightbox-caption]");
     const lightboxClose = page.querySelector("[data-lightbox-close]");
+    const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
-    function cvUrl(path) {
-        return window.cvclassUrl ? window.cvclassUrl(path) : path;
-    }
+    function setupCapabilityReveal() {
+        revealCards.forEach((card) => {
+            card.addEventListener("click", () => {
+                card.classList.toggle("is-revealed");
+            });
 
-    function escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
+            card.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                card.classList.toggle("is-revealed");
+            });
 
-    function escapeRegExp(value) {
-        return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
+            if (!isTouchDevice) {
+                card.addEventListener("mouseleave", () => card.classList.remove("is-revealed"));
+            }
+        });
 
-    async function loadTasks() {
-        try {
-            const response = await fetch(cvUrl("/static/assets/data/vision_banana_tasks.json"), { cache: "no-store" });
-            if (!response.ok) return fallbackTasks;
-            const data = await response.json();
-            return Array.isArray(data) && data.length ? data : fallbackTasks;
-        } catch (_error) {
-            return fallbackTasks;
+        if (isTouchDevice) {
+            page.querySelectorAll(".vb-reveal-hint").forEach((hint) => {
+                hint.textContent = "Tap reveal";
+            });
         }
-    }
-
-    function renderPrompt(task) {
-        if (!promptNode) return;
-        let html = escapeHtml(task.prompt);
-        const keywords = [...(task.keywords || [])].sort((a, b) => b.length - a.length);
-        keywords.forEach((keyword) => {
-            const safeKeyword = escapeHtml(keyword);
-            const regex = new RegExp(escapeRegExp(safeKeyword), "gi");
-            html = html.replace(regex, (match) => `<span class="prompt-keyword">${match}</span>`);
-        });
-        promptNode.innerHTML = html;
-
-        promptNode.querySelectorAll(".prompt-keyword").forEach((node, index) => {
-            window.setTimeout(() => node.classList.add("is-active"), 70 * index);
-        });
-    }
-
-    function clearTaskClasses(tasks) {
-        if (!output) return;
-        tasks.forEach((task) => output.classList.remove(`is-task-${task.id}`));
-    }
-
-    function activateTask(task, tasks) {
-        if (!task) return;
-
-        tabRoot?.querySelectorAll("button").forEach((button) => {
-            const isActive = button.dataset.taskId === task.id;
-            button.classList.toggle("is-active", isActive);
-            button.setAttribute("aria-checked", String(isActive));
-        });
-
-        clearTaskClasses(tasks);
-        output?.classList.add("is-switching", `is-task-${task.id}`);
-        window.setTimeout(() => output?.classList.remove("is-switching"), 520);
-
-        if (currentTask) currentTask.textContent = task.label;
-        if (rgbTitle) rgbTitle.textContent = task.rgbTitle;
-        if (decodeTitle) decodeTitle.textContent = task.decodeTitle;
-        if (decodeNode) decodeNode.textContent = task.decode;
-        renderPrompt(task);
-    }
-
-    function renderTabs(tasks) {
-        if (!tabRoot) return;
-        tabRoot.innerHTML = "";
-        tasks.forEach((task, index) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.dataset.taskId = task.id;
-            button.setAttribute("role", "radio");
-            button.setAttribute("aria-checked", String(index === 0));
-            button.innerHTML = `<strong>${task.label}</strong><small>${task.rgbTitle}</small>`;
-            button.addEventListener("click", () => activateTask(task, tasks));
-            tabRoot.appendChild(button);
-        });
     }
 
     function openLightbox(src, title) {
         if (!lightbox || !lightboxImage || !lightboxCaption) return;
         lightboxImage.src = src;
-        lightboxImage.alt = title;
-        lightboxCaption.textContent = `${title} · arXiv:2604.20329v1`;
+        lightboxImage.alt = title || "Vision Banana research figure";
+        lightboxCaption.textContent = title || "Vision Banana research figure";
         lightbox.classList.add("is-open");
         lightbox.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
@@ -189,30 +49,39 @@
         lightbox.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
         window.setTimeout(() => {
-            if (!lightbox.classList.contains("is-open")) lightboxImage.removeAttribute("src");
+            if (!lightbox.classList.contains("is-open")) {
+                lightboxImage.removeAttribute("src");
+            }
         }, 220);
     }
 
     function setupLightbox() {
-        page.querySelectorAll("[data-lightbox-src]").forEach((button) => {
-            button.addEventListener("click", () => openLightbox(button.dataset.lightboxSrc, button.dataset.lightboxTitle || "论文图"));
+        page.querySelectorAll("[data-vb-lightbox-src]").forEach((button) => {
+            button.addEventListener("click", () => {
+                openLightbox(button.dataset.vbLightboxSrc, button.dataset.vbLightboxTitle);
+            });
         });
+
         lightboxClose?.addEventListener("click", closeLightbox);
         lightbox?.addEventListener("click", (event) => {
             if (event.target === lightbox) closeLightbox();
         });
         window.addEventListener("keydown", (event) => {
-            if (event.key === "Escape" && lightbox?.classList.contains("is-open")) closeLightbox();
+            if (event.key === "Escape" && lightbox?.classList.contains("is-open")) {
+                closeLightbox();
+            }
         });
     }
 
     function setupReveal() {
         const items = page.querySelectorAll("[data-reveal-section]");
         if (!items.length) return;
+
         if (!("IntersectionObserver" in window)) {
             items.forEach((item) => item.classList.add("is-visible"));
             return;
         }
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 if (!entry.isIntersecting) return;
@@ -220,13 +89,396 @@
                 observer.unobserve(entry.target);
             });
         }, { threshold: 0.16 });
+
         items.forEach((item) => observer.observe(item));
     }
 
-    loadTasks().then((tasks) => {
-        renderTabs(tasks);
-        activateTask(tasks[0], tasks);
-        setupLightbox();
-        setupReveal();
-    });
+    function setupBibtexCopy() {
+        const button = page.querySelector("[data-vb-copy-bibtex]");
+        const source = page.querySelector("[data-vb-bibtex]");
+        if (!button || !source) return;
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "");
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand("copy");
+            } finally {
+                textarea.remove();
+            }
+        }
+
+        button.addEventListener("click", async () => {
+            const text = source.textContent.trim();
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    fallbackCopy(text);
+                }
+                button.classList.add("is-copied");
+                window.setTimeout(() => button.classList.remove("is-copied"), 1200);
+            } catch (error) {
+                fallbackCopy(text);
+                button.classList.add("is-copied");
+                window.setTimeout(() => button.classList.remove("is-copied"), 1200);
+            }
+        });
+    }
+
+    function setupPointCloudViewer() {
+        const viewer = page.querySelector("[data-vb-pointcloud]");
+        const canvas = page.querySelector("[data-vb-pointcloud-canvas]");
+        const loading = page.querySelector("[data-vb-pointcloud-loading]");
+        if (!viewer || !canvas || !loading) return;
+
+        const dataButtons = Array.from(viewer.querySelectorAll("[data-pc-key]"));
+        const rotateButton = viewer.querySelector("[data-vb-pc-rotate]");
+        const resetButton = viewer.querySelector("[data-vb-pc-reset]");
+        const cache = new Map();
+
+        let gl;
+        let program;
+        let positionLoc;
+        let colorLoc;
+        let yawLoc;
+        let pitchLoc;
+        let zoomLoc;
+        let projectionLoc;
+        let pointSizeLoc;
+        let currentCloud = null;
+        let initialized = false;
+        let visible = false;
+        let autoRotate = true;
+        let yaw = 0.24;
+        let pitch = -0.12;
+        let zoom = 3.8;
+        let dragging = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const vertexShaderSource = `
+            attribute vec3 aPosition;
+            attribute vec3 aColor;
+            uniform float uYaw;
+            uniform float uPitch;
+            uniform float uZoom;
+            uniform float uPointSize;
+            uniform mat4 uProjection;
+            varying vec3 vColor;
+
+            void main() {
+                float cy = cos(uYaw);
+                float sy = sin(uYaw);
+                float cp = cos(uPitch);
+                float sp = sin(uPitch);
+                vec3 p = aPosition;
+                p = vec3(cy * p.x + sy * p.z, p.y, -sy * p.x + cy * p.z);
+                p = vec3(p.x, cp * p.y - sp * p.z, sp * p.y + cp * p.z);
+                p.y += 0.22;
+                p.z -= uZoom;
+                vec4 clip = uProjection * vec4(p, 1.0);
+                gl_Position = clip;
+                gl_PointSize = clamp(uPointSize / max(0.8, clip.w), 1.2, 4.2);
+                vColor = aColor;
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec3 vColor;
+
+            void main() {
+                vec2 delta = gl_PointCoord - vec2(0.5);
+                if (dot(delta, delta) > 0.25) discard;
+                gl_FragColor = vec4(vColor, 0.94);
+            }
+        `;
+
+        function setLoading(isLoading, text, isError) {
+            loading.classList.toggle("is-hidden", !isLoading);
+            loading.classList.toggle("is-error", Boolean(isError));
+            const label = loading.querySelector("strong");
+            if (label && text) label.textContent = text;
+        }
+
+        function createShader(type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                const message = gl.getShaderInfoLog(shader);
+                gl.deleteShader(shader);
+                throw new Error(message || "WebGL shader compile failed");
+            }
+            return shader;
+        }
+
+        function createProgram() {
+            const vertex = createShader(gl.VERTEX_SHADER, vertexShaderSource);
+            const fragment = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+            const linked = gl.createProgram();
+            gl.attachShader(linked, vertex);
+            gl.attachShader(linked, fragment);
+            gl.linkProgram(linked);
+            gl.deleteShader(vertex);
+            gl.deleteShader(fragment);
+            if (!gl.getProgramParameter(linked, gl.LINK_STATUS)) {
+                const message = gl.getProgramInfoLog(linked);
+                gl.deleteProgram(linked);
+                throw new Error(message || "WebGL program link failed");
+            }
+            return linked;
+        }
+
+        function perspective(fovy, aspect, near, far) {
+            const f = 1 / Math.tan(fovy / 2);
+            const rangeInv = 1 / (near - far);
+            return new Float32Array([
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (near + far) * rangeInv, -1,
+                0, 0, near * far * rangeInv * 2, 0
+            ]);
+        }
+
+        function resizeCanvas() {
+            if (!gl) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+            const height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+            gl.viewport(0, 0, width, height);
+            gl.useProgram(program);
+            gl.uniformMatrix4fv(projectionLoc, false, perspective(Math.PI / 4.5, width / height, 0.01, 100));
+        }
+
+        function parsePointCloud(buffer) {
+            const data = new Float32Array(buffer);
+            const total = Math.floor(data.length / 6);
+            const stride = Math.max(1, Math.floor(total / 140000));
+
+            let minX = Infinity;
+            let minY = Infinity;
+            let minZ = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            let maxZ = -Infinity;
+            let maxColor = 0;
+
+            for (let i = 0; i < total; i += stride) {
+                const base = i * 6;
+                const x = data[base];
+                const y = data[base + 1];
+                const z = data[base + 2];
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                minZ = Math.min(minZ, z);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+                maxZ = Math.max(maxZ, z);
+                maxColor = Math.max(maxColor, data[base + 3], data[base + 4], data[base + 5]);
+            }
+
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            const cz = (minZ + maxZ) / 2;
+            const range = Math.max(maxX - minX, maxY - minY, maxZ - minZ) || 1;
+            const scale = 2.35 / range;
+            const colorScale = maxColor > 1.5 ? 255 : 1;
+            const count = Math.ceil(total / stride);
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            let cursor = 0;
+            for (let i = 0; i < total; i += stride) {
+                const base = i * 6;
+                positions[cursor * 3] = (data[base] - cx) * scale;
+                positions[cursor * 3 + 1] = -(data[base + 1] - cy) * scale;
+                positions[cursor * 3 + 2] = (data[base + 2] - cz) * scale;
+                colors[cursor * 3] = Math.min(1, Math.max(0, data[base + 3] / colorScale));
+                colors[cursor * 3 + 1] = Math.min(1, Math.max(0, data[base + 4] / colorScale));
+                colors[cursor * 3 + 2] = Math.min(1, Math.max(0, data[base + 5] / colorScale));
+                cursor += 1;
+            }
+
+            return { positions, colors, count };
+        }
+
+        function createCloudBuffers(parsed) {
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, parsed.positions, gl.STATIC_DRAW);
+
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, parsed.colors, gl.STATIC_DRAW);
+
+            return {
+                positionBuffer,
+                colorBuffer,
+                count: parsed.count
+            };
+        }
+
+        async function loadCloud(button) {
+            const key = button.dataset.pcKey;
+            if (!key) return;
+
+            dataButtons.forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
+            setLoading(true, "Loading point cloud...");
+
+            try {
+                if (!cache.has(key)) {
+                    const response = await fetch(button.dataset.pcSrc);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const parsed = parsePointCloud(await response.arrayBuffer());
+                    cache.set(key, createCloudBuffers(parsed));
+                }
+                currentCloud = cache.get(key);
+                resetView(false);
+                setLoading(false);
+            } catch (error) {
+                setLoading(true, "Point cloud failed to load.", true);
+            }
+        }
+
+        function bindCloud() {
+            if (!currentCloud) return;
+            gl.bindBuffer(gl.ARRAY_BUFFER, currentCloud.positionBuffer);
+            gl.enableVertexAttribArray(positionLoc);
+            gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, currentCloud.colorBuffer);
+            gl.enableVertexAttribArray(colorLoc);
+            gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, 0, 0);
+        }
+
+        function resetView(keepRotate) {
+            yaw = 0.24;
+            pitch = -0.12;
+            zoom = 3.8;
+            if (!keepRotate) {
+                autoRotate = rotateButton?.classList.contains("is-active") ?? true;
+            }
+        }
+
+        function setAutoRotate(value) {
+            autoRotate = value;
+            rotateButton?.classList.toggle("is-active", autoRotate);
+        }
+
+        function render() {
+            window.requestAnimationFrame(render);
+            if (!visible || !gl || !currentCloud) return;
+
+            if (autoRotate) yaw += 0.0032;
+            resizeCanvas();
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.useProgram(program);
+            gl.uniform1f(yawLoc, yaw);
+            gl.uniform1f(pitchLoc, pitch);
+            gl.uniform1f(zoomLoc, zoom);
+            gl.uniform1f(pointSizeLoc, 8.2);
+            bindCloud();
+            gl.drawArrays(gl.POINTS, 0, currentCloud.count);
+        }
+
+        function setupPointerControls() {
+            canvas.addEventListener("pointerdown", (event) => {
+                dragging = true;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                canvas.setPointerCapture?.(event.pointerId);
+                setAutoRotate(false);
+            });
+
+            canvas.addEventListener("pointermove", (event) => {
+                if (!dragging) return;
+                const dx = event.clientX - lastX;
+                const dy = event.clientY - lastY;
+                yaw += dx * 0.006;
+                pitch = Math.max(-1.2, Math.min(1.2, pitch + dy * 0.006));
+                lastX = event.clientX;
+                lastY = event.clientY;
+            });
+
+            window.addEventListener("pointerup", () => {
+                dragging = false;
+            });
+
+            canvas.addEventListener("wheel", (event) => {
+                event.preventDefault();
+                zoom = Math.max(1.4, Math.min(8, zoom + event.deltaY * 0.003));
+            }, { passive: false });
+        }
+
+        function init() {
+            if (initialized) return;
+            initialized = true;
+
+            try {
+                gl = canvas.getContext("webgl", { antialias: true, alpha: false });
+                if (!gl) throw new Error("WebGL unavailable");
+                program = createProgram();
+                positionLoc = gl.getAttribLocation(program, "aPosition");
+                colorLoc = gl.getAttribLocation(program, "aColor");
+                yawLoc = gl.getUniformLocation(program, "uYaw");
+                pitchLoc = gl.getUniformLocation(program, "uPitch");
+                zoomLoc = gl.getUniformLocation(program, "uZoom");
+                projectionLoc = gl.getUniformLocation(program, "uProjection");
+                pointSizeLoc = gl.getUniformLocation(program, "uPointSize");
+                gl.clearColor(1, 1, 1, 1);
+                gl.enable(gl.DEPTH_TEST);
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                resizeCanvas();
+                setupPointerControls();
+                new ResizeObserver(resizeCanvas).observe(canvas);
+                render();
+                const activeButton = dataButtons.find((button) => button.classList.contains("is-active")) || dataButtons[0];
+                if (activeButton) loadCloud(activeButton);
+            } catch (error) {
+                setLoading(true, "WebGL point cloud viewer is unavailable.", true);
+            }
+        }
+
+        dataButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                if (!initialized) init();
+                loadCloud(button);
+            });
+        });
+
+        rotateButton?.addEventListener("click", () => setAutoRotate(!autoRotate));
+        resetButton?.addEventListener("click", () => resetView(true));
+
+        if (!("IntersectionObserver" in window)) {
+            visible = true;
+            init();
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                visible = entry.isIntersecting;
+                if (entry.isIntersecting) init();
+            });
+        }, { rootMargin: "320px 0px", threshold: 0.04 });
+
+        observer.observe(viewer);
+    }
+
+    setupCapabilityReveal();
+    setupLightbox();
+    setupReveal();
+    setupBibtexCopy();
+    setupPointCloudViewer();
 }());

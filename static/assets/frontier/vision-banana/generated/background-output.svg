@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-label="Foreground objects after background removal">
+  <defs>
+    <pattern id="checker" width="58" height="58" patternUnits="userSpaceOnUse">
+      <rect width="58" height="58" fill="#f8fbff"/>
+      <rect width="29" height="29" fill="#dbeafe"/>
+      <rect x="29" y="29" width="29" height="29" fill="#dbeafe"/>
+    </pattern>
+    <linearGradient id="maskGlow" x1="0" x2="1">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset=".52" stop-color="#1d5cff"/>
+      <stop offset="1" stop-color="#20b56b"/>
+    </linearGradient>
+    <filter id="fgShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="26" stdDeviation="20" flood-color="#0f172a" flood-opacity=".2"/>
+    </filter>
+    <filter id="fgGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="820" fill="url(#checker)"/>
+  <rect x="54" y="48" width="1092" height="724" rx="30" fill="#ffffff" opacity=".42"/>
+  <g opacity=".32">
+    <path d="M96 650h1008" stroke="#1d5cff" stroke-width="2"/>
+    <path d="M96 548h1008" stroke="#1d5cff" stroke-width="2"/>
+    <path d="M96 446h1008" stroke="#1d5cff" stroke-width="2"/>
+    <path d="M210 90v640M390 90v640M570 90v640M750 90v640M930 90v640" stroke="#06b6d4" stroke-width="2"/>
+  </g>
+  <g filter="url(#fgGlow)" opacity=".82">
+    <path d="M378 344h318c50 0 94 32 108 80l42 146H302l34-146c12-50 4-80 42-80z" fill="none" stroke="url(#maskGlow)" stroke-width="18" stroke-linejoin="round"/>
+    <path d="M418 282h238c64 0 112 46 120 108l16 136" fill="none" stroke="url(#maskGlow)" stroke-width="18"/>
+    <ellipse cx="930" cy="408" rx="80" ry="152" fill="none" stroke="url(#maskGlow)" stroke-width="18"/>
+    <rect x="1004" y="338" width="64" height="188" rx="28" fill="none" stroke="url(#maskGlow)" stroke-width="18"/>
+    <path d="M110 438h198c34 0 62 28 62 62v82H104z" fill="none" stroke="url(#maskGlow)" stroke-width="18"/>
+  </g>
+  <g filter="url(#fgShadow)">
+    <path d="M420 288h230c64 0 112 46 120 108l18 150H316l22-150c10-64 36-108 82-108z" fill="#fbbf24"/>
+    <path d="M374 350h320c44 0 84 30 96 72l38 132H312l30-132c10-44 0-72 32-72z" fill="#f59e0b"/>
+    <path d="M452 314h112v132H430zm146 0h86l44 132H598z" fill="#e0f2fe"/>
+    <circle cx="432" cy="568" r="48" fill="#111827"/>
+    <circle cx="714" cy="568" r="48" fill="#111827"/>
+    <circle cx="432" cy="568" r="20" fill="#94a3b8"/>
+    <circle cx="714" cy="568" r="20" fill="#94a3b8"/>
+    <rect x="120" y="452" width="170" height="86" rx="22" fill="#1d4ed8"/>
+    <rect x="150" y="420" width="118" height="52" rx="18" fill="#93c5fd"/>
+    <circle cx="168" cy="552" r="24" fill="#0f172a"/>
+    <circle cx="250" cy="552" r="24" fill="#0f172a"/>
+    <ellipse cx="930" cy="408" rx="62" ry="132" fill="#16a34a"/>
+    <path d="M914 292c-32 44-42 96-26 154 34-42 78-58 116-46-4-54-28-92-90-108z" fill="#22c55e"/>
+    <rect x="1018" y="352" width="38" height="156" rx="18" fill="#111827"/>
+    <circle cx="1037" cy="322" r="34" fill="#0f172a"/>
+  </g>
+  <g>
+    <rect x="60" y="58" width="294" height="58" rx="14" fill="#ffffff" opacity=".88"/>
+    <text x="86" y="95" fill="#1d5cff" font-family="Arial, sans-serif" font-size="24" font-weight="800">alpha-ready output</text>
+  </g>
+</svg>

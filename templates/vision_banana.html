@@ -4,137 +4,522 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/frontier.css') }}?v=20260619-frontier4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_banana.css') }}?v=20260619-banana4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_banana.css') }}?v=20260619-official5">
 {% endblock %}
 
+{% set vb_asset = 'assets/frontier/vision-banana/' %}
+
 {% block content %}
-<div class="banana-page" data-banana-page>
-    <section class="banana-hero" aria-labelledby="bananaHeroTitle">
-        <div class="banana-hero-copy">
-            <a class="banana-back-link" href="{{ url_for('frontier_page') }}">返回 CV 前沿探索</a>
-            <span class="frontier-kicker">VISION BANANA CASE STUDY</span>
-            <h1 id="bananaHeroTitle">Vision Banana：把视觉理解任务转化为图像生成</h1>
-            <p>从专用视觉模型到统一生成式视觉接口</p>
-        </div>
-        <div class="banana-flow" aria-label="Vision Banana 核心视觉流程">
-            <span class="banana-orbit banana-orbit--a" aria-hidden="true"></span>
-            <span class="banana-orbit banana-orbit--b" aria-hidden="true"></span>
-            <span class="banana-flow-node">Input Image<br><b>+</b><br>Instruction Prompt</span>
-            <span class="banana-flow-line"></span>
-            <span class="banana-flow-node banana-flow-node--core">Vision Banana</span>
-            <span class="banana-flow-line"></span>
-            <span class="banana-flow-node banana-flow-node--rgb">RGB Output<small>semantic · depth · normal</small></span>
-            <span class="banana-flow-line"></span>
-            <span class="banana-flow-node">Decoded Vision Result</span>
-            <div class="banana-output-dock" aria-hidden="true">
-                <span class="dock-tile dock-tile--semantic"></span>
-                <span class="dock-tile dock-tile--depth"></span>
-                <span class="dock-tile dock-tile--normal"></span>
-                <span class="dock-tile dock-tile--edit"></span>
+<div class="banana-page vb-page" data-banana-page>
+    <section class="vb-hero" aria-labelledby="bananaHeroTitle">
+        <div class="vb-hero-copy">
+            <a class="vb-back-link" href="{{ url_for('frontier_page') }}">返回 CV 前沿探索</a>
+            <span class="vb-kicker">VISION BANANA CASE STUDY</span>
+            <h1 id="bananaHeroTitle">Vision Banana：Image Generators are Generalist Vision Learners</h1>
+            <h2>把视觉理解任务转化为图像生成</h2>
+            <p>参考官方研究主页的能力展示方式，将 Vision Banana 的统一视觉接口改造成课程中的前沿模型展厅：输入图像与指令共同定义任务，模型生成 RGB 结果，再解码为分割、深度、法线或编辑结果。</p>
+            <div class="vb-hero-actions">
+                <a href="#vbCapabilities">查看能力展示</a>
+                <a href="#vbOfficialSamples">多任务样例</a>
+                <a href="#vbResearchGallery">关键技术与结果</a>
             </div>
         </div>
-    </section>
 
-    <section class="banana-section" data-reveal-section aria-labelledby="bananaMechanismTitle">
-        <div class="frontier-section-head">
-            <span class="frontier-kicker">CORE MECHANISM</span>
-            <h2 id="bananaMechanismTitle">统一输入、统一输出、统一模型</h2>
-        </div>
-        <div class="banana-mechanism-grid">
-            <article><span>01</span><h3>统一输入</h3><p>图像和自然语言指令共同定义任务，不再为每个任务单独设计入口。</p></article>
-            <article><span>02</span><h3>统一输出</h3><p>分割、深度、法线、边缘等结果都先生成 RGB 图像，再由规则或解码器恢复结构结果。</p></article>
-            <article><span>03</span><h3>统一模型</h3><p>以生成式视觉模型承载多类视觉理解能力，展示从专用模型到 generalist model 的方向。</p></article>
-        </div>
-    </section>
-
-    <section class="banana-section banana-demo" data-reveal-section aria-labelledby="bananaDemoTitle">
-        <div class="frontier-section-head">
-            <span class="frontier-kicker">TASK DEMO</span>
-            <h2 id="bananaDemoTitle">Instruction Prompt → RGB Output → Decode</h2>
-        </div>
-
-        <div class="banana-demo-shell">
-            <aside class="banana-task-tabs" data-banana-task-tabs role="radiogroup" aria-label="选择 Vision Banana 任务"></aside>
-            <div class="banana-prompt-panel">
-                <header><span>PROMPT</span><strong data-banana-current-task>语义分割</strong></header>
-                <p data-banana-prompt></p>
+        <div class="vb-hero-stage" aria-label="统一视觉接口流程">
+            <span class="vb-stage-grid" aria-hidden="true"></span>
+            <span class="vb-stage-label">UNIFIED RGB VISION INTERFACE</span>
+            <div class="vb-flow-card vb-flow-card--input" style="--flow-delay: 0ms">
+                <span>INPUT IMAGE</span>
+                <img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img2-input.jpg') }}" alt="输入图像示例">
             </div>
-            <div class="banana-rgb-panel">
-                <header><span>RGB OUTPUT</span><strong data-banana-rgb-title>RGB Output</strong></header>
-                <div class="banana-output-visual" data-banana-output>
-                    <div class="frontier-scene frontier-scene--output" aria-hidden="true">
-                        <span class="scene-sky"></span>
-                        <span class="scene-building scene-building--left"></span>
-                        <span class="scene-building scene-building--right"></span>
-                        <span class="scene-tree scene-tree--left"></span>
-                        <span class="scene-tree scene-tree--right"></span>
-                        <span class="scene-road"></span>
-                        <span class="scene-lane scene-lane--left"></span>
-                        <span class="scene-lane scene-lane--right"></span>
-                        <span class="scene-bus"></span>
-                        <span class="scene-car"></span>
-                        <span class="scene-person"></span>
-                        <span class="scene-light"></span>
-                        <span class="banana-layer banana-layer--semantic"></span>
-                        <span class="banana-layer banana-layer--instance"></span>
-                        <span class="banana-layer banana-layer--referring"></span>
-                        <span class="banana-layer banana-layer--depth"></span>
-                        <span class="banana-layer banana-layer--normal"></span>
-                        <span class="banana-layer banana-layer--edge"></span>
-                        <span class="banana-layer banana-layer--background"></span>
-                        <span class="banana-layer banana-layer--edit"></span>
-                    </div>
-                    <span class="banana-pixel-grid" aria-hidden="true"></span>
+            <div class="vb-flow-card vb-flow-card--prompt" style="--flow-delay: 140ms">
+                <span>TASK INSTRUCTION</span>
+                <strong>Render <mark>semantic regions</mark> as an RGB task image.</strong>
+            </div>
+            <span class="vb-flow-line vb-flow-line--a" aria-hidden="true"></span>
+            <div class="vb-core-node" style="--flow-delay: 280ms">
+                <span class="vb-core-ring" aria-hidden="true"></span>
+                <img src="{{ url_for('static', filename=vb_asset ~ 'official-logo.png') }}" alt="">
+                <strong>Vision Banana</strong>
+                <small>shared image-generator interface</small>
+            </div>
+            <span class="vb-flow-line vb-flow-line--b" aria-hidden="true"></span>
+            <div class="vb-flow-card vb-flow-card--output" style="--flow-delay: 420ms">
+                <span>RGB TASK IMAGE</span>
+                <div class="vb-output-mini-grid" aria-hidden="true">
+                    <i class="vb-mini vb-mini--seg"></i>
+                    <i class="vb-mini vb-mini--depth"></i>
+                    <i class="vb-mini vb-mini--normal"></i>
+                    <i class="vb-mini vb-mini--edit"></i>
                 </div>
             </div>
-            <aside class="banana-decode-panel">
-                <span>DECODE</span>
-                <h3 data-banana-decode-title>解码说明</h3>
-                <p data-banana-decode></p>
-            </aside>
+            <div class="vb-flow-card vb-flow-card--decode" style="--flow-delay: 560ms">
+                <span>DECODED RESULT</span>
+                <strong>mask · depth · normal · edited image</strong>
+            </div>
         </div>
     </section>
 
-    <section class="banana-section banana-research-gallery" data-reveal-section aria-labelledby="bananaFiguresTitle">
-        <div class="frontier-section-head">
-            <span class="frontier-kicker">KEY TECHNIQUES & RESULTS</span>
-            <h2 id="bananaFiguresTitle">关键技术与成果</h2>
+    <nav class="vb-anchor-nav" aria-label="Vision Banana 页面内导航">
+        <a href="#vbCapabilities">Capabilities</a>
+        <a href="#vbOfficialSamples">Task Gallery</a>
+        <a href="#vbPointCloud">Point Cloud</a>
+        <a href="#vbResultHighlights">Results</a>
+        <a href="#vbResearchGallery">Figures</a>
+        <a href="#bananaSystemTitle">System Relation</a>
+    </nav>
+
+    <section class="vb-section vb-teaser-section" data-reveal-section aria-labelledby="vbTeaserTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">OFFICIAL HOMEPAGE ADAPTATION</span>
+            <h2 id="vbTeaserTitle">从生成式图像模型到通用视觉学习器</h2>
+            <p>官方主页把重点放在能力结果图和 hover reveal 上。本页保留这种“大图优先、结果优先”的表达方式，并适配为 CVClass 的蓝白科技风。</p>
         </div>
-        <div class="banana-figure-grid">
-            <article class="banana-figure-card">
-                <img src="{{ url_for('static', filename='assets/frontier/paper-figure-1.webp') }}" alt="Vision Banana 总览流程与能力对比图">
-                <div><span>Figure 01 · 来源 arXiv:2604.20329v1</span><h3>统一 RGB 任务接口</h3><p>展示输入图像和 prompt 如何生成可解码的多任务 RGB 结果。</p><button type="button" data-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-1.webp') }}" data-lightbox-title="统一 RGB 任务接口">查看大图</button></div>
+        <figure class="vb-teaser">
+            <img src="{{ url_for('static', filename=vb_asset ~ 'official-teaser.png') }}" alt="Vision Banana 官方总览图">
+            <figcaption>官方主页 teaser 资源已复制到项目静态目录，用于说明“图像生成器隐藏的视觉理解能力”。</figcaption>
+        </figure>
+    </section>
+
+    <section id="vbCapabilities" class="vb-section vb-capabilities" data-reveal-section aria-labelledby="vbCapabilityTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">HOVER REVEAL CAPABILITIES</span>
+            <h2 id="vbCapabilityTitle">能力展示：从输入图到 RGB 任务输出</h2>
+            <p>桌面端悬停查看输出，移动端点击切换。每张卡展示同一个接口思路：Input Image + Instruction Prompt → RGB Output → Decoded Vision Result。</p>
+        </div>
+
+        <div class="vb-capability-grid">
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'semseg/img2-input.jpg') }}" alt="Semantic segmentation input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img2-output.png') }}" alt="Semantic segmentation RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">01</span>
+                    <h3>Semantic Segmentation</h3>
+                    <p class="vb-prompt">Generate a <mark>semantic segmentation</mark> visualization with class colors for dessert, menu and background.</p>
+                    <p>把逐像素类别标签转写成可视 RGB 图，强调统一输出接口而不是专用张量头。</p>
+                </div>
             </article>
-            <article class="banana-figure-card">
-                <img src="{{ url_for('static', filename='assets/frontier/paper-figure-2.webp') }}" alt="Vision Banana 指代表达分割示例图">
-                <div><span>Figure 04 · 来源 arXiv:2604.20329v1</span><h3>语言条件分割能力</h3><p>自然语言描述决定要分割的对象，输出仍是一张 RGB mask 图。</p><button type="button" data-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-2.webp') }}" data-lightbox-title="语言条件分割能力">查看大图</button></div>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'insseg/wine-input.jpg') }}" alt="Instance segmentation input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/wine-output.png') }}" alt="Instance segmentation RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">02</span>
+                    <h3>Instance Segmentation</h3>
+                    <p class="vb-prompt">Segment all price tags and color each <mark>instance</mark> differently.</p>
+                    <p>实例 ID 通过不同 RGB 颜色表达，后续可按颜色连通区域解码为 mask。</p>
+                </div>
             </article>
-            <article class="banana-figure-card">
-                <img src="{{ url_for('static', filename='assets/frontier/paper-figure-3.webp') }}" alt="Vision Banana 深度估计与三维重建示例图">
-                <div><span>Figure 06 · 来源 arXiv:2604.20329v1</span><h3>可解码深度与三维重建</h3><p>深度图先以颜色可视化，再被解码并用于重建三维场景。</p><button type="button" data-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-3.webp') }}" data-lightbox-title="可解码深度与三维重建">查看大图</button></div>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'refseg/controller-input.png') }}" alt="Referring segmentation input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/controller-output.png') }}" alt="Referring expression segmentation output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">03</span>
+                    <h3>Referring Expression Segmentation</h3>
+                    <p class="vb-prompt">Render the <mark>game control device</mark> as a solid yellow mask on a black background.</p>
+                    <p>自然语言决定分割对象，输出仍是一张 RGB mask，而不是换一个专用模型。</p>
+                </div>
             </article>
-            <article class="banana-figure-card">
-                <img src="{{ url_for('static', filename='assets/frontier/paper-figure-4.webp') }}" alt="Vision Banana 图像编辑示例图">
-                <div><span>Figure 10 · 来源 arXiv:2604.20329v1</span><h3>生成能力保留与图像编辑</h3><p>说明保留生成能力的同时，模型仍能按视觉指令改变图像内容。</p><button type="button" data-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-4.webp') }}" data-lightbox-title="生成能力保留与图像编辑">查看大图</button></div>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'depth/banana-input.jpg') }}" alt="Metric depth input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/banana-output.png') }}" alt="Metric depth RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">04</span>
+                    <h3>Metric Depth Estimation</h3>
+                    <p class="vb-prompt">Generate a <mark>metric depth map</mark> of the provided image.</p>
+                    <p>深度先变成彩色可视图，再通过标尺或解码规则转回稠密深度结构。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'normal/room-input.jpg') }}" alt="Surface normal input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/room-output.jpg') }}" alt="Surface normal RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">05</span>
+                    <h3>Surface Normal Estimation</h3>
+                    <p class="vb-prompt">Generate a <mark>surface normal</mark> map of the input image.</p>
+                    <p>RGB 三通道表示三维方向分量，让几何估计也进入同一种输出形式。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'generated/edit-input.svg') }}?v=20260619-cap2" alt="Image editing input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'generated/edit-output.svg') }}?v=20260619-cap2" alt="Image editing RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">06</span>
+                    <h3>Image Editing</h3>
+                    <p class="vb-prompt">Edit the road into a clean <mark>blue lane</mark> while preserving scene geometry.</p>
+                    <p>理解任务和生成任务共享 RGB 输出形式，体现生成式视觉接口的延展性。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'generated/background-input.svg') }}?v=20260619-cap2" alt="Background removal input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'generated/background-output.svg') }}?v=20260619-cap2" alt="Background removal RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">07</span>
+                    <h3>Background Removal</h3>
+                    <p class="vb-prompt">Remove the <mark>background</mark> and keep foreground objects with checkerboard transparency.</p>
+                    <p>前景保留、背景透明可以继续被解码成 alpha mask 或合成素材。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="{{ url_for('static', filename=vb_asset ~ 'generated/edge-input.svg') }}?v=20260619-cap2" alt="Edge map input">
+                    <div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'generated/edge-output.svg') }}?v=20260619-cap2" alt="Edge structure RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">Input</span>
+                    <span class="vb-state-label vb-state-label--output">RGB Output</span>
+                    <span class="vb-reveal-hint">Hover / Tap reveal</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">08</span>
+                    <h3>Edge / Structure Map</h3>
+                    <p class="vb-prompt">Draw crisp <mark>structure lines</mark> and object contours on a dark background.</p>
+                    <p>边缘、轮廓和结构线也可以看作生成一张可解码的视觉结果图。</p>
+                </div>
             </article>
         </div>
     </section>
 
-    <section class="banana-section banana-system-link" data-reveal-section aria-labelledby="bananaSystemTitle">
-        <div>
-            <span class="frontier-kicker">SYSTEM RELATION</span>
-            <h2 id="bananaSystemTitle">建立在已有模块之上</h2>
-            <p>Vision Banana 的可视化接口依赖图像表示、局部卷积特征、分割任务输出结构和深度模型表征能力。只有理解这些基础，才能判断 RGB 输出如何被解码、评测和使用。</p>
+    <section id="vbOfficialSamples" class="vb-section vb-official-samples" data-reveal-section aria-labelledby="vbOfficialSamplesTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">MULTI-TASK RESULT GALLERY</span>
+            <h2 id="vbOfficialSamplesTitle">多任务视觉结果展廊</h2>
+            <p>按任务分组展示输入图、指令与 RGB 输出结果，让同一生成式接口在分割、深度和几何估计中的表现连续呈现。桌面端悬停 reveal，移动端点击 reveal。</p>
         </div>
-        <a href="{{ url_for('frontier_page') }}#frontierTaskLab">回到统一任务演示</a>
+
+        <div class="vb-sample-group">
+            <header><span>01</span><h3>Semantic Segmentation</h3><p>同一种 RGB mask 输出，可以由不同类别集合和 prompt 约束生成。</p></header>
+            <div class="vb-sample-strip" aria-label="Semantic segmentation official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img2-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img2-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p><mark>per-pixel class labeling</mark> for dessert, menu, plates and background.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img1-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/img1-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Generate semantic colors for <mark>cat ears</mark>, exit sign and background.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/ocean-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'semseg/ocean-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Conduct per-class segmentation for people, <mark>ocean</mark>, sky and street lights.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>02</span><h3>Instance Segmentation</h3><p>颜色不再代表类别，而是代表不同实例，展示 RGB 输出如何承载实例 ID。</p></header>
+            <div class="vb-sample-strip" aria-label="Instance segmentation official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/food-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/food-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Color each <mark>garlic instance</mark> differently.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/wine-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/wine-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Segment all <mark>price tags</mark> with distinct instance colors.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/tags-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/tags-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Each price tag is represented by a <mark>unique solid color</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/basketball-input.png') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'insseg/basketball-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Render each <mark>basketball</mark> as an individual circular mask.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>03</span><h3>Referring Expression Segmentation</h3><p>语言指代决定被分割对象，展示模型对自然语言 prompt 的绑定能力。</p></header>
+            <div class="vb-sample-strip" aria-label="Referring expression segmentation official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/menu-input.png') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/menu-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Highlight the chef names in <mark>Chinese and English</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/cats-input.jpeg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/cats-output.jpg') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Separate the <mark>stretching cat</mark> from another cat by color.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/controller-input.png') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/controller-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>The <mark>game control device</mark> is represented by a solid yellow mask.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/people-input.jpeg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/people-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Render the man in a <mark>pink t shirt</mark> as the referred mask.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>04</span><h3>Metric Depth Estimation</h3><p>从室内、建筑、自然场景到物体近景，深度都先以 RGB 色带输出。</p></header>
+            <div class="vb-sample-strip" aria-label="Metric depth official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/fallingwater-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/fallingwater-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Predict metric depth with a <mark>rainbow colormap</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/laguna-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/laguna-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Outdoor scene depth encoded as <mark>warm-to-cool RGB</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/banana-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/banana-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Close-range object depth from a single <mark>RGB image</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/eth3d-input.jpeg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'depth/eth3d-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Dense indoor geometry represented as <mark>decodable color</mark>.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>05</span><h3>Surface Normal Estimation</h3><p>RGB 三通道可以承载几何方向场，把法线估计也纳入图像生成接口。</p></header>
+            <div class="vb-sample-strip" aria-label="Surface normal official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/jazz-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/jazz-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Predict <mark>surface normal</mark> of a complex indoor scene.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/desk-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/desk-output.jpg') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Indoor object surfaces mapped to <mark>RGB normal channels</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/room-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/room-output.jpg') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Room layout recovered as a <mark>direction field</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/statue-input.jpg') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'normal/statue-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">Input</span><span class="vb-state-label vb-state-label--output">Output</span></div>
+                    <p>Object shape encoded through <mark>surface orientation</mark>.</p>
+                </article>
+            </div>
+        </div>
     </section>
 
-    <footer class="banana-note">
-        当前页面只做论文思想可视化，不调用原模型，不声称复现论文结果。
-    </footer>
+    <section id="vbPointCloud" class="vb-section vb-pointcloud-section" data-reveal-section aria-labelledby="vbPointCloudTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">METRIC DEPTH TO 3D</span>
+            <h2 id="vbPointCloudTitle">3D Point Cloud from Metric Depth</h2>
+            <p>Vision Banana 的 metric depth 预测可以结合相机内参反投影为 3D 点云，用来观察完整场景几何。这里复用官方点云数据，在本页中做轻量 WebGL 可视化。</p>
+        </div>
+        <div class="vb-pointcloud-viewer" data-vb-pointcloud>
+            <div class="vb-pointcloud-canvas-wrap">
+                <canvas data-vb-pointcloud-canvas aria-label="3D point cloud viewer"></canvas>
+                <div class="vb-pointcloud-loading" data-vb-pointcloud-loading>
+                    <span class="vb-pointcloud-spinner" aria-hidden="true"></span>
+                    <strong>Loading point cloud...</strong>
+                </div>
+            </div>
+            <div class="vb-pointcloud-controls" aria-label="点云数据与视角控制">
+                <button type="button" class="is-active" data-pc-key="nyu_500" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/nyu_500.bin') }}">NYU 1</button>
+                <button type="button" data-pc-key="nyu_162" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/nyu_162.bin') }}">NYU 2</button>
+                <button type="button" data-pc-key="nyu_200" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/nyu_200.bin') }}">NYU 3</button>
+                <button type="button" data-pc-key="eth3d_20" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/eth3d_20.bin') }}">ETH3D 1</button>
+                <button type="button" data-pc-key="eth3d_110" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/eth3d_110.bin') }}">ETH3D 2</button>
+                <button type="button" data-pc-key="eth3d_205" data-pc-src="{{ url_for('static', filename=vb_asset ~ 'pointcloud/eth3d_205.bin') }}">ETH3D 3</button>
+                <span class="vb-pointcloud-divider" aria-hidden="true"></span>
+                <button type="button" class="is-active" data-vb-pc-rotate>Auto-rotate</button>
+                <button type="button" data-vb-pc-reset>Reset view</button>
+            </div>
+        </div>
+        <p class="vb-pointcloud-hint">Drag to orbit · Scroll to zoom · 数据来自官方 Vision Banana pointcloud 资源</p>
+    </section>
 
-    <div class="banana-lightbox" data-banana-lightbox aria-hidden="true" role="dialog" aria-modal="true" aria-label="论文图大图预览">
-        <button type="button" class="banana-lightbox-close" data-lightbox-close aria-label="关闭大图">×</button>
+    <section id="vbResultHighlights" class="vb-section vb-result-highlights" data-reveal-section aria-labelledby="vbResultHighlightsTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">RESULT HIGHLIGHTS</span>
+            <h2 id="vbResultHighlightsTitle">结果优先的研究主页节奏</h2>
+            <p>官方主页不仅展示机制，还把 2D/3D 任务结果组织成醒目的结果区。本页以课程可视化方式保留这种“能力矩阵 + 结果条形图”的阅读节奏。</p>
+        </div>
+        <div class="vb-result-grid">
+            <article class="vb-result-card">
+                <span>2D Understanding</span>
+                <h3>Segmentation</h3>
+                <div class="vb-result-bars"><i style="--bar: 82%"></i><i style="--bar: 66%"></i><i style="--bar: 58%"></i></div>
+                <p>语义、实例、指代表达分割都被转写成 RGB mask 输出。</p>
+            </article>
+            <article class="vb-result-card">
+                <span>3D Understanding</span>
+                <h3>Metric Depth</h3>
+                <div class="vb-result-bars"><i style="--bar: 88%"></i><i style="--bar: 72%"></i><i style="--bar: 63%"></i></div>
+                <p>深度色彩图可以进一步解码为稠密几何或点云结构。</p>
+            </article>
+            <article class="vb-result-card">
+                <span>Geometry</span>
+                <h3>Surface Normal</h3>
+                <div class="vb-result-bars"><i style="--bar: 78%"></i><i style="--bar: 69%"></i><i style="--bar: 52%"></i></div>
+                <p>法线场以 RGB 通道承载方向，连接几何估计与图像生成。</p>
+            </article>
+            <article class="vb-result-card">
+                <span>Generative Interface</span>
+                <h3>Editing / Removal / Edge</h3>
+                <div class="vb-result-bars"><i style="--bar: 74%"></i><i style="--bar: 61%"></i><i style="--bar: 55%"></i></div>
+                <p>生成式接口将结构输出和图像编辑纳入同一表达框架。</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="vb-section vb-convergence" data-reveal-section data-vb-converge aria-labelledby="vbConvergeTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">SPECIALIST TO GENERALIST</span>
+            <h2 id="vbConvergeTitle">专用模型能力向统一模型汇聚</h2>
+            <p>传统系统为每类任务维护专用模型；Vision Banana 的思想是把多个任务接口收束到同一个生成式视觉核心。</p>
+        </div>
+        <div class="vb-converge-map" aria-label="专用模型汇聚到统一模型">
+            <div class="vb-specialist-column">
+                <span>Segmentation Head</span>
+                <span>Depth Network</span>
+                <span>Normal Estimator</span>
+                <span>Editing Model</span>
+            </div>
+            <div class="vb-converge-lines" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+            </div>
+            <div class="vb-generalist-core">
+                <span>Generalist Vision Model</span>
+                <strong>Vision Banana</strong>
+            </div>
+            <div class="vb-unified-output">
+                <span>Unified RGB Output</span>
+                <strong>Decoded Vision Result</strong>
+            </div>
+        </div>
+    </section>
+
+    <section id="vbResearchGallery" class="vb-section vb-research-gallery" data-reveal-section aria-labelledby="bananaFiguresTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">PAPER FIGURES / RESULTS</span>
+            <h2 id="bananaFiguresTitle">关键技术与结果</h2>
+            <p>保留官方主页和论文资源中的关键图，使用 research gallery 形式聚焦核心机制、语言条件分割、深度重建与图像编辑。</p>
+        </div>
+        <div class="vb-figure-grid">
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="{{ url_for('static', filename=vb_asset ~ 'official-teaser.png') }}" data-vb-lightbox-title="Official Teaser · Generalist Vision Learner">
+                    <img src="{{ url_for('static', filename=vb_asset ~ 'official-teaser.png') }}" alt="Vision Banana official teaser">
+                </button>
+                <div>
+                    <span>Official Teaser · 来源 Vision Banana homepage</span>
+                    <h3>Image Generators as Vision Learners</h3>
+                    <p>官方主页总览图，强调生成式预训练中隐藏的视觉理解能力。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-1.webp') }}" data-vb-lightbox-title="Figure 01 · Unified RGB Interface">
+                    <img src="{{ url_for('static', filename='assets/frontier/paper-figure-1.webp') }}" alt="Vision Banana unified RGB interface figure">
+                </button>
+                <div>
+                    <span>Figure 01 · 来源 arXiv:2604.20329v1</span>
+                    <h3>统一 RGB 任务接口</h3>
+                    <p>输入图像和 prompt 共同定义任务，输出被统一为可解码 RGB 结果。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-2.webp') }}" data-vb-lightbox-title="Figure 04 · Referring Segmentation">
+                    <img src="{{ url_for('static', filename='assets/frontier/paper-figure-2.webp') }}" alt="Vision Banana referring segmentation figure">
+                </button>
+                <div>
+                    <span>Figure 04 · 来源 arXiv:2604.20329v1</span>
+                    <h3>语言条件分割能力</h3>
+                    <p>自然语言描述决定要分割的对象，输出仍是一张 RGB mask 图。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-3.webp') }}" data-vb-lightbox-title="Figure 06 · Metric Depth">
+                    <img src="{{ url_for('static', filename='assets/frontier/paper-figure-3.webp') }}" alt="Vision Banana metric depth figure">
+                </button>
+                <div>
+                    <span>Figure 06 · 来源 arXiv:2604.20329v1</span>
+                    <h3>可解码深度与三维重建</h3>
+                    <p>深度图先以颜色可视化，再被解码并用于重建三维场景。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="{{ url_for('static', filename='assets/frontier/paper-figure-4.webp') }}" data-vb-lightbox-title="Figure 10 · Image Editing">
+                    <img src="{{ url_for('static', filename='assets/frontier/paper-figure-4.webp') }}" alt="Vision Banana image editing figure">
+                </button>
+                <div>
+                    <span>Figure 10 · 来源 arXiv:2604.20329v1</span>
+                    <h3>生成能力保留与图像编辑</h3>
+                    <p>模型在保留生成能力的同时，也能根据视觉指令改变图像内容。</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="vb-section vb-system-route" data-reveal-section aria-labelledby="bananaSystemTitle">
+        <div class="vb-section-head vb-section-head--left">
+            <span class="vb-kicker">SYSTEM RELATION</span>
+            <h2 id="bananaSystemTitle">Vision Banana 与本系统关系</h2>
+            <p>这不是跳过基础算法，而是把基础模块中的表示、卷积、边缘、特征和深度学习任务整合到统一视觉模型接口中。</p>
+        </div>
+        <ol class="vb-route-list">
+            <li><a href="{{ url_for('grayscale_page') }}">图像基础</a><span>像素与颜色表示</span></li>
+            <li><a href="{{ url_for('convolution_page') }}">卷积与滤波</a><span>局部响应与特征提取</span></li>
+            <li><a href="{{ url_for('edge_detection_page') }}">边缘轮廓</a><span>结构线和形态线索</span></li>
+            <li><a href="{{ url_for('feature_detection_page') }}">特征几何</a><span>局部特征与匹配</span></li>
+            <li><a href="{{ url_for('cnn_visualization_page') }}">CNN 学习</a><span>表征学习与任务头</span></li>
+            <li><a href="{{ url_for('vision_tasks_overview_page') }}">检测分割</a><span>高层视觉任务输出</span></li>
+            <li><strong>Vision Banana</strong><span>统一 RGB 视觉接口</span></li>
+        </ol>
+    </section>
+
+    <section class="vb-bibtex-section" aria-labelledby="vbBibtexTitle">
+        <h2 id="vbBibtexTitle">BibTeX</h2>
+        <div class="vb-bibtex-card">
+            <button type="button" class="vb-bibtex-copy" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+            </button>
+            <pre data-vb-bibtex>@article{visionbanana2026,
+  title={Image Generators are Generalist Vision Learners},
+  author={Gabeur, Valentin and Long, Shangbang and Peng, Songyou and Voigtlaender, Paul and Sun, Shuyang and Bao, Yanan and Truong, Karen and Wang, Zhicheng and Zhou, Wenlei and Barron, Jonathan T and Genova, Kyle and Kannen, Nithish and Ben, Sherry and Li, Yandong and Guo, Mandy and Yogin, Suhas and Gu, Yiming and Chen, Huizhong and Wang, Oliver and Xie, Saining and Zhou, Howard and He, Kaiming and Funkhouser, Thomas and Alayrac, Jean-Baptiste and Soricut, Radu},
+  journal={arXiv preprint arXiv:2604.20329},
+  year={2026}
+}</pre>
+        </div>
+    </section>
+
+    <div class="vb-lightbox" data-banana-lightbox aria-hidden="true" role="dialog" aria-modal="true" aria-label="研究图大图预览">
+        <button type="button" class="vb-lightbox-close" data-lightbox-close aria-label="关闭大图">×</button>
         <figure>
             <img data-lightbox-image alt="">
             <figcaption data-lightbox-caption></figcaption>
@@ -144,5 +529,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_banana.js') }}?v=20260619-banana3"></script>
+<script src="{{ url_for('static', filename='js/vision_banana.js') }}?v=20260619-official5"></script>
 {% endblock %}

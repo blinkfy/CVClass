@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-label="Edge and structure map output">
+  <defs>
+    <linearGradient id="edgeLine" x1="0" x2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset=".52" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#a7f3d0"/>
+    </linearGradient>
+    <filter id="lineGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="820" fill="#030712"/>
+  <g opacity=".18">
+    <path d="M0 82h1200M0 164h1200M0 246h1200M0 328h1200M0 410h1200M0 492h1200M0 574h1200M0 656h1200M0 738h1200" stroke="#1d5cff"/>
+    <path d="M80 0v820M160 0v820M240 0v820M320 0v820M400 0v820M480 0v820M560 0v820M640 0v820M720 0v820M800 0v820M880 0v820M960 0v820M1040 0v820M1120 0v820" stroke="#06b6d4"/>
+  </g>
+  <g filter="url(#lineGlow)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M74 260h244v262H74zM116 300h46v58h-46zm76 0h46v58h-46zm-76 86h46v58h-46zm76 0h46v58h-46z" stroke="url(#edgeLine)" stroke-width="5"/>
+    <path d="M884 188h214v346H884zM928 238h42v58h-42zm76 0h42v58h-42zm-76 92h42v58h-42zm76 0h42v58h-42z" stroke="#93c5fd" stroke-width="5"/>
+    <path d="M444 386h312l360 434H70z" stroke="#67e8f9" stroke-width="7"/>
+    <path d="M582 402 502 820M648 402l96 418" stroke="#e0f2fe" stroke-width="6"/>
+    <path d="M0 560c210 40 410 44 604 12 192-32 374-34 596 0" stroke="#1d5cff" stroke-width="4" opacity=".78"/>
+    <path d="M0 642c250 52 472 58 670 14 188-42 340-34 530 10" stroke="#06b6d4" stroke-width="4" opacity=".72"/>
+    <path d="M170 482h250c38 0 70 26 82 62l36 112H132l28-124c6-28 0-50 10-50zM204 424h190c38 0 72 24 88 66H170c14-42 22-66 34-66z" stroke="#fde68a" stroke-width="6"/>
+    <path d="M232 448h72v54h-86zm96 0h92l28 54H328z" stroke="#bfdbfe" stroke-width="4"/>
+    <circle cx="246" cy="670" r="40" stroke="#f8fafc" stroke-width="6"/>
+    <circle cx="462" cy="670" r="40" stroke="#f8fafc" stroke-width="6"/>
+    <path d="M792 500h188q24 0 24 24v68H792zM824 456h126q18 0 28 58H798q10-58 26-58z" stroke="#60a5fa" stroke-width="6"/>
+    <circle cx="834" cy="610" r="30" stroke="#f8fafc" stroke-width="5"/>
+    <circle cx="950" cy="610" r="30" stroke="#f8fafc" stroke-width="5"/>
+    <ellipse cx="640" cy="356" rx="54" ry="120" stroke="#86efac" stroke-width="7"/>
+    <path d="M724 292h34v148h-34zM741 236a28 28 0 1 0 0 56 28 28 0 0 0 0-56z" stroke="#e5e7eb" stroke-width="5"/>
+  </g>
+  <g opacity=".9">
+    <rect x="58" y="54" width="338" height="58" rx="14" fill="#071536" stroke="#1d5cff"/>
+    <text x="84" y="91" fill="#67e8f9" font-family="Arial, sans-serif" font-size="24" font-weight="800">structure map RGB</text>
+  </g>
+  <g opacity=".48" fill="none">
+    <path d="M74 522 0 560M318 260 444 386M1098 534l102 38M884 188 756 386" stroke="#a7f3d0" stroke-width="2"/>
+    <path d="M170 482 444 386M1004 524l112 296M246 710l-60 110M462 710l-10 110" stroke="#38bdf8" stroke-width="2"/>
+  </g>
+</svg>
