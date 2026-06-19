@@ -7,17 +7,19 @@
     const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/detection_inference.js");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialMode = ["yolo", "rcnn", "roi", "rpn"].includes(initialParams.get("mode")) ? initialParams.get("mode") : "yolo";
     const state = {
         data: null,
         rcnnData: null,
         sampleId: "",
         source: "inference",
-        detMode: "yolo",
+        detMode: initialMode,
         conf: 0.25,
         iou: 0.5,
         showLow: true,
         classes: new Set(),
-        step: 0,
+        step: initialParams.get("focus") === "nms" ? 5 : 0,
         rcnnStep: 0,
         playing: false,
         timer: null,

@@ -6,6 +6,7 @@
     const dataRoot = api.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
+    const initialParams = new URLSearchParams(window.location.search);
     const methodLabels = {
         bovw: "BoVW 视觉词袋",
         pyramid: "Spatial Pyramid Matching",
@@ -77,6 +78,15 @@
         notes: $("[data-cls-notes]"),
         stepper: $$("[data-cls-phase]"),
     };
+
+    if (["bovw", "pyramid", "cnn"].includes(initialParams.get("method"))) {
+        state.method = initialParams.get("method");
+    }
+    if (initialParams.get("focus") === "topk") {
+        state.topK = 5;
+    }
+    els.methods.forEach((item) => item.classList.toggle("is-active", item.dataset.clsMethod === state.method));
+    els.topK.value = String(state.topK);
 
     const escapeHtml = (value) => String(value ?? "")
         .replaceAll("&", "&amp;")

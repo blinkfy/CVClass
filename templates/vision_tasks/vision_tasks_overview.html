@@ -313,7 +313,7 @@
     <div class="overview-section-heading">
         <div>
             <span>COURSE METHOD MAP</span>
-            <h4 id="visionMethodMapTitle">高级视觉任务课程方法地图</h4>
+            <h4 id="visionMethodMapTitle">视觉识别与分割课程方法地图</h4>
         </div>
         <p>从图像级分类，到像素级/实例级 mask，再到浏览器端真实模型推理，形成完整实验模块。</p>
     </div>
@@ -322,31 +322,31 @@
             <header><span>01</span><strong>图像分类</strong><em>Image-level prediction</em></header>
             <div><b>BoVW</b><b>Spatial Pyramid</b><b>CNN / ResNet</b></div>
             <p>局部特征、视觉词典、直方图编码与端到端 CNN 分类对比。</p>
-            <a href="{{ url_for('classification_lab_page') }}">进入图像分类</a>
+            <a href="{{ url_for('classification_lab_detail_alias_page', method='bovw') }}">进入图像分类</a>
         </article>
         <article>
             <header><span>02</span><strong>传统图像分割</strong><em>Unsupervised regions</em></header>
-            <div><b>K-means RGB</b><b>K-means RGB + XY</b><b>Graph Cut</b><b>Ncut</b></div>
-            <p>颜色聚类、空间约束与图结构切割的传统分割思想。</p>
-            <a href="{{ url_for('segmentation_basic_lab_page') }}">进入图像分割</a>
+            <div><b>K-means RGB</b><b>K-means RGB + XY</b><b>Graph Cut</b><b>Ncut</b><b>GrabCut</b><b>Watershed</b><b>Region Properties</b></div>
+            <p>颜色聚类、空间约束、交互式前景提取与区域 label map 的传统分割思想。</p>
+            <a href="{{ url_for('segmentation_basic_alias_page') }}">进入图像分割</a>
         </article>
         <article>
             <header><span>03</span><strong>语义分割</strong><em>Pixel-wise class map</em></header>
             <div><b>Pixel-wise Classification</b><b>FCN</b><b>1×1 Conv</b><b>Upsampling</b><b>Skip Connection</b><b>mIoU</b><b>SegFormer 推理</b></div>
             <p>从 FCN dense prediction 到 SegFormer 前端真实 semantic mask。</p>
-            <a href="{{ url_for('semantic_segmentation_lab_page') }}">进入语义分割</a>
+            <a href="{{ url_for('segmentation_lab_page') }}">进入语义分割</a>
         </article>
         <article>
             <header><span>04</span><strong>目标检测</strong><em>Box + class + score</em></header>
             <div><b>Sliding Window</b><b>Proposal</b><b>R-CNN</b><b>Fast R-CNN</b><b>ROI Pooling</b><b>Faster R-CNN</b><b>RPN / Anchor</b><b>IoU / NMS</b><b>YOLO 推理</b></div>
             <p>检测从候选区域机制到 YOLO ONNX Runtime Web 推理和后处理。</p>
-            <a href="{{ url_for('detection_lab_page') }}">进入目标检测</a>
+            <a href="{{ url_for('object_detection_alias_page') }}">进入目标检测</a>
         </article>
         <article>
             <header><span>05</span><strong>实例分割</strong><em>Object mask + identity</em></header>
             <div><b>Mask R-CNN</b><b>FPN</b><b>ROI Align</b><b>Mask Head</b><b>Mask IoU / Mask AP</b><b>YOLO-seg 推理</b></div>
             <p>在检测基础上为每个实例生成独立 mask，并对 Mask AP 做可视化解释。</p>
-            <a href="{{ url_for('instance_segmentation_lab_page') }}">进入实例分割</a>
+            <a href="{{ url_for('segmentation_lab_instance_page') }}">进入实例分割</a>
         </article>
     </div>
 </section>

@@ -1,11 +1,11 @@
 {% extends "vision_tasks_base.html" %}
 
 {% block vision_badge %}Station 06 · Image Classification{% endblock %}
-{% block vision_title %}图像分类：BoVW 与 CNN 分类对比{% endblock %}
+{% block vision_title %}图像分类与任务谱系{% endblock %}
 {% block vision_subtitle %}从手工局部特征和视觉词袋，到深度卷积网络端到端分类，理解图像级预测的两条典型路线。{% endblock %}
 
 {% block vision_content %}
-<section class="vision-workbench method-lab-workbench classification-lab-workbench" data-classification-lab aria-label="图像分类课程方法工作台">
+<section id="bovw-classification" class="vision-workbench method-lab-workbench classification-lab-workbench" data-classification-lab aria-label="图像分类课程方法工作台">
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
@@ -131,7 +131,7 @@
                     </div>
                 </section>
 
-                <section class="classification-topk-card">
+                <section id="topk-metrics" class="classification-topk-card">
                     <div class="method-result-head">
                         <strong data-cls-board-title>Top-K 分类概率</strong>
                         <span data-cls-board-subtitle>softmax / linear classifier scores</span>
@@ -140,7 +140,7 @@
                 </section>
             </div>
 
-            <div class="classification-cnn-compare" data-cls-cnn-compare hidden>
+            <div id="cnn-classification" class="classification-cnn-compare" data-cls-cnn-compare hidden>
                 <section>
                     <h4>BoVW Route</h4>
                     <div class="cls-route-steps">

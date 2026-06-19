@@ -4,10 +4,13 @@
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const moduleDataRoot = window.CVClassVisionTasks?.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/instance_inference.js?v=20260618-webgpu-fix1");
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/instance_inference.js");
     const requiredModelFiles = ["yolo11n-seg.onnx", "labels_coco.json", "model_config.json"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialSource = ["preset", "model", "maskrcnn", "roiAlign", "maskMetric"].includes(initialParams.get("source")) ? initialParams.get("source") : "model";
+    const initialView = ["instance", "semantic"].includes(initialParams.get("view")) ? initialParams.get("view") : "instance";
     const COLORS = ["#2563EB", "#F97316", "#22C55E", "#8B5CF6", "#EAB308", "#EC4899", "#06B6D4", "#EF4444", "#14B8A6"];
 
     const state = {
@@ -20,8 +23,8 @@
         showBox: true,
         showId: true,
         onlySelected: false,
-        view: "instance",
-        sourceMode: "model",
+        view: initialView,
+        sourceMode: initialSource,
         phase: "image",
         maskRcnnStep: 0,
         presetScenes: new Map(),

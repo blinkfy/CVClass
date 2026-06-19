@@ -1,31 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}高级视觉任务实验室{% endblock %}
+{% block title %}{{ vision_module_title|default('视觉识别与分割实验室') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260618-seg-basic-polish1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260619-module-split1">
 {% endblock %}
 
 {% block content %}
-<div class="vision-lab" data-vision-page="{{ active_sub_page }}">
+<div class="vision-lab" data-vision-page="{{ active_sub_page }}" data-vision-module="{{ vision_module_key|default('vision_tasks') }}">
     <header class="vision-hero station-hero">
         <div>
-            <span class="section-label station-eyebrow">STATION 06–09 · ADVANCED VISION TASKS</span>
-            <h1 class="station-title">高级视觉任务实验室</h1>
-            <p class="station-summary">围绕 Classification、Segmentation、Detection、Semantic Segmentation、Instance Segmentation 展示高级视觉任务的输出结构、核心机制和评价指标。</p>
+            <span class="section-label station-eyebrow">{{ vision_module_eyebrow|default('STATION 06–09 · VISION TASKS') }}</span>
+            <h1 class="station-title">{{ vision_module_title|default('视觉任务实验室') }}</h1>
+            <p class="station-summary">{{ vision_module_subtitle|default('围绕 Classification、Segmentation、Detection、Semantic Segmentation、Instance Segmentation 展示视觉任务的输出结构、核心机制和评价指标。') }}</p>
         </div>
         <div class="station-hero-actions">
-            <strong class="station-badge">OUTPUT · METRIC · POST-PROCESS</strong>
+            <strong class="station-badge">{{ vision_module_badge|default('OUTPUT · METRIC · POST-PROCESS') }}</strong>
         </div>
     </header>
 
-    <nav class="vision-tabs station-tabs" aria-label="高级视觉任务实验模块">
-        <a class="{{ 'is-active' if active_sub_page == 'overview' else '' }}" href="{{ url_for('vision_tasks_overview_page') }}">任务谱系</a>
-        <a class="{{ 'is-active' if active_sub_page == 'classification' else '' }}" href="{{ url_for('classification_lab_page') }}">图像分类</a>
-        <a class="{{ 'is-active' if active_sub_page == 'segmentation_basic' else '' }}" href="{{ url_for('segmentation_basic_lab_page') }}">图像分割</a>
-        <a class="{{ 'is-active' if active_sub_page == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_lab_page') }}">语义分割</a>
-        <a class="{{ 'is-active' if active_sub_page == 'detection' else '' }}" href="{{ url_for('detection_lab_page') }}">目标检测</a>
-        <a class="{{ 'is-active' if active_sub_page == 'instance' else '' }}" href="{{ url_for('instance_segmentation_lab_page') }}">实例分割</a>
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="{{ vision_module_title|default('视觉任务') }}内部导航">
+        {% for item in vision_module_nav|default([]) %}
+        <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
     </nav>
 
     <section class="vision-page-heading" aria-labelledby="visionPageTitle">

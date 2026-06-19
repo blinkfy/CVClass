@@ -12,12 +12,17 @@
         "kmeans-compare": "RGB vs RGB+XY 对比",
         graphcut: "Graph Cut",
         ncut: "Normalized Cut",
+        grabcut: "GrabCut",
+        watershed: "Watershed",
+        regions: "区域属性",
     };
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialMethod = methodLabels[initialParams.get("method")] ? initialParams.get("method") : "kmeans-rgb";
     const state = {
         data: null,
         sampleId: "",
         uploadUrl: "",
-        method: "kmeans-rgb",
+        method: initialMethod,
         k: 4,
         maxIter: 10,
         xyWeight: 0.35,
@@ -88,6 +93,8 @@
         stepper: [...document.querySelectorAll("[data-segb-phase]")],
     };
 
+    els.methodButtons.forEach((item) => item.classList.toggle("is-active", item.dataset.segbMethod === state.method));
+
     const escapeHtml = (value) => String(value ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -108,6 +115,33 @@
                 ["update", "Min Cut / Ncut", "partition"],
                 ["map", "Region Split", "FG/BG"],
                 ["stats", "Statistics", "cut cost"],
+            ]
+            : kind === "grabcut"
+            ? [
+                ["image", "User Box", "probable FG"],
+                ["feature", "Color Models", "GMM FG/BG"],
+                ["assign", "Graph Weights", "unary + pairwise"],
+                ["update", "Min Cut", "optimize labels"],
+                ["map", "Foreground Mask", "binary output"],
+                ["stats", "Mask Stats", "bbox and ratio"],
+            ]
+            : kind === "watershed"
+            ? [
+                ["image", "Gradient / Distance", "boundary cue"],
+                ["feature", "FG Marker", "sure foreground"],
+                ["assign", "BG Marker", "sure background"],
+                ["update", "Unknown Region", "compete fronts"],
+                ["map", "Watershed Boundary", "ridge lines"],
+                ["stats", "Label Map", "region ids"],
+            ]
+            : kind === "regions"
+            ? [
+                ["image", "Label Map", "region ids"],
+                ["feature", "Area", "pixel count"],
+                ["assign", "BBox", "x y w h"],
+                ["update", "Contour", "perimeter"],
+                ["map", "Mask Ratio", "area / image"],
+                ["stats", "Region Table", "properties"],
             ]
             : [
                 ["image", "Image Pixels", "Canvas image data"],
@@ -645,6 +679,81 @@
         `;
     }
 
+    function grabCutInputSvg() {
+        return `
+            <svg class="seg-concept-svg" viewBox="0 0 520 300" role="img" aria-label="GrabCut user rectangle">
+                <defs>
+                    <linearGradient id="grabBg" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#dbeafe"/><stop offset="100%" stop-color="#e0f2fe"/>
+                    </linearGradient>
+                </defs>
+                <rect x="28" y="30" width="464" height="230" rx="22" fill="url(#grabBg)" stroke="#bfdbfe"/>
+                <rect x="48" y="178" width="424" height="62" rx="18" fill="#bbf7d0" opacity=".7"/>
+                <ellipse cx="260" cy="148" rx="70" ry="88" fill="#f97316" opacity=".82"/>
+                <ellipse cx="234" cy="132" rx="28" ry="36" fill="#fed7aa" opacity=".9"/>
+                <ellipse cx="292" cy="125" rx="26" ry="34" fill="#fdba74" opacity=".9"/>
+                <rect x="154" y="58" width="214" height="178" rx="16" fill="none" stroke="#2563eb" stroke-width="5" stroke-dasharray="12 8"/>
+                <path d="M154 58 L118 34 M368 236 L404 262" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+                <text x="260" y="42" text-anchor="middle" class="seg-svg-title">user rectangle</text>
+                <text x="260" y="284" text-anchor="middle" class="seg-svg-note">框外确定背景，框内是可能前景，随后学习 FG/BG 颜色模型。</text>
+            </svg>
+        `;
+    }
+
+    function grabCutMaskSvg() {
+        return `
+            <svg class="seg-concept-svg seg-cut-result-svg" viewBox="0 0 300 210" role="img" aria-label="GrabCut foreground mask">
+                <rect x="30" y="24" width="240" height="162" rx="18" fill="#0f172a"/>
+                <path d="M138 46 C196 34 231 88 212 136 C195 181 126 185 96 144 C66 103 88 56 138 46Z" fill="#ffffff"/>
+                <path d="M102 62 C125 74 139 90 145 119" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round" opacity=".76"/>
+                <rect x="70" y="34" width="160" height="142" rx="12" fill="none" stroke="#2563eb" stroke-width="3" stroke-dasharray="7 6"/>
+                <text x="150" y="202" text-anchor="middle" class="seg-svg-note">output: foreground alpha mask</text>
+            </svg>
+        `;
+    }
+
+    function watershedMarkersSvg() {
+        return `
+            <svg class="seg-concept-svg" viewBox="0 0 520 300" role="img" aria-label="Watershed markers">
+                <rect x="28" y="30" width="464" height="230" rx="22" fill="#f8fafc" stroke="#dbeafe"/>
+                <path d="M72 218 C130 154 180 224 238 154 C292 88 348 156 448 76" fill="none" stroke="#cbd5e1" stroke-width="16" stroke-linecap="round"/>
+                <path d="M72 218 C130 154 180 224 238 154 C292 88 348 156 448 76" fill="none" stroke="#64748b" stroke-width="3" stroke-dasharray="6 6"/>
+                <circle cx="150" cy="164" r="28" fill="#22c55e" opacity=".82"/><text x="150" y="169" text-anchor="middle">FG</text>
+                <circle cx="380" cy="84" r="28" fill="#22c55e" opacity=".82"/><text x="380" y="89" text-anchor="middle">FG</text>
+                <rect x="52" y="50" width="74" height="52" rx="12" fill="#2563eb" opacity=".74"/><text x="89" y="81" text-anchor="middle" fill="#fff">BG</text>
+                <rect x="392" y="194" width="76" height="48" rx="12" fill="#2563eb" opacity=".74"/><text x="430" y="224" text-anchor="middle" fill="#fff">BG</text>
+                <text x="260" y="278" text-anchor="middle" class="seg-svg-note">foreground marker、background marker 与 unknown region 一起驱动分水岭。</text>
+            </svg>
+        `;
+    }
+
+    function watershedLabelSvg() {
+        return `
+            <svg class="seg-concept-svg seg-cut-result-svg" viewBox="0 0 300 210" role="img" aria-label="Watershed label map">
+                <rect x="28" y="22" width="244" height="164" rx="18" fill="#dbeafe"/>
+                <path d="M28 122 C92 78 132 148 178 82 C210 38 234 64 272 40 L272 186 L28 186Z" fill="#bbf7d0"/>
+                <path d="M28 122 C92 78 132 148 178 82 C210 38 234 64 272 40" fill="none" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+                <text x="82" y="82" text-anchor="middle" class="seg-svg-title">label 1</text>
+                <text x="210" y="150" text-anchor="middle" class="seg-svg-title">label 2</text>
+                <text x="150" y="202" text-anchor="middle" class="seg-svg-note">red ridge = watershed boundary</text>
+            </svg>
+        `;
+    }
+
+    function regionLabelMapSvg() {
+        return `
+            <svg class="seg-concept-svg" viewBox="0 0 520 300" role="img" aria-label="region label map">
+                <rect x="30" y="32" width="460" height="224" rx="20" fill="#f8fafc" stroke="#dbeafe"/>
+                <path d="M62 64 H218 V166 H62Z" fill="#93c5fd"/><text x="140" y="118" text-anchor="middle" class="seg-svg-title">1</text>
+                <path d="M244 52 H448 V132 H384 V220 H244Z" fill="#bbf7d0"/><text x="345" y="122" text-anchor="middle" class="seg-svg-title">2</text>
+                <path d="M84 188 C132 154 196 176 208 232 H80Z" fill="#fed7aa"/><text x="146" y="215" text-anchor="middle" class="seg-svg-title">3</text>
+                <rect x="62" y="64" width="156" height="102" fill="none" stroke="#1d4ed8" stroke-width="4" stroke-dasharray="8 6"/>
+                <rect x="244" y="52" width="204" height="168" fill="none" stroke="#16a34a" stroke-width="4" stroke-dasharray="8 6"/>
+                <text x="260" y="282" text-anchor="middle" class="seg-svg-note">label map 可以直接计算 area、bbox、contour length 与 mask ratio。</text>
+            </svg>
+        `;
+    }
+
     function renderGraphCut() {
         stopAnimation();
         state.result = null;
@@ -765,6 +874,184 @@
         setBusy(false);
     }
 
+    function renderGrabCut() {
+        stopAnimation();
+        state.result = null;
+        state.compareResult = null;
+        els.kmeansView.hidden = true;
+        els.graphView.hidden = false;
+        els.kmeansControls.hidden = true;
+        els.status.textContent = "GrabCut Concept";
+        els.activeMethod.textContent = "GrabCut";
+        els.currentIter.textContent = "4 refinement";
+        els.regionCount.textContent = "2";
+        els.time.textContent = "--";
+        els.stripMethod.textContent = "GrabCut";
+        els.stripFeature.textContent = "box + color GMM";
+        els.stripK.textContent = "FG/BG";
+        els.stripIter.textContent = "graph cut";
+        els.stageTitle.textContent = "当前实验模式：GrabCut 前景提取";
+        els.stripOutput.textContent = "foreground mask";
+        renderStepper("grabcut");
+        els.graphStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>用户框选区域</h4>
+                ${grabCutInputSvg()}
+            </section>
+        `;
+        els.matrixStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>前景 / 背景颜色模型</h4>
+                <div class="seg-model-swatches">
+                    <span style="--c:#f97316"><b>FG GMM</b><em>框内可能前景</em></span>
+                    <span style="--c:#60a5fa"><b>BG GMM</b><em>框外确定背景</em></span>
+                    <span style="--c:#22c55e"><b>Pairwise</b><em>边界平滑项</em></span>
+                </div>
+                <div class="seg-mini-equation">E(label)=color likelihood + boundary penalty</div>
+            </section>
+        `;
+        els.conceptDetail.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>Graph Cut 优化后的前景 mask</h4>
+                ${grabCutMaskSvg()}
+                <div class="seg-region-property-table">
+                    <div><span>mask ratio</span><strong>28.4%</strong></div>
+                    <div><span>bbox</span><strong>[70,34,160,142]</strong></div>
+                    <div><span>boundary</span><strong>438 px</strong></div>
+                </div>
+            </section>
+        `;
+        els.notesSubtitle.textContent = "GrabCut Foreground Extraction";
+        els.formulaLabel.textContent = "GrabCut";
+        els.formula.textContent = "labels = min_cut(unary_color_model + pairwise_boundary)";
+        els.formulaNote.textContent = "用户只给一个矩形框，算法把框外设为确定背景，框内前景概率由颜色模型和图切割共同决定。";
+        els.notes.innerHTML = `
+            <dl>
+                <div><dt>用户框</dt><dd>框外像素直接作为背景种子，框内像素先标为可能前景。</dd></div>
+                <div><dt>颜色模型</dt><dd>分别拟合前景与背景的颜色分布，给每个像素计算 unary cost。</dd></div>
+                <div><dt>Graph Cut</dt><dd>通过 pairwise 边界项避免 mask 产生锯齿和孤立噪点。</dd></div>
+                <div><dt>输出</dt><dd>得到二值前景 mask，可继续生成透明背景或物体区域统计。</dd></div>
+            </dl>
+        `;
+        setPhase("map");
+        setBusy(false);
+    }
+
+    function renderWatershed() {
+        stopAnimation();
+        state.result = null;
+        state.compareResult = null;
+        els.kmeansView.hidden = true;
+        els.graphView.hidden = false;
+        els.kmeansControls.hidden = true;
+        els.status.textContent = "Watershed Concept";
+        els.activeMethod.textContent = "Watershed";
+        els.currentIter.textContent = "markers";
+        els.regionCount.textContent = "3";
+        els.time.textContent = "--";
+        els.stripMethod.textContent = "Watershed";
+        els.stripFeature.textContent = "gradient + markers";
+        els.stripK.textContent = "label ids";
+        els.stripIter.textContent = "flood fill";
+        els.stageTitle.textContent = "当前实验模式：Watershed 分水岭";
+        els.stripOutput.textContent = "boundary + label map";
+        renderStepper("watershed");
+        els.graphStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>梯度图 / 距离变换</h4>
+                <div class="seg-gradient-board"><i></i><i></i><i></i><i></i><i></i></div>
+                <p>边缘响应高的位置更可能成为分水岭边界，距离变换能帮助找到前景中心。</p>
+            </section>
+        `;
+        els.matrixStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>foreground / background / unknown markers</h4>
+                ${watershedMarkersSvg()}
+            </section>
+        `;
+        els.conceptDetail.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>watershed boundary 与 label map</h4>
+                ${watershedLabelSvg()}
+            </section>
+        `;
+        els.notesSubtitle.textContent = "Watershed Marker Propagation";
+        els.formulaLabel.textContent = "Watershed";
+        els.formula.textContent = "markers flood low-gradient basins until boundaries meet";
+        els.formulaNote.textContent = "分水岭把梯度图看作地形，marker 从盆地扩张，相遇处形成边界线。";
+        els.notes.innerHTML = `
+            <dl>
+                <div><dt>foreground marker</dt><dd>来自阈值、距离变换或人工种子，表示确定前景。</dd></div>
+                <div><dt>background marker</dt><dd>表示确定背景区域，防止前景无约束扩张。</dd></div>
+                <div><dt>unknown region</dt><dd>前景与背景都不确定的位置由扩张竞争决定标签。</dd></div>
+                <div><dt>输出</dt><dd>边界像素形成 watershed boundary，其余像素得到区域 label id。</dd></div>
+            </dl>
+        `;
+        setPhase("map");
+        setBusy(false);
+    }
+
+    function renderRegions() {
+        stopAnimation();
+        state.result = null;
+        state.compareResult = null;
+        els.kmeansView.hidden = true;
+        els.graphView.hidden = false;
+        els.kmeansControls.hidden = true;
+        els.status.textContent = "Region Properties";
+        els.activeMethod.textContent = "区域属性";
+        els.currentIter.textContent = "--";
+        els.regionCount.textContent = "3";
+        els.time.textContent = "--";
+        els.stripMethod.textContent = "区域属性";
+        els.stripFeature.textContent = "label map";
+        els.stripK.textContent = "3 labels";
+        els.stripIter.textContent = "measure";
+        els.stageTitle.textContent = "当前实验模式：区域属性 label map";
+        els.stripOutput.textContent = "area / bbox / contour";
+        renderStepper("regions");
+        els.graphStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>区域 label map</h4>
+                ${regionLabelMapSvg()}
+            </section>
+        `;
+        els.matrixStage.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>区域统计表</h4>
+                <div class="seg-region-property-table">
+                    <div><span>label 1</span><strong>area 15.9% · bbox 156×102</strong></div>
+                    <div><span>label 2</span><strong>area 27.2% · bbox 204×168</strong></div>
+                    <div><span>label 3</span><strong>area 8.6% · bbox 128×58</strong></div>
+                </div>
+            </section>
+        `;
+        els.conceptDetail.innerHTML = `
+            <section class="seg-concept-card">
+                <h4>轮廓与 mask 占比</h4>
+                <div class="seg-region-bars">
+                    <span style="--w:64%;--c:#93c5fd"><b>label 1 contour</b><em>412 px</em></span>
+                    <span style="--w:82%;--c:#86efac"><b>label 2 contour</b><em>536 px</em></span>
+                    <span style="--w:38%;--c:#fdba74"><b>label 3 contour</b><em>248 px</em></span>
+                </div>
+            </section>
+        `;
+        els.notesSubtitle.textContent = "Connected Region Statistics";
+        els.formulaLabel.textContent = "Region Properties";
+        els.formula.textContent = "area(label)=count(mask==label), bbox=min/max(x,y)";
+        els.formulaNote.textContent = "label map 不是最终说明文字，它是后续测量 bbox、轮廓、面积和 mask 占比的数据结构。";
+        els.notes.innerHTML = `
+            <dl>
+                <div><dt>区域面积</dt><dd>统计每个 label 覆盖的像素数量和相对占比。</dd></div>
+                <div><dt>bbox</dt><dd>取区域像素坐标的 min/max，得到最小外接矩形。</dd></div>
+                <div><dt>轮廓长度</dt><dd>沿 label 边界追踪 contour，用于形状复杂度分析。</dd></div>
+                <div><dt>mask 占比</dt><dd>area / image area，可用于过滤过小区域或比较目标规模。</dd></div>
+            </dl>
+        `;
+        setPhase("stats");
+        setBusy(false);
+    }
+
     async function runCurrentMode() {
         try {
             if (state.method === "graphcut") {
@@ -773,6 +1060,18 @@
             }
             if (state.method === "ncut") {
                 renderNcut();
+                return;
+            }
+            if (state.method === "grabcut") {
+                renderGrabCut();
+                return;
+            }
+            if (state.method === "watershed") {
+                renderWatershed();
+                return;
+            }
+            if (state.method === "regions") {
+                renderRegions();
                 return;
             }
             els.kmeansView.hidden = false;

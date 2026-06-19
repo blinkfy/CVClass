@@ -143,7 +143,7 @@
 
         return {
             module: 'vision_tasks',
-            page: '高级视觉任务 — ' + algName,
+            page: (document.querySelector('.station-title')?.textContent?.trim() || '视觉识别与分割') + ' — ' + algName,
             algorithm: algName,
             step: sub,
             params: params,
@@ -162,7 +162,7 @@
         else if (ap === 'cnn') ctx = buildCnnContext();
         else if (ap === 'convolution') ctx = buildConvolutionContext();
         else if (ap === 'grayscale') ctx = buildGrayscaleContext();
-        else if (ap === 'vision_tasks') ctx = buildVisionTasksContext();
+        else if (['vision_tasks', 'classification_lab', 'segmentation_basic', 'object_detection', 'segmentation_lab'].includes(ap)) ctx = buildVisionTasksContext();
         else {
             // 通用 Fallback：尽力抓取页面上的信息
             const pageTitle = document.title.replace(' - 计算机视觉实验平台', '').trim();

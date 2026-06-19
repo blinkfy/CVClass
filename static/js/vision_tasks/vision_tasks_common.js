@@ -154,6 +154,48 @@
         return cells.join("");
     }
 
+    function parseHexColor(value) {
+        const raw = String(value || "#8b5cf6").replace("#", "");
+        const full = raw.length === 3 ? raw.split("").map((char) => char + char).join("") : raw.padEnd(6, "0").slice(0, 6);
+        return [
+            Number.parseInt(full.slice(0, 2), 16),
+            Number.parseInt(full.slice(2, 4), 16),
+            Number.parseInt(full.slice(4, 6), 16)
+        ];
+    }
+
+    function paintInstanceMaskCanvas(container, width, height, instances) {
+        if (!container || !width || !height) return false;
+        const maskInstances = instances.filter((item) => item?.mask?.data && item.mask.width === width && item.mask.height === height);
+        if (!maskInstances.length) return false;
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "overview-instance-canvas";
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d", {willReadFrequently: true});
+        const imageData = ctx.createImageData(width, height);
+        const out = imageData.data;
+
+        maskInstances.forEach((item) => {
+            const [r, g, b] = parseHexColor(item.color || "#8b5cf6");
+            const alpha = Math.round(0.56 * 255);
+            const mask = item.mask.data;
+            for (let i = 0; i < mask.length; i += 1) {
+                if (!mask[i]) continue;
+                const p = i * 4;
+                out[p] = r;
+                out[p + 1] = g;
+                out[p + 2] = b;
+                out[p + 3] = Math.max(out[p + 3], alpha);
+            }
+        });
+
+        ctx.putImageData(imageData, 0, 0);
+        container.prepend(canvas);
+        return true;
+    }
+
     function svgFromRegions(regions, sample, classResolver, className) {
         if (!regions?.length) {
             return `<div class="vision-empty-result">该样例暂无该任务预设结果</div>`;
@@ -355,16 +397,20 @@
         const instances = (result?.instances || []).filter((item) => item.score >= state.confidence);
         const width = result?.width || sample.width;
         const height = result?.height || sample.height;
-        const maskRects = instances.slice(0, 12).map((item) => instanceMaskToSvgCells(item.mask, item.color || "#8b5cf6")).join("");
-        const maskSvg = `<svg class="overview-instance-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${maskRects}</svg>`;
-        const boxes = instances.slice(0, 12).map((item) => {
+        const visibleInstances = instances.slice(0, 12);
+        const boxes = visibleInstances.map((item) => {
             const [x1, y1, x2, y2] = item.bbox;
             return `<div class="overview-instance-box" style="left:${pct(x1, width)};top:${pct(y1, height)};width:${pct(x2 - x1, width)};height:${pct(y2 - y1, height)};--box-color:${esc(item.color || "#8b5cf6")}"><span>ID ${item.id} · ${esc(item.className || item.class)} ${(item.score * 100).toFixed(0)}%</span></div>`;
         }).join("");
-        els.instanceLayer.innerHTML = maskSvg + boxes;
+        els.instanceLayer.innerHTML = boxes;
+        if (!paintInstanceMaskCanvas(els.instanceLayer, width, height, visibleInstances)) {
+            const maskRects = visibleInstances.map((item) => instanceMaskToSvgCells(item.mask, item.color || "#8b5cf6")).join("");
+            const maskSvg = `<svg class="overview-instance-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${maskRects}</svg>`;
+            els.instanceLayer.insertAdjacentHTML("afterbegin", maskSvg);
+        }
         els.instanceCount.textContent = `${instances.length} 个实例 · model`;
         els.instanceMap.textContent = `YOLO-seg ${Number.isFinite(result?.meta?.postprocessTime) ? result.meta.postprocessTime.toFixed(0) : "--"} ms`;
-        els.instanceLegend.innerHTML = instances.slice(0, 6).map((item) => `<span><i style="background:${esc(item.color || "#8b5cf6")}"></i>#${item.id} ${esc(item.className || item.class)}</span>`).join("");
+        els.instanceLegend.innerHTML = visibleInstances.slice(0, 6).map((item) => `<span><i style="background:${esc(item.color || "#8b5cf6")}"></i>#${item.id} ${esc(item.className || item.class)}</span>`).join("");
         setInferenceStatus("instance", `YOLO-seg · ${result?.meta?.backend || "wasm"} · ${Number.isFinite(result?.meta?.inferenceTime) ? result.meta.inferenceTime.toFixed(0) : "--"} ms`);
     }
 

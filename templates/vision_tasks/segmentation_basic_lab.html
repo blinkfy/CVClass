@@ -1,8 +1,8 @@
 {% extends "vision_tasks_base.html" %}
 
-{% block vision_badge %}Station 06 · Traditional Image Segmentation{% endblock %}
-{% block vision_title %}传统图像分割实验室{% endblock %}
-{% block vision_subtitle %}从像素颜色聚类到图结构切割，理解传统图像分割如何在没有人工类别标签的情况下把图像划分为多个区域。{% endblock %}
+{% block vision_badge %}Station 07 · Image Segmentation and Region Extraction{% endblock %}
+{% block vision_title %}图像分割与区域提取{% endblock %}
+{% block vision_subtitle %}从像素颜色聚类、图切割、GrabCut 前景提取到 Watershed label map，理解传统区域分割如何连接边缘、轮廓和语义 mask。{% endblock %}
 
 {% block vision_content %}
 <section class="vision-workbench method-lab-workbench segmentation-basic-workbench" data-seg-basic-lab aria-label="传统图像分割实验台">
@@ -42,6 +42,14 @@
                 <div class="overview-segmented-control method-segmented-control seg-basic-methods">
                     <button type="button" data-segb-method="graphcut">Graph Cut 概念演示</button>
                     <button type="button" data-segb-method="ncut">Normalized Cut 概念演示</button>
+                    <button type="button" data-segb-method="grabcut">GrabCut 前景提取</button>
+                </div>
+            </section>
+            <section>
+                <strong>区域分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button type="button" data-segb-method="watershed">Watershed 分水岭</button>
+                    <button type="button" data-segb-method="regions">区域属性 label map</button>
                 </div>
             </section>
         </div>

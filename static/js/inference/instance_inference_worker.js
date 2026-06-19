@@ -290,6 +290,25 @@ function protoValue(tensor, meta, k, y, x) {
     return tensor.data[((y * meta.width + x) * meta.coeffs) + k];
 }
 
+function bilinearSample(values, width, height, x, y) {
+    const clampedX = Math.max(0, Math.min(width - 1, x));
+    const clampedY = Math.max(0, Math.min(height - 1, y));
+    const x0 = Math.floor(clampedX);
+    const y0 = Math.floor(clampedY);
+    const x1 = Math.min(width - 1, x0 + 1);
+    const y1 = Math.min(height - 1, y0 + 1);
+    const dx = clampedX - x0;
+    const dy = clampedY - y0;
+
+    const v00 = values[y0 * width + x0];
+    const v10 = values[y0 * width + x1];
+    const v01 = values[y1 * width + x0];
+    const v11 = values[y1 * width + x1];
+    const top = v00 * (1 - dx) + v10 * dx;
+    const bottom = v01 * (1 - dx) + v11 * dx;
+    return top * (1 - dy) + bottom * dy;
+}
+
 function contourLength(mask, width, height) {
     let edge = 0;
     for (let y = 0; y < height; y += 1) {
@@ -325,11 +344,12 @@ function createMask(candidate, prototypeTensor, preMeta, originalBox) {
     let cySum = 0;
     for (let y = Math.max(0, y1); y < Math.min(preMeta.originalHeight, y2); y += 1) {
         for (let x = Math.max(0, x1); x < Math.min(preMeta.originalWidth, x2); x += 1) {
-            const lx = x * preMeta.scale + preMeta.padX;
-            const ly = y * preMeta.scale + preMeta.padY;
-            const px = Math.max(0, Math.min(pm.width - 1, Math.floor((lx / INPUT_SIZE) * pm.width)));
-            const py = Math.max(0, Math.min(pm.height - 1, Math.floor((ly / INPUT_SIZE) * pm.height)));
-            if (low[py * pm.width + px] >= threshold) {
+            // Sample at pixel centers and use bilinear interpolation to reduce blocky edges.
+            const lx = (x + 0.5) * preMeta.scale + preMeta.padX;
+            const ly = (y + 0.5) * preMeta.scale + preMeta.padY;
+            const px = (lx / INPUT_SIZE) * pm.width - 0.5;
+            const py = (ly / INPUT_SIZE) * pm.height - 0.5;
+            if (bilinearSample(low, pm.width, pm.height, px, py) >= threshold) {
                 const index = y * preMeta.originalWidth + x;
                 mask[index] = 1;
                 area += 1;

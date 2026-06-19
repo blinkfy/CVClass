@@ -1,4 +1,4 @@
-const INSTANCE_WORKER_URL = "/static/js/inference/instance_inference_worker.js?v=20260618-webgpu-fix1";
+const INSTANCE_WORKER_URL = "/static/js/inference/instance_inference_worker.js";
 
 let instanceSequence = 0;
 

@@ -26,10 +26,10 @@
         edge: "edge-contour",
         feature: "feature-panorama",
         cnn: "cnn-learning",
-        "vision_tasks:overview": "vision-task-overview",
-        "vision_tasks:detection": "object-detection",
-        "vision_tasks:semantic": "semantic-segmentation",
-        "vision_tasks:instance": "instance-segmentation",
+        classification_lab: "classification-lab",
+        segmentation_basic: "segmentation-basic",
+        object_detection: "object-detection",
+        segmentation_lab: "segmentation-lab",
         frontier: "frontier",
     };
 

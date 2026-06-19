@@ -9,11 +9,13 @@
     const requiredModelFiles = ["config.json", "preprocessor_config.json", "quantize_config.json", "model_quantized.onnx", "model_fp16.onnx"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialSource = ["preset", "model", "fcn"].includes(initialParams.get("source")) ? initialParams.get("source") : "model";
 
     const state = {
         data: null,
         sampleId: "",
-        selectedSource: "model",
+        selectedSource: initialSource,
         mode: "overlay",
         opacity: 0.65,
         boundaries: true,
