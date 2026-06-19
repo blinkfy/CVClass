@@ -3,7 +3,7 @@
 {% block title %}{{ vision_module_title|default('视觉识别与分割实验室') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260619-polish1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260620-subpage-granularity1">
 {% endblock %}
 
 {% block content %}
@@ -43,12 +43,12 @@
 {% if active_sub_page == 'classification' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260618-vision-final1"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260619-polish1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260620-subpage-granularity1"></script>
 {% elif active_sub_page == 'detection' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}?v=20260619-polish1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}?v=20260620-subpage-granularity1"></script>
 {% elif active_sub_page == 'semantic' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260618-vision-final2"></script>
 {% elif active_sub_page == 'instance' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260619-polish1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260620-subpage-granularity1"></script>
 {% endif %}
 {% endblock %}

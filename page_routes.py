@@ -36,57 +36,61 @@ def register_page_routes(app, get_model_status):
         config = module_configs[module_key]
 
         if module_key == "classification_lab":
-            requested_method = request.args.get("method")
-            requested_focus = request.args.get("focus")
-            active_nav = active_nav or ("overview" if active_sub_page == "overview" else requested_focus or requested_method or "bovw")
+            active_nav = active_nav or ("overview" if active_sub_page == "overview" else "classification")
             nav = [
                 {"key": "overview", "label": "任务谱系", "href": url_for("classification_lab_page")},
-                {"key": "bovw", "label": "BoVW 分类", "href": f"{url_for('classification_lab_detail_alias_page', method='bovw')}#bovw-classification"},
-                {"key": "cnn", "label": "CNN 分类对比", "href": f"{url_for('classification_lab_detail_alias_page', method='cnn')}#cnn-classification"},
-                {"key": "topk", "label": "Top-K 指标", "href": f"{url_for('classification_lab_detail_alias_page', focus='topk')}#topk-metrics"},
+                {"key": "classification", "label": "图像分类实验", "href": url_for("classification_lab_detail_alias_page")},
             ]
         elif module_key == "segmentation_basic":
             requested_method = request.args.get("method") or "kmeans-rgb"
-            active_nav = active_nav or (
-                "kmeans" if requested_method.startswith("kmeans")
-                else "graph" if requested_method in {"graphcut", "ncut"}
-                else requested_method
+            requested_family = (
+                "cluster" if request.path.endswith("/cluster")
+                else "graph" if request.path.endswith("/graph")
+                else "region" if request.path.endswith("/region")
+                else None
             )
+            def segmentation_family():
+                if requested_family:
+                    return requested_family
+                if requested_method.startswith("kmeans"):
+                    return "cluster"
+                if requested_method in {"graphcut", "ncut", "grabcut"}:
+                    return "graph"
+                return "region"
+            active_nav = active_nav or segmentation_family()
             nav = [
-                {"key": "kmeans", "label": "K-means", "href": url_for("segmentation_basic_alias_page", method="kmeans-rgb")},
-                {"key": "graph", "label": "Graph Cut / Ncut", "href": url_for("segmentation_basic_alias_page", method="graphcut")},
-                {"key": "grabcut", "label": "GrabCut", "href": url_for("segmentation_basic_alias_page", method="grabcut")},
-                {"key": "watershed", "label": "Watershed", "href": url_for("segmentation_basic_alias_page", method="watershed")},
-                {"key": "regions", "label": "区域属性", "href": url_for("segmentation_basic_alias_page", method="regions")},
+                {"key": "cluster", "label": "聚类分割", "href": url_for("segmentation_basic_cluster_page")},
+                {"key": "graph", "label": "图模型与交互分割", "href": url_for("segmentation_basic_graph_page")},
+                {"key": "region", "label": "区域分割与属性分析", "href": url_for("segmentation_basic_region_page")},
             ]
         elif module_key == "object_detection":
             requested_mode = request.args.get("mode") or "yolo"
             requested_focus = request.args.get("focus")
-            active_nav = active_nav or ("nms" if requested_focus == "nms" else requested_mode)
+            requested_family = "rcnn" if request.path.endswith("/rcnn") else "yolo" if request.path.endswith("/yolo") else None
+            def detection_family():
+                if requested_family:
+                    return requested_family
+                if requested_mode == "yolo" or requested_focus == "nms":
+                    return "yolo"
+                return "rcnn"
+            active_nav = active_nav or detection_family()
             nav = [
-                {"key": "yolo", "label": "YOLO 推理", "href": url_for("object_detection_alias_page", mode="yolo")},
-                {"key": "nms", "label": "IoU / NMS", "href": url_for("object_detection_alias_page", mode="yolo", focus="nms")},
-                {"key": "rcnn", "label": "R-CNN 系列", "href": url_for("object_detection_alias_page", mode="rcnn")},
-                {"key": "rpn", "label": "RPN / Anchor", "href": url_for("object_detection_alias_page", mode="rpn")},
-                {"key": "roi", "label": "ROI Pooling", "href": url_for("object_detection_alias_page", mode="roi")},
+                {"key": "yolo", "label": "YOLO 推理与 NMS", "href": url_for("object_detection_yolo_page")},
+                {"key": "rcnn", "label": "R-CNN 系列机制", "href": url_for("object_detection_rcnn_page")},
             ]
         else:
-            requested_source = request.args.get("source")
             requested_view = request.args.get("view")
             if active_sub_page == "instance":
                 active_nav = active_nav or (
                     "compare" if requested_view == "semantic"
-                    else "maskrcnn" if requested_source in {"maskrcnn", "roiAlign", "maskMetric"}
                     else "instance"
                 )
             else:
-                active_nav = active_nav or ("fcn" if requested_source == "fcn" else "semantic")
+                active_nav = active_nav or "semantic"
             nav = [
-                {"key": "semantic", "label": "语义分割", "href": url_for("segmentation_lab_page")},
-                {"key": "fcn", "label": "FCN / SegFormer", "href": url_for("segmentation_lab_page", source="fcn")},
+                {"key": "compare", "label": "语义 vs 实例", "href": url_for("segmentation_lab_page")},
+                {"key": "semantic", "label": "语义分割", "href": url_for("segmentation_lab_semantic_page")},
                 {"key": "instance", "label": "实例分割", "href": url_for("segmentation_lab_instance_page")},
-                {"key": "maskrcnn", "label": "Mask R-CNN / YOLO-seg", "href": url_for("segmentation_lab_instance_page", source="maskrcnn")},
-                {"key": "compare", "label": "语义 vs 实例", "href": url_for("segmentation_lab_instance_page", view="semantic")},
             ]
 
         for item in nav:
@@ -190,6 +194,27 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("segmentation_basic", "segmentation_basic"),
         )
 
+    @app.route("/segmentation-basic/cluster", methods=["GET"])
+    def segmentation_basic_cluster_page():
+        return render_template(
+            "vision_tasks/segmentation_basic_lab.html",
+            **build_vision_module_context("segmentation_basic", "segmentation_basic", "cluster"),
+        )
+
+    @app.route("/segmentation-basic/graph", methods=["GET"])
+    def segmentation_basic_graph_page():
+        return render_template(
+            "vision_tasks/segmentation_basic_lab.html",
+            **build_vision_module_context("segmentation_basic", "segmentation_basic", "graph"),
+        )
+
+    @app.route("/segmentation-basic/region", methods=["GET"])
+    def segmentation_basic_region_page():
+        return render_template(
+            "vision_tasks/segmentation_basic_lab.html",
+            **build_vision_module_context("segmentation_basic", "segmentation_basic", "region"),
+        )
+
     @app.route("/vision-tasks/segmentation-basic", methods=["GET"])
     def segmentation_basic_lab_page():
         return render_template(
@@ -204,6 +229,20 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("object_detection", "detection"),
         )
 
+    @app.route("/object-detection/yolo", methods=["GET"])
+    def object_detection_yolo_page():
+        return render_template(
+            "vision_tasks/detection_lab.html",
+            **build_vision_module_context("object_detection", "detection", "yolo"),
+        )
+
+    @app.route("/object-detection/rcnn", methods=["GET"])
+    def object_detection_rcnn_page():
+        return render_template(
+            "vision_tasks/detection_lab.html",
+            **build_vision_module_context("object_detection", "detection", "rcnn"),
+        )
+
     @app.route("/vision-tasks/detection", methods=["GET"])
     def detection_lab_page():
         return render_template(
@@ -212,11 +251,28 @@ def register_page_routes(app, get_model_status):
         )
 
     @app.route("/segmentation-lab", methods=["GET"])
-    @app.route("/segmentation-lab/semantic", methods=["GET"])
     def segmentation_lab_page():
+        context = build_vision_module_context("segmentation_lab", "instance", "compare")
+        context["vision_instance_mode"] = "compare"
+        return render_template(
+            "vision_tasks/instance_segmentation_lab.html",
+            **context,
+        )
+
+    @app.route("/segmentation-lab/compare", methods=["GET"])
+    def segmentation_lab_compare_page():
+        context = build_vision_module_context("segmentation_lab", "instance", "compare")
+        context["vision_instance_mode"] = "compare"
+        return render_template(
+            "vision_tasks/instance_segmentation_lab.html",
+            **context,
+        )
+
+    @app.route("/segmentation-lab/semantic", methods=["GET"])
+    def segmentation_lab_semantic_page():
         return render_template(
             "vision_tasks/semantic_segmentation_lab.html",
-            **build_vision_module_context("segmentation_lab", "semantic"),
+            **build_vision_module_context("segmentation_lab", "semantic", "semantic"),
         )
 
     @app.route("/vision-tasks/semantic", methods=["GET"])

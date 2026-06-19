@@ -9,7 +9,11 @@
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
-    const initialView = ["instance", "semantic"].includes(initialParams.get("view")) ? initialParams.get("view") : "instance";
+    function viewForPath() {
+        if (window.location.pathname.endsWith("/segmentation-lab") || window.location.pathname.endsWith("/compare")) return "semantic";
+        return "instance";
+    }
+    const initialView = ["instance", "semantic"].includes(initialParams.get("view")) ? initialParams.get("view") : viewForPath();
     const initialSource = initialView === "semantic" ? "preset" : ["preset", "model", "maskrcnn", "roiAlign", "maskMetric"].includes(initialParams.get("source")) ? initialParams.get("source") : "model";
     const COLORS = ["#2563EB", "#F97316", "#22C55E", "#8B5CF6", "#EAB308", "#EC4899", "#06B6D4", "#EF4444", "#14B8A6"];
 

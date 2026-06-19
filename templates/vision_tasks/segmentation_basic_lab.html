@@ -29,7 +29,7 @@
         </div>
 
         <div class="seg-basic-method-groups" aria-label="分割方法选择">
-            <section>
+            <section data-segb-family-group="cluster">
                 <strong>聚类分割</strong>
                 <div class="overview-segmented-control method-segmented-control seg-basic-methods">
                     <button class="is-active" type="button" data-segb-method="kmeans-rgb">K-means RGB</button>
@@ -37,7 +37,7 @@
                     <button type="button" data-segb-method="kmeans-compare">RGB / RGB+XY 对比</button>
                 </div>
             </section>
-            <section>
+            <section data-segb-family-group="graph">
                 <strong>图切割分割</strong>
                 <div class="overview-segmented-control method-segmented-control seg-basic-methods">
                     <button type="button" data-segb-method="graphcut">Graph Cut 概念演示</button>
@@ -45,7 +45,7 @@
                     <button type="button" data-segb-method="grabcut">GrabCut 前景提取</button>
                 </div>
             </section>
-            <section>
+            <section data-segb-family-group="region">
                 <strong>区域分割</strong>
                 <div class="overview-segmented-control method-segmented-control seg-basic-methods">
                     <button type="button" data-segb-method="watershed">Watershed 分水岭</button>

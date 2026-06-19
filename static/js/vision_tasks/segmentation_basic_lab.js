@@ -17,7 +17,23 @@
         regions: "区域属性",
     };
     const initialParams = new URLSearchParams(window.location.search);
-    const initialMethod = methodLabels[initialParams.get("method")] ? initialParams.get("method") : "kmeans-rgb";
+    const methodFamilies = {
+        "kmeans-rgb": "cluster",
+        "kmeans-rgbxy": "cluster",
+        "kmeans-compare": "cluster",
+        graphcut: "graph",
+        ncut: "graph",
+        grabcut: "graph",
+        watershed: "region",
+        regions: "region",
+    };
+    function methodForPath() {
+        if (window.location.pathname.endsWith("/graph")) return "graphcut";
+        if (window.location.pathname.endsWith("/region")) return "watershed";
+        return "kmeans-rgb";
+    }
+    const requestedMethod = initialParams.get("method");
+    const initialMethod = methodLabels[requestedMethod] ? requestedMethod : methodForPath();
     const state = {
         data: null,
         sampleId: "",
@@ -93,7 +109,19 @@
         stepper: [...document.querySelectorAll("[data-segb-phase]")],
     };
 
+    function activeFamily() {
+        return methodFamilies[state.method] || "cluster";
+    }
+
+    function renderFamilyGroups() {
+        root.dataset.segbFamily = activeFamily();
+        $$("[data-segb-family-group]").forEach((group) => {
+            group.hidden = group.dataset.segbFamilyGroup !== activeFamily();
+        });
+    }
+
     els.methodButtons.forEach((item) => item.classList.toggle("is-active", item.dataset.segbMethod === state.method));
+    renderFamilyGroups();
 
     const escapeHtml = (value) => String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -1172,6 +1200,7 @@
             state.method = button.dataset.segbMethod;
             els.methodButtons.forEach((item) => item.classList.toggle("is-active", item === button));
             els.activeMethod.textContent = methodLabels[state.method];
+            renderFamilyGroups();
             await runCurrentMode();
         });
     });

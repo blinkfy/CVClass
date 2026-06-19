@@ -8,7 +8,11 @@
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
-    const initialMode = ["yolo", "rcnn", "roi", "rpn"].includes(initialParams.get("mode")) ? initialParams.get("mode") : "yolo";
+    function modeForPath() {
+        if (window.location.pathname.endsWith("/rcnn")) return "rcnn";
+        return "yolo";
+    }
+    const initialMode = ["yolo", "rcnn", "roi", "rpn"].includes(initialParams.get("mode")) ? initialParams.get("mode") : modeForPath();
     const state = {
         data: null,
         rcnnData: null,

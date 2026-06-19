@@ -97,33 +97,24 @@
             <a class="{{ 'active' if active_page == 'classification_lab' else '' }}" href="{{ url_for('classification_lab_page') }}">图像分类与任务谱系</a>
             <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
                 <a class="{{ 'active' if active_page == 'classification_lab' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('classification_lab_page') }}">任务谱系</a>
-                <a href="{{ url_for('classification_lab_detail_alias_page', method='bovw') }}">BoVW 分类</a>
-                <a href="{{ url_for('classification_lab_detail_alias_page', method='cnn') }}">CNN 分类对比</a>
-                <a href="{{ url_for('classification_lab_detail_alias_page', focus='topk') }}">Top-K 指标</a>
+                <a class="{{ 'active' if active_page == 'classification_lab' and active_sub_page|default('') == 'classification' else '' }}" href="{{ url_for('classification_lab_detail_alias_page') }}">图像分类实验</a>
             </div>
             <a class="{{ 'active' if active_page == 'segmentation_basic' else '' }}" href="{{ url_for('segmentation_basic_alias_page') }}">图像分割与区域提取</a>
             <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
-                <a href="{{ url_for('segmentation_basic_alias_page', method='kmeans-rgb') }}">K-means</a>
-                <a href="{{ url_for('segmentation_basic_alias_page', method='graphcut') }}">Graph Cut / Ncut</a>
-                <a href="{{ url_for('segmentation_basic_alias_page', method='grabcut') }}">GrabCut</a>
-                <a href="{{ url_for('segmentation_basic_alias_page', method='watershed') }}">Watershed</a>
-                <a href="{{ url_for('segmentation_basic_alias_page', method='regions') }}">区域属性</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_basic_alias_page') or request.path == url_for('segmentation_basic_cluster_page') else '' }}" href="{{ url_for('segmentation_basic_cluster_page') }}">聚类分割</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_basic_graph_page') else '' }}" href="{{ url_for('segmentation_basic_graph_page') }}">图模型与交互分割</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_basic_region_page') else '' }}" href="{{ url_for('segmentation_basic_region_page') }}">区域分割与属性分析</a>
             </div>
             <a class="{{ 'active' if active_page == 'object_detection' else '' }}" href="{{ url_for('object_detection_alias_page') }}">目标检测</a>
             <div class="sidebar-subnav" aria-label="目标检测子页面">
-                <a href="{{ url_for('object_detection_alias_page', mode='yolo') }}">YOLO 推理</a>
-                <a href="{{ url_for('object_detection_alias_page', mode='yolo', focus='nms') }}">IoU / NMS</a>
-                <a href="{{ url_for('object_detection_alias_page', mode='rcnn') }}">R-CNN 系列</a>
-                <a href="{{ url_for('object_detection_alias_page', mode='rpn') }}">RPN / Anchor</a>
-                <a href="{{ url_for('object_detection_alias_page', mode='roi') }}">ROI Pooling</a>
+                <a class="{{ 'active' if request.path == url_for('object_detection_alias_page') or request.path == url_for('object_detection_yolo_page') else '' }}" href="{{ url_for('object_detection_yolo_page') }}">YOLO 推理与 NMS</a>
+                <a class="{{ 'active' if request.path == url_for('object_detection_rcnn_page') else '' }}" href="{{ url_for('object_detection_rcnn_page') }}">R-CNN 系列机制</a>
             </div>
             <a class="{{ 'active' if active_page == 'segmentation_lab' else '' }}" href="{{ url_for('segmentation_lab_page') }}">语义分割与实例分割</a>
             <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
-                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('segmentation_lab_page') }}">语义分割</a>
-                <a href="{{ url_for('segmentation_lab_page', source='fcn') }}">FCN / SegFormer</a>
-                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('segmentation_lab_instance_page') }}">实例分割</a>
-                <a href="{{ url_for('segmentation_lab_instance_page', source='maskrcnn') }}">Mask R-CNN / YOLO-seg</a>
-                <a href="{{ url_for('segmentation_lab_instance_page', view='semantic') }}">语义 vs 实例</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_lab_page') or request.path == url_for('segmentation_lab_compare_page') else '' }}" href="{{ url_for('segmentation_lab_page') }}">语义 vs 实例</a>
+                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('segmentation_lab_semantic_page') }}">语义分割</a>
+                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' and not (request.path == url_for('segmentation_lab_page') or request.path == url_for('segmentation_lab_compare_page') or request.args.get('view') == 'semantic') else '' }}" href="{{ url_for('segmentation_lab_instance_page') }}">实例分割</a>
             </div>
             <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
