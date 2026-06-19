@@ -435,8 +435,8 @@
 }
 
 .vb-core-node img {
-    width: 38px;
-    height: 38px;
+    width: 58px;
+    height: 58px;
     object-fit: contain;
     filter: drop-shadow(0 8px 16px rgba(37, 99, 235, 0.16));
 }
@@ -873,6 +873,11 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.vb-sample-card--focus-bottom .vb-sample-media>img,
+.vb-sample-card--focus-bottom .vb-sample-media .vb-output-layer img {
+    object-position: center bottom;
 }
 
 .vb-sample-card p {

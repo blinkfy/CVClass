@@ -592,14 +592,18 @@ body.home-page-shell .content-shell {
 }
 
 .home-page {
+    display: flex;
+    min-height: calc(100vh - var(--home-header-height) - 18px);
+    flex-direction: column;
     color: var(--home-ink);
 }
 
 .home-page .home-hero {
     position: relative;
     display: grid;
+    flex: 1 0 auto;
     grid-template-columns: minmax(470px, 0.88fr) minmax(760px, 1.38fr);
-    align-items: center;
+    align-items: stretch;
     min-height: 329px;
     margin: 0;
     padding: 30px 66px 20px 119px;
@@ -630,6 +634,7 @@ body.home-page-shell .content-shell {
 .home-page .home-hero-copy {
     position: relative;
     z-index: 2;
+    align-self: center;
     max-width: 610px;
 }
 
@@ -730,7 +735,7 @@ body.home-page-shell .content-shell {
 
 .hero-bg-image {
     position: absolute;
-    inset: -48px -8px -4px 102px;
+    inset: -33px -8px -4px 102px;
     z-index: 0;
     width: calc(100% - 94px);
     height: calc(100% + 52px);

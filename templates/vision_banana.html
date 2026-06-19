@@ -16,7 +16,7 @@
             <a class="vb-back-link" href="{{ url_for('frontier_page') }}">返回 CV 前沿探索</a>
             <h1 id="bananaHeroTitle">Vision Banana：Image Generators are Generalist Vision Learners</h1>
             <h2>把视觉理解任务转化为图像生成</h2>
-            <p>参考官方研究主页的能力展示方式，将 Vision Banana 的统一视觉接口改造成课程中的前沿模型展厅：输入图像与指令共同定义任务，模型生成 RGB 结果，再解码为分割、深度、法线或编辑结果。</p>
+            <p>输入图像与指令共同定义任务，模型生成 RGB 结果，再解码为分割、深度、法线或编辑结果。</p>
             <div class="vb-hero-actions">
                 <a href="#vbCapabilities">查看能力展示</a>
                 <a href="#vbOfficialSamples">多任务样例</a>
@@ -343,7 +343,7 @@
         <div class="vb-sample-group">
             <header><span>03</span><h3>指代性语言分割</h3><p>语言指代决定被分割对象，展示模型对自然语言 prompt 的绑定能力。</p></header>
             <div class="vb-sample-strip" aria-label="Referring expression segmentation official samples">
-                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                <article class="vb-sample-card vb-sample-card--focus-bottom" data-vb-reveal-card tabindex="0">
                     <div class="vb-sample-media"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/menu-input.png') }}" alt=""><div class="vb-output-layer"><img src="{{ url_for('static', filename=vb_asset ~ 'refseg/menu-output.png') }}" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Highlight the chef names in <mark>Chinese and English</mark>.</p>
                 </article>
