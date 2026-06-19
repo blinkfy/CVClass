@@ -690,7 +690,7 @@
 
         try {
             const dataUrl = page.dataset.graphDataUrl;
-            const response = await fetch(dataUrl, { cache: "no-store" });
+            const response = await fetch(dataUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             state.graphData = await response.json();
             state.currentViewId = state.graphData.defaultView || "root";

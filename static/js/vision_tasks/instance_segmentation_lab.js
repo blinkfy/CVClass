@@ -1327,8 +1327,8 @@
     }
 
     async function fetchHeadOrGet(url) {
-        let response = await fetch(url, {method: "HEAD", cache: "no-store"});
-        if (response.status === 405 || response.status === 501) response = await fetch(url, {cache: "no-store"});
+        let response = await fetch(url, {method: "HEAD"});
+        if (response.status === 405 || response.status === 501) response = await fetch(url);
         return response.ok;
     }
 

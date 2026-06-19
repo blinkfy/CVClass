@@ -40,7 +40,7 @@ function ensureOrtLoaded() {
 }
 
 async function fetchJson(url, label) {
-    const response = await fetch(url, {cache: "no-store"});
+    const response = await fetch(url);
     if (!response.ok) {
         const error = new Error(`${label} 未安装或不可访问`);
         error.code = "MODEL_FILE_MISSING";
@@ -50,7 +50,7 @@ async function fetchJson(url, label) {
 }
 
 async function fetchModelBytes() {
-    const response = await fetch(MODEL_URL, {cache: "no-store"});
+    const response = await fetch(MODEL_URL);
     if (!response.ok) {
         const error = new Error("模型文件不存在，请放置 static/assets/data/instance/yolo11n-seg.onnx");
         error.code = "MODEL_FILE_MISSING";

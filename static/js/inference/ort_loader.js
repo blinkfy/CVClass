@@ -19,7 +19,7 @@
     }
 
     async function fetchModelBytes(modelUrl) {
-        const response = await fetch(modelUrl, {cache: "no-store"});
+        const response = await fetch(modelUrl);
         if (!response.ok) {
             const error = new Error("模型文件未找到，已回退到预设结果。");
             error.code = "MODEL_NOT_FOUND";

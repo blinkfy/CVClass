@@ -125,7 +125,7 @@
 
     async function loadTasks() {
         try {
-            const response = await fetch(cvUrl("/static/assets/data/frontier_tasks.json"), { cache: "no-store" });
+            const response = await fetch(cvUrl("/static/assets/data/frontier_tasks.json"));
             if (!response.ok) return fallbackTasks;
             const data = await response.json();
             return Array.isArray(data) && data.length ? data : fallbackTasks;

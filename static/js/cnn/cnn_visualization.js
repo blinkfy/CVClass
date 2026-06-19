@@ -964,7 +964,7 @@
         let lastError = null;
         for (const path of paths) {
             try {
-                const response = await fetch(cvUrl(path), { cache: "no-store" });
+                const response = await fetch(cvUrl(path));
                 if (!response.ok) throw new Error(`${path} ${response.status}`);
                 const data = await response.json();
                 if (data && data.success === false) throw new Error(data.message || `${path} 返回 success=false`);

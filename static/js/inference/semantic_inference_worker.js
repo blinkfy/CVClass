@@ -42,7 +42,7 @@ function modelUrl(path) {
 }
 
 async function fetchJson(path) {
-    const response = await fetch(modelUrl(path), {cache: "no-store"});
+    const response = await fetch(modelUrl(path));
     if (!response.ok) {
         const error = new Error(`模型文件未安装或不可访问：${path}`);
         error.code = "MODEL_FILE_MISSING";
@@ -52,7 +52,7 @@ async function fetchJson(path) {
 }
 
 async function fetchArrayBuffer(path) {
-    const response = await fetch(modelUrl(path), {cache: "no-store"});
+    const response = await fetch(modelUrl(path));
     if (!response.ok) {
         const error = new Error(`模型文件未安装或不可访问：${path}`);
         error.code = "MODEL_FILE_MISSING";

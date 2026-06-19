@@ -4,6 +4,8 @@
 
     const api = window.CVClassVisionTasks || {};
     const dataRoot = api.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
+    const DATA_CACHE_KEY = "cvclass.classification_lab.data";
+    const DATA_CACHE_VERSION = "v1";
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
@@ -513,15 +515,49 @@
         setPhase(state.method === "cnn" ? "classifier" : state.method === "pyramid" ? "histogram" : "dictionary");
     }
 
+    function readCachedData() {
+        try {
+            const raw = sessionStorage.getItem(DATA_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (parsed?.version !== DATA_CACHE_VERSION) return null;
+            return parsed.data || null;
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function writeCachedData(data) {
+        try {
+            sessionStorage.setItem(DATA_CACHE_KEY, JSON.stringify({ version: DATA_CACHE_VERSION, data }));
+        } catch (_error) {
+            // ignore storage errors
+        }
+    }
+
+    function applyData(data) {
+        state.data = data;
+        state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";
+        els.sample.innerHTML = (state.data.samples || [])
+            .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`)
+            .join("");
+        els.sample.value = state.sampleId;
+        render();
+    }
+
     async function init() {
+        const cached = readCachedData();
+        if (cached) {
+            applyData(cached);
+            return;
+        }
+
         try {
             const response = await fetch(`${dataRoot}/classification_samples.json`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            state.data = await response.json();
-            state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";
-            els.sample.innerHTML = (state.data.samples || []).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
-            els.sample.value = state.sampleId;
-            render();
+            const data = await response.json();
+            writeCachedData(data);
+            applyData(data);
         } catch (error) {
             console.error("classification lab data failed", error);
             els.notes.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/vision_tasks/data/classification_samples.json。</p>`;

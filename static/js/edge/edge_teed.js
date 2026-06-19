@@ -404,7 +404,7 @@
         }
         setStatus("正在加载模型", "loading");
         state.modelLoading = (async () => {
-            const response = await fetch(modelUrl, { method: "HEAD", cache: "no-store" });
+            const response = await fetch(modelUrl, { method: "HEAD" });
             if (!response.ok) {
                 throw new Error("未检测到 TEED ONNX 模型文件，请将 teed_debug_352.onnx 放入 static/assets/data/edge/ 后重新加载。");
             }
