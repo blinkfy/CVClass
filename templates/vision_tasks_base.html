@@ -25,15 +25,6 @@
         {% endfor %}
     </nav>
 
-    <section class="vision-page-heading" aria-labelledby="visionPageTitle">
-        <div>
-            <span class="vision-page-kicker">{% block vision_badge %}STATION 06{% endblock %}</span>
-            <h2 id="visionPageTitle">{% block vision_title %}视觉任务谱系{% endblock %}</h2>
-            <p>{% block vision_subtitle %}对比不同视觉任务的预测粒度、输出张量与评价指标。{% endblock %}</p>
-        </div>
-        <span class="vision-static-note">PRESET SAMPLE · EXPLAINABLE VIEW</span>
-    </section>
-
     {% block vision_content %}{% endblock %}
 </div>
 {% endblock %}

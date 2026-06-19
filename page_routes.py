@@ -96,14 +96,67 @@ def register_page_routes(app, get_model_status):
         for item in nav:
             item["active"] = item["key"] == active_nav
 
+        # Subpage-specific hero titles replace the module-level defaults so the
+        # top hero changes with the active sub-page instead of duplicating it below.
+        subpage_overrides = {
+            ("classification_lab", "overview"): {
+                "eyebrow": "STATION 06 · TASK TAXONOMY",
+                "title": "视觉任务谱系与图像分类",
+                "subtitle": "使用同一张预设图像，对比 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的预测单位、空间结构和评价协议。",
+                "badge": "TASK TAXONOMY · OUTPUT · METRIC",
+            },
+            ("classification_lab", "classification"): {
+                "eyebrow": "STATION 06 · IMAGE CLASSIFICATION",
+                "title": "图像分类与任务谱系",
+                "subtitle": "从手工局部特征和视觉词袋，到深度卷积网络端到端分类，理解图像级预测的两条典型路线。",
+                "badge": "CLASSIFICATION · TAXONOMY · TOP-K",
+            },
+            ("segmentation_basic", "segmentation_basic"): {
+                "eyebrow": "STATION 07 · TRADITIONAL SEGMENTATION",
+                "title": "图像分割与区域提取",
+                "subtitle": "从像素颜色聚类、图切割、GrabCut 前景提取到 Watershed label map，理解传统区域分割如何连接边缘、轮廓和语义 mask。",
+                "badge": "CLUSTER · GRAPH CUT · REGION MAP",
+            },
+            ("object_detection", "detection"): {
+                "eyebrow": "STATION 08 · OBJECT DETECTION",
+                "title": "目标检测",
+                "subtitle": "在真实图片上使用 ONNX Runtime 运行 YOLOv8，逐步观察候选框解码、置信度过滤与 NMS 非极大值抑制的完整流程。",
+                "badge": "YOLO · BBOX · NMS",
+            },
+            ("segmentation_lab", "semantic"): {
+                "eyebrow": "STATION 09 · SEMANTIC SEGMENTATION",
+                "title": "语义分割：Pixel-wise Mask",
+                "subtitle": "在真实图像上展示预设 Semantic Mask 与浏览器端 SegFormer-B0 推理结果，理解 H×W×C logits 到 H×W class map 的转换。",
+                "badge": "SEMANTIC MASK · PIXEL CLASS",
+            },
+        }
+
+        if module_key == "segmentation_lab" and active_sub_page == "instance":
+            if active_nav == "compare":
+                subpage_overrides[(module_key, active_sub_page)] = {
+                    "eyebrow": "STATION 09 · SEMANTIC VS INSTANCE",
+                    "title": "语义分割 vs 实例分割",
+                    "subtitle": "在同一张真实图像上对比 H×W class map 与 N × {bbox, class, score, mask, instance_id} 的输出结构、指标和交互目标。",
+                    "badge": "COMPARE · SEMANTIC · INSTANCE",
+                }
+            else:
+                subpage_overrides[(module_key, active_sub_page)] = {
+                    "eyebrow": "STATION 09 · INSTANCE SEGMENTATION",
+                    "title": "实例分割：Instance Mask",
+                    "subtitle": "在真实图像上绘制每个实例的 mask、bbox 与 instance id，并在浏览器端演示 YOLO11n-seg 的候选框、NMS、prototype mask 与实例统计流程。",
+                    "badge": "INSTANCE MASK · YOLO-SEG",
+                }
+
+        override = subpage_overrides.get((module_key, active_sub_page), {})
+
         return {
             "active_page": config["active_page"],
             "active_sub_page": active_sub_page,
             "vision_module_key": module_key,
-            "vision_module_eyebrow": config["eyebrow"],
-            "vision_module_title": config["title"],
-            "vision_module_subtitle": config["subtitle"],
-            "vision_module_badge": config["badge"],
+            "vision_module_eyebrow": override.get("eyebrow", config["eyebrow"]),
+            "vision_module_title": override.get("title", config["title"]),
+            "vision_module_subtitle": override.get("subtitle", config["subtitle"]),
+            "vision_module_badge": override.get("badge", config["badge"]),
             "vision_module_nav": nav,
         }
 
