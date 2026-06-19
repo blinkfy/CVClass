@@ -9,8 +9,8 @@
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
-    const initialSource = ["preset", "model", "maskrcnn", "roiAlign", "maskMetric"].includes(initialParams.get("source")) ? initialParams.get("source") : "model";
     const initialView = ["instance", "semantic"].includes(initialParams.get("view")) ? initialParams.get("view") : "instance";
+    const initialSource = initialView === "semantic" ? "preset" : ["preset", "model", "maskrcnn", "roiAlign", "maskMetric"].includes(initialParams.get("source")) ? initialParams.get("source") : "model";
     const COLORS = ["#2563EB", "#F97316", "#22C55E", "#8B5CF6", "#EAB308", "#EC4899", "#06B6D4", "#EF4444", "#14B8A6"];
 
     const state = {
@@ -49,6 +49,7 @@
         image: $("[data-inst-image]"),
         missing: $("[data-inst-missing]"),
         stage: $("[data-inst-stage]"),
+        comparePage: $("[data-inst-compare-page]"),
         canvas: $("[data-inst-mask-canvas]"),
         svg: $("[data-inst-svg]"),
         maskRcnnDemo: $("[data-inst-maskrcnn-demo]"),
@@ -87,6 +88,7 @@
         flow: $("[data-inst-flow]"),
         stepperItems: [...document.querySelectorAll("[data-inst-stepper] [data-inst-phase]")],
         flowItems: $$("[data-inst-flow-phase]"),
+        interactiveDeck: $(".instance-interactive-deck"),
         blenderContainer: $("[data-inst-blender-container]"),
         blenderPlayBtn: $("[data-inst-blender-play-btn]"),
         blenderCanvas: $("[data-inst-blender-canvas]"),
@@ -120,7 +122,19 @@
         return ["maskrcnn", "roiAlign", "maskMetric"].includes(state.sourceMode);
     }
 
+    function isCompareView() {
+        return state.view === "semantic";
+    }
+
     function activeSteps() {
+        if (isCompareView()) {
+            return [
+                {id: "semantic", title: "Semantic Mask", detail: "H×W class map"},
+                {id: "instance", title: "Instance Mask", detail: "per-object id"},
+                {id: "schema", title: "Output Schema", detail: "map vs set"},
+                {id: "metric", title: "Metrics", detail: "mIoU / Mask AP"},
+            ];
+        }
         return isMaskRcnnMode() ? maskRcnnSteps : yoloSteps;
     }
 
@@ -447,6 +461,16 @@
     function renderList() {
         const scene = state.currentScene;
         if (!scene) return;
+        if (isCompareView()) {
+            const palette = classPalette(scene);
+            const rows = semanticClassRows(scene);
+            els.list.innerHTML = rows.map((row) => `
+                <button type="button" class="is-compare-row">
+                    <i style="background:${esc(palette.get(row.className) || "#2563eb")}"></i>
+                    <span><strong>${esc(row.className)}</strong><small>${row.count} instance(s) → one semantic class · area ${Math.round(row.area).toLocaleString()} px</small></span>
+                </button>`).join("");
+            return;
+        }
         if (!scene.instances.length) {
             els.list.innerHTML = `<div class="vision-empty-result">当前暂无实例结果</div>`;
             return;
@@ -465,6 +489,22 @@
     }
 
     function renderStats() {
+        if (isCompareView()) {
+            const scene = state.currentScene;
+            const classes = new Map();
+            (scene?.instances || []).forEach((item) => {
+                const entry = classes.get(item.className) || {count: 0, area: 0};
+                entry.count += 1;
+                entry.area += item.maskArea || 0;
+                classes.set(item.className, entry);
+            });
+            els.stats.innerHTML = `
+                <div class="instance-compare-mini-schema">
+                    <strong>Semantic</strong><span>${classes.size || "--"} classes · merged by class_id</span>
+                    <strong>Instance</strong><span>${scene?.instances?.length || 0} masks · unique instance_id</span>
+                </div>`;
+            return;
+        }
         const item = selectedInstance();
         if (!item) {
             els.stats.innerHTML = `<div class="vision-empty-result">暂无可选实例</div>`;
@@ -482,6 +522,98 @@
                 <div><span>Mask / Box Ratio</span><strong>${item.maskBoxRatio.toFixed(3)}</strong></div>
                 <div><span>Center</span><strong>(${item.center.join(", ")})</strong></div>
                 <div><span>Contour Length</span><strong>${Math.round(item.contourLength).toLocaleString()} px</strong></div>
+            </div>`;
+    }
+
+    function classPalette(scene) {
+        const map = new Map();
+        (scene.semantic_regions || []).forEach((region, index) => {
+            map.set(region.class || region.className || `class_${index + 1}`, region.color || COLORS[index % COLORS.length]);
+        });
+        (scene.instances || []).forEach((item, index) => {
+            if (!map.has(item.className)) map.set(item.className, COLORS[index % COLORS.length]);
+        });
+        return map;
+    }
+
+    function polygonPoints(poly = [], scene) {
+        return poly.map(([x, y]) => `${(x / scene.width) * 100},${(y / scene.height) * 100}`).join(" ");
+    }
+
+    function semanticClassRows(scene) {
+        const rows = new Map();
+        (scene.instances || []).forEach((item) => {
+            const row = rows.get(item.className) || {className: item.className, count: 0, area: 0};
+            row.count += 1;
+            row.area += item.maskArea || 0;
+            rows.set(item.className, row);
+        });
+        (scene.semantic_regions || []).forEach((region) => {
+            const className = region.class || region.className || "class";
+            if (!rows.has(className)) rows.set(className, {className, count: 1, area: polygonArea(region.polygon || [])});
+        });
+        return [...rows.values()];
+    }
+
+    function renderCompareSvg(scene, type) {
+        const palette = classPalette(scene);
+        if (type === "semantic") {
+            const instancePolys = (scene.instances || []).map((item) => `
+                <polygon points="${polygonPoints(item.polygon || [], scene)}" fill="${esc(palette.get(item.className) || item.color)}" opacity=".48" stroke="#ffffff" stroke-width=".45" vector-effect="non-scaling-stroke"></polygon>
+            `).join("");
+            const extraRegions = (scene.semantic_regions || [])
+                .filter((region) => !(scene.instances || []).some((item) => item.className === (region.class || region.className)))
+                .map((region) => `<polygon points="${polygonPoints(region.polygon || [], scene)}" fill="${esc(region.color || palette.get(region.class) || "#2563eb")}" opacity=".34" stroke="#ffffff" stroke-width=".35" vector-effect="non-scaling-stroke"></polygon>`)
+                .join("");
+            const labels = semanticClassRows(scene).map((row, index) => `<text x="4" y="${8 + index * 7}" class="instance-compare-svg-label">${esc(row.className)}</text>`).join("");
+            return `<svg viewBox="0 0 100 100" preserveAspectRatio="none">${extraRegions}${instancePolys}${labels}</svg>`;
+        }
+        const masks = (scene.instances || []).map((item) => `
+            <polygon points="${polygonPoints(item.polygon || [], scene)}" fill="${esc(item.color)}" opacity=".46" stroke="#ffffff" stroke-width=".45" vector-effect="non-scaling-stroke"></polygon>
+        `).join("");
+        const boxes = (scene.instances || []).map((item) => {
+            const rect = percentBox(item.bbox, scene);
+            return `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="none" stroke="${esc(item.color)}" stroke-width=".8" vector-effect="non-scaling-stroke"></rect>
+                <text x="${rect.x}" y="${Math.max(5, rect.y - 1)}" class="instance-compare-svg-label">#${item.id}</text>`;
+        }).join("");
+        return `<svg viewBox="0 0 100 100" preserveAspectRatio="none">${masks}${boxes}</svg>`;
+    }
+
+    function renderComparePage(scene) {
+        if (!els.comparePage || !scene) return;
+        const palette = classPalette(scene);
+        const classRows = semanticClassRows(scene);
+        const classLegend = classRows.map((row) => `
+            <span><i style="background:${esc(palette.get(row.className) || "#2563eb")}"></i><b>${esc(row.className)}</b><em>${row.count > 1 ? `${row.count} instances merged` : "class region"}</em></span>
+        `).join("");
+        const instanceLegend = (scene.instances || []).map((item) => `
+            <span><i style="background:${esc(item.color)}"></i><b>${esc(item.className)} #${item.id}</b><em>score ${item.score.toFixed(2)} · bbox [${item.bbox.join(", ")}]</em></span>
+        `).join("");
+        els.comparePage.hidden = false;
+        els.comparePage.innerHTML = `
+            <div class="instance-compare-grid">
+                <section class="instance-compare-panel">
+                    <header><span>Semantic Mask</span><strong>H × W class map</strong></header>
+                    <div class="instance-compare-visual">
+                        <img src="${scene.image.startsWith("blob:") ? scene.image : window.cvclassUrl(scene.image)}" alt="Semantic mask comparison">
+                        ${renderCompareSvg(scene, "semantic")}
+                    </div>
+                    <div class="instance-compare-legend">${classLegend}</div>
+                    <p>同一类别的目标共享 class_id / class_name；例如 person #1、#2、#3 都合并为 person 类别区域。</p>
+                </section>
+                <section class="instance-compare-panel">
+                    <header><span>Instance Mask</span><strong>N independent masks</strong></header>
+                    <div class="instance-compare-visual">
+                        <img src="${scene.image.startsWith("blob:") ? scene.image : window.cvclassUrl(scene.image)}" alt="Instance mask comparison">
+                        ${renderCompareSvg(scene, "instance")}
+                    </div>
+                    <div class="instance-compare-legend">${instanceLegend}</div>
+                    <p>同类目标按 instance_id 分开，每个目标保留独立颜色、bbox、score 和可交互实例编号。</p>
+                </section>
+            </div>
+            <div class="instance-output-compare-table">
+                <article><h4>Semantic Segmentation</h4><code>H × W class map</code><span>metric: Pixel Accuracy / mIoU</span></article>
+                <article><h4>Instance Segmentation</h4><code>N × {bbox, class, score, mask, instance_id}</code><span>metric: Mask IoU / Mask AP</span></article>
             </div>`;
     }
 
@@ -624,6 +756,25 @@
     }
 
     function renderNotes() {
+        if (isCompareView()) {
+            const scene = state.currentScene || presetScene();
+            const classCount = semanticClassRows(scene).length;
+            els.notesTitle.textContent = "Semantic vs Instance";
+            els.notesSubtitle.textContent = "Output Structure";
+            els.notesTutorial.innerHTML = `
+                <p>Semantic Mask 关注每个像素属于哪个类别；Instance Mask 进一步区分同一类别中的不同个体。语义分割适合场景理解，实例分割适合目标级计数、实例属性统计和交互选择。</p>
+            `;
+            els.notes.innerHTML = `<dl>
+                <div><dt>Semantic Mask</dt><dd>每个像素输出 class_id / class_name，同类目标合并。</dd></div>
+                <div><dt>Instance Mask</dt><dd>每个目标输出独立 mask、bbox、score 与 instance_id。</dd></div>
+                <div><dt>类别数量</dt><dd>${classCount} semantic classes</dd></div>
+                <div><dt>实例数量</dt><dd>${scene.instances?.length || 0} instance masks</dd></div>
+                <div><dt>语义指标</dt><dd>Pixel Accuracy / mIoU</dd></div>
+                <div><dt>实例指标</dt><dd>Mask IoU / Mask AP</dd></div>
+                <div><dt>输出结构差异</dt><dd>H × W class map vs N × {bbox, class, score, mask, instance_id}</dd></div>
+            </dl>`;
+            return;
+        }
         if (isMaskRcnnMode()) {
             const demo = state.maskRcnnData || {};
             const step = activeMaskRcnnStep();
@@ -683,10 +834,35 @@
     }
 
     function render() {
+        if (isCompareView()) {
+            state.sourceMode = "preset";
+            state.currentScene = presetScene();
+        }
         const scene = state.currentScene;
         if (!scene) return;
         els.opacityOut.textContent = `${els.opacity.value}%`;
         els.viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.instView === state.view));
+        renderSourceButtons();
+        if (isCompareView()) {
+            if (els.stage) els.stage.hidden = true;
+            if (els.flow) els.flow.hidden = true;
+            if (els.interactiveDeck) els.interactiveDeck.hidden = true;
+            if (els.maskRcnnDemo) els.maskRcnnDemo.hidden = true;
+            if (els.stepper) els.stepper.hidden = false;
+            setProcessSteps("schema");
+            renderRuntime();
+            renderImage();
+            renderComparePage(scene);
+            renderList();
+            renderStats();
+            renderNotes();
+            return;
+        }
+        if (els.stage) els.stage.hidden = false;
+        if (els.comparePage) els.comparePage.hidden = true;
+        if (els.flow) els.flow.hidden = false;
+        if (els.interactiveDeck) els.interactiveDeck.hidden = false;
+        if (els.stepper) els.stepper.hidden = false;
         const items = visibleInstances();
         drawMaskBitmap(scene, items);
         renderSvg();
@@ -1374,7 +1550,7 @@
             renderSourceButtons();
             activateScene(presetScene(), true);
             setPhase("image");
-            autoLoadAndRun("initial");
+            if (!isCompareView()) autoLoadAndRun("initial");
         })
         .catch(() => {
             els.stats.innerHTML = `<div class="vision-empty-result">实例样例数据加载失败</div>`;
@@ -1382,17 +1558,18 @@
 
     els.sample.addEventListener("change", () => {
         state.sampleId = els.sample.value;
-        state.sourceMode = "model";
+        state.sourceMode = isCompareView() ? "preset" : "model";
         state.modelScene = null;
         renderSourceButtons();
         activateScene(presetScene(), true);
         setPhase("image");
-        autoLoadAndRun("sample");
+        if (!isCompareView()) autoLoadAndRun("sample");
     });
     els.upload.addEventListener("change", () => setUploadImage(els.upload.files?.[0]));
     if (Array.isArray(els.sourceButtons)) {
         els.sourceButtons.forEach((button) => button.addEventListener("click", () => {
             state.sourceMode = button.dataset.instSource;
+            if (isCompareView()) state.sourceMode = "preset";
             renderSourceButtons();
             nextAutoToken();
             if (state.sourceMode === "preset") {
@@ -1413,7 +1590,11 @@
     els.showBox.addEventListener("change", () => { state.showBox = els.showBox.checked; render(); });
     els.showId.addEventListener("change", () => { state.showId = els.showId.checked; render(); });
     els.onlySelected.addEventListener("change", () => { state.onlySelected = els.onlySelected.checked; render(); });
-    els.viewButtons.forEach((button) => button.addEventListener("click", () => { state.view = button.dataset.instView; render(); }));
+    els.viewButtons.forEach((button) => button.addEventListener("click", () => {
+        state.view = button.dataset.instView;
+        if (isCompareView()) state.sourceMode = "preset";
+        render();
+    }));
     els.backend.addEventListener("change", () => {
         nextAutoToken();
         state.inferenceClient?.dispose?.();

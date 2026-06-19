@@ -790,6 +790,12 @@
                 <h4>cut 后前景 / 背景划分</h4>
                 ${cutResultSvg()}
                 <div class="seg-mini-equation">cut cost = 2.4 + 1.8</div>
+                <div class="seg-analysis-metrics">
+                    <div><span>node weights</span><strong>S-link 9.2 / T-link 8.7</strong></div>
+                    <div><span>source / sink</span><strong>FG 46% / BG 54%</strong></div>
+                    <div><span>cut cost</span><strong>4.2 total edge weight</strong></div>
+                    <div><span>ratio</span><strong>foreground 0.46</strong></div>
+                </div>
             </section>
         `;
         els.notesSubtitle.textContent = "Graph Cut / Min Cut";
@@ -856,6 +862,12 @@
             <section class="seg-concept-card">
                 <h4>第二小特征向量二分结果</h4>
                 ${eigenResultSvg()}
+                <div class="seg-analysis-metrics">
+                    <div><span>assoc(A,V)</span><strong>3.41</strong></div>
+                    <div><span>assoc(B,V)</span><strong>3.58</strong></div>
+                    <div><span>cut(A,B)</span><strong>0.42</strong></div>
+                    <div><span>Ncut score</span><strong>0.240</strong></div>
+                </div>
             </section>
         `;
         els.notesSubtitle.textContent = "Normalized Cut";
@@ -914,6 +926,12 @@
             <section class="seg-concept-card">
                 <h4>Graph Cut 优化后的前景 mask</h4>
                 ${grabCutMaskSvg()}
+                <div class="seg-analysis-metrics">
+                    <div><span>user box</span><strong>[154,58,214,178]</strong></div>
+                    <div><span>unary cost</span><strong>FG 0.31 / BG 0.69</strong></div>
+                    <div><span>pairwise cost</span><strong>boundary smoothness 0.42</strong></div>
+                    <div><span>mask pixels</span><strong>28.4% foreground</strong></div>
+                </div>
                 <div class="seg-region-property-table">
                     <div><span>mask ratio</span><strong>28.4%</strong></div>
                     <div><span>bbox</span><strong>[70,34,160,142]</strong></div>
@@ -973,6 +991,12 @@
             <section class="seg-concept-card">
                 <h4>watershed boundary 与 label map</h4>
                 ${watershedLabelSvg()}
+                <div class="seg-analysis-metrics">
+                    <div><span>markers</span><strong>FG 2 / BG 2 / unknown 1</strong></div>
+                    <div><span>gradient mean</span><strong>0.38 ridge score</strong></div>
+                    <div><span>boundary</span><strong>286 px watershed line</strong></div>
+                    <div><span>label map</span><strong>3 regions + boundary</strong></div>
+                </div>
             </section>
         `;
         els.notesSubtitle.textContent = "Watershed Marker Propagation";
@@ -1033,6 +1057,12 @@
                     <span style="--w:64%;--c:#93c5fd"><b>label 1 contour</b><em>412 px</em></span>
                     <span style="--w:82%;--c:#86efac"><b>label 2 contour</b><em>536 px</em></span>
                     <span style="--w:38%;--c:#fdba74"><b>label 3 contour</b><em>248 px</em></span>
+                </div>
+                <div class="seg-analysis-metrics">
+                    <div><span>label id</span><strong>1 / 2 / 3</strong></div>
+                    <div><span>area</span><strong>15.9% / 27.2% / 8.6%</strong></div>
+                    <div><span>bbox</span><strong>156×102 · 204×168 · 128×58</strong></div>
+                    <div><span>mask ratio</span><strong>area / image area</strong></div>
                 </div>
             </section>
         `;

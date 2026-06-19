@@ -1,8 +1,8 @@
 {% extends "vision_tasks_base.html" %}
 
-{% block vision_badge %}STATION 09 · INSTANCE SEGMENTATION{% endblock %}
-{% block vision_title %}实例分割：Instance Mask{% endblock %}
-{% block vision_subtitle %}在真实图像上绘制每个实例的 mask、bbox 与 instance id，并在浏览器端演示 YOLO11n-seg 的候选框、NMS、prototype mask 与实例统计流程。{% endblock %}
+{% block vision_badge %}{% if vision_instance_mode|default('instance') == 'compare' %}STATION 09C · SEMANTIC VS INSTANCE{% else %}STATION 09B · INSTANCE SEGMENTATION{% endif %}{% endblock %}
+{% block vision_title %}{% if vision_instance_mode|default('instance') == 'compare' %}语义分割 vs 实例分割{% else %}实例分割：Instance Mask{% endif %}{% endblock %}
+{% block vision_subtitle %}{% if vision_instance_mode|default('instance') == 'compare' %}在同一张真实图像上对比 H×W class map 与 N × {bbox, class, score, mask, instance_id} 的输出结构、指标和交互目标。{% else %}在真实图像上绘制每个实例的 mask、bbox 与 instance id，并在浏览器端演示 YOLO11n-seg 的候选框、NMS、prototype mask 与实例统计流程。{% endif %}{% endblock %}
 
 {% block vision_content %}
 <section class="vision-workbench instance-lab-workbench" data-instance-lab aria-label="实例分割教学工作台">
@@ -98,6 +98,7 @@
             <canvas data-inst-mask-canvas aria-label="实例 mask 覆盖层"></canvas>
             <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
         </div>
+        <div class="instance-compare-page" data-inst-compare-page hidden></div>
         <div class="instance-maskrcnn-demo" data-inst-maskrcnn-demo hidden></div>
         <div class="instance-seg-flow" data-inst-flow>
             <div data-inst-flow-phase="image"><strong>Image</strong><span>H×W×3</span></div>

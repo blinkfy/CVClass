@@ -33,9 +33,8 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .vision-tabs {
-    position: sticky;
-    top: 12px;
-    z-index: 20;
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -1979,7 +1978,11 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .seg-basic-stage-panel {
-    min-height: 680px;
+    min-height: 0;
+}
+
+.segmentation-basic-workbench {
+    align-items: start;
 }
 
 [data-seg-basic-lab] [hidden] {
@@ -2065,7 +2068,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     grid-template-rows: auto minmax(0, 1fr);
     gap: 8px;
     min-width: 0;
-    min-height: 258px;
+    min-height: 224px;
     margin: 0;
     border: 1px solid #dbeafe;
     border-radius: 14px;
@@ -2094,7 +2097,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .seg-basic-feature-space {
     position: relative;
-    min-height: 190px;
+    min-height: 148px;
     overflow: hidden;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
@@ -2314,12 +2317,12 @@ body:has(.vision-lab) .ai-fab-icon img {
 .seg-concept-svg {
     display: block;
     width: 100%;
-    min-height: 240px;
+    min-height: 208px;
 }
 
 .seg-pixel-svg,
 .seg-cut-result-svg {
-    min-height: 190px;
+    min-height: 156px;
 }
 
 .seg-concept-svg text {
@@ -2460,7 +2463,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
-    min-height: 190px;
+    min-height: 142px;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 10px;
@@ -2541,6 +2544,36 @@ body:has(.vision-lab) .ai-fab-icon img {
     position: relative;
 }
 
+.seg-analysis-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.seg-analysis-metrics div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px;
+    background: #f8fafc;
+}
+
+.seg-analysis-metrics span {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.seg-analysis-metrics strong {
+    min-width: 0;
+    color: #172554;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
 .seg-eigen-bars {
     display: flex;
     align-items: end;
@@ -2614,7 +2647,9 @@ body:has(.vision-lab) .ai-fab-icon img {
 @media (max-width: 1180px) {
     .seg-basic-canvas-grid,
     .seg-basic-kmeans-summary,
-    .seg-basic-concept-view {
+    .seg-basic-concept-view,
+    .instance-compare-grid,
+    .instance-output-compare-table {
         grid-template-columns: 1fr;
     }
 
@@ -4633,8 +4668,9 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .det-notes-data dl > div {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(78px, 0.42fr) minmax(0, 1fr);
+    gap: 8px;
     border: 1px solid #e2e8f0;
     border-radius: 7px;
     padding: 4px 8px;
@@ -4647,10 +4683,13 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .det-notes-data dd {
+    min-width: 0;
     color: #1e40af;
     font-weight: 800;
     font-family: monospace;
     margin: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
 }
 
 .detection-pair {
@@ -6445,6 +6484,179 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .instance-stage-strip strong {
     color: #1d4ed8;
+}
+
+.instance-compare-page {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    background:
+        linear-gradient(90deg, rgba(219, 234, 254, 0.46) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(219, 234, 254, 0.46) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 24px 24px;
+}
+
+.instance-compare-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.instance-compare-panel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.06);
+}
+
+.instance-compare-panel header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.instance-compare-panel header span {
+    color: #172554;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.instance-compare-panel header strong {
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.instance-compare-visual {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #eaf2ff;
+    aspect-ratio: 4 / 3;
+}
+
+.instance-compare-visual img,
+.instance-compare-visual svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.instance-compare-visual img {
+    object-fit: fill;
+}
+
+.instance-compare-svg-label {
+    fill: #0f172a;
+    paint-order: stroke;
+    stroke: rgba(255, 255, 255, 0.82);
+    stroke-width: .75px;
+    font-size: 4px;
+    font-weight: 950;
+}
+
+.instance-compare-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.instance-compare-legend span {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    gap: 3px 7px;
+    align-items: center;
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 7px;
+    background: #f8fafc;
+}
+
+.instance-compare-legend i {
+    grid-row: span 2;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.instance-compare-legend b,
+.instance-compare-legend em {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.instance-compare-legend b {
+    color: #172554;
+    font-size: 10px;
+}
+
+.instance-compare-legend em,
+.instance-compare-panel p {
+    color: #64748b;
+    font-size: 10px;
+    font-style: normal;
+    line-height: 1.45;
+}
+
+.instance-compare-panel p {
+    margin: 0;
+}
+
+.instance-output-compare-table {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.instance-output-compare-table article,
+.instance-compare-mini-schema {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 11px;
+    background: #ffffff;
+}
+
+.instance-output-compare-table h4 {
+    margin: 0;
+    color: #172554;
+    font-size: 13px;
+}
+
+.instance-output-compare-table code {
+    min-width: 0;
+    color: #1d4ed8;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.instance-output-compare-table span,
+.instance-compare-mini-schema span {
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.instance-compare-mini-schema strong {
+    color: #172554;
+    font-size: 12px;
 }
 
 .instance-real-stage {

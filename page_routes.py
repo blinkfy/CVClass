@@ -228,16 +228,22 @@ def register_page_routes(app, get_model_status):
 
     @app.route("/segmentation-lab/instance", methods=["GET"])
     def segmentation_lab_instance_page():
+        context = build_vision_module_context("segmentation_lab", "instance")
+        if request.args.get("view") == "semantic":
+            context["vision_instance_mode"] = "compare"
         return render_template(
             "vision_tasks/instance_segmentation_lab.html",
-            **build_vision_module_context("segmentation_lab", "instance"),
+            **context,
         )
 
     @app.route("/vision-tasks/instance", methods=["GET"])
     def instance_segmentation_lab_page():
+        context = build_vision_module_context("segmentation_lab", "instance")
+        if request.args.get("view") == "semantic":
+            context["vision_instance_mode"] = "compare"
         return render_template(
             "vision_tasks/instance_segmentation_lab.html",
-            **build_vision_module_context("segmentation_lab", "instance"),
+            **context,
         )
 
     @app.route("/frontier", methods=["GET"])

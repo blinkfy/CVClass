@@ -632,24 +632,48 @@
         const proposals = demo.proposals || [];
         const anchors = demo.anchors || [];
         const p = proposals[0] || {};
+        const roi = demo.roiPooling || {};
+        const positiveCount = anchors.filter((anchor) => anchor.label === "positive").length;
+        const negativeCount = anchors.filter((anchor) => anchor.label === "negative").length;
         const copy = {
             rcnn: {
                 title: "R-CNN 系列机制",
-                tutorial: `<p><strong>滑动窗口为什么慢：</strong>窗口位置、尺度和长宽比组合爆炸。R-CNN 用 proposal 先筛掉大量背景区域，但早期 R-CNN 仍要对每个 proposal 单独跑 CNN，重复特征计算很重。</p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>滑动窗口位置、尺度和长宽比组合爆炸。R-CNN 用 proposal 先筛掉大量背景区域，再执行 crop / warp、CNN feature、classifier、bbox regression 与 NMS。</p>`,
                 subtitle: step.title,
-                data: `<dl><div><dt>proposal count</dt><dd>${proposals.length}</dd></div><div><dt>当前 proposal</dt><dd>${esc(p.id || "--")} ${esc(p.class || "")}</dd></div><div><dt>bbox regression</dt><dd>dx ${p.offset?.dx ?? "--"}, dy ${p.offset?.dy ?? "--"}, dw ${p.offset?.dw ?? "--"}, dh ${p.offset?.dh ?? "--"}</dd></div><div><dt>NMS 作用</dt><dd>最终同类重复框去重</dd></div></dl>`
+                data: `<dl>
+                    <div><dt>解决的问题</dt><dd>用 proposal 减少滑窗搜索空间，并通过 bbox regression 修正候选框。</dd></div>
+                    <div><dt>输入结构</dt><dd>image + ${proposals.length} proposals，每个 proposal 会 crop / warp 到 CNN 输入尺寸。</dd></div>
+                    <div><dt>中间输出</dt><dd>proposal → crop / warp → CNN feature → classifier score → bbox regression offset。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>bbox' = bbox + (dx, dy, dw, dh)，当前 dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>R-CNN 是 two-stage；YOLO 是 one-stage dense prediction。两者最终都需要 NMS 去掉同类重复框。</dd></div>
+                    <div><dt>本页链路</dt><dd>proposal ${esc(p.id || "--")} → crop / warp → CNN feature → classifier ${esc(p.class || "--")} → bbox regression → NMS。</dd></div>
+                </dl>`
             },
             roi: {
                 title: "Fast R-CNN / ROI Pooling",
-                tutorial: `<p><strong>Fast R-CNN 提速点：</strong>整张图只跑一次 CNN 得到 shared feature map，再把每个 ROI 映射到 feature map，通过 ROI Pooling 变成固定尺寸特征，避免 proposal 逐个重复卷积。</p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>早期 R-CNN 对每个 proposal 重复跑 CNN。ROI Pooling 让整图共享 feature map，再把每个 ROI 转成固定尺寸特征。</p>`,
                 subtitle: step.title,
-                data: `<dl><div><dt>feature stride</dt><dd>${demo.roiPooling?.featureStride || 16}</dd></div><div><dt>image ROI</dt><dd>[${(demo.roiPooling?.roi?.bbox || []).join(", ")}]</dd></div><div><dt>feature ROI</dt><dd>[${(demo.roiPooling?.roi?.featureBox || []).join(", ")}]</dd></div><div><dt>pooling</dt><dd>${(demo.roiPooling?.pooledSize || [3, 3]).join(" × ")} max pooling</dd></div></dl>`
+                data: `<dl>
+                    <div><dt>解决的问题</dt><dd>避免每个 proposal 单独卷积，统一映射到 shared feature map。</dd></div>
+                    <div><dt>输入结构</dt><dd>image ROI [${(roi.roi?.bbox || []).join(", ")}] + feature map，stride ${roi.featureStride || 16}。</dd></div>
+                    <div><dt>中间输出</dt><dd>feature map ROI [${(roi.roi?.featureBox || []).join(", ")}] → pooling grid ${(roi.pooledSize || [3, 3]).join(" × ")}。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>每个 bin 取 max pooling，输出固定尺寸 feature，再送入 classifier + bbox regressor。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>ROI Pooling 属于 two-stage head；YOLO 直接从网格预测框。ROI 后的分类框仍需 NMS 去重。</dd></div>
+                    <div><dt>本页链路</dt><dd>image ROI → feature map ROI → pooling grid → max pooling → fixed-size feature output。</dd></div>
+                </dl>`
             },
             rpn: {
                 title: "Faster R-CNN / RPN Anchor",
-                tutorial: `<p><strong>Faster R-CNN 的核心：</strong>RPN 在 feature map 上滑动，每个位置预测多个 anchor 的 objectness 和 bbox offset，用学习到的网络替代传统 proposal 生成。正负锚框由 anchor 与 ground truth 的 IoU 决定。</p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>用可学习的 RPN 替代 Selective Search。RPN 在 feature map 上滑动，为每个 anchor 预测 objectness score 与 bbox offset。</p>`,
                 subtitle: step.title,
-                data: `<dl><div><dt>anchor count</dt><dd>${anchors.length}</dd></div><div><dt>positive rule</dt><dd>${esc(demo.rpnRules?.positive || "")}</dd></div><div><dt>negative rule</dt><dd>${esc(demo.rpnRules?.negative || "")}</dd></div><div><dt>output structure</dt><dd>proposal = anchor + bbox offset</dd></div></dl>`
+                data: `<dl>
+                    <div><dt>解决的问题</dt><dd>自动生成高质量 proposals，减少手工候选区域生成成本。</dd></div>
+                    <div><dt>输入结构</dt><dd>shared feature map + ${anchors.length} anchors（positive ${positiveCount} / negative ${negativeCount}）。</dd></div>
+                    <div><dt>中间输出</dt><dd>每个 anchor 输出 objectness score 与 bbox offset，再筛选 proposal output。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>positive: ${esc(demo.rpnRules?.positive || "IoU >= 0.70")}；negative: ${esc(demo.rpnRules?.negative || "IoU < 0.30")}；proposal = anchor + offset。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>RPN 是 two-stage 的候选框生成器；YOLO 直接输出检测框。RPN proposals 和最终检测都通常要经过 NMS。</dd></div>
+                    <div><dt>本页链路</dt><dd>anchor count ${anchors.length} → objectness score → bbox offset → proposal output → Fast R-CNN head。</dd></div>
+                </dl>`
             }
         }[state.detMode];
         els.notesTitle.textContent = copy.title;
