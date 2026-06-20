@@ -70,6 +70,7 @@
 
     const els = {
         sample: $("[data-segb-sample]"),
+        sampleGrid: $("[data-segb-sample-grid]"),
         upload: $("[data-segb-upload]"),
         uploadName: $("[data-segb-upload-name]"),
         methodButtons: $$("[data-segb-method]"),
@@ -220,6 +221,36 @@
 
     function selectedSample() {
         return state.data?.samples.find((item) => item.id === state.sampleId) || state.data?.samples[0];
+    }
+
+    function updateSampleCards() {
+        if (!els.sampleGrid) return;
+        els.sampleGrid.querySelectorAll("[data-segb-sample-card]").forEach((button) => {
+            button.classList.toggle("is-active", button.dataset.segbSampleCard === state.sampleId);
+        });
+    }
+
+    function renderSamplePicker() {
+        const samples = state.data?.samples || [];
+        els.sample.innerHTML = samples.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+        els.sample.value = state.sampleId;
+        if (!els.sampleGrid) return;
+        els.sampleGrid.innerHTML = samples.map((item) => `
+            <button type="button" data-segb-sample-card="${escapeHtml(item.id)}">
+                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
+                <span>${escapeHtml(item.name)}</span>
+            </button>
+        `).join("");
+        els.sampleGrid.querySelectorAll("[data-segb-sample-card]").forEach((button) => {
+            button.addEventListener("click", async () => {
+                if (button.dataset.segbSampleCard === state.sampleId) return;
+                state.sampleId = button.dataset.segbSampleCard;
+                els.sample.value = state.sampleId;
+                updateSampleCards();
+                await loadSelectedSample(true);
+            });
+        });
+        updateSampleCards();
     }
 
     function stopAnimation() {
@@ -1191,6 +1222,242 @@
 
     function noteRows(rows) {
         return `<dl>${rows.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}</dl>`;
+    }
+
+    function renderLatexFormula(latex) {
+        let text = String(latex || "")
+            .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
+            .replaceAll("\\mathcal{G}", "𝒢")
+            .replaceAll("\\mathbb{N}", "ℕ")
+            .replaceAll("\\cup", "∪")
+            .replaceAll("\\in", "∈")
+            .replaceAll("\\mid", "|")
+            .replaceAll("\\Rightarrow", "⇒")
+            .replaceAll("\\ne", "≠")
+            .replaceAll("\\lambda", "λ")
+            .replaceAll("\\sigma", "σ")
+            .replaceAll("\\theta", "θ")
+            .replaceAll("\\mu", "μ")
+            .replaceAll("\\alpha", "α")
+            .replaceAll("\\nabla", "∇")
+            .replaceAll("\\Omega", "Ω")
+            .replaceAll("\\ldots", "…")
+            .replaceAll("\\arg\\min", "arg min")
+            .replaceAll("\\sum", "Σ")
+            .replaceAll("\\min", "min")
+            .replaceAll("\\max", "max")
+            .replaceAll("\\lVert", "‖")
+            .replaceAll("\\rVert", "‖")
+            .replaceAll("\\{", "{")
+            .replaceAll("\\}", "}")
+            .replaceAll("\\quad", " ")
+            .replaceAll("\\;", " ")
+            .replaceAll("\\,", " ");
+        text = escapeHtml(text);
+        text = text
+            .replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>")
+            .replace(/_\{([^{}]+)\}/g, "<sub>$1</sub>")
+            .replace(/\^([A-Za-z0-9*+\-]+)/g, "<sup>$1</sup>")
+            .replace(/_([A-Za-z0-9*+\-]+)/g, "<sub>$1</sub>");
+        return `<span class="seg-latex-inline">${text}</span>`;
+    }
+
+    function phaseName(phase) {
+        return {
+            image: "输入建模",
+            feature: "特征/代价",
+            assign: "传播/分配",
+            update: "优化更新",
+            map: "标签输出",
+            stats: "统计解释",
+        }[phase] || "计算步骤";
+    }
+
+    function teachingMeta(concept, frame) {
+        const method = concept?.activeMethod || "";
+        const phase = frame?.phase || "image";
+        const fallback = {
+            latex: concept?.formula || "y=f(x)",
+            flow: ["input", "feature", "score", "label"],
+            principle: frame?.stageNote || concept?.formulaNote || "当前步骤把输入转换为下一阶段所需的中间量。",
+            facts: [
+                ["step", `${state.conceptFrameIndex + 1}/${concept?.frames?.length || 1}`],
+                ["phase", phaseName(phase)],
+                ["output", concept?.stripOutput || "label map"],
+            ],
+        };
+        const table = {
+            "Graph Cut": {
+                image: {
+                    latex: "\\mathcal{G}=(V,E),\\; V=\\{p_i\\}\\cup\\{s,t\\}",
+                    flow: ["image pixels", "nodes p_i", "Source/Sink", "seed constraints"],
+                    principle: "把像素采样点变成图节点，前景种子连接 Source，背景种子连接 Sink。",
+                },
+                feature: {
+                    latex: "D_i(l)=-\\log P(I_i\\mid l),\\; l\\in\\{FG,BG\\}",
+                    flow: ["RGB sample", "FG/BG mean", "unary cost", "terminal edges"],
+                    principle: "颜色越接近某一类模型，切断该类端点边的代价越高，节点越倾向保留这个标签。",
+                },
+                assign: {
+                    latex: "V_{ij}=\\lambda\\exp\\left(-\\frac{\\lVert I_i-I_j\\rVert^2}{2\\sigma^2}\\right)",
+                    flow: ["neighbor pixels", "color contrast", "pairwise edge", "smoothness"],
+                    principle: "相邻像素颜色越像，边权越大，算法越不愿把它们切到两侧。",
+                },
+                update: {
+                    latex: "L^*=\\arg\\min_L\\sum_iD_i(L_i)+\\sum_{(i,j)}V_{ij}[L_i\\ne L_j]",
+                    flow: ["residual graph", "augment flow", "min cut", "FG/BG split"],
+                    principle: "最大流结束后，最小割给出总代价最小的前景/背景边界。",
+                },
+                stats: {
+                    latex: "FG=\\{i\\mid i\\in S\\; after\\; mincut\\},\\; ratio=|FG|/|V|",
+                    flow: ["binary labels", "cut edges", "area ratio", "region stats"],
+                    principle: "最终 label map 可以直接统计前景比例、割边数量和边界位置。",
+                },
+            },
+            "Normalized Cut": {
+                image: {
+                    latex: "W_{ij}=\\exp(-\\lVert c_i-c_j\\rVert^2/\\sigma_c^2)\\exp(-\\lVert x_i-x_j\\rVert^2/\\sigma_x^2)",
+                    flow: ["image samples", "color + xy", "similarity W", "weighted graph"],
+                    principle: "Ncut 先构造全局相似度图，而不是设置 Source/Sink。",
+                },
+                feature: {
+                    latex: "D_{ii}=\\sum_j W_{ij},\\quad S=D^{-1/2}WD^{-1/2}",
+                    flow: ["W matrix", "degree D", "normalized S", "spectral space"],
+                    principle: "度矩阵记录每个节点与全图的连接强度，归一化能减少孤立小块偏置。",
+                },
+                assign: {
+                    latex: "S y=\\lambda y,\\quad y\\perp \\sqrt{d}",
+                    flow: ["power iteration", "eigenvector y", "sign pattern", "soft partition"],
+                    principle: "第二特征向量把节点投到一维，符号和大小预示最终分区。",
+                },
+                update: {
+                    latex: "A=\\{i\\mid y_i\\ge median(y)\\},\\; B=V\\setminus A",
+                    flow: ["stable y", "threshold", "A/B labels", "balanced cut"],
+                    principle: "按特征向量阈值二分，使切割代价和区域内部连接强度同时受控。",
+                },
+                stats: {
+                    latex: "Ncut(A,B)=\\frac{cut(A,B)}{assoc(A,V)}+\\frac{cut(A,B)}{assoc(B,V)}",
+                    flow: ["partition", "cut", "assoc", "Ncut score"],
+                    principle: "Ncut 分数越小，说明两侧内部更紧密、边界代价更合理。",
+                },
+            },
+            GrabCut: {
+                image: {
+                    latex: "T_i\\in\\{B,F,?\\},\\quad outside(rect)\\Rightarrow B",
+                    flow: ["user box", "trimap T", "probable FG", "hard BG"],
+                    principle: "矩形框外是确定背景，框内是可能前景；画笔会加入更强的交互约束。",
+                },
+                feature: {
+                    latex: "\\theta_l=(\\mu_l,\\sigma_l),\\quad D_i(l)=-\\log P(I_i\\mid\\theta_l)",
+                    flow: ["current mask", "FG/BG color model", "unary term", "terminal weights"],
+                    principle: "页面用前景/背景颜色模型近似 GMM，前景笔会直接影响 FG 模型。",
+                },
+                update: {
+                    latex: "L^{t+1}=mincut(D(L\\mid\\theta^t)+V(L))",
+                    flow: ["color model", "graph cut", "new mask", "next iteration"],
+                    principle: "颜色模型和图割标签交替更新，边界逐轮贴近目标。",
+                },
+                map: {
+                    latex: "\\alpha_i=1[L_i=FG]",
+                    flow: ["binary label", "alpha mask", "bbox", "foreground"],
+                    principle: "最终输出是二值前景 mask，可继续做裁剪、透明背景或区域统计。",
+                },
+                stats: {
+                    latex: "bbox=(\\min x,\\min y,\\max x,\\max y),\\quad area=\\sum_i\\alpha_i",
+                    flow: ["mask", "area", "bbox", "ratio"],
+                    principle: "mask 的面积、外接框和占比直接来自前景像素计数。",
+                },
+            },
+            Watershed: {
+                image: {
+                    latex: "g(x)=\\lVert \\nabla I(x)\\rVert",
+                    flow: ["image", "gradient g(x)", "terrain height", "basins"],
+                    principle: "分水岭把梯度图看成地形，高梯度像山脊，低梯度像盆地。",
+                },
+                feature: {
+                    latex: "M(x)\\in\\{1,2,\\ldots,K\\}",
+                    flow: ["markers", "priority queue", "unknown pixels", "seed basins"],
+                    principle: "marker 是确定起点，未知像素等待相邻标签按梯度优先扩张。",
+                },
+                assign: {
+                    latex: "x^*=\\arg\\min_{x\\in Q} g(x)",
+                    flow: ["queue Q", "lowest gradient", "frontier", "label claim"],
+                    principle: "每次优先处理低梯度位置，所以区域会沿颜色平滑处扩张。",
+                },
+                map: {
+                    latex: "L(x)=-1\\quad if\\quad |N_L(x)|>1",
+                    flow: ["neighbor labels", "conflict", "watershed line", "label map"],
+                    principle: "不同标签相遇时不强行归类，而是留下分水岭边界。",
+                },
+                stats: {
+                    latex: "region_k=\\{x\\mid L(x)=k\\}",
+                    flow: ["label map", "regions", "boundary", "statistics"],
+                    principle: "最终 label map 把边界和区域 id 都保存下来，供后续属性分析使用。",
+                },
+            },
+            "区域属性": {
+                image: {
+                    latex: "L(x)\\in\\mathbb{N},\\quad x=(u,v)",
+                    flow: ["label map", "integer id", "mask per label", "region input"],
+                    principle: "区域属性分析的输入不是彩色图片，而是每个像素的整数 label。",
+                },
+                feature: {
+                    latex: "C_k=\\{x\\mid L(x)=k,\\; x\\ connected\\}",
+                    flow: ["scan pixels", "same label", "connected component", "compact id"],
+                    principle: "同 label 且空间相邻的像素被合成一个连通区域，离散块会分开编号。",
+                },
+                assign: {
+                    latex: "area_k=|C_k|,\\quad ratio_k=area_k/|\\Omega|",
+                    flow: ["component C_k", "pixel count", "area", "mask ratio"],
+                    principle: "面积就是该区域覆盖的像素数，占比用于过滤过小区域或比较目标规模。",
+                },
+                update: {
+                    latex: "bbox_k=(\\min u,\\min v,\\max u,\\max v)",
+                    flow: ["coordinates", "min/max", "bbox", "contour edges"],
+                    principle: "bbox 来自坐标极值，轮廓来自与其他 label 或图像边界相邻的边。",
+                },
+                stats: {
+                    latex: "table_k=(area,bbox,perimeter,ratio)",
+                    flow: ["label map", "measure", "region table", "filter/sort"],
+                    principle: "最终区域表可以直接用于筛选、排序、目标质量评价或后续识别。",
+                },
+            },
+        };
+        const methodMeta = table[method] || {};
+        const phaseMeta = methodMeta[phase] || methodMeta.map || methodMeta.stats || fallback;
+        return {
+            ...fallback,
+            ...phaseMeta,
+            facts: [
+                ["step", `${state.conceptFrameIndex + 1}/${concept?.frames?.length || 1}`],
+                ["phase", phaseName(phase)],
+                ["nodes", concept?.stripK || "--"],
+                ["output", concept?.stripOutput || "--"],
+            ],
+        };
+    }
+
+    function renderProcessNotes(concept, frame) {
+        const meta = teachingMeta(concept, frame);
+        const flow = meta.flow || [];
+        const compactNotes = (concept?.notes || []).slice(0, 4);
+        return `
+            <section class="seg-notes-current">
+                <div class="seg-notes-flowline" aria-label="当前步骤数据流">
+                    ${flow.map((item, index) => `
+                        <span>${escapeHtml(item)}</span>
+                        ${index < flow.length - 1 ? "<i></i>" : ""}
+                    `).join("")}
+                </div>
+                <p>${escapeHtml(meta.principle)}</p>
+                <div class="seg-notes-stat-grid">
+                    ${meta.facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}
+                </div>
+            </section>
+            <dl class="seg-notes-compact">
+                ${compactNotes.map(([label, text]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(text)}</dd></div>`).join("")}
+            </dl>
+        `;
     }
 
     function matrixHeatmap(values, size, labels = []) {
@@ -2465,11 +2732,10 @@
         els.conceptDetail.innerHTML = conceptCard("输出解释", frame.detail);
         els.currentIter.textContent = `${state.conceptFrameIndex + 1} / ${frames.length}`;
         els.stripIter.textContent = `${state.conceptFrameIndex + 1}`;
-        els.notes.innerHTML = noteRows([
-            ["当前阶段", frame.stageNote || frame.title],
-            ...state.concept.notes,
-        ]);
-        els.formulaNote.textContent = frame.stageNote || state.concept.formulaNote;
+        const meta = teachingMeta(state.concept, frame);
+        els.formula.innerHTML = renderLatexFormula(meta.latex);
+        els.formulaNote.textContent = meta.principle;
+        els.notes.innerHTML = renderProcessNotes(state.concept, frame);
         drawConceptShowcase(frame.showcase || state.concept.showcase);
         setPhase(frame.phase || "map");
         updateConceptFrameStrip();
@@ -3309,6 +3575,7 @@
             state.uploadUrl = "";
         }
         els.uploadName.textContent = "选择文件";
+        updateSampleCards();
         await loadImage(item.image, item.name);
         if (autoRun) await runCurrentMode();
     }
@@ -3319,8 +3586,7 @@
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             state.data = await response.json();
             state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";
-            els.sample.innerHTML = (state.data.samples || []).map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
-            els.sample.value = state.sampleId;
+            renderSamplePicker();
             readControls();
             await loadSelectedSample(true);
         } catch (error) {
@@ -3332,6 +3598,7 @@
 
     els.sample.addEventListener("change", async () => {
         state.sampleId = els.sample.value;
+        updateSampleCards();
         await loadSelectedSample(true);
     });
     els.upload.addEventListener("change", async () => {

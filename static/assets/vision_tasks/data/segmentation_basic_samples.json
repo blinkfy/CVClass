@@ -71,6 +71,86 @@
           ]
         }
       }
+    },
+    {
+      "id": "traffic_scene",
+      "name": "Traffic Street",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 640,
+      "height": 427,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "vehicle seeds + road/background contrast",
+          "objective": "separate foreground vehicles from street context",
+          "seeds": [
+            {"x": 50, "y": 58, "type": "fg"},
+            {"x": 65, "y": 62, "type": "fg"},
+            {"x": 18, "y": 20, "type": "bg"},
+            {"x": 86, "y": 18, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "boat_water",
+      "name": "Boat & Water",
+      "image": "/static/assets/img/boat_1.jpeg",
+      "width": 640,
+      "height": 427,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "boat foreground + water background",
+          "objective": "cut along high color-contrast hull edges",
+          "seeds": [
+            {"x": 45, "y": 52, "type": "fg"},
+            {"x": 58, "y": 56, "type": "fg"},
+            {"x": 16, "y": 22, "type": "bg"},
+            {"x": 82, "y": 24, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "peppers_color",
+      "name": "Color Peppers",
+      "image": "/static/assets/img/peppers_color.png",
+      "width": 512,
+      "height": 384,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "warm object colors + dark gaps",
+          "objective": "segment compact color regions",
+          "seeds": [
+            {"x": 40, "y": 48, "type": "fg"},
+            {"x": 58, "y": 46, "type": "fg"},
+            {"x": 16, "y": 16, "type": "bg"},
+            {"x": 86, "y": 84, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "width": 640,
+      "height": 426,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "object/table seeds + wall background",
+          "objective": "separate tabletop objects from room context",
+          "seeds": [
+            {"x": 47, "y": 60, "type": "fg"},
+            {"x": 61, "y": 56, "type": "fg"},
+            {"x": 18, "y": 20, "type": "bg"},
+            {"x": 86, "y": 18, "type": "bg"}
+          ]
+        }
+      }
     }
   ]
 }

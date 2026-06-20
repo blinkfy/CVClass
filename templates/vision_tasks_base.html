@@ -3,7 +3,7 @@
 {% block title %}{{ vision_module_title|default('视觉识别与分割实验室') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260621-output-contract1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260621-method-roadmap1">
 {% endblock %}
 
 {% block content %}
@@ -34,7 +34,7 @@
 {% if active_sub_page == 'classification' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260620-classification-lab1"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260621-segb-autograb2"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260621-segb-notes-samples2"></script>
 {% elif active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}?v=20260621-detection-resize1"></script>
 {% elif active_sub_page == 'semantic' %}

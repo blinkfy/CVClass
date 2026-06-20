@@ -1,0 +1,9 @@
+[0621/023721.628:ERROR:gpu\ipc\client\command_buffer_proxy_impl.cc:285] ContextResult::kTransientFailure: Failed to send GpuControl.CreateCommandBuffer.
+[0621/023723.954:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023725.718:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023728.432:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023730.257:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023732.448:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023735.231:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023737.236:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
+[0621/023817.440:ERROR:gpu\command_buffer\service\webgpu_decoder_impl.cc:1724] Failed to query ID3D11Device from ANGLE.
