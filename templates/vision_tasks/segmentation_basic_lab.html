@@ -189,6 +189,7 @@
                     <canvas data-segb-concept-mask width="256" height="180"></canvas>
                 </figure>
             </div>
+            <div class="seg-basic-frame-strip" data-segb-frame-strip aria-label="算法步骤预览"></div>
             <div class="seg-basic-graph-stage" data-segb-graph-stage></div>
             <div class="seg-basic-matrix-stage" data-segb-matrix-stage></div>
             <div class="seg-basic-concept-detail" data-segb-concept-detail></div>
@@ -208,13 +209,4 @@
         <div class="method-notes-data seg-basic-notes-data" data-segb-notes></div>
     </aside>
 </section>
-
-<ol class="vision-stepper method-stepper seg-basic-stepper" aria-label="传统图像分割处理流程" data-segb-stepper>
-    <li class="is-active" data-segb-phase="image"><span>1</span><div><strong>Image Pixels</strong><small>Canvas image data</small></div></li>
-    <li data-segb-phase="feature"><span>2</span><div><strong>Feature Vector</strong><small>RGB / RGB+XY</small></div></li>
-    <li data-segb-phase="assign"><span>3</span><div><strong>Assign / Graph</strong><small>cluster or nodes</small></div></li>
-    <li data-segb-phase="update"><span>4</span><div><strong>Update / Cut</strong><small>centers or min-cut</small></div></li>
-    <li data-segb-phase="map"><span>5</span><div><strong>Segmentation Map</strong><small>region labels</small></div></li>
-    <li data-segb-phase="stats"><span>6</span><div><strong>Region Statistics</strong><small>counts and ratios</small></div></li>
-</ol>
 {% endblock %}

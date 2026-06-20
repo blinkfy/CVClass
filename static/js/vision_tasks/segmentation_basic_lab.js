@@ -53,6 +53,7 @@
         concept: null,
         conceptFrameIndex: 0,
         skipConceptAutoPlay: false,
+        autoRunTimer: 0,
         grabcut: {
             tool: "box",
             box: null,
@@ -117,6 +118,7 @@
         conceptMask: $("[data-segb-concept-mask]"),
         conceptResultTitle: $("[data-segb-concept-result-title]"),
         conceptResultCaption: $("[data-segb-concept-result-caption]"),
+        frameStrip: $("[data-segb-frame-strip]"),
         grabcutToolbar: $("[data-segb-grabcut-toolbar]"),
         grabcutTools: $$("[data-segb-grabcut-tool]"),
         grabcutReset: $("[data-segb-grabcut-reset]"),
@@ -226,6 +228,7 @@
             state.animationTimer = 0;
         }
         state.playing = false;
+        els.frameStrip?.classList.remove("is-playing");
         els.play.textContent = activeFamily() === "cluster" ? "播放迭代" : "播放流程";
     }
 
@@ -687,8 +690,8 @@
         };
     }
 
-    function drawConceptShowcase(showcase) {
-        if (!els.conceptSource || !els.conceptMask || !showcase) return;
+    function drawShowcaseCanvases(showcase, sourceCanvas, maskCanvas, options = {}) {
+        if (!sourceCanvas || !maskCanvas || !showcase) return null;
         const work = ensureWorkData();
         const {
             model,
@@ -703,6 +706,7 @@
             caption,
             alpha = 0.66,
         } = showcase;
+        if (!model) return null;
         const displayBox = showcase.interactive === "grabcut" && state.grabcut.draftBox
             ? state.grabcut.draftBox
             : box;
@@ -712,18 +716,18 @@
                 ...indexesToSeeds(uniqueIndexes(state.grabcut.bgSeeds, model), "bg"),
             ]
             : seeds;
-        [els.conceptSource, els.conceptMask].forEach((canvas) => {
+        [sourceCanvas, maskCanvas].forEach((canvas) => {
             canvas.width = work.width;
             canvas.height = work.height;
         });
-        const sourceCtx = els.conceptSource.getContext("2d");
+        const sourceCtx = sourceCanvas.getContext("2d");
         sourceCtx.putImageData(work.imageData, 0, 0);
-        if (showcase.interactive === "grabcut") {
-            drawConceptBox(sourceCtx, work.width, work.height, model.cols, model.rows, displayBox, els.conceptSource);
-            drawConceptSeeds(sourceCtx, work.width, work.height, model.cols, model.rows, displaySeeds, els.conceptSource, { compact: true });
+        if (showcase.interactive === "grabcut" && options.showInputMarks !== false) {
+            drawConceptBox(sourceCtx, work.width, work.height, model.cols, model.rows, displayBox, sourceCanvas);
+            drawConceptSeeds(sourceCtx, work.width, work.height, model.cols, model.rows, displaySeeds, sourceCanvas, { compact: true });
         }
 
-        const maskCtx = els.conceptMask.getContext("2d");
+        const maskCtx = maskCanvas.getContext("2d");
         const output = maskCtx.createImageData(work.width, work.height);
         const src = work.imageData.data;
         const dst = output.data;
@@ -747,13 +751,20 @@
         }
         maskCtx.putImageData(output, 0, 0);
         drawGridLines(maskCtx, work.width, work.height, cols, rows);
-        drawConceptBox(maskCtx, work.width, work.height, cols, rows, displayBox, els.conceptMask);
-        drawConceptCutEdges(maskCtx, work.width, work.height, cols, rows, cutEdges, els.conceptMask);
-        drawConceptBboxes(maskCtx, work.width, work.height, cols, rows, bboxes, els.conceptMask);
-        drawConceptActiveCells(maskCtx, work.width, work.height, cols, rows, activeCells, els.conceptMask);
-        if (!showcase.interactive || showcase.showSeedsOnMask) {
-            drawConceptSeeds(maskCtx, work.width, work.height, cols, rows, displaySeeds, els.conceptMask, { compact: showcase.interactive === "grabcut" });
+        drawConceptBox(maskCtx, work.width, work.height, cols, rows, displayBox, maskCanvas);
+        drawConceptCutEdges(maskCtx, work.width, work.height, cols, rows, cutEdges, maskCanvas);
+        drawConceptBboxes(maskCtx, work.width, work.height, cols, rows, bboxes, maskCanvas);
+        drawConceptActiveCells(maskCtx, work.width, work.height, cols, rows, activeCells, maskCanvas);
+        if (options.showMaskSeeds !== false && (!showcase.interactive || showcase.showSeedsOnMask)) {
+            drawConceptSeeds(maskCtx, work.width, work.height, cols, rows, displaySeeds, maskCanvas, { compact: showcase.interactive === "grabcut" });
         }
+        return { title, caption };
+    }
+
+    function drawConceptShowcase(showcase) {
+        const meta = drawShowcaseCanvases(showcase, els.conceptSource, els.conceptMask);
+        if (!meta) return;
+        const { title, caption } = meta;
         els.conceptResultTitle.textContent = title || "分割结果 label map";
         els.conceptResultCaption.textContent = caption || "算法输出的区域标签会在这里显示。";
     }
@@ -1302,13 +1313,25 @@
         return indexes.map((index) => ({ index, type, text: type === "bg" ? "B" : "F" }));
     }
 
-    function buildGrabCutPixelModel() {
+    function buildPixelModel(maxSide = 120, minCols = 48, minRows = 32) {
         const work = ensureWorkData();
-        const maxSide = 132;
         const scale = maxSide / Math.max(work.width, work.height);
-        const cols = Math.max(48, Math.round(work.width * Math.min(1, scale)));
-        const rows = Math.max(32, Math.round(work.height * Math.min(1, scale)));
+        const cols = Math.max(minCols, Math.round(work.width * Math.min(1, scale)));
+        const rows = Math.max(minRows, Math.round(work.height * Math.min(1, scale)));
         return buildSampleGrid(cols, rows);
+    }
+
+    function buildGrabCutPixelModel() {
+        return buildPixelModel(120, 48, 32);
+    }
+
+    function seedsForModel(seedDefs, model) {
+        return seedDefs.map((seed) => ({
+            index: nearestCellIndex(model.cells, model.cols, model.rows, seed.x, seed.y),
+            type: seed.type,
+            text: seed.text,
+            label: seed.label,
+        }));
     }
 
     function scaleBox(box, fromModel, toModel) {
@@ -1364,19 +1387,29 @@
         let labels = model.cells.map((cell, index) => {
             if (bgUserSet.has(index)) return false;
             if (fgUserSet.has(index)) return true;
-            return insideBox(cell) && central(cell);
+            return insideBox(cell);
         });
         const snapshots = [];
         const sigmaSq = 54 * 54;
         for (let iter = 1; iter <= 5; iter += 1) {
             const fgIndexes = labels.map((label, index) => label ? index : -1).filter((index) => index >= 0);
             const bgIndexes = labels.map((label, index) => !label ? index : -1).filter((index) => index >= 0);
-            const fgMean = colorMean(model.cells, fgIndexes.length ? fgIndexes : model.cells.filter(insideBox).map((cell) => cell.index));
-            const bgMean = colorMean(model.cells, bgIndexes);
+            const outsideIndexes = model.cells
+                .filter((cell) => !insideBox(cell))
+                .map((cell) => cell.index);
+            const fgModelIndexes = fgUserSet.size
+                ? [...fgUserSet]
+                : (fgIndexes.length ? fgIndexes : model.cells.filter(insideBox).map((cell) => cell.index));
+            const bgModelIndexes = bgUserSet.size
+                ? [...bgUserSet, ...outsideIndexes]
+                : bgIndexes;
+            const fgMean = colorMean(model.cells, fgModelIndexes);
+            const bgMean = colorMean(model.cells, bgModelIndexes);
             const scores = model.cells.map((cell, index) => {
                 if (fgUserSet.has(index)) return 8;
                 if (bgUserSet.has(index) || !insideBox(cell)) return -8;
-                const fgAffinity = Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 3.2 + (central(cell) ? 0.58 : 0);
+                const boxPrior = fgUserSet.size ? 0.34 : 0.58;
+                const fgAffinity = Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 3.2 + boxPrior;
                 const bgAffinity = Math.exp(-colorDistanceSq(cell, bgMean) / (2 * sigmaSq)) * 3.2 + 0.24;
                 return fgAffinity - bgAffinity;
             });
@@ -1396,7 +1429,7 @@
                         const weight = Math.exp(-colorDistanceSq(cell, model.cells[neighbor]) / (2 * 34 * 34));
                         vote += (labels[neighbor] ? 1 : -1) * weight;
                     });
-                    next[index] = scores[index] + vote * 0.72 > 0;
+                    next[index] = scores[index] + vote * 0.52 > 0;
                 });
                 labels = next;
             }
@@ -1412,9 +1445,101 @@
         return { labels, snapshots, insideBox, central };
     }
 
+    function runDenseSeededCut(model, seedDefs, options = {}) {
+        const seedMarks = seedsForModel(seedDefs, model);
+        const fgSeedSet = new Set(seedMarks.filter((seed) => seed.type === "fg").map((seed) => seed.index));
+        const bgSeedSet = new Set(seedMarks.filter((seed) => seed.type === "bg").map((seed) => seed.index));
+        const fgMean = colorMean(model.cells, [...fgSeedSet]);
+        const bgMean = colorMean(model.cells, [...bgSeedSet]);
+        const sigmaSq = options.sigmaSq || 58 * 58;
+        const scores = model.cells.map((cell, index) => {
+            if (fgSeedSet.has(index)) return 8;
+            if (bgSeedSet.has(index)) return -8;
+            const fgAffinity = Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 3.2;
+            const bgAffinity = Math.exp(-colorDistanceSq(cell, bgMean) / (2 * sigmaSq)) * 3.2;
+            const centerBias = (0.5 - Math.hypot(cell.cx - 0.5, cell.cy - 0.5)) * (options.centerBias || 0.35);
+            return fgAffinity - bgAffinity + centerBias;
+        });
+        let labels = scores.map((score) => score > 0);
+        const snapshots = [];
+        const totalRounds = options.rounds || 4;
+        for (let iter = 1; iter <= totalRounds; iter += 1) {
+            const next = labels.slice();
+            model.cells.forEach((cell, index) => {
+                if (fgSeedSet.has(index)) {
+                    next[index] = true;
+                    return;
+                }
+                if (bgSeedSet.has(index)) {
+                    next[index] = false;
+                    return;
+                }
+                let vote = 0;
+                neighborIndexes(index, model.cols, model.rows).forEach((neighbor) => {
+                    const weight = Math.exp(-colorDistanceSq(cell, model.cells[neighbor]) / (2 * 36 * 36));
+                    vote += (labels[neighbor] ? 1 : -1) * weight;
+                });
+                next[index] = scores[index] + vote * 0.68 > 0;
+            });
+            labels = next;
+            snapshots.push({
+                iter,
+                labels: labels.slice(),
+                scores,
+                cutEdges: cutEdgesFromLabels(model, labels),
+            });
+        }
+        return {
+            seedMarks,
+            fgMean,
+            bgMean,
+            scores,
+            labels,
+            cutEdges: cutEdgesFromLabels(model, labels),
+            snapshots,
+        };
+    }
+
+    function runDenseNcut(model) {
+        const raw = model.cells.map((cell) => (
+            (cell.cx - 0.5) * 1.25
+            + (cell.cy - 0.5) * 0.42
+            + ((cell.gray - 128) / 255) * 0.86
+        ));
+        const snapshots = [];
+        let vector = raw.slice();
+        for (let iter = 1; iter <= 4; iter += 1) {
+            const next = vector.slice();
+            model.cells.forEach((cell, index) => {
+                let sum = vector[index] * 1.4;
+                let weightSum = 1.4;
+                neighborIndexes(index, model.cols, model.rows).forEach((neighbor) => {
+                    const weight = Math.exp(-colorDistanceSq(cell, model.cells[neighbor]) / (2 * 42 * 42));
+                    sum += vector[neighbor] * weight;
+                    weightSum += weight;
+                });
+                next[index] = sum / Math.max(0.001, weightSum);
+            });
+            const mean = next.reduce((sum, value) => sum + value, 0) / next.length;
+            const norm = Math.hypot(...next.map((value) => value - mean)) || 1;
+            vector = next.map((value) => (value - mean) / norm);
+            snapshots.push({ iter, vector: vector.slice() });
+        }
+        const sorted = [...vector].sort((a, b) => a - b);
+        const threshold = sorted[Math.floor(sorted.length / 2)];
+        const labels = vector.map((value) => value >= threshold);
+        const cutEdges = cutEdgesFromLabels(model, labels);
+        return { scores: vector, labels, cutEdges, snapshots, threshold };
+    }
+
     function buildGraphCutDemo() {
         const model = buildSampleGrid(10, 7);
         const seeds = graphSeedsForSample();
+        const denseModel = buildPixelModel(120, 48, 32);
+        const denseCut = runDenseSeededCut(denseModel, seeds);
+        const denseSeedMarks = denseCut.seedMarks;
+        const denseFinal = denseCut.snapshots[denseCut.snapshots.length - 1] || denseCut;
+        const denseFgCount = denseFinal.labels.filter(Boolean).length;
         const seedMarks = seeds.map((seed) => ({
             index: nearestCellIndex(model.cells, model.cols, model.rows, seed.x, seed.y),
             type: seed.type,
@@ -1453,12 +1578,12 @@
             activeMethod: "Graph Cut",
             stageTitle: "当前实验模式：Graph Cut 最小割",
             stripFeature: "unary + pairwise graph",
-            stripK: `${model.cells.length} nodes`,
+            stripK: `${denseModel.cells.length} px samples`,
             stripOutput: "min-cut labels",
             regionCount: "2",
             formulaLabel: "Graph Cut",
             formula: "E(L)=Σ unary_i(L_i)+Σ pairwise_ij[L_i≠L_j]",
-            formulaNote: "页面在当前图像上抽样成小型像素图，并用最大流/最小割实际求解前景与背景划分。",
+            formulaNote: "页面使用小图解释 max-flow/min-cut，同时在大图上运行 dense 颜色项 + 邻域平滑的像素级近似图割。",
             notes: [
                 ["建图", "每个小格是节点，Source 表示前景，Sink 表示背景。"],
                 ["Unary cost", "前景/背景种子估计颜色模型，决定节点连到 Source 或 Sink 的代价。"],
@@ -1466,10 +1591,11 @@
                 ["最小割", "最大流结束后，从 Source 还能到达的节点就是前景侧。"],
             ],
             showcase: {
-                model,
-                labels: solution.labels,
+                model: denseModel,
+                labels: denseFinal.labels,
+                cutEdges: denseFinal.cutEdges,
                 title: "Graph Cut 分割结果",
-                caption: `绿色为 Source 前景侧，蓝色为背景侧；当前前景约 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`,
+                caption: `绿色为 Source 前景侧，蓝色为背景侧；dense 前景约 ${Math.round((denseFgCount / denseModel.cells.length) * 100)}%，割边 ${denseFinal.cutEdges.length} 条。`,
             },
             frames: [
                 {
@@ -1483,11 +1609,11 @@
                     detail: metricCards([["sample", `${model.cols}×${model.rows} grid`], ["source", state.sourceName || "sample image"], ["seed rule", "manual FG/BG hints"], ["next", "build unary costs"]]),
                     stageNote: "先把图像抽样成小图，再用绿色/蓝色种子给前景和背景提供约束。",
                     showcase: {
-                        model,
-                        labels: seedStageLabels(model, seedMarks),
-                        seeds: seedMarks,
+                        model: denseModel,
+                        labels: seedStageLabels(denseModel, denseSeedMarks),
+                        seeds: denseSeedMarks,
                         title: "Graph Cut Step 1：前景/背景种子",
-                        caption: "绿色种子代表 Source 前景约束，蓝色种子代表 Sink 背景约束。",
+                        caption: "绿色种子代表 Source 前景约束，蓝色种子代表 Sink 背景约束；大图按 dense 像素采样显示。",
                         alpha: 0.5,
                     },
                 },
@@ -1504,9 +1630,9 @@
                     detail: metricCards([["FG color", rgbText(fgMean)], ["BG color", rgbText(bgMean)], ["unary range", "seed caps = 90"], ["meaning", "lower cut keeps label"]]),
                     stageNote: "每个节点会得到一对端点权重：切断 Source 边会让它偏向背景，切断 Sink 边会让它偏向前景。",
                     showcase: {
-                        model,
-                        scores,
-                        seeds: seedMarks,
+                        model: denseModel,
+                        scores: denseCut.scores,
+                        seeds: denseSeedMarks,
                         title: "Graph Cut Step 2：Unary cost 热力图",
                         caption: "偏橙的网格更像前景模型，偏蓝的网格更像背景模型。",
                         alpha: 0.72,
@@ -1525,12 +1651,12 @@
                     detail: metricCards([["augment paths", String(solution.paths.length)], ["first bottle", (solution.paths[0]?.bottleneck || 0).toFixed(2)], ["edge model", "color contrast"], ["next", "min cut"]]),
                     stageNote: "最大流会沿着还能承载流量的路径推进；粗边代表切开会更痛，红色切线通常绕开它们。",
                     showcase: {
-                        model,
-                        labels: filledLabels(model, 0),
-                        activeCells: pathCells,
+                        model: denseModel,
+                        labels: denseCut.snapshots[0]?.labels || filledLabels(denseModel, 0),
+                        cutEdges: denseCut.snapshots[0]?.cutEdges || [],
                         title: "Graph Cut Step 3：最大流增广路径",
-                        caption: "橙色高亮表示当前增广路径经过的节点，算法沿可通行边不断推送流量。",
-                        alpha: 0.42,
+                        caption: "大图展示 dense 图割的第一轮边界，红线是被切开的相邻采样点。",
+                        alpha: 0.66,
                     },
                 },
                 {
@@ -1545,12 +1671,11 @@
                     ]),
                     stageNote: "最小割选择一组总权重最低的边，把 Source 与 Sink 分开。",
                     showcase: {
-                        model,
-                        labels: solution.labels,
-                        cutEdges: solution.cutEdges,
-                        seeds: seedMarks,
+                        model: denseModel,
+                        labels: denseFinal.labels,
+                        cutEdges: denseFinal.cutEdges,
                         title: "Graph Cut Step 4：最小割边界",
-                        caption: "红色虚线是最终切断的边，绿色/蓝色表示割开后的两侧。",
+                        caption: "红色虚线是 dense 图割最终切断的边，绿色/蓝色表示割开后的两侧。",
                     },
                 },
                 {
@@ -1564,11 +1689,11 @@
                     ]),
                     stageNote: "最终得到的是每个节点的前景/背景标签，红线就是算法认为最自然的边界。",
                     showcase: {
-                        model,
-                        labels: solution.labels,
-                        cutEdges: solution.cutEdges,
+                        model: denseModel,
+                        labels: denseFinal.labels,
+                        cutEdges: denseFinal.cutEdges,
                         title: "Graph Cut Step 5：最终分割结果",
-                        caption: `前景约 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`,
+                        caption: `dense 前景约 ${Math.round((denseFgCount / denseModel.cells.length) * 100)}%，割边 ${denseFinal.cutEdges.length} 条。`,
                     },
                 },
             ],
@@ -1577,6 +1702,8 @@
 
     function buildNcutDemo() {
         const model = buildSampleGrid(4, 3);
+        const denseModel = buildPixelModel(120, 48, 32);
+        const denseNcut = runDenseNcut(denseModel);
         const n = model.cells.length;
         const weights = new Float64Array(n * n);
         for (let i = 0; i < n; i += 1) {
@@ -1654,12 +1781,12 @@
             activeMethod: "Normalized Cut",
             stageTitle: "当前实验模式：Normalized Cut 谱分割",
             stripFeature: "W + D + eigenvector",
-            stripK: `${n} supernodes`,
+            stripK: `${denseModel.cells.length} px samples`,
             stripOutput: "balanced partition",
             regionCount: "2",
             formulaLabel: "Ncut",
             formula: "Ncut(A,B)=cut(A,B)/assoc(A,V)+cut(A,B)/assoc(B,V)",
-            formulaNote: "页面实际构造 W 矩阵，并用归一化相似度矩阵的第二特征向量做二分割。",
+            formulaNote: "说明区展示小型 W/D/特征向量，右侧大图用 dense 平滑谱向量近似展示像素级二分。",
             notes: [
                 ["W 矩阵", "颜色相近、空间相邻的超像素权重大。"],
                 ["D 矩阵", "D[i,i] 是第 i 个节点的连接总强度。"],
@@ -1667,8 +1794,9 @@
                 ["归一化", "Ncut 用 assoc 项惩罚切出很小的孤立块。"],
             ],
             showcase: {
-                model,
-                labels,
+                model: denseModel,
+                labels: denseNcut.labels,
+                cutEdges: denseNcut.cutEdges,
                 title: "Normalized Cut 平衡分割结果",
                 caption: `两种颜色表示第二特征向量阈值后的两个区域；Ncut score = ${ncut.toFixed(3)}。`,
             },
@@ -1681,11 +1809,13 @@
                     detail: barsHtml(model.cells.map((cell, index) => ({ label: `v${index + 1}`, value: degree[index], color: "#2563eb", note: `D=${degree[index].toFixed(2)}` }))),
                     stageNote: "Ncut 不是找 Source/Sink，而是先构造一个所有节点之间的相似度图。",
                     showcase: {
-                        model,
-                        labels: filledLabels(model, 0),
-                        activeCells: model.cells.map((cell) => cell.index),
+                        model: denseModel,
+                        labels: filledLabels(denseModel, 0),
+                        activeCells: denseModel.cells
+                            .filter((_, index) => index % Math.max(1, Math.round(denseModel.cells.length / 80)) === 0)
+                            .map((cell) => cell.index),
                         title: "Ncut Step 1：超像素节点图",
-                        caption: "先把图像抽样为少量超像素节点，后续用节点相似度做谱分割。",
+                        caption: "先把图像抽样为 dense 像素节点，后续用相似度平滑近似谱分割。",
                         alpha: 0.42,
                     },
                 },
@@ -1697,10 +1827,10 @@
                     detail: metricCards([["W shape", `${n}×${n}`], ["max W", Math.max(...weights).toFixed(2)], ["min nonzero W", Math.min(...Array.from(weights).filter(Boolean)).toFixed(2)], ["normalizer", "D^-1/2 W D^-1/2"]]),
                     stageNote: "矩阵越亮表示两个节点越相似；D 记录每个节点在图里的总连接强度。",
                     showcase: {
-                        model,
-                        scores: degreeScores,
+                        model: denseModel,
+                        scores: denseNcut.snapshots[0]?.vector || denseNcut.scores,
                         title: "Ncut Step 2：节点连接强度 D",
-                        caption: "颜色越偏橙，表示该节点与全图的连接总强度越高。",
+                        caption: "蓝/橙热力显示 dense 谱向量的初期分布，后续逐轮平滑稳定。",
                         alpha: 0.7,
                     },
                 },
@@ -1712,8 +1842,8 @@
                     detail: metricCards([["iteration", String(snapshot.iter)], ["orthogonal", "removed first eigenvector"], ["threshold", "median sign split"], ["solver", "power iteration demo"]]),
                     stageNote: "向量逐步稳定后，同号节点会被分到同一侧；这就是谱分割的可视化核心。",
                     showcase: {
-                        model,
-                        scores: snapshot.vector,
+                        model: denseModel,
+                        scores: denseNcut.snapshots[Math.min(index + 1, denseNcut.snapshots.length - 1)]?.vector || denseNcut.scores,
                         title: `Ncut Step 3：特征向量迭代 ${snapshot.iter}`,
                         caption: "蓝/橙两侧逐渐稳定，之后按阈值形成两个区域。",
                         alpha: 0.74,
@@ -1730,9 +1860,9 @@
                     ]),
                     stageNote: "最终边界由第二特征向量的阈值决定，并用 Ncut 分数衡量是否平衡。",
                     showcase: {
-                        model,
-                        labels,
-                        cutEdges,
+                        model: denseModel,
+                        labels: denseNcut.labels,
+                        cutEdges: denseNcut.cutEdges,
                         title: "Ncut Step 4：最终平衡分割",
                         caption: `两个区域由特征向量阈值得到；Ncut score = ${ncut.toFixed(3)}。`,
                     },
@@ -1778,10 +1908,10 @@
             regionCount: "2",
             formulaLabel: "GrabCut",
             formula: "repeat: estimate FG/BG color model → graph cut labels",
-            formulaNote: "在左侧输入图上拖拽矩形框或使用前景/背景画笔，页面会用你的标注重新估计颜色模型并运行图割。",
+            formulaNote: "框内默认是可能前景；前景笔会学习目标颜色，背景笔是硬背景约束，涂到目标上会强制把那部分挖掉。",
             notes: [
                 ["用户框", "在输入图上拖拽矩形框，框外作为确定背景，框内作为可能前景。"],
-                ["前景/背景笔", "前景笔会强制 Source 约束，背景笔会强制 Sink 约束。"],
+                ["前景/背景笔", "前景笔应画在想保留的衣服/物体上；背景笔只画皮肤、头发或外部背景，画到目标上会被强制扣除。"],
                 ["颜色模型", "每轮用当前 mask 估计 FG/BG 平均颜色，近似 GrabCut 的 GMM 思路。"],
                 ["Graph Cut", "用 unary 颜色项和 pairwise 平滑项求新的二值 mask。"],
                 ["迭代收敛", "mask 与颜色模型交替更新，边界逐渐贴合物体颜色差异。"],
@@ -1802,14 +1932,14 @@
                     graph: conceptGridSvg(previewModel, { box: previewBox, seeds: previewSeedMarks, activeCells: previewModel.cells.filter((cell) => {
                         const denseX = Math.round((cell.x / Math.max(1, previewModel.cols - 1)) * (model.cols - 1));
                         const denseY = Math.round((cell.y / Math.max(1, previewModel.rows - 1)) * (model.rows - 1));
-                        return insideBox(model.cells[denseY * model.cols + denseX]) && central(model.cells[denseY * model.cols + denseX]);
+                        return insideBox(model.cells[denseY * model.cols + denseX]);
                     }).map((cell) => cell.index), caption: "drag box, then add optional FG/BG seeds" }),
                     matrix: metricCards([["box", `[${box.x0},${box.y0}] - [${box.x1},${box.y1}]`], ["FG seeds", String(fgUserSeeds.length)], ["BG seeds", String(bgUserSeeds.length)], ["next", "learn colors"]]),
                     detail: noteRows([["初始化", "矩形框决定 probable foreground 范围；画笔种子会作为强约束进入图割。"]]),
                     stageNote: "在输入图上直接拖拽框选，或用前景/背景笔补充种子，GrabCut 会按这些交互输入重新提取前景。",
                     showcase: {
                         model,
-                        labels: model.cells.map((cell) => insideBox(cell) && central(cell)),
+                        labels: model.cells.map((cell) => insideBox(cell)),
                         box,
                         seeds: userSeedMarks,
                         interactive: "grabcut",
@@ -1882,8 +2012,7 @@
         });
     }
 
-    function buildWatershedCore() {
-        const model = buildSampleGrid(16, 10);
+    function buildWatershedCore(model = buildSampleGrid(16, 10)) {
         const gradient = gradientForModel(model);
         const markerDefs = [
             { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
@@ -1898,11 +2027,38 @@
         const labels = new Int16Array(model.cells.length);
         const queued = new Uint8Array(model.cells.length);
         const queue = [];
+        const pushQueue = (item) => {
+            queue.push(item);
+            let index = queue.length - 1;
+            while (index > 0) {
+                const parent = Math.floor((index - 1) / 2);
+                if (queue[parent].priority <= queue[index].priority) break;
+                [queue[parent], queue[index]] = [queue[index], queue[parent]];
+                index = parent;
+            }
+        };
+        const popQueue = () => {
+            if (queue.length === 1) return queue.pop();
+            const top = queue[0];
+            queue[0] = queue.pop();
+            let index = 0;
+            while (true) {
+                const left = index * 2 + 1;
+                const right = left + 1;
+                let smallest = index;
+                if (left < queue.length && queue[left].priority < queue[smallest].priority) smallest = left;
+                if (right < queue.length && queue[right].priority < queue[smallest].priority) smallest = right;
+                if (smallest === index) break;
+                [queue[index], queue[smallest]] = [queue[smallest], queue[index]];
+                index = smallest;
+            }
+            return top;
+        };
         const pushNeighbors = (index) => {
             neighborIndexes(index, model.cols, model.rows).forEach((next) => {
                 if (labels[next] !== 0 || queued[next]) return;
                 queued[next] = 1;
-                queue.push({ index: next, priority: gradient[next] });
+                pushQueue({ index: next, priority: gradient[next] });
             });
         };
         markers.forEach((marker) => {
@@ -1914,8 +2070,7 @@
         let targetIndex = 0;
         let processed = 0;
         while (queue.length) {
-            queue.sort((a, b) => a.priority - b.priority);
-            const current = queue.shift();
+            const current = popQueue();
             if (labels[current.index] !== 0) continue;
             const neighborLabels = [...new Set(neighborIndexes(current.index, model.cols, model.rows)
                 .map((next) => labels[next])
@@ -1963,18 +2118,22 @@
 
     function buildWatershedDemo() {
         const core = buildWatershedCore();
+        const denseCore = buildWatershedCore(buildPixelModel(112, 48, 32));
         const gradientScores = core.gradient.map((value) => value * 2 - 1);
+        const denseGradientScores = denseCore.gradient.map((value) => value * 2 - 1);
         const props = propsFromLabelMap(core.model, core.labels);
+        const denseProps = propsFromLabelMap(denseCore.model, denseCore.labels);
         const boundaryCount = core.labels.filter((label) => label === -1).length;
+        const denseBoundaryCount = denseCore.labels.filter((label) => label === -1).length;
         return {
             stepperKind: "watershed",
             status: "Watershed Algorithm",
             activeMethod: "Watershed",
             stageTitle: "当前实验模式：Watershed 分水岭",
             stripFeature: "gradient + markers",
-            stripK: `${props.length} labels`,
+            stripK: `${denseCore.model.cells.length} px samples`,
             stripOutput: "boundary + label map",
-            regionCount: String(props.length),
+            regionCount: String(denseProps.length),
             formulaLabel: "Watershed",
             formula: "markers flood low-gradient basins until fronts meet",
             formulaNote: "页面把当前图像的梯度当作地形高度，marker 从低阻力区域扩张，相遇处形成分水岭边界。",
@@ -1985,10 +2144,10 @@
                 ["Label map", "除边界外，每个网格得到一个区域 id。"],
             ],
             showcase: {
-                model: core.model,
-                labels: core.labels,
+                model: denseCore.model,
+                labels: denseCore.labels,
                 title: "Watershed 分水岭 label map",
-                caption: `红色为分水岭边界，其余颜色为区域 label；共 ${props.length} 个区域，边界 ${boundaryCount} 格。`,
+                caption: `红色为分水岭边界，其余颜色为区域 label；dense 输出共 ${denseProps.length} 个区域，边界 ${denseBoundaryCount} 格。`,
                 alpha: 0.72,
             },
             frames: [
@@ -2000,8 +2159,8 @@
                     detail: metricCards([["grid", `${core.model.cols}×${core.model.rows}`], ["cue", "color gradient"], ["low areas", "flood first"], ["ridges", "boundary candidates"]]),
                     stageNote: "分水岭把梯度图想象成地形：水从低处扩张，山脊就是分界线。",
                     showcase: {
-                        model: core.model,
-                        scores: gradientScores,
+                        model: denseCore.model,
+                        scores: denseGradientScores,
                         title: "Watershed Step 1：梯度地形图",
                         caption: "偏橙区域代表高梯度山脊，后续更容易成为分水岭边界。",
                         alpha: 0.74,
@@ -2015,31 +2174,35 @@
                     detail: noteRows([["Marker 约束", "没有 marker 的像素不会立刻分类，而是等待相邻标签扩张。"]]),
                     stageNote: "marker 是分水岭算法的锚点，决定哪些盆地从哪里开始扩张。",
                     showcase: {
-                        model: core.model,
-                        labels: seedStageLabels(core.model, core.markers),
-                        seeds: core.markers,
+                        model: denseCore.model,
+                        labels: seedStageLabels(denseCore.model, denseCore.markers),
+                        seeds: denseCore.markers,
                         title: "Watershed Step 2：前景/背景 marker",
                         caption: "marker 是扩张起点；未知区域将在后续由优先队列竞争决定标签。",
                         alpha: 0.52,
                     },
                 },
-                ...core.snapshots.slice(1).map((snapshot, index) => ({
-                    phase: index < 2 ? "assign" : index < 3 ? "update" : "map",
-                    title: `3. Flooding 扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
-                    graph: conceptGridSvg(core.model, { labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" }),
-                    matrix: metricCards([["processed", `${snapshot.processed}/${core.model.cells.length}`], ["frontier", snapshot.frontier.length ? `cell ${snapshot.frontier[0] + 1}` : "done"], ["boundary rule", "labels meet"], ["queue", "low gradient first"]]),
-                    detail: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${Math.round(prop.ratio * 100)}% final` }))),
-                    stageNote: "扩张前沿遇到不同标签时，不再强行归类，而是留下红色分水岭边界。",
-                    showcase: {
-                        model: core.model,
-                        labels: Array.from(snapshot.labels),
-                        seeds: core.markers,
-                        activeCells: snapshot.frontier,
-                        title: `Watershed Step 3：扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
-                        caption: "橙色描边是当前扩张前沿；红色格子是不同标签相遇后形成的边界。",
-                        alpha: 0.72,
-                    },
-                })),
+                ...core.snapshots.slice(1).map((snapshot, index) => {
+                    const denseSnapshot = denseCore.snapshots[Math.min(index + 1, denseCore.snapshots.length - 1)];
+                    const denseRatio = denseSnapshot ? Math.round((denseSnapshot.processed / denseCore.model.cells.length) * 100) : 100;
+                    return {
+                        phase: index < 2 ? "assign" : index < 3 ? "update" : "map",
+                        title: `3. Flooding 扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
+                        graph: conceptGridSvg(core.model, { labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" }),
+                        matrix: metricCards([["processed", `${snapshot.processed}/${core.model.cells.length}`], ["frontier", snapshot.frontier.length ? `cell ${snapshot.frontier[0] + 1}` : "done"], ["boundary rule", "labels meet"], ["queue", "low gradient first"]]),
+                        detail: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${Math.round(prop.ratio * 100)}% final` }))),
+                        stageNote: "扩张前沿遇到不同标签时，不再强行归类，而是留下红色分水岭边界。",
+                        showcase: {
+                            model: denseCore.model,
+                            labels: Array.from(denseSnapshot?.labels || denseCore.labels),
+                            seeds: denseCore.markers,
+                            activeCells: denseSnapshot?.frontier || [],
+                            title: `Watershed Step 3：dense 扩张 ${denseRatio}%`,
+                            caption: "橙色描边是当前扩张前沿；红色区域是不同标签相遇后形成的边界。",
+                            alpha: 0.72,
+                        },
+                    };
+                }),
                 {
                     phase: "stats",
                     title: "4. Watershed label map",
@@ -2048,11 +2211,11 @@
                     detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area ${Math.round(prop.ratio * 100)}%, bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}`])),
                     stageNote: "最终结果是一个 label map：边界为红色，其余网格保存区域编号。",
                     showcase: {
-                        model: core.model,
-                        labels: core.labels,
-                        seeds: core.markers,
+                        model: denseCore.model,
+                        labels: denseCore.labels,
+                        seeds: denseCore.markers,
                         title: "Watershed Step 4：最终 label map",
-                        caption: `红色为分水岭边界，其余颜色为区域 label；共 ${props.length} 个区域。`,
+                        caption: `红色为分水岭边界，其余颜色为 dense 区域 label；共 ${denseProps.length} 个区域。`,
                         alpha: 0.72,
                     },
                 },
@@ -2117,18 +2280,22 @@
 
     function buildRegionsDemo() {
         const core = buildWatershedCore();
+        const denseCore = buildWatershedCore(buildPixelModel(112, 48, 32));
         const components = connectedComponents(core.model, core.labels);
+        const denseComponents = connectedComponents(denseCore.model, denseCore.labels);
         const props = components.props;
+        const denseProps = denseComponents.props;
         const scanCells = props[0]?.cells.slice(0, Math.max(1, Math.round((props[0]?.cells.length || 1) * 0.5))) || [];
+        const denseScanCells = denseProps[0]?.cells.slice(0, Math.min(120, Math.max(1, Math.round((denseProps[0]?.cells.length || 1) * 0.18)))) || [];
         return {
             stepperKind: "regions",
             status: "Region Properties",
             activeMethod: "区域属性",
             stageTitle: "当前实验模式：区域属性 label map",
             stripFeature: "connected labels",
-            stripK: `${props.length} regions`,
+            stripK: `${denseProps.length} regions`,
             stripOutput: "area / bbox / contour",
-            regionCount: String(props.length),
+            regionCount: String(denseProps.length),
             formulaLabel: "Region Properties",
             formula: "area=count(label), bbox=min/max(x,y), contour=count(boundary edges)",
             formulaNote: "区域属性不是人工填写的说明，而是从 label map 中扫描、连通域编号和边界计数得到的数据。",
@@ -2139,10 +2306,10 @@
                 ["contour", "统计与其他 label 相邻或接触图像边界的边。"],
             ],
             showcase: {
-                model: core.model,
-                labels: components.compLabels,
+                model: denseCore.model,
+                labels: denseComponents.compLabels,
                 title: "区域属性 label map",
-                caption: `彩色区域是连通域编号后的 label map；已计算 ${props.length} 个区域的 area、bbox 和 contour。`,
+                caption: `彩色区域是 dense 连通域编号后的 label map；已计算 ${denseProps.length} 个区域的 area、bbox 和 contour。`,
                 alpha: 0.72,
             },
             frames: [
@@ -2154,10 +2321,10 @@
                     detail: noteRows([["关键点", "label map 是结构化数据，不只是彩色可视化图。"]]),
                     stageNote: "区域属性分析从 label map 开始：每个网格都有自己的整数标签。",
                     showcase: {
-                        model: core.model,
-                        labels: core.labels,
+                        model: denseCore.model,
+                        labels: denseCore.labels,
                         title: "Region Step 1：输入 label map",
-                        caption: "这是分割算法输出的整数标签图，区域属性计算从这里开始。",
+                        caption: "这是 dense 分水岭输出的整数标签图，区域属性计算从这里开始。",
                         alpha: 0.72,
                     },
                 },
@@ -2165,13 +2332,13 @@
                     phase: "feature",
                     title: "2. 连通域扫描与重新编号",
                     graph: conceptGridSvg(core.model, { labels: components.compLabels, activeCells: scanCells, caption: "connected components receive compact ids" }),
-                    matrix: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${prop.count} cells` }))),
-                    detail: metricCards([["components", String(props.length)], ["largest", `${props[0]?.count || 0} cells`], ["scan", "BFS/DFS"], ["renumber", "compact ids"]]),
+                    matrix: barsHtml(denseProps.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${prop.count} px` }))),
+                    detail: metricCards([["components", String(denseProps.length)], ["largest", `${denseProps[0]?.count || 0} px`], ["scan", "BFS/DFS"], ["renumber", "compact ids"]]),
                     stageNote: "扫描时只把同 label 且相邻的网格归为同一区域，离散小块会成为单独 region。",
                     showcase: {
-                        model: core.model,
-                        labels: components.compLabels,
-                        activeCells: scanCells,
+                        model: denseCore.model,
+                        labels: denseComponents.compLabels,
+                        activeCells: denseScanCells,
                         title: "Region Step 2：连通域扫描",
                         caption: "橙色描边展示正在扫描的连通区域，扫描后会重新编号为紧凑 label id。",
                         alpha: 0.72,
@@ -2181,12 +2348,12 @@
                     phase: "assign",
                     title: "3. 面积 area 与 mask ratio",
                     graph: conceptGridSvg(core.model, { labels: components.compLabels, caption: "area = count(label id)" }),
-                    matrix: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.ratio, color: prop.color, note: `${Math.round(prop.ratio * 100)}%` }))),
-                    detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area=${prop.count}, mask ratio=${Math.round(prop.ratio * 100)}%`])),
+                    matrix: barsHtml(denseProps.map((prop) => ({ label: `label ${prop.label}`, value: prop.ratio, color: prop.color, note: `${Math.round(prop.ratio * 100)}%` }))),
+                    detail: noteRows(denseProps.map((prop) => [`label ${prop.label}`, `area=${prop.count}, mask ratio=${Math.round(prop.ratio * 100)}%`])),
                     stageNote: "面积就是该 label 覆盖的网格数量，mask ratio 是它占整幅图的比例。",
                     showcase: {
-                        model: core.model,
-                        labels: components.compLabels,
+                        model: denseCore.model,
+                        labels: denseComponents.compLabels,
                         title: "Region Step 3：面积与占比",
                         caption: "彩色面积直接对应每个 label 的像素计数与 mask ratio。",
                         alpha: 0.72,
@@ -2196,14 +2363,14 @@
                     phase: "update",
                     title: "4. BBox 与轮廓边界",
                     graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "dashed boxes are min/max coordinate bounds" }),
-                    matrix: noteRows(props.map((prop) => [`label ${prop.label}`, `bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}, contour ${prop.perimeter}`])),
+                    matrix: noteRows(denseProps.map((prop) => [`label ${prop.label}`, `bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}, contour ${prop.perimeter}`])),
                     detail: metricCards([["bbox rule", "min/max x,y"], ["contour rule", "neighbor differs"], ["shape cue", "perimeter/area"], ["output", "region table"]]),
                     stageNote: "bbox 来自坐标极值，轮廓长度来自边界邻接关系。",
                     showcase: {
-                        model: core.model,
-                        labels: components.compLabels,
-                        bboxes: props,
-                        activeCells: props.flatMap((prop) => prop.cells.slice(0, 2)),
+                        model: denseCore.model,
+                        labels: denseComponents.compLabels,
+                        bboxes: denseProps,
+                        activeCells: denseProps.flatMap((prop) => prop.cells.slice(0, 2)),
                         title: "Region Step 4：bbox 与轮廓",
                         caption: "区域轮廓来自相邻 label 变化，bbox 来自该区域坐标的最小/最大值。",
                         alpha: 0.72,
@@ -2215,22 +2382,77 @@
                     graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "label map + measured properties" }),
                     matrix: `
                         <div class="seg-region-property-table">
-                            ${props.map((prop) => `<div><span>label ${prop.label}</span><strong>area ${prop.count} · bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1} · contour ${prop.perimeter}</strong></div>`).join("")}
+                            ${denseProps.map((prop) => `<div><span>label ${prop.label}</span><strong>area ${prop.count} · bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1} · contour ${prop.perimeter}</strong></div>`).join("")}
                         </div>
                     `,
-                    detail: metricCards([["regions", String(props.length)], ["largest ratio", `${Math.round((props[0]?.ratio || 0) * 100)}%`], ["computed", "area / bbox / contour"], ["ready for", "filtering or grading"]]),
+                    detail: metricCards([["regions", String(denseProps.length)], ["largest ratio", `${Math.round((denseProps[0]?.ratio || 0) * 100)}%`], ["computed", "area / bbox / contour"], ["ready for", "filtering or grading"]]),
                     stageNote: "最终输出就是可用于筛选、排序、评价的区域属性表。",
                     showcase: {
-                        model: core.model,
-                        labels: components.compLabels,
-                        bboxes: props,
+                        model: denseCore.model,
+                        labels: denseComponents.compLabels,
+                        bboxes: denseProps,
                         title: "Region Step 5：最终区域属性结果",
-                        caption: `已从 label map 中计算 ${props.length} 个区域的 area、bbox、contour 与 mask ratio。`,
+                        caption: `已从 dense label map 中计算 ${denseProps.length} 个区域的 area、bbox、contour 与 mask ratio。`,
                         alpha: 0.72,
                     },
                 },
             ],
         };
+    }
+
+    function shortFrameTitle(title, index) {
+        return String(title || `Step ${index + 1}`)
+            .replace(/^\d+\.\s*/, "")
+            .replace(/^Graph Cut\s*/i, "")
+            .replace(/^GrabCut\s*/i, "")
+            .replace(/^Watershed\s*/i, "")
+            .replace(/^Region\s*/i, "");
+    }
+
+    function drawFramePreview(canvas, frame) {
+        const showcase = frame.showcase || state.concept?.showcase;
+        if (!canvas || !showcase) return;
+        const source = document.createElement("canvas");
+        const mask = document.createElement("canvas");
+        const meta = drawShowcaseCanvases(showcase, source, mask, {
+            showInputMarks: false,
+            showMaskSeeds: false,
+        });
+        if (!meta) return;
+        canvas.width = 132;
+        canvas.height = 82;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    }
+
+    function updateConceptFrameStrip() {
+        if (!els.frameStrip) return;
+        els.frameStrip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
+            button.classList.toggle("is-active", Number(button.dataset.segbFrameIndex) === state.conceptFrameIndex);
+        });
+    }
+
+    function renderConceptFrameStrip(config) {
+        if (!els.frameStrip) return;
+        const frames = config.frames || [];
+        els.frameStrip.innerHTML = frames.map((frame, index) => `
+            <button type="button" data-segb-frame-index="${index}" title="${escapeHtml(frame.title || `Step ${index + 1}`)}">
+                <canvas width="132" height="82" aria-hidden="true"></canvas>
+                <span>${index + 1}</span>
+                <strong>${escapeHtml(shortFrameTitle(frame.title, index))}</strong>
+            </button>
+        `).join("");
+        els.frameStrip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
+            const index = Number(button.dataset.segbFrameIndex);
+            const canvas = button.querySelector("canvas");
+            drawFramePreview(canvas, frames[index]);
+            button.addEventListener("click", () => {
+                stopAnimation();
+                renderConceptFrame(index);
+            });
+        });
+        updateConceptFrameStrip();
     }
 
     function renderConceptFrame(index) {
@@ -2250,6 +2472,7 @@
         els.formulaNote.textContent = frame.stageNote || state.concept.formulaNote;
         drawConceptShowcase(frame.showcase || state.concept.showcase);
         setPhase(frame.phase || "map");
+        updateConceptFrameStrip();
     }
 
     function renderAlgorithmConcept(config) {
@@ -2279,6 +2502,7 @@
             els.grabcutToolbar.hidden = config.activeMethod !== "GrabCut";
         }
         renderStepper(config.stepperKind);
+        renderConceptFrameStrip(config);
         renderConceptFrame(0);
         setBusy(false);
         const shouldAutoPlay = !state.skipConceptAutoPlay && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2297,6 +2521,7 @@
             return;
         }
         state.playing = true;
+        els.frameStrip?.classList.add("is-playing");
         els.play.textContent = "停止播放";
         let index = 0;
         renderConceptFrame(index);
@@ -2308,7 +2533,7 @@
                 return;
             }
             renderConceptFrame(index);
-        }, 980);
+        }, 620);
     }
 
     function cellFromConceptEvent(event) {
@@ -2461,6 +2686,7 @@
     async function runKMeansMode() {
         stopAnimation();
         state.concept = null;
+        if (els.frameStrip) els.frameStrip.innerHTML = "";
         readControls();
         setBusy(true);
         setPhase("feature");
@@ -3023,6 +3249,10 @@
 
     async function runCurrentMode() {
         try {
+            if (state.autoRunTimer) {
+                clearTimeout(state.autoRunTimer);
+                state.autoRunTimer = 0;
+            }
             if (state.method === "graphcut") {
                 renderGraphCut();
                 return;
@@ -3059,6 +3289,14 @@
             els.notes.innerHTML = `<p class="method-error">分割运行失败：${escapeHtml(error.message)}。请换一张图片或降低 K / 迭代次数。</p>`;
             setBusy(false);
         }
+    }
+
+    function scheduleAutoRun(delay = 160) {
+        if (state.autoRunTimer) clearTimeout(state.autoRunTimer);
+        state.autoRunTimer = setTimeout(() => {
+            state.autoRunTimer = 0;
+            runCurrentMode();
+        }, delay);
     }
 
     async function loadSelectedSample(autoRun = true) {
@@ -3118,10 +3356,14 @@
         });
     });
     [els.k, els.maxIter, els.xyWeight, els.init, els.showCenters, els.showIterations].forEach((control) => {
-        control.addEventListener("change", runCurrentMode);
+        control.addEventListener("change", () => {
+            readControls();
+            scheduleAutoRun(0);
+        });
         control.addEventListener("input", () => {
             readControls();
             if (control === els.showCenters && state.result?.snapshots?.length) renderKMeansResult(state.currentSnapshot);
+            scheduleAutoRun(control.type === "range" ? 180 : 0);
         });
     });
     els.run.addEventListener("click", runCurrentMode);
