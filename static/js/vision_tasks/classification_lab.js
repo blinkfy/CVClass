@@ -5,14 +5,14 @@
     const api = window.CVClassVisionTasks || {};
     const dataRoot = api.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
-    const DATA_CACHE_VERSION = "v1";
+    const DATA_CACHE_VERSION = "v2";
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
     const methodLabels = {
         bovw: "BoVW 视觉词袋",
-        pyramid: "Spatial Pyramid Matching",
-        cnn: "CNN 分类对比",
+        cnn: "CNN 端到端分类",
+        compare: "BoVW vs CNN 对比",
     };
     const featureLabels = {
         sift: "SIFT-like",
@@ -31,12 +31,12 @@
         words: [],
         assignments: [],
         histogram: [],
-        pyramid: null,
     };
 
     const els = {
         sample: $("[data-cls-sample]"),
         methods: $$("[data-cls-method]"),
+        bovwControls: $("[data-cls-bovw-controls]"),
         vocabSize: $("[data-cls-vocab-size]"),
         featureType: $("[data-cls-feature-type]"),
         topK: $("[data-cls-topk]"),
@@ -47,47 +47,57 @@
         vectorDim: $("[data-cls-vector-dim]"),
         top1: $("[data-cls-top1]"),
         status: $("[data-cls-status]"),
-        stripMethod: $("[data-cls-strip-method]"),
-        stripFeature: $("[data-cls-strip-feature]"),
-        stripVector: $("[data-cls-strip-vector]"),
-        stripPrediction: $("[data-cls-strip-prediction]"),
-        stripTopk: $("[data-cls-strip-topk]"),
-        image: $("[data-cls-image]"),
-        missing: $("[data-cls-missing]"),
-        featureOverlay: $("[data-cls-feature-overlay]"),
-        imageTitle: $("[data-cls-image-title]"),
-        imageSubtitle: $("[data-cls-image-subtitle]"),
-        visualTitle: $("[data-cls-visual-title]"),
-        visualSubtitle: $("[data-cls-visual-subtitle]"),
-        dictionary: $("[data-cls-dictionary]"),
+
+        modePanels: $$("[data-cls-mode]"),
+
+        bovwImage: $("[data-cls-bovw-image]"),
+        bovwMissing: $("[data-cls-bovw-missing]"),
+        bovwOverlay: $("[data-cls-bovw-overlay]"),
+        bovwDictionary: $("[data-cls-bovw-dictionary]"),
+        bovwHistogram: $("[data-cls-bovw-histogram]"),
+        bovwScoreList: $("[data-cls-bovw-score-list]"),
+
+        cnnImage: $("[data-cls-cnn-image]"),
+        cnnMissing: $("[data-cls-cnn-missing]"),
+        cnnInputOverlay: $("[data-cls-cnn-input-overlay]"),
         cnnMaps: $("[data-cls-cnn-maps]"),
-        flowFeature: $("[data-cls-flow-feature]"),
-        histTitle: $("[data-cls-hist-title]"),
-        histSubtitle: $("[data-cls-hist-subtitle]"),
-        histogram: $("[data-cls-histogram]"),
-        pyramidPanel: $("[data-cls-pyramid-panel]"),
-        pyramidImage: $("[data-cls-pyramid-image]"),
-        pyramidGrid: $("[data-cls-pyramid-grid]"),
-        pyramidRegions: $("[data-cls-pyramid-regions]"),
-        boardTitle: $("[data-cls-board-title]"),
-        boardSubtitle: $("[data-cls-board-subtitle]"),
-        scoreList: $("[data-cls-score-list]"),
-        cnnCompare: $("[data-cls-cnn-compare]"),
-        notesSubtitle: $("[data-cls-notes-subtitle]"),
-        formulaLabel: $("[data-cls-formula-label]"),
-        formula: $("[data-cls-formula]"),
-        formulaNote: $("[data-cls-formula-note]"),
-        notes: $("[data-cls-notes]"),
+        cnnGlobal: $("[data-cls-cnn-global]"),
+        cnnScoreList: $("[data-cls-cnn-score-list]"),
+
+        compareBovwImage: $("[data-cls-compare-bovw-image]"),
+        compareBovwOverlay: $("[data-cls-compare-bovw-overlay]"),
+        compareBovwHist: $("[data-cls-compare-bovw-hist]"),
+        compareBovwScores: $("[data-cls-compare-bovw-scores]"),
+        compareCnnImage: $("[data-cls-compare-cnn-image]"),
+        compareCnnMaps: $("[data-cls-compare-cnn-maps]"),
+        compareCnnGlobal: $("[data-cls-compare-cnn-global]"),
+        compareCnnScores: $("[data-cls-compare-cnn-scores]"),
+        compareDiff: $("[data-cls-compare-diff]"),
+
+        notesMethod: $("[data-cls-notes-method]"),
+        notesMethodDesc: $("[data-cls-notes-method-desc]"),
+        notesFormula: $("[data-cls-notes-formula]"),
+        notesFormulaNote: $("[data-cls-notes-formula-note]"),
+        statSample: $("[data-cls-stat-sample]"),
+        statTopk: $("[data-cls-stat-topk]"),
+        statRepr: $("[data-cls-stat-repr]"),
+        statTop1: $("[data-cls-stat-top1]"),
+        notesCompare: $("[data-cls-notes-compare]"),
+
         stepper: $$("[data-cls-phase]"),
     };
 
-    if (["bovw", "pyramid", "cnn"].includes(initialParams.get("method"))) {
+    if (["bovw", "cnn", "compare"].includes(initialParams.get("method"))) {
         state.method = initialParams.get("method");
     }
     if (initialParams.get("focus") === "topk") {
         state.topK = 5;
     }
-    els.methods.forEach((item) => item.classList.toggle("is-active", item.dataset.clsMethod === state.method));
+    els.methods.forEach((item) => {
+        const active = item.dataset.clsMethod === state.method;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", active ? "true" : "false");
+    });
     els.topK.value = String(state.topK);
 
     const escapeHtml = (value) => String(value ?? "")
@@ -122,8 +132,12 @@
         els.stepper.forEach((item) => item.classList.toggle("is-active", item.dataset.clsPhase === phase));
     }
 
-    function methodScores(item) {
-        return state.method === "cnn" ? item.cnn?.top5 || [] : item.bovw?.top5 || [];
+    function bovwScores(item) {
+        return item.bovw?.top5 || [];
+    }
+
+    function cnnScores(item) {
+        return item.cnn?.top5 || [];
     }
 
     function generateFeatures(item) {
@@ -202,29 +216,6 @@
         return { assignments, histogram };
     }
 
-    function buildPyramid(features, assignments) {
-        const levels = [1, 2, 4];
-        const regions = [];
-        levels.forEach((level) => {
-            for (let row = 0; row < level; row += 1) {
-                for (let col = 0; col < level; col += 1) {
-                    const hist = new Array(state.vocabSize).fill(0);
-                    let count = 0;
-                    features.forEach((feature, index) => {
-                        const cx = Math.min(level - 1, Math.floor((feature.x / 100) * level));
-                        const cy = Math.min(level - 1, Math.floor((feature.y / 100) * level));
-                        if (cx === col && cy === row) {
-                            hist[assignments[index]] += 1;
-                            count += 1;
-                        }
-                    });
-                    regions.push({ level, row, col, count, hist });
-                }
-            }
-        });
-        return { levels, regions, vectorDim: state.vocabSize * regions.length };
-    }
-
     function rebuildRepresentation() {
         const item = sample();
         if (!item) return;
@@ -233,29 +224,9 @@
         const assigned = assignFeatures(state.features, state.words);
         state.assignments = assigned.assignments;
         state.histogram = assigned.histogram;
-        state.pyramid = buildPyramid(state.features, state.assignments);
     }
 
-    function renderOverlay() {
-        if (state.method === "cnn") {
-            els.featureOverlay.innerHTML = `
-                <defs>
-                    <filter id="clsGlow" x="-40%" y="-40%" width="180%" height="180%">
-                        <feGaussianBlur stdDeviation="1.4" result="blur"></feGaussianBlur>
-                        <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
-                    </filter>
-                </defs>
-                <rect x="8" y="10" width="84" height="76" rx="3" fill="rgba(37,99,235,0.08)" stroke="#60a5fa" stroke-width="0.8"></rect>
-                ${Array.from({ length: 20 }, (_, i) => {
-                    const x = 12 + (i % 5) * 16;
-                    const y = 16 + Math.floor(i / 5) * 16;
-                    return `<rect class="cls-conv-cell" x="${x}" y="${y}" width="10" height="10" rx="1.5" fill="#2563eb" opacity="${0.18 + (i % 4) * 0.12}" style="--delay:${(i * 0.06).toFixed(2)}s"></rect>`;
-                }).join("")}
-                <path class="cls-scan-beam" d="M8 12 H92"></path>
-                <text x="50" y="94" text-anchor="middle" fill="#1e40af" font-size="5" font-weight="800">convolutional feature maps</text>
-            `;
-            return;
-        }
+    function renderBovwOverlay(svg) {
         const topWords = state.histogram
             .map((count, id) => ({ count, id, word: state.words[id] }))
             .filter((item) => item.count > 0)
@@ -284,7 +255,7 @@
                 </g>
             `;
         }).join("");
-        const lineLimit = state.method === "pyramid" ? 38 : 34;
+        const lineLimit = 34;
         const paths = state.features.slice(0, lineLimit).map((feature, index) => {
             const word = state.words[state.assignments[index]];
             const slot = slotMap.get(word.id) || {
@@ -315,11 +286,7 @@
                 </g>
             `;
         }).join("");
-        const grid = state.method === "pyramid" ? `
-            <path d="M50 0 V100 M0 50 H100" stroke="#ffffff" stroke-width="0.9" opacity="0.95"></path>
-            ${[25, 75].map((v) => `<path d="M${v} 0 V100 M0 ${v} H100" stroke="#ffffff" stroke-width="0.45" opacity="0.55"></path>`).join("")}
-        ` : "";
-        els.featureOverlay.innerHTML = `
+        svg.innerHTML = `
             <defs>
                 <filter id="clsGlow" x="-40%" y="-40%" width="180%" height="180%">
                     <feGaussianBlur stdDeviation="1.35" result="blur"></feGaussianBlur>
@@ -333,7 +300,6 @@
             </defs>
             <rect class="cls-overlay-vignette" x="0" y="0" width="100" height="100" fill="url(#clsOverlayFade)"></rect>
             <path class="cls-scan-beam" d="M4 9 H96"></path>
-            ${grid}
             ${aggregateHalos}
             <g class="cls-assignment-layer">${paths}</g>
             <g class="cls-word-slot-layer">${slots}</g>
@@ -341,36 +307,35 @@
         `;
     }
 
-    function renderDictionary() {
+    function renderCnnOverlay(container) {
+        container.innerHTML = Array.from({ length: 64 }, (_, i) => {
+            const x = (i % 8) * 12.5 + 1.5;
+            const y = Math.floor(i / 8) * 12.5 + 1.5;
+            const opacity = 0.08 + ((i * 7) % 13) / 40;
+            return `<div class="cls-cnn-pixel-cell" style="left:${x}%;top:${y}%;opacity:${opacity.toFixed(3)};--delay:${(i * 0.01).toFixed(2)}s"></div>`;
+        }).join("");
+    }
+
+    function renderDictionary(target) {
         const maxVisible = Math.min(state.vocabSize, 32);
-        els.dictionary.hidden = state.method === "cnn";
-        els.cnnMaps.hidden = state.method !== "cnn";
-        if (state.method === "cnn") {
-            els.cnnMaps.innerHTML = Array.from({ length: 12 }, (_, i) => `
-                <div class="cls-cnn-map">
-                    ${Array.from({ length: 16 }, (_, j) => `<span style="opacity:${0.25 + (((i * 7 + j * 5) % 9) / 12)}"></span>`).join("")}
-                </div>
-            `).join("");
-            return;
-        }
-        els.dictionary.innerHTML = state.words.slice(0, maxVisible).map((word, index) => {
+        target.innerHTML = state.words.slice(0, maxVisible).map((word, index) => {
             const count = state.histogram[word.id] || 0;
             const strength = Math.min(100, Math.max(8, Math.round((count / Math.max(1, ...state.histogram)) * 100)));
             const strengthScale = (strength / 100).toFixed(2);
             return `
-            <div class="cls-word-chip" style="--word-color:${word.color}; --strength-scale:${strengthScale}; --delay:${(index * 0.025).toFixed(2)}s">
-                <i style="background:${word.color}"></i>
-                <span>w${word.id + 1}</span>
-                <b aria-hidden="true"></b>
-            </div>
-        `;
+                <div class="cls-word-chip" style="--word-color:${word.color}; --strength-scale:${strengthScale}; --delay:${(index * 0.025).toFixed(2)}s">
+                    <i style="background:${word.color}"></i>
+                    <span>w${word.id + 1}</span>
+                    <b aria-hidden="true"></b>
+                    <small>${count}</small>
+                </div>
+            `;
         }).join("") + (state.vocabSize > maxVisible ? `<div class="cls-word-chip is-more">+${state.vocabSize - maxVisible}</div>` : "");
     }
 
-    function renderHistogram() {
+    function renderHistogram(target) {
         const max = Math.max(1, ...state.histogram);
-        const visibleBins = state.histogram.map((count, index) => ({ count, index }));
-        els.histogram.innerHTML = visibleBins.map(({ count, index }) => {
+        target.innerHTML = state.histogram.map((count, index) => {
             const height = Math.max(5, Math.round((count / max) * 100));
             return `
                 <div class="cls-hist-bin" title="word ${index + 1}: ${count}">
@@ -381,32 +346,40 @@
         }).join("");
     }
 
-    function renderPyramid(item) {
-        const enabled = state.method === "pyramid";
-        els.pyramidPanel.hidden = !enabled;
-        if (!enabled) return;
-        els.pyramidImage.src = item.image;
-        els.pyramidGrid.innerHTML = `
-            <rect x="0" y="0" width="100" height="100" fill="transparent" stroke="#ffffff" stroke-width="1.2"></rect>
-            <path d="M50 0 V100 M0 50 H100" stroke="#ffffff" stroke-width="1"></path>
-            ${[25, 75].map((v) => `<path d="M${v} 0 V100 M0 ${v} H100" stroke="#ffffff" stroke-width="0.55" opacity="0.7"></path>`).join("")}
-        `;
-        const topRegions = [...state.pyramid.regions].sort((a, b) => b.count - a.count).slice(0, 8);
-        els.pyramidRegions.innerHTML = topRegions.map((region) => {
-            const max = Math.max(1, ...region.hist);
-            return `
-                <div class="cls-pyramid-region">
-                    <strong>${region.level}×${region.level} · r${region.row + 1}c${region.col + 1}</strong>
-                    <div>${region.hist.slice(0, 8).map((v, idx) => `<i style="height:${Math.max(4, Math.round((v / max) * 100))}%; background:${palette[idx % palette.length]}"></i>`).join("")}</div>
-                    <span>${region.count} features</span>
-                </div>
-            `;
+    function renderMiniHistogram(target) {
+        const max = Math.max(1, ...state.histogram);
+        const visible = state.histogram.slice(0, 16);
+        target.innerHTML = visible.map((count, index) => {
+            const height = Math.max(4, Math.round((count / max) * 100));
+            return `<div class="cls-mini-bin" title="w${index + 1}: ${count}" style="--h:${height}%; background:${palette[index % palette.length]}"></div>`;
         }).join("");
     }
 
-    function renderScores(scores) {
+    function renderCnnMaps(target) {
+        target.innerHTML = Array.from({ length: 12 }, (_, i) => `
+            <div class="cls-cnn-map">
+                ${Array.from({ length: 16 }, (_, j) => `<span style="opacity:${0.25 + (((i * 7 + j * 5) % 9) / 12)}; --delay:${((i * 4 + j) * 0.01).toFixed(2)}s"></span>`).join("")}
+            </div>
+        `).join("");
+    }
+
+    function renderGlobalFeature(target, dim = 64) {
+        const cells = Array.from({ length: dim }, (_, i) => {
+            const intensity = 0.12 + ((i * 13) % 17) / 28;
+            return `<span style="opacity:${intensity.toFixed(3)}; --delay:${(i * 0.01).toFixed(2)}s"></span>`;
+        }).join("");
+        target.innerHTML = `
+            <div class="cls-global-vector">${cells}</div>
+            <div class="cls-global-meta">
+                <span>${dim} dims</span>
+                <span>GAP: H×W×C → 1×1×C</span>
+            </div>
+        `;
+    }
+
+    function renderScores(target, scores) {
         const sliced = scores.slice(0, state.topK);
-        els.scoreList.innerHTML = sliced.map((item, index) => `
+        target.innerHTML = sliced.map((item, index) => `
             <div class="classification-score-row ${index === 0 ? "is-top" : ""}">
                 <span>${index + 1}</span>
                 <strong>${escapeHtml(item.label)}</strong>
@@ -416,54 +389,70 @@
         `).join("");
     }
 
-    function vectorDim() {
+    function renderDiffTable() {
+        els.compareDiff.innerHTML = `
+            <table>
+                <thead><tr><th>对比维度</th><th>BoVW</th><th>CNN</th></tr></thead>
+                <tbody>
+                    <tr><td>表示形式</td><td>稀疏词频直方图<br><small>${state.vocabSize} bins</small></td><td>全局稠密特征向量<br><small>via GAP</small></td></tr>
+                    <tr><td>特征来源</td><td>手工局部描述子<br><small>${featureLabels[state.featureType]}</small></td><td>数据驱动的卷积核<br><small>端到端学习</small></td></tr>
+                    <tr><td>空间信息</td><td>弱（需 SPM 增强）</td><td>保留在特征图中，<br>池化后压缩</td></tr>
+                    <tr><td>训练方式</td><td>分阶段：词典 + 分类器</td><td>统一反向传播优化</td></tr>
+                    <tr><td>可解释性</td><td>词频、关键点可见</td><td>特征图可视化较抽象</td></tr>
+                </tbody>
+            </table>
+        `;
+    }
+
+    function vectorDimLabel() {
         if (state.method === "cnn") return "GAP 1×C";
-        if (state.method === "pyramid") return `${state.pyramid?.vectorDim || state.vocabSize * 21} dims`;
         return `${state.vocabSize} bins`;
     }
 
-    function renderNotes(item, scores) {
-        const top = scores[0];
-        if (state.method === "pyramid") {
-            els.notesSubtitle.textContent = "Spatial Pyramid Matching";
-            els.formulaLabel.textContent = "SPM";
-            els.formula.textContent = "vector = concat(hist(1×1), hist(2×2), hist(4×4))";
-            els.formulaNote.textContent = "空间金字塔把 BoVW 从整图统计扩展到多尺度网格，补充弱位置信息。";
-            els.notes.innerHTML = `
-                <dl>
-                    <div><dt>图像分类定义</dt><dd>输入整张图像，输出类别概率排序；不负责定位对象位置。</dd></div>
-                    <div><dt>空间金字塔</dt><dd>1×1 保留全局分布，2×2 与 4×4 补充区域布局，最终拼接为 ${vectorDim()}。</dd></div>
-                    <div><dt>视觉词典</dt><dd>${state.vocabSize} 个视觉单词，每个局部特征被分配给最近的视觉单词。</dd></div>
-                    <div><dt>Top-K 概念</dt><dd>Top-${state.topK} 检查正确类别是否出现在最高的 ${state.topK} 个预测内。</dd></div>
-                    <div><dt>当前预测</dt><dd>${escapeHtml(top?.label || "--")} · ${Math.round((top?.score || 0) * 100)}%</dd></div>
-                </dl>
-            `;
-            return;
-        }
+    function renderNotes(item) {
+        const bScores = bovwScores(item);
+        const cScores = cnnScores(item);
+        const topB = bScores[0];
+        const topC = cScores[0];
+
+        els.notesMethod.textContent = methodLabels[state.method];
+        els.statSample.textContent = item.name || item.id;
+        els.statTopk.textContent = `Top-${state.topK}`;
+        els.statRepr.textContent = vectorDimLabel();
+        els.statTop1.textContent = state.method === "cnn" ? (topC ? `${topC.label} ${Math.round(topC.score * 100)}%` : "--") : (topB ? `${topB.label} ${Math.round(topB.score * 100)}%` : "--");
+
         if (state.method === "cnn") {
-            els.notesSubtitle.textContent = "CNN End-to-end Classification";
-            els.formulaLabel.textContent = "CNN";
-            els.formula.textContent = "p = softmax(W · GAP(conv(image)) + b)";
-            els.formulaNote.textContent = "CNN 直接从像素学习卷积特征、全局语义向量和分类器参数。";
-            els.notes.innerHTML = `
+            els.notesMethodDesc.textContent = "直接从像素学习卷积特征、全局语义向量和分类器参数。";
+            els.notesFormula.textContent = "p = softmax(W · GAP(conv(image)) + b)";
+            els.notesFormulaNote.textContent = "CNN 通过卷积层提取层级特征，经全局平均池化得到图像级向量，再由全连接层输出类别概率。";
+            els.notesCompare.innerHTML = `
                 <dl>
-                    <div><dt>CNN 为什么端到端</dt><dd>局部特征、聚合方式和分类器由训练目标共同优化，不需要手工视觉词典。</dd></div>
-                    <div><dt>卷积特征图</dt><dd>浅层更像边缘纹理响应，深层更接近物体部件和场景语义。</dd></div>
-                    <div><dt>全局特征</dt><dd>Global Average Pooling 把 H×W×C 特征图压缩为 C 维图像向量。</dd></div>
+                    <div><dt>当前方法</dt><dd>CNN 端到端分类：输入 → 卷积特征图 → GAP → Softmax。</dd></div>
+                    <div><dt>与 BoVW 对比</dt><dd>不需要手工设计视觉词典，特征、聚合和分类器联合优化。</dd></div>
                     <div><dt>Top-K 输出</dt><dd>展示 softmax 后的 Top-${state.topK} 类别概率。</dd></div>
-                    <div><dt>与 BoVW 对比</dt><dd>BoVW 依赖局部描述子和直方图，CNN 学到层级特征并保留更强语义表达。</dd></div>
                 </dl>
             `;
             return;
         }
-        els.notesSubtitle.textContent = "BoVW Flow";
-        els.formulaLabel.textContent = "BoVW";
-        els.formula.textContent = "hist[w] = count(assign(feature_i) = word_w)";
-        els.formulaNote.textContent = "BoVW 将局部特征量化为视觉单词，再把整图编码为词频直方图。";
-        els.notes.innerHTML = `
+        if (state.method === "compare") {
+            els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
+            els.notesFormula.textContent = "BoVW: hist[w] = count(assign(f_i) = w)";
+            els.notesFormulaNote.textContent = "CNN: p = softmax(W · GAP(conv(image)) + b)。左侧稀疏直方图，右侧稠密全局特征。";
+            els.notesCompare.innerHTML = `
+                <dl>
+                    <div><dt>BoVW Top-1</dt><dd>${topB ? `${escapeHtml(topB.label)} · ${Math.round(topB.score * 100)}%` : "--"}</dd></div>
+                    <div><dt>CNN Top-1</dt><dd>${topC ? `${escapeHtml(topC.label)} · ${Math.round(topC.score * 100)}%` : "--"}</dd></div>
+                    <div><dt>关键差异</dt><dd>BoVW 把图像表示为可解释的视觉词频；CNN 把图像表示为端到端学习得到的语义向量。</dd></div>
+                </dl>
+            `;
+            return;
+        }
+        els.notesMethodDesc.textContent = "用局部特征和视觉词典生成图像级直方图表示。";
+        els.notesFormula.textContent = "hist[w] = count(assign(feature_i) = word_w)";
+        els.notesFormulaNote.textContent = "BoVW 将局部特征量化为视觉单词，再把整图编码为词频直方图。";
+        els.notesCompare.innerHTML = `
             <dl>
-                <div><dt>图像分类定义</dt><dd>预测整张图像属于哪些类别，输出 Top-K 类别概率。</dd></div>
-                <div><dt>BoVW 流程</dt><dd>局部特征 → K-means 视觉词典 → 视觉单词分配 → 直方图编码 → 分类器。</dd></div>
+                <div><dt>BoVW 流程</dt><dd>局部特征 → K-means 视觉词典 → 视觉单词分配 → 直方图编码 → 线性分类器。</dd></div>
                 <div><dt>局部特征</dt><dd>${featureLabels[state.featureType]} 产生 ${state.features.length} 个关键点或局部描述子。</dd></div>
                 <div><dt>视觉词典</dt><dd>${state.vocabSize} 个中心模拟 K-means codebook，每个颜色表示一个视觉单词。</dd></div>
                 <div><dt>Top-K 错误率</dt><dd>若真实类别不在 Top-${state.topK} 中，则记为 Top-${state.topK} error。</dd></div>
@@ -471,48 +460,74 @@
         `;
     }
 
+    function setImage(img, missing, item) {
+        img.src = item.image;
+        if (missing) missing.textContent = item.image;
+    }
+
+    function renderBovw(item) {
+        setImage(els.bovwImage, els.bovwMissing, item);
+        renderBovwOverlay(els.bovwOverlay);
+        renderDictionary(els.bovwDictionary);
+        renderHistogram(els.bovwHistogram);
+        renderScores(els.bovwScoreList, bovwScores(item));
+    }
+
+    function renderCnn(item) {
+        setImage(els.cnnImage, els.cnnMissing, item);
+        renderCnnOverlay(els.cnnInputOverlay);
+        renderCnnMaps(els.cnnMaps);
+        renderGlobalFeature(els.cnnGlobal, 64);
+        renderScores(els.cnnScoreList, cnnScores(item));
+    }
+
+    function renderCompare(item) {
+        setImage(els.compareBovwImage, null, item);
+        setImage(els.compareCnnImage, null, item);
+        renderBovwOverlay(els.compareBovwOverlay);
+        renderMiniHistogram(els.compareBovwHist);
+        renderScores(els.compareBovwScores, bovwScores(item));
+        renderCnnMaps(els.compareCnnMaps);
+        renderGlobalFeature(els.compareCnnGlobal, 32);
+        renderScores(els.compareCnnScores, cnnScores(item));
+        renderDiffTable();
+    }
+
     function render() {
         const item = sample();
         if (!item) return;
         rebuildRepresentation();
-        const scores = methodScores(item);
-        const top = scores[0];
+        const bScores = bovwScores(item);
+        const cScores = cnnScores(item);
+        const activeScores = state.method === "cnn" ? cScores : bScores;
+        const top = activeScores[0];
         const methodLabel = methodLabels[state.method];
-        const featureLabel = featureLabels[state.featureType];
 
-        els.image.src = item.image;
-        els.missing.textContent = item.image;
         els.inputSize.textContent = `${item.width} × ${item.height}`;
         els.featureCount.textContent = state.method === "cnn" ? "learned maps" : String(state.features.length);
         els.vocabReadout.textContent = String(state.vocabSize);
-        els.vectorDim.textContent = vectorDim();
+        els.vectorDim.textContent = vectorDimLabel();
         els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%` : "--";
         els.activeMethod.textContent = methodLabel;
-        els.stripMethod.textContent = methodLabel;
-        els.stripFeature.textContent = state.method === "cnn" ? "Conv maps" : featureLabel;
-        els.stripVector.textContent = vectorDim();
-        els.stripPrediction.textContent = top?.label || "--";
-        els.stripTopk.textContent = `Top-${state.topK}`;
-        els.status.textContent = state.method === "cnn" ? "CNN CONCEPT VIEW" : "PRESET BOVW DATA";
+        els.status.textContent = state.method === "cnn" ? "CNN CONCEPT VIEW" : state.method === "compare" ? "BOVW / CNN COMPARE" : "PRESET BOVW DATA";
 
-        els.imageTitle.textContent = state.method === "cnn" ? "输入图像 + 卷积响应概念" : state.method === "pyramid" ? "原图 + 空间金字塔分块" : "原图 + 局部特征点";
-        els.imageSubtitle.textContent = state.method === "cnn" ? "input image to feature maps" : state.method === "pyramid" ? "1×1 / 2×2 / 4×4 blocks" : "keypoints assigned to visual words";
-        els.visualTitle.textContent = state.method === "cnn" ? "卷积特征图概念" : "视觉词典中心";
-        els.visualSubtitle.textContent = state.method === "cnn" ? "learned filters and activation maps" : "K-means visual dictionary";
-        els.flowFeature.textContent = state.method === "cnn" ? "Conv Feature Maps" : state.method === "pyramid" ? "Pyramid Histograms" : "Local Features";
-        els.histTitle.textContent = state.method === "cnn" ? "全局特征向量" : state.method === "pyramid" ? "拼接后的图像表征向量" : "视觉单词直方图";
-        els.histSubtitle.textContent = state.method === "cnn" ? "global average pooled feature" : state.method === "pyramid" ? "1 + 4 + 16 regional histograms" : "histogram encoding";
-        els.boardTitle.textContent = state.method === "cnn" ? "Softmax Top-K 输出" : "Top-K 分类概率";
-        els.boardSubtitle.textContent = state.method === "cnn" ? "end-to-end CNN classifier scores" : "linear classifier over BoVW feature";
+        els.bovwControls.hidden = state.method === "cnn";
+        if (state.method === "cnn") {
+            els.featureCount.textContent = "learned maps";
+            els.vocabReadout.textContent = "--";
+        }
 
-        renderOverlay();
-        renderDictionary();
-        renderHistogram();
-        renderPyramid(item);
-        renderScores(scores);
-        renderNotes(item, scores);
-        els.cnnCompare.hidden = state.method !== "cnn";
-        setPhase(state.method === "cnn" ? "classifier" : state.method === "pyramid" ? "histogram" : "dictionary");
+        els.modePanels.forEach((panel) => {
+            const active = panel.dataset.clsMode === state.method;
+            panel.hidden = !active;
+        });
+
+        renderBovw(item);
+        renderCnn(item);
+        renderCompare(item);
+        renderNotes(item);
+
+        setPhase(state.method === "compare" ? "topk" : "representation");
     }
 
     function readCachedData() {
@@ -560,7 +575,7 @@
             applyData(data);
         } catch (error) {
             console.error("classification lab data failed", error);
-            els.notes.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/vision_tasks/data/classification_samples.json。</p>`;
+            els.notesCompare.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/vision_tasks/data/classification_samples.json。</p>`;
         }
     }
 
@@ -571,7 +586,11 @@
     els.methods.forEach((button) => {
         button.addEventListener("click", () => {
             state.method = button.dataset.clsMethod;
-            els.methods.forEach((item) => item.classList.toggle("is-active", item === button));
+            els.methods.forEach((item) => {
+                const active = item === button;
+                item.classList.toggle("is-active", active);
+                item.setAttribute("aria-pressed", active ? "true" : "false");
+            });
             render();
         });
     });
@@ -587,8 +606,11 @@
         state.topK = Number(els.topK.value);
         render();
     });
-    els.image.addEventListener("error", () => root.classList.add("is-image-missing"));
-    els.image.addEventListener("load", () => root.classList.remove("is-image-missing"));
+    [els.bovwImage, els.cnnImage, els.compareBovwImage, els.compareCnnImage].forEach((img) => {
+        if (!img) return;
+        img.addEventListener("error", () => root.classList.add("is-image-missing"));
+        img.addEventListener("load", () => root.classList.remove("is-image-missing"));
+    });
 
     init();
 })();

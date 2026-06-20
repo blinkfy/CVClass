@@ -13,6 +13,14 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-padding-top: 12px;
+}
+
+body:has(.vision-lab) {
+    scroll-padding-top: 80px;
+}
+
 body.cv-shell {
     min-height: 100vh;
     margin: 0;
