@@ -36,8 +36,8 @@
             <section data-segb-family-group="graph">
                 <strong>图切割分割</strong>
                 <div class="overview-segmented-control method-segmented-control seg-basic-methods">
-                    <button type="button" data-segb-method="graphcut">Graph Cut 概念演示</button>
-                    <button type="button" data-segb-method="ncut">Normalized Cut 概念演示</button>
+                    <button type="button" data-segb-method="graphcut">Graph Cut 算法演示</button>
+                    <button type="button" data-segb-method="ncut">Normalized Cut 算法演示</button>
                     <button type="button" data-segb-method="grabcut">GrabCut 前景提取</button>
                 </div>
             </section>
@@ -168,6 +168,27 @@
         </div>
 
         <div class="seg-basic-concept-view" data-segb-graph-view hidden>
+            <div class="seg-basic-concept-result" data-segb-concept-result>
+                <figure>
+                    <div class="seg-concept-figure-head">
+                        <figcaption>输入图像</figcaption>
+                        <div class="seg-grabcut-toolbar" data-segb-grabcut-toolbar hidden>
+                            <button class="is-active" type="button" data-segb-grabcut-tool="box">框选</button>
+                            <button type="button" data-segb-grabcut-tool="fg">前景笔</button>
+                            <button type="button" data-segb-grabcut-tool="bg">背景笔</button>
+                            <button type="button" data-segb-grabcut-reset>重置</button>
+                        </div>
+                    </div>
+                    <canvas data-segb-concept-source width="256" height="180"></canvas>
+                </figure>
+                <figure>
+                    <div class="seg-concept-figure-head">
+                        <figcaption data-segb-concept-result-title>分割结果 label map</figcaption>
+                        <p data-segb-concept-result-caption>算法输出的区域标签会在这里显示。</p>
+                    </div>
+                    <canvas data-segb-concept-mask width="256" height="180"></canvas>
+                </figure>
+            </div>
             <div class="seg-basic-graph-stage" data-segb-graph-stage></div>
             <div class="seg-basic-matrix-stage" data-segb-matrix-stage></div>
             <div class="seg-basic-concept-detail" data-segb-concept-detail></div>

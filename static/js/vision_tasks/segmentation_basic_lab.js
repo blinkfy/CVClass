@@ -50,6 +50,18 @@
         work: null,
         result: null,
         compareResult: null,
+        concept: null,
+        conceptFrameIndex: 0,
+        skipConceptAutoPlay: false,
+        grabcut: {
+            tool: "box",
+            box: null,
+            fgSeeds: [],
+            bgSeeds: [],
+            dragging: false,
+            dragStart: null,
+            draftBox: null,
+        },
         animationTimer: 0,
         playing: false,
         currentSnapshot: 0,
@@ -101,6 +113,13 @@
         graphStage: $("[data-segb-graph-stage]"),
         matrixStage: $("[data-segb-matrix-stage]"),
         conceptDetail: $("[data-segb-concept-detail]"),
+        conceptSource: $("[data-segb-concept-source]"),
+        conceptMask: $("[data-segb-concept-mask]"),
+        conceptResultTitle: $("[data-segb-concept-result-title]"),
+        conceptResultCaption: $("[data-segb-concept-result-caption]"),
+        grabcutToolbar: $("[data-segb-grabcut-toolbar]"),
+        grabcutTools: $$("[data-segb-grabcut-tool]"),
+        grabcutReset: $("[data-segb-grabcut-reset]"),
         notesSubtitle: $("[data-segb-notes-subtitle]"),
         formulaLabel: $("[data-segb-formula-label]"),
         formula: $("[data-segb-formula]"),
@@ -189,8 +208,11 @@
     }
 
     function setBusy(isBusy) {
+        const canPlay = activeFamily() === "cluster"
+            ? Boolean(state.result?.snapshots?.length && state.showIterations)
+            : Boolean(state.concept?.frames?.length > 1);
         els.run.disabled = isBusy;
-        els.play.disabled = isBusy || !state.result?.snapshots?.length || !state.showIterations;
+        els.play.disabled = isBusy || !canPlay;
         els.statusText.textContent = isBusy ? "计算中" : "就绪";
     }
 
@@ -204,7 +226,7 @@
             state.animationTimer = 0;
         }
         state.playing = false;
-        els.play.textContent = "播放迭代";
+        els.play.textContent = activeFamily() === "cluster" ? "播放迭代" : "播放流程";
     }
 
     function drawImageToWorkCanvas(image) {
@@ -535,7 +557,1885 @@
         if (state.method === "kmeans-rgbxy") renderContinuityMap(result, snapshot);
     }
 
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function ensureWorkData() {
+        if (!state.work && state.image) drawImageToWorkCanvas(state.image);
+        if (!state.work) throw new Error("image data not ready");
+        return state.work;
+    }
+
+    function buildSampleGrid(cols, rows) {
+        const work = ensureWorkData();
+        const source = work.imageData.data;
+        const cells = [];
+        for (let gy = 0; gy < rows; gy += 1) {
+            for (let gx = 0; gx < cols; gx += 1) {
+                const x0 = Math.floor((gx / cols) * work.width);
+                const y0 = Math.floor((gy / rows) * work.height);
+                const x1 = Math.max(x0 + 1, Math.floor(((gx + 1) / cols) * work.width));
+                const y1 = Math.max(y0 + 1, Math.floor(((gy + 1) / rows) * work.height));
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                let count = 0;
+                for (let y = y0; y < y1; y += 1) {
+                    for (let x = x0; x < x1; x += 1) {
+                        const p = (y * work.width + x) * 4;
+                        r += source[p];
+                        g += source[p + 1];
+                        b += source[p + 2];
+                        count += 1;
+                    }
+                }
+                r /= Math.max(1, count);
+                g /= Math.max(1, count);
+                b /= Math.max(1, count);
+                cells.push({
+                    index: gy * cols + gx,
+                    x: gx,
+                    y: gy,
+                    cx: (gx + 0.5) / cols,
+                    cy: (gy + 0.5) / rows,
+                    r,
+                    g,
+                    b,
+                    gray: 0.299 * r + 0.587 * g + 0.114 * b,
+                });
+            }
+        }
+        return { cells, cols, rows };
+    }
+
+    function normalizedSeed(seed) {
+        return {
+            x: clamp(Number(seed.x) > 1 ? Number(seed.x) / 100 : Number(seed.x), 0, 1),
+            y: clamp(Number(seed.y) > 1 ? Number(seed.y) / 100 : Number(seed.y), 0, 1),
+            type: seed.type || "fg",
+        };
+    }
+
+    function nearestCellIndex(cells, cols, rows, x, y) {
+        const gx = clamp(Math.round(x * (cols - 1)), 0, cols - 1);
+        const gy = clamp(Math.round(y * (rows - 1)), 0, rows - 1);
+        return cells[gy * cols + gx].index;
+    }
+
+    function graphSeedsForSample() {
+        const fallback = [
+            { x: 0.22, y: 0.62, type: "fg" },
+            { x: 0.52, y: 0.58, type: "fg" },
+            { x: 0.78, y: 0.22, type: "bg" },
+            { x: 0.18, y: 0.18, type: "bg" },
+        ];
+        const seeds = selectedSample()?.methods?.graphcut?.seeds || fallback;
+        return seeds.map(normalizedSeed);
+    }
+
+    function colorMean(cells, indexes) {
+        const list = indexes.length ? indexes : cells.map((cell) => cell.index);
+        const sum = list.reduce((acc, index) => {
+            const cell = cells[index];
+            acc.r += cell.r;
+            acc.g += cell.g;
+            acc.b += cell.b;
+            return acc;
+        }, { r: 0, g: 0, b: 0 });
+        return {
+            r: sum.r / Math.max(1, list.length),
+            g: sum.g / Math.max(1, list.length),
+            b: sum.b / Math.max(1, list.length),
+        };
+    }
+
+    function colorDistanceSq(a, b) {
+        const dr = a.r - b.r;
+        const dg = a.g - b.g;
+        const db = a.b - b.b;
+        return dr * dr + dg * dg + db * db;
+    }
+
+    function rgbText(color) {
+        return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
+    }
+
+    function hexToRgb(hex) {
+        const clean = String(hex || "#dbeafe").replace("#", "");
+        const full = clean.length === 3 ? clean.split("").map((item) => item + item).join("") : clean;
+        const value = Number.parseInt(full, 16);
+        return {
+            r: (value >> 16) & 255,
+            g: (value >> 8) & 255,
+            b: value & 255,
+        };
+    }
+
+    function labelRgb(label) {
+        if (label === -1) return hexToRgb("#ef4444");
+        if (typeof label === "boolean") return hexToRgb(label ? "#22c55e" : "#60a5fa");
+        return hexToRgb(labelFill(label));
+    }
+
+    function scoreRgb(score) {
+        const value = clamp((score + 1) / 2, 0, 1);
+        return {
+            r: Math.round(96 + value * 153),
+            g: Math.round(165 - value * 50),
+            b: Math.round(250 - value * 214),
+        };
+    }
+
+    function drawConceptShowcase(showcase) {
+        if (!els.conceptSource || !els.conceptMask || !showcase) return;
+        const work = ensureWorkData();
+        const {
+            model,
+            labels = [],
+            scores = null,
+            seeds = [],
+            activeCells = [],
+            cutEdges = [],
+            box = null,
+            bboxes = [],
+            title,
+            caption,
+            alpha = 0.66,
+        } = showcase;
+        const displayBox = showcase.interactive === "grabcut" && state.grabcut.draftBox
+            ? state.grabcut.draftBox
+            : box;
+        const displaySeeds = showcase.interactive === "grabcut"
+            ? [
+                ...indexesToSeeds(uniqueIndexes(state.grabcut.fgSeeds, model), "fg"),
+                ...indexesToSeeds(uniqueIndexes(state.grabcut.bgSeeds, model), "bg"),
+            ]
+            : seeds;
+        [els.conceptSource, els.conceptMask].forEach((canvas) => {
+            canvas.width = work.width;
+            canvas.height = work.height;
+        });
+        const sourceCtx = els.conceptSource.getContext("2d");
+        sourceCtx.putImageData(work.imageData, 0, 0);
+        if (showcase.interactive === "grabcut") {
+            drawConceptBox(sourceCtx, work.width, work.height, model.cols, model.rows, displayBox, els.conceptSource);
+            drawConceptSeeds(sourceCtx, work.width, work.height, model.cols, model.rows, displaySeeds, els.conceptSource, { compact: true });
+        }
+
+        const maskCtx = els.conceptMask.getContext("2d");
+        const output = maskCtx.createImageData(work.width, work.height);
+        const src = work.imageData.data;
+        const dst = output.data;
+        const cols = model.cols;
+        const rows = model.rows;
+        for (let y = 0; y < work.height; y += 1) {
+            const gy = clamp(Math.floor((y / work.height) * rows), 0, rows - 1);
+            for (let x = 0; x < work.width; x += 1) {
+                const gx = clamp(Math.floor((x / work.width) * cols), 0, cols - 1);
+                const cellIndex = gy * cols + gx;
+                const label = labels[cellIndex];
+                const color = scores ? scoreRgb(scores[cellIndex] || 0) : labelRgb(label ?? 0);
+                const p = (y * work.width + x) * 4;
+                const isBoundary = label === -1;
+                const mix = isBoundary ? 0.92 : alpha;
+                dst[p] = Math.round(src[p] * (1 - mix) + color.r * mix);
+                dst[p + 1] = Math.round(src[p + 1] * (1 - mix) + color.g * mix);
+                dst[p + 2] = Math.round(src[p + 2] * (1 - mix) + color.b * mix);
+                dst[p + 3] = 255;
+            }
+        }
+        maskCtx.putImageData(output, 0, 0);
+        drawGridLines(maskCtx, work.width, work.height, cols, rows);
+        drawConceptBox(maskCtx, work.width, work.height, cols, rows, displayBox, els.conceptMask);
+        drawConceptCutEdges(maskCtx, work.width, work.height, cols, rows, cutEdges, els.conceptMask);
+        drawConceptBboxes(maskCtx, work.width, work.height, cols, rows, bboxes, els.conceptMask);
+        drawConceptActiveCells(maskCtx, work.width, work.height, cols, rows, activeCells, els.conceptMask);
+        if (!showcase.interactive || showcase.showSeedsOnMask) {
+            drawConceptSeeds(maskCtx, work.width, work.height, cols, rows, displaySeeds, els.conceptMask, { compact: showcase.interactive === "grabcut" });
+        }
+        els.conceptResultTitle.textContent = title || "分割结果 label map";
+        els.conceptResultCaption.textContent = caption || "算法输出的区域标签会在这里显示。";
+    }
+
+    function canvasObjectFitRect(canvas, width = canvas.width, height = canvas.height) {
+        const displayWidth = canvas.clientWidth || width;
+        const displayHeight = canvas.clientHeight || height;
+        const intrinsicRatio = width / Math.max(1, height);
+        const displayRatio = displayWidth / Math.max(1, displayHeight);
+        let drawWidth = displayWidth;
+        let drawHeight = displayHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+        if (displayRatio > intrinsicRatio) {
+            drawHeight = displayHeight;
+            drawWidth = drawHeight * intrinsicRatio;
+            offsetX = (displayWidth - drawWidth) / 2;
+        } else {
+            drawWidth = displayWidth;
+            drawHeight = drawWidth / intrinsicRatio;
+            offsetY = (displayHeight - drawHeight) / 2;
+        }
+        return {
+            offsetX,
+            offsetY,
+            scaleX: drawWidth / Math.max(1, width),
+            scaleY: drawHeight / Math.max(1, height),
+        };
+    }
+
+    function withCanvasDisplayTransform(ctx, width, height, canvas, draw) {
+        draw(0, 0, 1, 1);
+    }
+
+    function drawGridLines(ctx, width, height, cols, rows) {
+        if (cols > 32 || rows > 24) return;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.42)";
+        ctx.lineWidth = 1;
+        for (let x = 1; x < cols; x += 1) {
+            const px = Math.round((x / cols) * width) + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(px, 0);
+            ctx.lineTo(px, height);
+            ctx.stroke();
+        }
+        for (let y = 1; y < rows; y += 1) {
+            const py = Math.round((y / rows) * height) + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, py);
+            ctx.lineTo(width, py);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    function drawConceptActiveCells(ctx, width, height, cols, rows, indexes, canvas = null) {
+        if (!indexes?.length) return;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        ctx.save();
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(249,115,22,0.6)";
+        ctx.shadowBlur = 8;
+        withCanvasDisplayTransform(ctx, width, height, canvas, () => {
+            indexes.forEach((index) => {
+                const x = (index % cols) * cellW + 2;
+                const y = Math.floor(index / cols) * cellH + 2;
+                ctx.strokeRect(x, y, Math.max(2, cellW - 4), Math.max(2, cellH - 4));
+            });
+        });
+        ctx.restore();
+    }
+
+    function drawConceptSeeds(ctx, width, height, cols, rows, seeds, canvas = null, options = {}) {
+        if (!seeds?.length) return;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        const compact = options.compact || cols > 32 || seeds.length > 18;
+        ctx.save();
+        withCanvasDisplayTransform(ctx, width, height, canvas, (offsetX, offsetY, scaleX) => {
+            const seedRadius = (compact ? 2.2 : 8.5) / Math.max(0.001, scaleX);
+            ctx.font = `bold ${9 / Math.max(0.001, scaleX)}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.globalAlpha = compact ? 0.72 : 1;
+            seeds.forEach((seed) => {
+                const x = ((seed.index % cols) + 0.5) * cellW;
+                const y = (Math.floor(seed.index / cols) + 0.5) * cellH;
+                const isFg = seed.type === "fg" || seed.label === 1 || seed.label === 2;
+                ctx.fillStyle = isFg ? "#16a34a" : "#2563eb";
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = (compact ? 0.9 : 2) / Math.max(0.001, scaleX);
+                ctx.beginPath();
+                ctx.arc(x, y, seedRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                if (!compact) {
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(seed.text || (seed.type === "bg" ? "B" : "F"), x, y + 0.5 / Math.max(0.001, scaleX));
+                }
+            });
+        });
+        ctx.restore();
+    }
+
+    function drawConceptBox(ctx, width, height, cols, rows, box, canvas = null) {
+        if (!box) return;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        ctx.save();
+        ctx.strokeStyle = "#2563eb";
+        withCanvasDisplayTransform(ctx, width, height, canvas, (offsetX, offsetY, scaleX) => {
+            ctx.lineWidth = 4 / Math.max(0.001, scaleX);
+            ctx.setLineDash([10 / Math.max(0.001, scaleX), 7 / Math.max(0.001, scaleX)]);
+            ctx.strokeRect(
+                box.x0 * cellW + 2,
+                box.y0 * cellH + 2,
+                (box.x1 - box.x0 + 1) * cellW - 4,
+                (box.y1 - box.y0 + 1) * cellH - 4,
+            );
+        });
+        ctx.restore();
+    }
+
+    function drawConceptBboxes(ctx, width, height, cols, rows, bboxes, canvas = null) {
+        if (!bboxes?.length) return;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        ctx.save();
+        withCanvasDisplayTransform(ctx, width, height, canvas, (offsetX, offsetY, scaleX) => {
+            ctx.lineWidth = 4 / Math.max(0.001, scaleX);
+            ctx.setLineDash([8 / Math.max(0.001, scaleX), 6 / Math.max(0.001, scaleX)]);
+            ctx.font = `bold ${12 / Math.max(0.001, scaleX)}px Arial`;
+            bboxes.forEach((box) => {
+                const color = box.color || "#f97316";
+                const x = box.minX * cellW + 3;
+                const y = box.minY * cellH + 3;
+                const w = (box.maxX - box.minX + 1) * cellW - 6;
+                const h = (box.maxY - box.minY + 1) * cellH - 6;
+                ctx.strokeStyle = color;
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillStyle = "rgba(255,255,255,0.88)";
+                ctx.fillRect(x + 3, y + 3, 52 / Math.max(0.001, scaleX), 18 / Math.max(0.001, scaleX));
+                ctx.fillStyle = color;
+                ctx.fillText(box.name || `L${box.label}`, x + 8 / Math.max(0.001, scaleX), y + 16 / Math.max(0.001, scaleX));
+            });
+        });
+        ctx.restore();
+    }
+
+    function drawConceptCutEdges(ctx, width, height, cols, rows, cutEdges, canvas = null) {
+        if (!cutEdges?.length) return;
+        if (cutEdges.length > 260) return;
+        const cellW = width / cols;
+        const cellH = height / rows;
+        ctx.save();
+        ctx.strokeStyle = "#ef4444";
+        withCanvasDisplayTransform(ctx, width, height, canvas, (offsetX, offsetY, scaleX) => {
+            ctx.lineWidth = 4 / Math.max(0.001, scaleX);
+            ctx.setLineDash([8 / Math.max(0.001, scaleX), 6 / Math.max(0.001, scaleX)]);
+            cutEdges.forEach((pair) => {
+                const ax = pair.a % cols;
+                const ay = Math.floor(pair.a / cols);
+                const bx = pair.b % cols;
+                const by = Math.floor(pair.b / cols);
+                ctx.beginPath();
+                if (ax !== bx) {
+                    const x = Math.max(ax, bx) * cellW;
+                    ctx.moveTo(x, ay * cellH + 2);
+                    ctx.lineTo(x, (ay + 1) * cellH - 2);
+                } else {
+                    const y = Math.max(ay, by) * cellH;
+                    ctx.moveTo(ax * cellW + 2, y);
+                    ctx.lineTo((ax + 1) * cellW - 2, y);
+                }
+                ctx.stroke();
+            });
+        });
+        ctx.restore();
+    }
+
+    function neighborIndexes(index, cols, rows) {
+        const x = index % cols;
+        const y = Math.floor(index / cols);
+        const result = [];
+        if (x > 0) result.push(index - 1);
+        if (x < cols - 1) result.push(index + 1);
+        if (y > 0) result.push(index - cols);
+        if (y < rows - 1) result.push(index + cols);
+        return result;
+    }
+
+    function addFlowEdge(adj, u, v, cap) {
+        const forward = { u, v, cap, original: cap, rev: adj[v].length };
+        const backward = { u: v, v: u, cap: 0, original: 0, rev: adj[u].length };
+        adj[u].push(forward);
+        adj[v].push(backward);
+    }
+
+    function runMaxFlow(nodeCount, source, sink, addEdges) {
+        const adj = Array.from({ length: nodeCount }, () => []);
+        addEdges(adj);
+        let flow = 0;
+        const paths = [];
+        const maxRounds = 600;
+        const eps = 1e-6;
+        for (let round = 0; round < maxRounds; round += 1) {
+            const parentNode = new Int32Array(nodeCount).fill(-1);
+            const parentEdge = new Int32Array(nodeCount).fill(-1);
+            const queue = [source];
+            parentNode[source] = source;
+            for (let head = 0; head < queue.length && parentNode[sink] < 0; head += 1) {
+                const node = queue[head];
+                for (let edgeIndex = 0; edgeIndex < adj[node].length; edgeIndex += 1) {
+                    const edge = adj[node][edgeIndex];
+                    if (edge.cap <= eps || parentNode[edge.v] >= 0) continue;
+                    parentNode[edge.v] = node;
+                    parentEdge[edge.v] = edgeIndex;
+                    queue.push(edge.v);
+                    if (edge.v === sink) break;
+                }
+            }
+            if (parentNode[sink] < 0) break;
+            let bottle = Infinity;
+            const path = [];
+            for (let v = sink; v !== source; v = parentNode[v]) {
+                const edge = adj[parentNode[v]][parentEdge[v]];
+                bottle = Math.min(bottle, edge.cap);
+                path.unshift(v);
+            }
+            path.unshift(source);
+            for (let v = sink; v !== source; v = parentNode[v]) {
+                const edge = adj[parentNode[v]][parentEdge[v]];
+                edge.cap -= bottle;
+                adj[edge.v][edge.rev].cap += bottle;
+            }
+            flow += bottle;
+            if (paths.length < 8) paths.push({ nodes: path, bottleneck: bottle });
+        }
+        const reachable = new Uint8Array(nodeCount);
+        const stack = [source];
+        reachable[source] = 1;
+        while (stack.length) {
+            const node = stack.pop();
+            adj[node].forEach((edge) => {
+                if (edge.cap > eps && !reachable[edge.v]) {
+                    reachable[edge.v] = 1;
+                    stack.push(edge.v);
+                }
+            });
+        }
+        return { flow, paths, reachable, adj };
+    }
+
+    function solveGridCut(cells, cols, rows, options) {
+        const nodeCount = cells.length + 2;
+        const source = cells.length;
+        const sink = cells.length + 1;
+        const pairs = [];
+        const sourceCaps = new Float32Array(cells.length);
+        const sinkCaps = new Float32Array(cells.length);
+        const result = runMaxFlow(nodeCount, source, sink, (adj) => {
+            cells.forEach((cell, index) => {
+                const caps = options.unary(cell, index);
+                const sourceCap = Math.max(0.001, caps.sourceCap);
+                const sinkCap = Math.max(0.001, caps.sinkCap);
+                sourceCaps[index] = sourceCap;
+                sinkCaps[index] = sinkCap;
+                addFlowEdge(adj, source, index, sourceCap);
+                addFlowEdge(adj, index, sink, sinkCap);
+            });
+            cells.forEach((cell, index) => {
+                const x = index % cols;
+                const y = Math.floor(index / cols);
+                [[x + 1, y], [x, y + 1]].forEach(([nx, ny]) => {
+                    if (nx >= cols || ny >= rows) return;
+                    const nextIndex = ny * cols + nx;
+                    const weight = Math.max(0.001, options.pairwise(cell, cells[nextIndex], index, nextIndex));
+                    pairs.push({ a: index, b: nextIndex, weight });
+                    addFlowEdge(adj, index, nextIndex, weight);
+                    addFlowEdge(adj, nextIndex, index, weight);
+                });
+            });
+        });
+        const labels = cells.map((_, index) => Boolean(result.reachable[index]));
+        const cutEdges = pairs.filter((pair) => labels[pair.a] !== labels[pair.b]);
+        return {
+            labels,
+            cutEdges,
+            pairs,
+            sourceCaps,
+            sinkCaps,
+            paths: result.paths,
+            maxFlow: result.flow,
+        };
+    }
+
+    function labelFill(label) {
+        const palette = {
+            "-1": "#ef4444",
+            0: "#e2e8f0",
+            1: "#93c5fd",
+            2: "#86efac",
+            3: "#fdba74",
+            4: "#c4b5fd",
+            5: "#67e8f9",
+        };
+        if (typeof label === "boolean") return label ? "#bbf7d0" : "#dbeafe";
+        return palette[label] || "#ddd6fe";
+    }
+
+    function scoreFill(score) {
+        const value = clamp((score + 1) / 2, 0, 1);
+        const hue = 214 - value * 170;
+        return `hsl(${hue} 82% 78%)`;
+    }
+
+    function edgeLine(pair, cols, rows, padX, padY, cellW, cellH, className, width = 3) {
+        const ax = pair.a % cols;
+        const ay = Math.floor(pair.a / cols);
+        const bx = pair.b % cols;
+        const by = Math.floor(pair.b / cols);
+        if (ax !== bx) {
+            const x = padX + Math.max(ax, bx) * cellW;
+            const y1 = padY + ay * cellH + 4;
+            const y2 = padY + (ay + 1) * cellH - 4;
+            return `<line class="${className}" x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke-width="${width}"/>`;
+        }
+        const y = padY + Math.max(ay, by) * cellH;
+        const x1 = padX + ax * cellW + 4;
+        const x2 = padX + (ax + 1) * cellW - 4;
+        return `<line class="${className}" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke-width="${width}"/>`;
+    }
+
+    function conceptGridSvg(model, options = {}) {
+        const { cells, cols, rows } = model;
+        const viewW = 520;
+        const viewH = 318;
+        const padX = 32;
+        const padY = 34;
+        const cellW = (viewW - padX * 2) / cols;
+        const cellH = (viewH - padY * 2) / rows;
+        const activeSet = new Set(options.activeCells || []);
+        const seedList = options.seeds || [];
+        const seedCells = new Map(seedList.map((seed) => [seed.index, seed]));
+        const edgeWeights = options.pairs || [];
+        const edgeMax = Math.max(0.01, ...edgeWeights.map((pair) => pair.weight || 0));
+        const visibleEdges = options.showEdges
+            ? edgeWeights.filter((pair) => pair.weight > edgeMax * 0.36)
+            : [];
+        const cellsHtml = cells.map((cell, index) => {
+            const x = padX + cell.x * cellW + 2;
+            const y = padY + cell.y * cellH + 2;
+            const label = options.labels ? options.labels[index] : null;
+            const fill = options.scores ? scoreFill(options.scores[index]) : options.labels ? labelFill(label) : `rgb(${Math.round(cell.r)},${Math.round(cell.g)},${Math.round(cell.b)})`;
+            const classes = [
+                "seg-grid-cell",
+                activeSet.has(index) ? "is-active" : "",
+                label === -1 ? "is-boundary" : "",
+            ].filter(Boolean).join(" ");
+            const delay = ((cell.x + cell.y) * 28) % 360;
+            return `<rect class="${classes}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(5, cellW - 4).toFixed(1)}" height="${Math.max(5, cellH - 4).toFixed(1)}" rx="6" fill="${fill}" style="animation-delay:${delay}ms"/>`;
+        }).join("");
+        const edgeHtml = visibleEdges.map((pair) => edgeLine(pair, cols, rows, padX, padY, cellW, cellH, "seg-grid-edge", 1 + (pair.weight / edgeMax) * 4)).join("");
+        const cutHtml = (options.cutEdges || []).map((pair) => edgeLine(pair, cols, rows, padX, padY, cellW, cellH, "seg-grid-cut", 4)).join("");
+        const seedHtml = seedList.map((seed) => {
+            const cell = cells[seed.index];
+            if (!cell) return "";
+            const cx = padX + (cell.x + 0.5) * cellW;
+            const cy = padY + (cell.y + 0.5) * cellH;
+            const isFg = seed.type === "fg" || seed.label === 1 || seed.label === 2;
+            const text = seed.text || (seed.type === "bg" ? "B" : "F");
+            return `<g class="seg-grid-seed ${isFg ? "is-fg" : "is-bg"}"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="12"/><text x="${cx.toFixed(1)}" y="${(cy + 4).toFixed(1)}" text-anchor="middle">${text}</text></g>`;
+        }).join("");
+        const boxHtml = options.box ? (() => {
+            const box = options.box;
+            const x = padX + box.x0 * cellW + 2;
+            const y = padY + box.y0 * cellH + 2;
+            const w = (box.x1 - box.x0 + 1) * cellW - 4;
+            const h = (box.y1 - box.y0 + 1) * cellH - 4;
+            return `<rect class="seg-grid-box" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="12"/>`;
+        })() : "";
+        const bboxHtml = (options.bboxes || []).map((box) => {
+            const x = padX + box.minX * cellW + 3;
+            const y = padY + box.minY * cellH + 3;
+            const w = (box.maxX - box.minX + 1) * cellW - 6;
+            const h = (box.maxY - box.minY + 1) * cellH - 6;
+            return `<rect class="seg-grid-bbox" style="--bbox:${box.color || "#2563eb"}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="9"/><text class="seg-grid-bbox-label" x="${(x + 8).toFixed(1)}" y="${(y + 16).toFixed(1)}">${escapeHtml(box.name || `L${box.label}`)}</text>`;
+        }).join("");
+        const caption = options.caption ? `<text x="260" y="304" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
+        return `
+            <svg class="seg-concept-svg seg-algo-grid" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="${escapeHtml(options.aria || "algorithm grid")}">
+                <rect x="16" y="18" width="488" height="276" rx="22" fill="#f8fafc" stroke="#dbeafe"/>
+                ${edgeHtml}
+                ${cellsHtml}
+                ${boxHtml}
+                ${cutHtml}
+                ${bboxHtml}
+                ${seedHtml}
+                ${caption}
+            </svg>
+        `;
+    }
+
+    function conceptCard(title, body, text = "") {
+        return `
+            <section class="seg-concept-card seg-algo-card">
+                <h4>${escapeHtml(title)}</h4>
+                ${body}
+                ${text ? `<p>${escapeHtml(text)}</p>` : ""}
+            </section>
+        `;
+    }
+
+    function metricCards(metrics) {
+        return `
+            <div class="seg-analysis-metrics">
+                ${metrics.map((metric) => `<div><span>${escapeHtml(metric[0])}</span><strong>${escapeHtml(metric[1])}</strong></div>`).join("")}
+            </div>
+        `;
+    }
+
+    function noteRows(rows) {
+        return `<dl>${rows.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}</dl>`;
+    }
+
+    function matrixHeatmap(values, size, labels = []) {
+        const list = Array.from(values);
+        const max = Math.max(0.001, ...list);
+        return `
+            <div class="seg-algo-matrix" style="--n:${size}">
+                ${list.map((value, index) => {
+                    const heat = clamp(value / max, 0, 1);
+                    const label = labels[index] || (value >= 1 ? value.toFixed(1) : value.toFixed(2));
+                    return `<span style="--heat:${heat.toFixed(3)}">${escapeHtml(label)}</span>`;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    function barsHtml(items) {
+        const max = Math.max(0.001, ...items.map((item) => Math.abs(item.value)));
+        return `
+            <div class="seg-algo-bars">
+                ${items.map((item) => `
+                    <span style="--w:${Math.round((Math.abs(item.value) / max) * 100)}%;--c:${item.color || "#2563eb"}">
+                        <b>${escapeHtml(item.label)}</b>
+                        <em>${escapeHtml(item.note || item.value.toFixed(2))}</em>
+                    </span>
+                `).join("")}
+            </div>
+        `;
+    }
+
+    function eigenBars(values) {
+        const max = Math.max(0.001, ...values.map((value) => Math.abs(value)));
+        return `
+            <div class="seg-eigen-bars seg-eigen-bars--signed">
+                ${values.map((value, index) => {
+                    const height = 16 + Math.abs(value / max) * 78;
+                    return `<i class="${value < 0 ? "neg" : ""}" style="height:${height.toFixed(1)}%"><span>v${index + 1}</span></i>`;
+                }).join("")}
+            </div>
+        `;
+    }
+
+    function computeMaskProps(cells, cols, rows, labels) {
+        const fgIndexes = labels.map((label, index) => label ? index : -1).filter((index) => index >= 0);
+        if (!fgIndexes.length) {
+            return { count: 0, ratio: 0, perimeter: 0, minX: 0, minY: 0, maxX: 0, maxY: 0 };
+        }
+        let minX = cols;
+        let minY = rows;
+        let maxX = 0;
+        let maxY = 0;
+        let perimeter = 0;
+        fgIndexes.forEach((index) => {
+            const cell = cells[index];
+            minX = Math.min(minX, cell.x);
+            minY = Math.min(minY, cell.y);
+            maxX = Math.max(maxX, cell.x);
+            maxY = Math.max(maxY, cell.y);
+            neighborIndexes(index, cols, rows).forEach((next) => {
+                if (!labels[next]) perimeter += 1;
+            });
+            const x = index % cols;
+            const y = Math.floor(index / cols);
+            if (x === 0 || x === cols - 1) perimeter += 1;
+            if (y === 0 || y === rows - 1) perimeter += 1;
+        });
+        return {
+            count: fgIndexes.length,
+            ratio: fgIndexes.length / labels.length,
+            perimeter,
+            minX,
+            minY,
+            maxX,
+            maxY,
+        };
+    }
+
+    function filledLabels(model, value = 0) {
+        return Array.from({ length: model.cells.length }, () => value);
+    }
+
+    function seedStageLabels(model, seeds) {
+        const labels = filledLabels(model, 0);
+        seeds.forEach((seed) => {
+            labels[seed.index] = seed.type === "bg" ? false : true;
+        });
+        return labels;
+    }
+
+    function defaultGrabCutBox(model) {
+        return {
+            x0: Math.max(1, Math.round(model.cols * 0.25)),
+            y0: Math.max(0, Math.round(model.rows * 0.14)),
+            x1: Math.min(model.cols - 2, Math.round(model.cols * 0.78)),
+            y1: Math.min(model.rows - 2, Math.round(model.rows * 0.76)),
+        };
+    }
+
+    function normalizeBox(box, model) {
+        const fallback = defaultGrabCutBox(model);
+        const raw = box || fallback;
+        const x0 = clamp(Math.min(raw.x0, raw.x1), 0, model.cols - 1);
+        const x1 = clamp(Math.max(raw.x0, raw.x1), 0, model.cols - 1);
+        const y0 = clamp(Math.min(raw.y0, raw.y1), 0, model.rows - 1);
+        const y1 = clamp(Math.max(raw.y0, raw.y1), 0, model.rows - 1);
+        return {
+            x0,
+            y0,
+            x1: Math.max(x0, x1),
+            y1: Math.max(y0, y1),
+        };
+    }
+
+    function uniqueIndexes(indexes, model) {
+        return [...new Set(indexes)]
+            .filter((index) => Number.isInteger(index) && index >= 0 && index < model.cells.length);
+    }
+
+    function indexesToSeeds(indexes, type) {
+        return indexes.map((index) => ({ index, type, text: type === "bg" ? "B" : "F" }));
+    }
+
+    function buildGrabCutPixelModel() {
+        const work = ensureWorkData();
+        const maxSide = 132;
+        const scale = maxSide / Math.max(work.width, work.height);
+        const cols = Math.max(48, Math.round(work.width * Math.min(1, scale)));
+        const rows = Math.max(32, Math.round(work.height * Math.min(1, scale)));
+        return buildSampleGrid(cols, rows);
+    }
+
+    function scaleBox(box, fromModel, toModel) {
+        const source = normalizeBox(box, fromModel);
+        return normalizeBox({
+            x0: Math.round((source.x0 / Math.max(1, fromModel.cols - 1)) * (toModel.cols - 1)),
+            y0: Math.round((source.y0 / Math.max(1, fromModel.rows - 1)) * (toModel.rows - 1)),
+            x1: Math.round((source.x1 / Math.max(1, fromModel.cols - 1)) * (toModel.cols - 1)),
+            y1: Math.round((source.y1 / Math.max(1, fromModel.rows - 1)) * (toModel.rows - 1)),
+        }, toModel);
+    }
+
+    function mapIndexesToModel(indexes, fromModel, toModel) {
+        return uniqueIndexes(indexes, fromModel).map((index) => {
+            const x = index % fromModel.cols;
+            const y = Math.floor(index / fromModel.cols);
+            const tx = Math.round((x / Math.max(1, fromModel.cols - 1)) * (toModel.cols - 1));
+            const ty = Math.round((y / Math.max(1, fromModel.rows - 1)) * (toModel.rows - 1));
+            return ty * toModel.cols + tx;
+        });
+    }
+
+    function downsampleLabels(sourceModel, labels, targetModel) {
+        return targetModel.cells.map((cell) => {
+            const sx = Math.round((cell.x / Math.max(1, targetModel.cols - 1)) * (sourceModel.cols - 1));
+            const sy = Math.round((cell.y / Math.max(1, targetModel.rows - 1)) * (sourceModel.rows - 1));
+            return labels[sy * sourceModel.cols + sx];
+        });
+    }
+
+    function cutEdgesFromLabels(model, labels, limit = 260) {
+        const edges = [];
+        for (let y = 0; y < model.rows; y += 1) {
+            for (let x = 0; x < model.cols; x += 1) {
+                const index = y * model.cols + x;
+                if (x < model.cols - 1 && labels[index] !== labels[index + 1]) edges.push({ a: index, b: index + 1, weight: 1 });
+                if (y < model.rows - 1 && labels[index] !== labels[index + model.cols]) edges.push({ a: index, b: index + model.cols, weight: 1 });
+                if (edges.length >= limit) return edges;
+            }
+        }
+        return edges;
+    }
+
+    function runDenseGrabCut(model, box, fgUserSeeds, bgUserSeeds) {
+        const fgUserSet = new Set(uniqueIndexes(fgUserSeeds, model));
+        const bgUserSet = new Set(uniqueIndexes(bgUserSeeds, model));
+        const insideBox = (cell) => cell.x >= box.x0 && cell.x <= box.x1 && cell.y >= box.y0 && cell.y <= box.y1;
+        const central = (cell) => {
+            const nx = (cell.x - (box.x0 + box.x1) / 2) / Math.max(1, (box.x1 - box.x0) / 2);
+            const ny = (cell.y - (box.y0 + box.y1) / 2) / Math.max(1, (box.y1 - box.y0) / 2);
+            return nx * nx + ny * ny < 0.62;
+        };
+        let labels = model.cells.map((cell, index) => {
+            if (bgUserSet.has(index)) return false;
+            if (fgUserSet.has(index)) return true;
+            return insideBox(cell) && central(cell);
+        });
+        const snapshots = [];
+        const sigmaSq = 54 * 54;
+        for (let iter = 1; iter <= 5; iter += 1) {
+            const fgIndexes = labels.map((label, index) => label ? index : -1).filter((index) => index >= 0);
+            const bgIndexes = labels.map((label, index) => !label ? index : -1).filter((index) => index >= 0);
+            const fgMean = colorMean(model.cells, fgIndexes.length ? fgIndexes : model.cells.filter(insideBox).map((cell) => cell.index));
+            const bgMean = colorMean(model.cells, bgIndexes);
+            const scores = model.cells.map((cell, index) => {
+                if (fgUserSet.has(index)) return 8;
+                if (bgUserSet.has(index) || !insideBox(cell)) return -8;
+                const fgAffinity = Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 3.2 + (central(cell) ? 0.58 : 0);
+                const bgAffinity = Math.exp(-colorDistanceSq(cell, bgMean) / (2 * sigmaSq)) * 3.2 + 0.24;
+                return fgAffinity - bgAffinity;
+            });
+            for (let smooth = 0; smooth < 4; smooth += 1) {
+                const next = labels.slice();
+                model.cells.forEach((cell, index) => {
+                    if (fgUserSet.has(index)) {
+                        next[index] = true;
+                        return;
+                    }
+                    if (bgUserSet.has(index) || !insideBox(cell)) {
+                        next[index] = false;
+                        return;
+                    }
+                    let vote = 0;
+                    neighborIndexes(index, model.cols, model.rows).forEach((neighbor) => {
+                        const weight = Math.exp(-colorDistanceSq(cell, model.cells[neighbor]) / (2 * 34 * 34));
+                        vote += (labels[neighbor] ? 1 : -1) * weight;
+                    });
+                    next[index] = scores[index] + vote * 0.72 > 0;
+                });
+                labels = next;
+            }
+            snapshots.push({
+                iter,
+                labels: labels.slice(),
+                fgMean,
+                bgMean,
+                scores,
+                cutEdges: cutEdgesFromLabels(model, labels),
+            });
+        }
+        return { labels, snapshots, insideBox, central };
+    }
+
+    function buildGraphCutDemo() {
+        const model = buildSampleGrid(10, 7);
+        const seeds = graphSeedsForSample();
+        const seedMarks = seeds.map((seed) => ({
+            index: nearestCellIndex(model.cells, model.cols, model.rows, seed.x, seed.y),
+            type: seed.type,
+        }));
+        const fgSeedSet = new Set(seedMarks.filter((seed) => seed.type === "fg").map((seed) => seed.index));
+        const bgSeedSet = new Set(seedMarks.filter((seed) => seed.type === "bg").map((seed) => seed.index));
+        const fgMean = colorMean(model.cells, [...fgSeedSet]);
+        const bgMean = colorMean(model.cells, [...bgSeedSet]);
+        const sigmaSq = 62 * 62;
+        const solution = solveGridCut(model.cells, model.cols, model.rows, {
+            unary: (cell, index) => {
+                if (fgSeedSet.has(index)) return { sourceCap: 90, sinkCap: 0.01 };
+                if (bgSeedSet.has(index)) return { sourceCap: 0.01, sinkCap: 90 };
+                return {
+                    sourceCap: 1 + Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 8,
+                    sinkCap: 1 + Math.exp(-colorDistanceSq(cell, bgMean) / (2 * sigmaSq)) * 8,
+                };
+            },
+            pairwise: (a, b) => {
+                const edgeSigmaSq = 38 * 38;
+                return 0.14 + Math.exp(-colorDistanceSq(a, b) / (2 * edgeSigmaSq)) * 7.5;
+            },
+        });
+        const scores = model.cells.map((_, index) => (solution.sourceCaps[index] - solution.sinkCaps[index]) / Math.max(solution.sourceCaps[index], solution.sinkCaps[index], 1));
+        const fgCount = solution.labels.filter(Boolean).length;
+        const pathCells = solution.paths[0]?.nodes.filter((index) => index >= 0 && index < model.cells.length) || [];
+        const metrics = [
+            ["max-flow", solution.maxFlow.toFixed(2)],
+            ["cut edges", String(solution.cutEdges.length)],
+            ["foreground", `${Math.round((fgCount / model.cells.length) * 100)}%`],
+            ["seeds", `FG ${fgSeedSet.size} / BG ${bgSeedSet.size}`],
+        ];
+        return {
+            stepperKind: "graph",
+            status: "Graph Cut Algorithm",
+            activeMethod: "Graph Cut",
+            stageTitle: "当前实验模式：Graph Cut 最小割",
+            stripFeature: "unary + pairwise graph",
+            stripK: `${model.cells.length} nodes`,
+            stripOutput: "min-cut labels",
+            regionCount: "2",
+            formulaLabel: "Graph Cut",
+            formula: "E(L)=Σ unary_i(L_i)+Σ pairwise_ij[L_i≠L_j]",
+            formulaNote: "页面在当前图像上抽样成小型像素图，并用最大流/最小割实际求解前景与背景划分。",
+            notes: [
+                ["建图", "每个小格是节点，Source 表示前景，Sink 表示背景。"],
+                ["Unary cost", "前景/背景种子估计颜色模型，决定节点连到 Source 或 Sink 的代价。"],
+                ["Pairwise cost", "相邻格颜色越像，边权越大，被切开的代价越高。"],
+                ["最小割", "最大流结束后，从 Source 还能到达的节点就是前景侧。"],
+            ],
+            showcase: {
+                model,
+                labels: solution.labels,
+                title: "Graph Cut 分割结果",
+                caption: `绿色为 Source 前景侧，蓝色为背景侧；当前前景约 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`,
+            },
+            frames: [
+                {
+                    phase: "image",
+                    title: "1. 像素图节点与前景/背景种子",
+                    graph: conceptGridSvg(model, { seeds: seedMarks, caption: "FG/BG seeds anchor the two terminal sides" }),
+                    matrix: barsHtml([
+                        { label: "FG mean", value: 1, color: "#22c55e", note: rgbText(fgMean) },
+                        { label: "BG mean", value: 1, color: "#60a5fa", note: rgbText(bgMean) },
+                    ]),
+                    detail: metricCards([["sample", `${model.cols}×${model.rows} grid`], ["source", state.sourceName || "sample image"], ["seed rule", "manual FG/BG hints"], ["next", "build unary costs"]]),
+                    stageNote: "先把图像抽样成小图，再用绿色/蓝色种子给前景和背景提供约束。",
+                    showcase: {
+                        model,
+                        labels: seedStageLabels(model, seedMarks),
+                        seeds: seedMarks,
+                        title: "Graph Cut Step 1：前景/背景种子",
+                        caption: "绿色种子代表 Source 前景约束，蓝色种子代表 Sink 背景约束。",
+                        alpha: 0.5,
+                    },
+                },
+                {
+                    phase: "feature",
+                    title: "2. Unary cost：节点更像前景还是背景",
+                    graph: conceptGridSvg(model, { scores, seeds: seedMarks, caption: "orange = FG affinity, blue = BG affinity" }),
+                    matrix: barsHtml(model.cells.slice(0, 8).map((cell, offset) => ({
+                        label: `p${offset + 1}`,
+                        value: solution.sourceCaps[cell.index] - solution.sinkCaps[cell.index],
+                        color: solution.sourceCaps[cell.index] > solution.sinkCaps[cell.index] ? "#f97316" : "#2563eb",
+                        note: `S ${solution.sourceCaps[cell.index].toFixed(1)} / T ${solution.sinkCaps[cell.index].toFixed(1)}`,
+                    }))),
+                    detail: metricCards([["FG color", rgbText(fgMean)], ["BG color", rgbText(bgMean)], ["unary range", "seed caps = 90"], ["meaning", "lower cut keeps label"]]),
+                    stageNote: "每个节点会得到一对端点权重：切断 Source 边会让它偏向背景，切断 Sink 边会让它偏向前景。",
+                    showcase: {
+                        model,
+                        scores,
+                        seeds: seedMarks,
+                        title: "Graph Cut Step 2：Unary cost 热力图",
+                        caption: "偏橙的网格更像前景模型，偏蓝的网格更像背景模型。",
+                        alpha: 0.72,
+                    },
+                },
+                {
+                    phase: "assign",
+                    title: "3. Pairwise edge：相似邻居更不愿被切开",
+                    graph: conceptGridSvg(model, { pairs: solution.pairs, showEdges: true, activeCells: pathCells, caption: "thicker edges carry higher smoothness penalty" }),
+                    matrix: barsHtml(solution.pairs.slice(0, 10).map((pair, index) => ({
+                        label: `e${index + 1}`,
+                        value: pair.weight,
+                        color: pair.weight > 4 ? "#16a34a" : "#f97316",
+                        note: `w=${pair.weight.toFixed(2)}`,
+                    }))),
+                    detail: metricCards([["augment paths", String(solution.paths.length)], ["first bottle", (solution.paths[0]?.bottleneck || 0).toFixed(2)], ["edge model", "color contrast"], ["next", "min cut"]]),
+                    stageNote: "最大流会沿着还能承载流量的路径推进；粗边代表切开会更痛，红色切线通常绕开它们。",
+                    showcase: {
+                        model,
+                        labels: filledLabels(model, 0),
+                        activeCells: pathCells,
+                        title: "Graph Cut Step 3：最大流增广路径",
+                        caption: "橙色高亮表示当前增广路径经过的节点，算法沿可通行边不断推送流量。",
+                        alpha: 0.42,
+                    },
+                },
+                {
+                    phase: "update",
+                    title: "4. Max-flow / Min-cut 后的割边",
+                    graph: conceptGridSvg(model, { labels: solution.labels, cutEdges: solution.cutEdges, seeds: seedMarks, caption: "red lines are the selected cut boundary" }),
+                    matrix: metricCards(metrics),
+                    detail: barsHtml([
+                        { label: "foreground side", value: fgCount, color: "#22c55e", note: `${fgCount} nodes` },
+                        { label: "background side", value: model.cells.length - fgCount, color: "#60a5fa", note: `${model.cells.length - fgCount} nodes` },
+                        { label: "cut capacity", value: solution.maxFlow, color: "#ef4444", note: solution.maxFlow.toFixed(2) },
+                    ]),
+                    stageNote: "最小割选择一组总权重最低的边，把 Source 与 Sink 分开。",
+                    showcase: {
+                        model,
+                        labels: solution.labels,
+                        cutEdges: solution.cutEdges,
+                        seeds: seedMarks,
+                        title: "Graph Cut Step 4：最小割边界",
+                        caption: "红色虚线是最终切断的边，绿色/蓝色表示割开后的两侧。",
+                    },
+                },
+                {
+                    phase: "stats",
+                    title: "5. 输出二值 label map 与统计",
+                    graph: conceptGridSvg(model, { labels: solution.labels, cutEdges: solution.cutEdges, caption: "foreground/background label map" }),
+                    matrix: metricCards(metrics),
+                    detail: noteRows([
+                        ["可解释输出", `前景占 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`],
+                        ["算法意义", "Graph Cut 把分割转化成能量最小化，适合有种子约束的前景/背景任务。"],
+                    ]),
+                    stageNote: "最终得到的是每个节点的前景/背景标签，红线就是算法认为最自然的边界。",
+                    showcase: {
+                        model,
+                        labels: solution.labels,
+                        cutEdges: solution.cutEdges,
+                        title: "Graph Cut Step 5：最终分割结果",
+                        caption: `前景约 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`,
+                    },
+                },
+            ],
+        };
+    }
+
+    function buildNcutDemo() {
+        const model = buildSampleGrid(4, 3);
+        const n = model.cells.length;
+        const weights = new Float64Array(n * n);
+        for (let i = 0; i < n; i += 1) {
+            for (let j = i + 1; j < n; j += 1) {
+                const a = model.cells[i];
+                const b = model.cells[j];
+                const colorDistance = Math.sqrt(colorDistanceSq(a, b)) / 441.7;
+                const spatialDistance = Math.hypot(a.cx - b.cx, a.cy - b.cy);
+                const closeBonus = spatialDistance < 0.54 ? 1 : 0.32;
+                const weight = closeBonus * Math.exp(-(colorDistance * colorDistance) / 0.16) * Math.exp(-(spatialDistance * spatialDistance) / 0.42);
+                weights[i * n + j] = weight;
+                weights[j * n + i] = weight;
+            }
+        }
+        const degree = Array.from({ length: n }, (_, i) => {
+            let sum = 0;
+            for (let j = 0; j < n; j += 1) sum += weights[i * n + j];
+            return Math.max(0.001, sum);
+        });
+        const first = degree.map(Math.sqrt);
+        const firstNorm = Math.hypot(...first) || 1;
+        for (let i = 0; i < first.length; i += 1) first[i] /= firstNorm;
+        let vector = model.cells.map((cell) => (cell.cx - 0.5) * 1.6 + (cell.gray - 128) / 255);
+        const orthogonalize = (vec) => {
+            const dot = vec.reduce((sum, value, index) => sum + value * first[index], 0);
+            for (let i = 0; i < vec.length; i += 1) vec[i] -= dot * first[i];
+            const norm = Math.hypot(...vec) || 1;
+            for (let i = 0; i < vec.length; i += 1) vec[i] /= norm;
+        };
+        orthogonalize(vector);
+        const eigenSnapshots = [];
+        for (let iter = 0; iter < 12; iter += 1) {
+            const next = Array(n).fill(0);
+            for (let i = 0; i < n; i += 1) {
+                for (let j = 0; j < n; j += 1) {
+                    next[i] += weights[i * n + j] * vector[j] / Math.sqrt(degree[i] * degree[j]);
+                }
+            }
+            orthogonalize(next);
+            vector = next;
+            if ([1, 4, 8, 11].includes(iter)) eigenSnapshots.push({ iter: iter + 1, vector: [...vector] });
+        }
+        const sorted = [...vector].sort((a, b) => a - b);
+        const threshold = sorted[Math.floor(sorted.length / 2)];
+        const labels = vector.map((value) => value >= threshold);
+        let cut = 0;
+        let assocA = 0;
+        let assocB = 0;
+        for (let i = 0; i < n; i += 1) {
+            if (labels[i]) assocA += degree[i];
+            else assocB += degree[i];
+            for (let j = i + 1; j < n; j += 1) {
+                if (labels[i] !== labels[j]) cut += weights[i * n + j];
+            }
+        }
+        const ncut = cut / Math.max(0.001, assocA) + cut / Math.max(0.001, assocB);
+        const pairEdges = [];
+        for (let i = 0; i < n; i += 1) {
+            for (let j = i + 1; j < n; j += 1) {
+                if (weights[i * n + j] > 0.1) pairEdges.push({ a: i, b: j, weight: weights[i * n + j] * 7 });
+            }
+        }
+        const cutEdges = pairEdges.filter((pair) => labels[pair.a] !== labels[pair.b]);
+        const metrics = [
+            ["cut(A,B)", cut.toFixed(3)],
+            ["assoc(A,V)", assocA.toFixed(3)],
+            ["assoc(B,V)", assocB.toFixed(3)],
+            ["Ncut score", ncut.toFixed(3)],
+        ];
+        const maxDegree = Math.max(0.001, ...degree);
+        const degreeScores = degree.map((value) => (value / maxDegree) * 2 - 1);
+        return {
+            stepperKind: "graph",
+            status: "Normalized Cut Algorithm",
+            activeMethod: "Normalized Cut",
+            stageTitle: "当前实验模式：Normalized Cut 谱分割",
+            stripFeature: "W + D + eigenvector",
+            stripK: `${n} supernodes`,
+            stripOutput: "balanced partition",
+            regionCount: "2",
+            formulaLabel: "Ncut",
+            formula: "Ncut(A,B)=cut(A,B)/assoc(A,V)+cut(A,B)/assoc(B,V)",
+            formulaNote: "页面实际构造 W 矩阵，并用归一化相似度矩阵的第二特征向量做二分割。",
+            notes: [
+                ["W 矩阵", "颜色相近、空间相邻的超像素权重大。"],
+                ["D 矩阵", "D[i,i] 是第 i 个节点的连接总强度。"],
+                ["谱松弛", "第二特征向量把节点投到一维，符号或中位数阈值给出二分。"],
+                ["归一化", "Ncut 用 assoc 项惩罚切出很小的孤立块。"],
+            ],
+            showcase: {
+                model,
+                labels,
+                title: "Normalized Cut 平衡分割结果",
+                caption: `两种颜色表示第二特征向量阈值后的两个区域；Ncut score = ${ncut.toFixed(3)}。`,
+            },
+            frames: [
+                {
+                    phase: "image",
+                    title: "1. 从图像抽样为超像素图",
+                    graph: conceptGridSvg(model, { pairs: pairEdges, showEdges: true, caption: "supernodes are connected by color-spatial similarity" }),
+                    matrix: metricCards([["nodes", String(n)], ["edge model", "color × spatial"], ["degree", "row sum of W"], ["goal", "balanced split"]]),
+                    detail: barsHtml(model.cells.map((cell, index) => ({ label: `v${index + 1}`, value: degree[index], color: "#2563eb", note: `D=${degree[index].toFixed(2)}` }))),
+                    stageNote: "Ncut 不是找 Source/Sink，而是先构造一个所有节点之间的相似度图。",
+                    showcase: {
+                        model,
+                        labels: filledLabels(model, 0),
+                        activeCells: model.cells.map((cell) => cell.index),
+                        title: "Ncut Step 1：超像素节点图",
+                        caption: "先把图像抽样为少量超像素节点，后续用节点相似度做谱分割。",
+                        alpha: 0.42,
+                    },
+                },
+                {
+                    phase: "feature",
+                    title: "2. 权重矩阵 W 与度矩阵 D",
+                    graph: matrixHeatmap(Array.from(weights), n),
+                    matrix: barsHtml(degree.map((value, index) => ({ label: `D${index + 1}`, value, color: "#0ea5e9", note: value.toFixed(2) }))),
+                    detail: metricCards([["W shape", `${n}×${n}`], ["max W", Math.max(...weights).toFixed(2)], ["min nonzero W", Math.min(...Array.from(weights).filter(Boolean)).toFixed(2)], ["normalizer", "D^-1/2 W D^-1/2"]]),
+                    stageNote: "矩阵越亮表示两个节点越相似；D 记录每个节点在图里的总连接强度。",
+                    showcase: {
+                        model,
+                        scores: degreeScores,
+                        title: "Ncut Step 2：节点连接强度 D",
+                        caption: "颜色越偏橙，表示该节点与全图的连接总强度越高。",
+                        alpha: 0.7,
+                    },
+                },
+                ...eigenSnapshots.map((snapshot, index) => ({
+                    phase: index < 2 ? "assign" : "update",
+                    title: `3. 特征向量迭代 ${snapshot.iter}`,
+                    graph: eigenBars(snapshot.vector),
+                    matrix: conceptGridSvg(model, { scores: snapshot.vector, caption: "blue / orange signs foreshadow the partition" }),
+                    detail: metricCards([["iteration", String(snapshot.iter)], ["orthogonal", "removed first eigenvector"], ["threshold", "median sign split"], ["solver", "power iteration demo"]]),
+                    stageNote: "向量逐步稳定后，同号节点会被分到同一侧；这就是谱分割的可视化核心。",
+                    showcase: {
+                        model,
+                        scores: snapshot.vector,
+                        title: `Ncut Step 3：特征向量迭代 ${snapshot.iter}`,
+                        caption: "蓝/橙两侧逐渐稳定，之后按阈值形成两个区域。",
+                        alpha: 0.74,
+                    },
+                })),
+                {
+                    phase: "stats",
+                    title: "4. Ncut 二分结果",
+                    graph: conceptGridSvg(model, { labels, pairs: pairEdges, cutEdges, showEdges: true, caption: "normalized cut keeps two internally coherent groups" }),
+                    matrix: metricCards(metrics),
+                    detail: noteRows([
+                        ["为什么不是普通 cut", "普通 cut 容易把一个弱连接小块切掉，Ncut 会同时看切割代价和区域内部连接强度。"],
+                        ["本次结果", `cut=${cut.toFixed(3)}, Ncut=${ncut.toFixed(3)}。`],
+                    ]),
+                    stageNote: "最终边界由第二特征向量的阈值决定，并用 Ncut 分数衡量是否平衡。",
+                    showcase: {
+                        model,
+                        labels,
+                        cutEdges,
+                        title: "Ncut Step 4：最终平衡分割",
+                        caption: `两个区域由特征向量阈值得到；Ncut score = ${ncut.toFixed(3)}。`,
+                    },
+                },
+            ],
+        };
+    }
+
+    function buildGrabCutDemo() {
+        const model = buildGrabCutPixelModel();
+        const previewModel = buildSampleGrid(12, 8);
+        const box = normalizeBox(state.grabcut.draftBox || state.grabcut.box, model);
+        if (!state.grabcut.box && !state.grabcut.draftBox) state.grabcut.box = box;
+        const fgUserSeeds = uniqueIndexes(state.grabcut.fgSeeds, model);
+        const bgUserSeeds = uniqueIndexes(state.grabcut.bgSeeds, model);
+        const userSeedMarks = [
+            ...indexesToSeeds(fgUserSeeds, "fg"),
+            ...indexesToSeeds(bgUserSeeds, "bg"),
+        ];
+        const previewBox = scaleBox(box, model, previewModel);
+        const previewSeedMarks = [
+            ...indexesToSeeds(mapIndexesToModel(fgUserSeeds, model, previewModel), "fg"),
+            ...indexesToSeeds(mapIndexesToModel(bgUserSeeds, model, previewModel), "bg"),
+        ];
+        const { labels, snapshots, insideBox, central } = runDenseGrabCut(model, box, fgUserSeeds, bgUserSeeds);
+        const final = snapshots[snapshots.length - 1];
+        const props = computeMaskProps(model.cells, model.cols, model.rows, final.labels);
+        const finalPreviewLabels = downsampleLabels(model, final.labels, previewModel);
+        const metrics = [
+            ["iterations", String(snapshots.length)],
+            ["mask ratio", `${Math.round(props.ratio * 100)}%`],
+            ["bbox", `${props.maxX - props.minX + 1}×${props.maxY - props.minY + 1}`],
+            ["pixel grid", `${model.cols}×${model.rows}`],
+        ];
+        return {
+            stepperKind: "grabcut",
+            status: "GrabCut Algorithm",
+            activeMethod: "GrabCut",
+            stageTitle: "当前实验模式：GrabCut 前景提取",
+            stripFeature: "box + color model + min-cut",
+            stripK: "FG/BG",
+            stripOutput: "foreground mask",
+            regionCount: "2",
+            formulaLabel: "GrabCut",
+            formula: "repeat: estimate FG/BG color model → graph cut labels",
+            formulaNote: "在左侧输入图上拖拽矩形框或使用前景/背景画笔，页面会用你的标注重新估计颜色模型并运行图割。",
+            notes: [
+                ["用户框", "在输入图上拖拽矩形框，框外作为确定背景，框内作为可能前景。"],
+                ["前景/背景笔", "前景笔会强制 Source 约束，背景笔会强制 Sink 约束。"],
+                ["颜色模型", "每轮用当前 mask 估计 FG/BG 平均颜色，近似 GrabCut 的 GMM 思路。"],
+                ["Graph Cut", "用 unary 颜色项和 pairwise 平滑项求新的二值 mask。"],
+                ["迭代收敛", "mask 与颜色模型交替更新，边界逐渐贴合物体颜色差异。"],
+            ],
+            showcase: {
+                model,
+                labels: final.labels,
+                box,
+                seeds: userSeedMarks,
+                interactive: "grabcut",
+                title: "GrabCut 前景 mask",
+                caption: `绿色为最终前景，蓝色为背景；前景覆盖约 ${Math.round(props.ratio * 100)}%，bbox ${props.maxX - props.minX + 1}×${props.maxY - props.minY + 1}。`,
+            },
+            frames: [
+                {
+                    phase: "image",
+                    title: "1. 用户交互标注",
+                    graph: conceptGridSvg(previewModel, { box: previewBox, seeds: previewSeedMarks, activeCells: previewModel.cells.filter((cell) => {
+                        const denseX = Math.round((cell.x / Math.max(1, previewModel.cols - 1)) * (model.cols - 1));
+                        const denseY = Math.round((cell.y / Math.max(1, previewModel.rows - 1)) * (model.rows - 1));
+                        return insideBox(model.cells[denseY * model.cols + denseX]) && central(model.cells[denseY * model.cols + denseX]);
+                    }).map((cell) => cell.index), caption: "drag box, then add optional FG/BG seeds" }),
+                    matrix: metricCards([["box", `[${box.x0},${box.y0}] - [${box.x1},${box.y1}]`], ["FG seeds", String(fgUserSeeds.length)], ["BG seeds", String(bgUserSeeds.length)], ["next", "learn colors"]]),
+                    detail: noteRows([["初始化", "矩形框决定 probable foreground 范围；画笔种子会作为强约束进入图割。"]]),
+                    stageNote: "在输入图上直接拖拽框选，或用前景/背景笔补充种子，GrabCut 会按这些交互输入重新提取前景。",
+                    showcase: {
+                        model,
+                        labels: model.cells.map((cell) => insideBox(cell) && central(cell)),
+                        box,
+                        seeds: userSeedMarks,
+                        interactive: "grabcut",
+                        title: "GrabCut Step 1：交互标注",
+                        caption: `矩形框 + ${fgUserSeeds.length} 个前景种子 + ${bgUserSeeds.length} 个背景种子将作为本次图割约束。`,
+                        alpha: 0.58,
+                    },
+                },
+                ...snapshots.map((snapshot) => ({
+                    phase: snapshot.iter === 1 ? "feature" : snapshot.iter < snapshots.length ? "update" : "map",
+                    title: `2. 第 ${snapshot.iter} 轮：颜色模型与图割更新`,
+                    graph: conceptGridSvg(previewModel, {
+                        labels: downsampleLabels(model, snapshot.labels, previewModel),
+                        box: previewBox,
+                        cutEdges: cutEdgesFromLabels(previewModel, downsampleLabels(model, snapshot.labels, previewModel)),
+                        caption: `iteration ${snapshot.iter}: dense pixel mask is refined`,
+                    }),
+                    matrix: barsHtml([
+                        { label: "FG model", value: 1, color: "#f97316", note: rgbText(snapshot.fgMean) },
+                        { label: "BG model", value: 1, color: "#60a5fa", note: rgbText(snapshot.bgMean) },
+                        { label: "boundary", value: snapshot.cutEdges.length, color: "#ef4444", note: `${snapshot.cutEdges.length} edges` },
+                    ]),
+                    detail: metricCards([
+                        ["iter", String(snapshot.iter)],
+                        ["fg cells", String(snapshot.labels.filter(Boolean).length)],
+                        ["cut edges", String(snapshot.cutEdges.length)],
+                        ["model", "FG/BG color mean"],
+                    ]),
+                    stageNote: "每轮先根据当前 mask 估计颜色，再由图割决定下一轮的前景/背景标签。",
+                    showcase: {
+                        model,
+                        labels: snapshot.labels,
+                        box,
+                        seeds: userSeedMarks,
+                        interactive: "grabcut",
+                        cutEdges: snapshot.cutEdges,
+                        title: `GrabCut Step 2：第 ${snapshot.iter} 轮 mask`,
+                        caption: `本轮前景 ${snapshot.labels.filter(Boolean).length} 个像素采样点，边界 ${snapshot.cutEdges.length} 条。`,
+                    },
+                })),
+                {
+                    phase: "stats",
+                    title: "3. 输出前景 mask 与区域属性",
+                    graph: conceptGridSvg(previewModel, { labels: finalPreviewLabels, box: previewBox, bboxes: [{ ...computeMaskProps(previewModel.cells, previewModel.cols, previewModel.rows, finalPreviewLabels), label: 1, name: "FG bbox", color: "#f97316" }], caption: "final dense alpha mask + bounding box" }),
+                    matrix: metricCards(metrics),
+                    detail: noteRows([
+                        ["前景提取", `最终前景覆盖 ${props.count}/${model.cells.length} 个网格。`],
+                        ["后续用途", "这个二值 mask 可以继续用于透明背景、目标裁剪或区域统计。"],
+                    ]),
+                    stageNote: "最终的前景 mask 是一个二值 label map，能直接继续做面积、bbox 和轮廓测量。",
+                    showcase: {
+                        model,
+                        labels: final.labels,
+                        box,
+                        seeds: userSeedMarks,
+                        interactive: "grabcut",
+                        bboxes: [{ ...props, label: 1, name: "FG bbox", color: "#f97316" }],
+                        title: "GrabCut Step 3：最终前景 mask",
+                        caption: `最终前景覆盖 ${props.count}/${model.cells.length} 格，bbox ${props.maxX - props.minX + 1}×${props.maxY - props.minY + 1}。`,
+                    },
+                },
+            ],
+        };
+    }
+
+    function gradientForModel(model) {
+        return model.cells.map((cell, index) => {
+            const diffs = neighborIndexes(index, model.cols, model.rows).map((next) => Math.abs(cell.gray - model.cells[next].gray) / 255);
+            return diffs.reduce((sum, value) => sum + value, 0) / Math.max(1, diffs.length);
+        });
+    }
+
+    function buildWatershedCore() {
+        const model = buildSampleGrid(16, 10);
+        const gradient = gradientForModel(model);
+        const markerDefs = [
+            { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
+            { x: 0.70, y: 0.44, label: 2, text: "2", type: "fg" },
+            { x: 0.08, y: 0.12, label: 3, text: "B", type: "bg" },
+            { x: 0.92, y: 0.88, label: 3, text: "B", type: "bg" },
+        ];
+        const markers = markerDefs.map((marker) => ({
+            ...marker,
+            index: nearestCellIndex(model.cells, model.cols, model.rows, marker.x, marker.y),
+        }));
+        const labels = new Int16Array(model.cells.length);
+        const queued = new Uint8Array(model.cells.length);
+        const queue = [];
+        const pushNeighbors = (index) => {
+            neighborIndexes(index, model.cols, model.rows).forEach((next) => {
+                if (labels[next] !== 0 || queued[next]) return;
+                queued[next] = 1;
+                queue.push({ index: next, priority: gradient[next] });
+            });
+        };
+        markers.forEach((marker) => {
+            labels[marker.index] = marker.label;
+            pushNeighbors(marker.index);
+        });
+        const snapshots = [{ processed: 0, labels: new Int16Array(labels), frontier: markers.map((marker) => marker.index) }];
+        const targets = [0.18, 0.42, 0.68, 1];
+        let targetIndex = 0;
+        let processed = 0;
+        while (queue.length) {
+            queue.sort((a, b) => a.priority - b.priority);
+            const current = queue.shift();
+            if (labels[current.index] !== 0) continue;
+            const neighborLabels = [...new Set(neighborIndexes(current.index, model.cols, model.rows)
+                .map((next) => labels[next])
+                .filter((label) => label > 0))];
+            labels[current.index] = neighborLabels.length > 1 ? -1 : (neighborLabels[0] || 3);
+            processed += 1;
+            pushNeighbors(current.index);
+            const ratio = processed / model.cells.length;
+            if (targetIndex < targets.length && ratio >= targets[targetIndex]) {
+                snapshots.push({ processed, labels: new Int16Array(labels), frontier: [current.index] });
+                targetIndex += 1;
+            }
+        }
+        if (snapshots[snapshots.length - 1].processed !== processed) {
+            snapshots.push({ processed, labels: new Int16Array(labels), frontier: [] });
+        }
+        return { model, gradient, markers, labels: Array.from(labels), snapshots };
+    }
+
+    function propsFromLabelMap(model, labels) {
+        const props = new Map();
+        labels.forEach((label, index) => {
+            if (label <= 0) return;
+            const cell = model.cells[index];
+            if (!props.has(label)) {
+                props.set(label, { label, count: 0, minX: cell.x, minY: cell.y, maxX: cell.x, maxY: cell.y, perimeter: 0 });
+            }
+            const item = props.get(label);
+            item.count += 1;
+            item.minX = Math.min(item.minX, cell.x);
+            item.minY = Math.min(item.minY, cell.y);
+            item.maxX = Math.max(item.maxX, cell.x);
+            item.maxY = Math.max(item.maxY, cell.y);
+            neighborIndexes(index, model.cols, model.rows).forEach((next) => {
+                if (labels[next] !== label) item.perimeter += 1;
+            });
+        });
+        return [...props.values()].map((item) => ({
+            ...item,
+            ratio: item.count / labels.length,
+            color: labelFill(item.label),
+            name: `label ${item.label}`,
+        }));
+    }
+
+    function buildWatershedDemo() {
+        const core = buildWatershedCore();
+        const gradientScores = core.gradient.map((value) => value * 2 - 1);
+        const props = propsFromLabelMap(core.model, core.labels);
+        const boundaryCount = core.labels.filter((label) => label === -1).length;
+        return {
+            stepperKind: "watershed",
+            status: "Watershed Algorithm",
+            activeMethod: "Watershed",
+            stageTitle: "当前实验模式：Watershed 分水岭",
+            stripFeature: "gradient + markers",
+            stripK: `${props.length} labels`,
+            stripOutput: "boundary + label map",
+            regionCount: String(props.length),
+            formulaLabel: "Watershed",
+            formula: "markers flood low-gradient basins until fronts meet",
+            formulaNote: "页面把当前图像的梯度当作地形高度，marker 从低阻力区域扩张，相遇处形成分水岭边界。",
+            notes: [
+                ["梯度地形", "颜色变化越大，梯度越高，越可能成为边界。"],
+                ["Marker", "前景/背景种子给出确定起点，未知区域等待扩张竞争。"],
+                ["Flooding", "低梯度位置先被占领，不同标签相遇时标记为边界。"],
+                ["Label map", "除边界外，每个网格得到一个区域 id。"],
+            ],
+            showcase: {
+                model: core.model,
+                labels: core.labels,
+                title: "Watershed 分水岭 label map",
+                caption: `红色为分水岭边界，其余颜色为区域 label；共 ${props.length} 个区域，边界 ${boundaryCount} 格。`,
+                alpha: 0.72,
+            },
+            frames: [
+                {
+                    phase: "image",
+                    title: "1. 梯度图：把图像看成地形",
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, caption: "orange ridges have higher gradient" }),
+                    matrix: barsHtml(core.gradient.slice(0, 10).map((value, index) => ({ label: `g${index + 1}`, value, color: "#f97316", note: value.toFixed(2) }))),
+                    detail: metricCards([["grid", `${core.model.cols}×${core.model.rows}`], ["cue", "color gradient"], ["low areas", "flood first"], ["ridges", "boundary candidates"]]),
+                    stageNote: "分水岭把梯度图想象成地形：水从低处扩张，山脊就是分界线。",
+                    showcase: {
+                        model: core.model,
+                        scores: gradientScores,
+                        title: "Watershed Step 1：梯度地形图",
+                        caption: "偏橙区域代表高梯度山脊，后续更容易成为分水岭边界。",
+                        alpha: 0.74,
+                    },
+                },
+                {
+                    phase: "feature",
+                    title: "2. 设置前景/背景 marker",
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, seeds: core.markers, caption: "markers seed the flood basins" }),
+                    matrix: metricCards([["FG markers", "label 1 / label 2"], ["BG markers", "label 3"], ["unknown", "all unlabeled cells"], ["next", "priority flood"]]),
+                    detail: noteRows([["Marker 约束", "没有 marker 的像素不会立刻分类，而是等待相邻标签扩张。"]]),
+                    stageNote: "marker 是分水岭算法的锚点，决定哪些盆地从哪里开始扩张。",
+                    showcase: {
+                        model: core.model,
+                        labels: seedStageLabels(core.model, core.markers),
+                        seeds: core.markers,
+                        title: "Watershed Step 2：前景/背景 marker",
+                        caption: "marker 是扩张起点；未知区域将在后续由优先队列竞争决定标签。",
+                        alpha: 0.52,
+                    },
+                },
+                ...core.snapshots.slice(1).map((snapshot, index) => ({
+                    phase: index < 2 ? "assign" : index < 3 ? "update" : "map",
+                    title: `3. Flooding 扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
+                    graph: conceptGridSvg(core.model, { labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" }),
+                    matrix: metricCards([["processed", `${snapshot.processed}/${core.model.cells.length}`], ["frontier", snapshot.frontier.length ? `cell ${snapshot.frontier[0] + 1}` : "done"], ["boundary rule", "labels meet"], ["queue", "low gradient first"]]),
+                    detail: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${Math.round(prop.ratio * 100)}% final` }))),
+                    stageNote: "扩张前沿遇到不同标签时，不再强行归类，而是留下红色分水岭边界。",
+                    showcase: {
+                        model: core.model,
+                        labels: Array.from(snapshot.labels),
+                        seeds: core.markers,
+                        activeCells: snapshot.frontier,
+                        title: `Watershed Step 3：扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
+                        caption: "橙色描边是当前扩张前沿；红色格子是不同标签相遇后形成的边界。",
+                        alpha: 0.72,
+                    },
+                })),
+                {
+                    phase: "stats",
+                    title: "4. Watershed label map",
+                    graph: conceptGridSvg(core.model, { labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" }),
+                    matrix: metricCards([["labels", String(props.length)], ["boundary", `${boundaryCount} cells`], ["largest", `${Math.max(...props.map((prop) => prop.count))} cells`], ["output", "region id map"]]),
+                    detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area ${Math.round(prop.ratio * 100)}%, bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}`])),
+                    stageNote: "最终结果是一个 label map：边界为红色，其余网格保存区域编号。",
+                    showcase: {
+                        model: core.model,
+                        labels: core.labels,
+                        seeds: core.markers,
+                        title: "Watershed Step 4：最终 label map",
+                        caption: `红色为分水岭边界，其余颜色为区域 label；共 ${props.length} 个区域。`,
+                        alpha: 0.72,
+                    },
+                },
+            ],
+        };
+    }
+
+    function connectedComponents(model, labels) {
+        const visited = new Uint8Array(labels.length);
+        const compLabels = new Int16Array(labels.length);
+        const props = [];
+        let compId = 0;
+        labels.forEach((label, start) => {
+            if (label <= 0 || visited[start]) return;
+            compId += 1;
+            const queue = [start];
+            visited[start] = 1;
+            compLabels[start] = compId;
+            const cells = [];
+            while (queue.length) {
+                const index = queue.shift();
+                cells.push(index);
+                neighborIndexes(index, model.cols, model.rows).forEach((next) => {
+                    if (visited[next] || labels[next] !== label) return;
+                    visited[next] = 1;
+                    compLabels[next] = compId;
+                    queue.push(next);
+                });
+            }
+            let minX = model.cols;
+            let minY = model.rows;
+            let maxX = 0;
+            let maxY = 0;
+            let perimeter = 0;
+            cells.forEach((index) => {
+                const cell = model.cells[index];
+                minX = Math.min(minX, cell.x);
+                minY = Math.min(minY, cell.y);
+                maxX = Math.max(maxX, cell.x);
+                maxY = Math.max(maxY, cell.y);
+                neighborIndexes(index, model.cols, model.rows).forEach((next) => {
+                    if (compLabels[next] !== compId) perimeter += 1;
+                });
+            });
+            props.push({
+                label: compId,
+                sourceLabel: label,
+                count: cells.length,
+                ratio: cells.length / labels.length,
+                minX,
+                minY,
+                maxX,
+                maxY,
+                perimeter,
+                cells,
+                color: labelFill(compId),
+                name: `label ${compId}`,
+            });
+        });
+        return { compLabels: Array.from(compLabels), props: props.sort((a, b) => b.count - a.count).slice(0, 5) };
+    }
+
+    function buildRegionsDemo() {
+        const core = buildWatershedCore();
+        const components = connectedComponents(core.model, core.labels);
+        const props = components.props;
+        const scanCells = props[0]?.cells.slice(0, Math.max(1, Math.round((props[0]?.cells.length || 1) * 0.5))) || [];
+        return {
+            stepperKind: "regions",
+            status: "Region Properties",
+            activeMethod: "区域属性",
+            stageTitle: "当前实验模式：区域属性 label map",
+            stripFeature: "connected labels",
+            stripK: `${props.length} regions`,
+            stripOutput: "area / bbox / contour",
+            regionCount: String(props.length),
+            formulaLabel: "Region Properties",
+            formula: "area=count(label), bbox=min/max(x,y), contour=count(boundary edges)",
+            formulaNote: "区域属性不是人工填写的说明，而是从 label map 中扫描、连通域编号和边界计数得到的数据。",
+            notes: [
+                ["Label map", "每个像素或网格保存一个整数区域 id。"],
+                ["连通域扫描", "同一 label 且空间相邻的像素合成一个 region。"],
+                ["bbox", "记录区域像素 x/y 的最小值与最大值。"],
+                ["contour", "统计与其他 label 相邻或接触图像边界的边。"],
+            ],
+            showcase: {
+                model: core.model,
+                labels: components.compLabels,
+                title: "区域属性 label map",
+                caption: `彩色区域是连通域编号后的 label map；已计算 ${props.length} 个区域的 area、bbox 和 contour。`,
+                alpha: 0.72,
+            },
+            frames: [
+                {
+                    phase: "image",
+                    title: "1. 输入 label map",
+                    graph: conceptGridSvg(core.model, { labels: core.labels, caption: "watershed output becomes the region-label input" }),
+                    matrix: metricCards([["source", "watershed labels"], ["boundary", "ignored for area"], ["task", "measure regions"], ["data type", "integer map"]]),
+                    detail: noteRows([["关键点", "label map 是结构化数据，不只是彩色可视化图。"]]),
+                    stageNote: "区域属性分析从 label map 开始：每个网格都有自己的整数标签。",
+                    showcase: {
+                        model: core.model,
+                        labels: core.labels,
+                        title: "Region Step 1：输入 label map",
+                        caption: "这是分割算法输出的整数标签图，区域属性计算从这里开始。",
+                        alpha: 0.72,
+                    },
+                },
+                {
+                    phase: "feature",
+                    title: "2. 连通域扫描与重新编号",
+                    graph: conceptGridSvg(core.model, { labels: components.compLabels, activeCells: scanCells, caption: "connected components receive compact ids" }),
+                    matrix: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${prop.count} cells` }))),
+                    detail: metricCards([["components", String(props.length)], ["largest", `${props[0]?.count || 0} cells`], ["scan", "BFS/DFS"], ["renumber", "compact ids"]]),
+                    stageNote: "扫描时只把同 label 且相邻的网格归为同一区域，离散小块会成为单独 region。",
+                    showcase: {
+                        model: core.model,
+                        labels: components.compLabels,
+                        activeCells: scanCells,
+                        title: "Region Step 2：连通域扫描",
+                        caption: "橙色描边展示正在扫描的连通区域，扫描后会重新编号为紧凑 label id。",
+                        alpha: 0.72,
+                    },
+                },
+                {
+                    phase: "assign",
+                    title: "3. 面积 area 与 mask ratio",
+                    graph: conceptGridSvg(core.model, { labels: components.compLabels, caption: "area = count(label id)" }),
+                    matrix: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.ratio, color: prop.color, note: `${Math.round(prop.ratio * 100)}%` }))),
+                    detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area=${prop.count}, mask ratio=${Math.round(prop.ratio * 100)}%`])),
+                    stageNote: "面积就是该 label 覆盖的网格数量，mask ratio 是它占整幅图的比例。",
+                    showcase: {
+                        model: core.model,
+                        labels: components.compLabels,
+                        title: "Region Step 3：面积与占比",
+                        caption: "彩色面积直接对应每个 label 的像素计数与 mask ratio。",
+                        alpha: 0.72,
+                    },
+                },
+                {
+                    phase: "update",
+                    title: "4. BBox 与轮廓边界",
+                    graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "dashed boxes are min/max coordinate bounds" }),
+                    matrix: noteRows(props.map((prop) => [`label ${prop.label}`, `bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}, contour ${prop.perimeter}`])),
+                    detail: metricCards([["bbox rule", "min/max x,y"], ["contour rule", "neighbor differs"], ["shape cue", "perimeter/area"], ["output", "region table"]]),
+                    stageNote: "bbox 来自坐标极值，轮廓长度来自边界邻接关系。",
+                    showcase: {
+                        model: core.model,
+                        labels: components.compLabels,
+                        bboxes: props,
+                        activeCells: props.flatMap((prop) => prop.cells.slice(0, 2)),
+                        title: "Region Step 4：bbox 与轮廓",
+                        caption: "区域轮廓来自相邻 label 变化，bbox 来自该区域坐标的最小/最大值。",
+                        alpha: 0.72,
+                    },
+                },
+                {
+                    phase: "stats",
+                    title: "5. 区域属性表",
+                    graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "label map + measured properties" }),
+                    matrix: `
+                        <div class="seg-region-property-table">
+                            ${props.map((prop) => `<div><span>label ${prop.label}</span><strong>area ${prop.count} · bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1} · contour ${prop.perimeter}</strong></div>`).join("")}
+                        </div>
+                    `,
+                    detail: metricCards([["regions", String(props.length)], ["largest ratio", `${Math.round((props[0]?.ratio || 0) * 100)}%`], ["computed", "area / bbox / contour"], ["ready for", "filtering or grading"]]),
+                    stageNote: "最终输出就是可用于筛选、排序、评价的区域属性表。",
+                    showcase: {
+                        model: core.model,
+                        labels: components.compLabels,
+                        bboxes: props,
+                        title: "Region Step 5：最终区域属性结果",
+                        caption: `已从 label map 中计算 ${props.length} 个区域的 area、bbox、contour 与 mask ratio。`,
+                        alpha: 0.72,
+                    },
+                },
+            ],
+        };
+    }
+
+    function renderConceptFrame(index) {
+        if (!state.concept?.frames?.length) return;
+        const frames = state.concept.frames;
+        const frame = frames[clamp(index, 0, frames.length - 1)];
+        state.conceptFrameIndex = frames.indexOf(frame);
+        els.graphStage.innerHTML = conceptCard(frame.title, frame.graph, frame.stageNote);
+        els.matrixStage.innerHTML = conceptCard("算法中间量", frame.matrix);
+        els.conceptDetail.innerHTML = conceptCard("输出解释", frame.detail);
+        els.currentIter.textContent = `${state.conceptFrameIndex + 1} / ${frames.length}`;
+        els.stripIter.textContent = `${state.conceptFrameIndex + 1}`;
+        els.notes.innerHTML = noteRows([
+            ["当前阶段", frame.stageNote || frame.title],
+            ...state.concept.notes,
+        ]);
+        els.formulaNote.textContent = frame.stageNote || state.concept.formulaNote;
+        drawConceptShowcase(frame.showcase || state.concept.showcase);
+        setPhase(frame.phase || "map");
+    }
+
+    function renderAlgorithmConcept(config) {
+        stopAnimation();
+        state.result = null;
+        state.compareResult = null;
+        state.concept = config;
+        state.conceptFrameIndex = 0;
+        els.kmeansView.hidden = true;
+        els.graphView.hidden = false;
+        els.kmeansControls.hidden = true;
+        els.status.textContent = config.status;
+        els.activeMethod.textContent = config.activeMethod;
+        els.currentIter.textContent = "--";
+        els.regionCount.textContent = config.regionCount;
+        els.time.textContent = "--";
+        els.stripMethod.textContent = config.activeMethod;
+        els.stripFeature.textContent = config.stripFeature;
+        els.stripK.textContent = config.stripK;
+        els.stageTitle.textContent = config.stageTitle;
+        els.stripOutput.textContent = config.stripOutput;
+        els.notesSubtitle.textContent = config.activeMethod;
+        els.formulaLabel.textContent = config.formulaLabel;
+        els.formula.textContent = config.formula;
+        els.formulaNote.textContent = config.formulaNote;
+        if (els.grabcutToolbar) {
+            els.grabcutToolbar.hidden = config.activeMethod !== "GrabCut";
+        }
+        renderStepper(config.stepperKind);
+        renderConceptFrame(0);
+        setBusy(false);
+        const shouldAutoPlay = !state.skipConceptAutoPlay && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        state.skipConceptAutoPlay = false;
+        if (shouldAutoPlay) {
+            window.setTimeout(() => {
+                if (state.concept === config && !state.playing) playConceptFrames();
+            }, 120);
+        }
+    }
+
+    function playConceptFrames() {
+        if (!state.concept?.frames?.length) return;
+        if (state.playing) {
+            stopAnimation();
+            return;
+        }
+        state.playing = true;
+        els.play.textContent = "停止播放";
+        let index = 0;
+        renderConceptFrame(index);
+        state.animationTimer = window.setInterval(() => {
+            index += 1;
+            if (index >= state.concept.frames.length) {
+                stopAnimation();
+                renderConceptFrame(state.concept.frames.length - 1);
+                return;
+            }
+            renderConceptFrame(index);
+        }, 980);
+    }
+
+    function cellFromConceptEvent(event) {
+        const model = state.concept?.showcase?.model;
+        const canvas = els.conceptSource;
+        if (!model || !canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        const fit = canvasObjectFitRect(canvas, canvas.width, canvas.height);
+        const localX = event.clientX - rect.left - fit.offsetX;
+        const localY = event.clientY - rect.top - fit.offsetY;
+        const x = clamp(localX / Math.max(1, fit.scaleX * canvas.width), 0, 0.9999);
+        const y = clamp(localY / Math.max(1, fit.scaleY * canvas.height), 0, 0.9999);
+        const gx = clamp(Math.floor(x * model.cols), 0, model.cols - 1);
+        const gy = clamp(Math.floor(y * model.rows), 0, model.rows - 1);
+        return { x: gx, y: gy, index: gy * model.cols + gx, model };
+    }
+
+    function setGrabCutTool(tool) {
+        state.grabcut.tool = tool;
+        els.grabcutTools.forEach((button) => {
+            button.classList.toggle("is-active", button.dataset.segbGrabcutTool === tool);
+        });
+    }
+
+    function addGrabCutSeed(index, type, model = state.concept?.showcase?.model) {
+        const target = type === "fg" ? state.grabcut.fgSeeds : state.grabcut.bgSeeds;
+        const other = type === "fg" ? state.grabcut.bgSeeds : state.grabcut.fgSeeds;
+        const indexes = [index];
+        if (model) {
+            const x = index % model.cols;
+            const y = Math.floor(index / model.cols);
+            const radius = 1;
+            for (let dy = -radius; dy <= radius; dy += 1) {
+                for (let dx = -radius; dx <= radius; dx += 1) {
+                    if (dx * dx + dy * dy > radius * radius) continue;
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx < 0 || nx >= model.cols || ny < 0 || ny >= model.rows) continue;
+                    indexes.push(ny * model.cols + nx);
+                }
+            }
+        }
+        indexes.forEach((seedIndex) => {
+            if (!target.includes(seedIndex)) target.push(seedIndex);
+            const otherIndex = other.indexOf(seedIndex);
+            if (otherIndex >= 0) other.splice(otherIndex, 1);
+        });
+    }
+
+    function rerunGrabCutFromInteraction() {
+        if (state.method !== "grabcut") return;
+        state.skipConceptAutoPlay = true;
+        renderGrabCut();
+    }
+
+    function resetGrabCutState() {
+        state.grabcut.box = null;
+        state.grabcut.fgSeeds = [];
+        state.grabcut.bgSeeds = [];
+        state.grabcut.draftBox = null;
+        state.grabcut.dragging = false;
+        state.grabcut.dragStart = null;
+    }
+
+    function setupGrabCutInteraction() {
+        els.grabcutTools.forEach((button) => {
+            button.addEventListener("click", () => setGrabCutTool(button.dataset.segbGrabcutTool));
+        });
+        els.grabcutReset?.addEventListener("click", () => {
+            resetGrabCutState();
+            setGrabCutTool("box");
+            rerunGrabCutFromInteraction();
+        });
+        if (!els.conceptSource) return;
+        els.conceptSource.addEventListener("pointerdown", (event) => {
+            if (state.method !== "grabcut") return;
+            const cell = cellFromConceptEvent(event);
+            if (!cell) return;
+            event.preventDefault();
+            els.conceptSource.setPointerCapture?.(event.pointerId);
+            state.grabcut.dragging = true;
+            state.grabcut.dragStart = cell;
+            if (state.grabcut.tool === "box") {
+                state.grabcut.draftBox = { x0: cell.x, y0: cell.y, x1: cell.x, y1: cell.y };
+                rerunGrabCutFromInteraction();
+            } else {
+                addGrabCutSeed(cell.index, state.grabcut.tool, cell.model);
+                drawConceptShowcase(state.concept?.frames?.[state.conceptFrameIndex]?.showcase || state.concept?.showcase);
+            }
+        });
+        els.conceptSource.addEventListener("pointermove", (event) => {
+            if (state.method !== "grabcut" || !state.grabcut.dragging) return;
+            const cell = cellFromConceptEvent(event);
+            if (!cell) return;
+            event.preventDefault();
+            if (state.grabcut.tool === "box") {
+                const start = state.grabcut.dragStart || cell;
+                state.grabcut.draftBox = { x0: start.x, y0: start.y, x1: cell.x, y1: cell.y };
+                drawConceptShowcase(state.concept?.frames?.[state.conceptFrameIndex]?.showcase || state.concept?.showcase);
+            } else {
+                addGrabCutSeed(cell.index, state.grabcut.tool, cell.model);
+                drawConceptShowcase(state.concept?.frames?.[state.conceptFrameIndex]?.showcase || state.concept?.showcase);
+            }
+        });
+        const finish = (event) => {
+            if (state.method !== "grabcut" || !state.grabcut.dragging) return;
+            event.preventDefault();
+            state.grabcut.dragging = false;
+            if (state.grabcut.tool === "box" && state.grabcut.draftBox) {
+                const model = state.concept?.showcase?.model;
+                state.grabcut.box = model ? normalizeBox(state.grabcut.draftBox, model) : state.grabcut.draftBox;
+                state.grabcut.draftBox = null;
+                rerunGrabCutFromInteraction();
+            } else if (state.grabcut.tool !== "box") {
+                rerunGrabCutFromInteraction();
+            }
+        };
+        els.conceptSource.addEventListener("pointerup", finish);
+        els.conceptSource.addEventListener("pointercancel", finish);
+        els.conceptSource.addEventListener("pointerleave", finish);
+    }
+
     function playSnapshots() {
+        if (activeFamily() !== "cluster") {
+            playConceptFrames();
+            return;
+        }
         if (!state.result?.snapshots?.length || !state.showIterations) return;
         if (state.playing) {
             stopAnimation();
@@ -560,6 +2460,7 @@
 
     async function runKMeansMode() {
         stopAnimation();
+        state.concept = null;
         readControls();
         setBusy(true);
         setPhase("feature");
@@ -783,6 +2684,8 @@
     }
 
     function renderGraphCut() {
+        renderAlgorithmConcept(buildGraphCutDemo());
+        return;
         stopAnimation();
         state.result = null;
         state.compareResult = null;
@@ -844,6 +2747,8 @@
     }
 
     function renderNcut() {
+        renderAlgorithmConcept(buildNcutDemo());
+        return;
         stopAnimation();
         state.result = null;
         state.compareResult = null;
@@ -915,6 +2820,8 @@
     }
 
     function renderGrabCut() {
+        renderAlgorithmConcept(buildGrabCutDemo());
+        return;
         stopAnimation();
         state.result = null;
         state.compareResult = null;
@@ -984,6 +2891,8 @@
     }
 
     function renderWatershed() {
+        renderAlgorithmConcept(buildWatershedDemo());
+        return;
         stopAnimation();
         state.result = null;
         state.compareResult = null;
@@ -1044,6 +2953,8 @@
     }
 
     function renderRegions() {
+        renderAlgorithmConcept(buildRegionsDemo());
+        return;
         stopAnimation();
         state.result = null;
         state.compareResult = null;
@@ -1154,6 +3065,7 @@
         const item = selectedSample();
         if (!item) return;
         stopAnimation();
+        resetGrabCutState();
         if (state.uploadUrl) {
             URL.revokeObjectURL(state.uploadUrl);
             state.uploadUrl = "";
@@ -1188,6 +3100,7 @@
         const file = els.upload.files?.[0];
         if (!file) return;
         stopAnimation();
+        resetGrabCutState();
         if (state.uploadUrl) URL.revokeObjectURL(state.uploadUrl);
         state.uploadUrl = URL.createObjectURL(file);
         els.uploadName.textContent = file.name;
@@ -1213,6 +3126,7 @@
     });
     els.run.addEventListener("click", runCurrentMode);
     els.play.addEventListener("click", playSnapshots);
+    setupGrabCutInteraction();
 
     init();
 })();

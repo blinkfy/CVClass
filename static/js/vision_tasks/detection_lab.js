@@ -693,6 +693,8 @@
         const step = activeRcnnStep();
         const steps = activeRcnnSteps();
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
+        const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
+        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
         if (sample.image) els.image.src = sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image);
         els.missing.textContent = "";
         els.missing.style.display = "none";
@@ -730,6 +732,8 @@
         state.step = Math.min(state.step, result.steps.length - 1);
         const step = result.steps[state.step] || result.steps[0];
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, s.width)} / ${Math.max(1, s.height)}`);
+        const rawRatio2 = Math.max(1, s.width) / Math.max(1, s.height);
+        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio2.toFixed(3));
         els.image.src = s.image.startsWith("blob:") ? s.image : window.cvclassUrl(s.image);
         els.missing.textContent = "";
         els.missing.style.display = "none";

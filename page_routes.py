@@ -101,13 +101,13 @@ def register_page_routes(app, get_model_status):
         subpage_overrides = {
             ("classification_lab", "overview"): {
                 "eyebrow": "STATION 06 · TASK TAXONOMY",
-                "title": "视觉任务谱系与图像分类",
+                "title": "视觉任务谱系：从整图分类到实例级理解",
                 "subtitle": "使用同一张预设图像，对比 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的预测单位、空间结构和评价协议。",
                 "badge": "TASK TAXONOMY · OUTPUT · METRIC",
             },
             ("classification_lab", "classification"): {
                 "eyebrow": "STATION 06 · IMAGE CLASSIFICATION",
-                "title": "图像分类与任务谱系",
+                "title": "图像分类",
                 "subtitle": "从手工局部特征和视觉词袋，到深度卷积网络端到端分类，理解图像级预测的两条典型路线。",
                 "badge": "CLASSIFICATION · TAXONOMY · TOP-K",
             },
