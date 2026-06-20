@@ -117,6 +117,77 @@
     setModuleLearned(activePageModuleMap[window.CVCLASS_ACTIVE_PAGE]);
     renderLearnedModules();
 
+    // 推荐学习路径联动高亮逻辑
+    (function initPathSelector() {
+        const pathCards = document.querySelectorAll(".path-selector-card");
+        const moduleGrid = document.querySelector(".module-grid");
+        const moduleCards = document.querySelectorAll(".module-card");
+
+        if (!pathCards.length || !moduleGrid || !moduleCards.length) return;
+
+        const pathModules = {
+            classic: ["image-basic", "convolution-filter", "edge-contour", "feature-panorama", "segmentation-basic"],
+            deep: ["cnn-learning", "classification-lab", "object-detection", "segmentation-lab", "frontier"]
+        };
+
+        pathCards.forEach((card) => {
+            card.addEventListener("click", () => {
+                const filter = card.dataset.pathFilter;
+                const color = card.dataset.pathColor;
+                const isActive = card.classList.contains("is-active");
+
+                // 清除所有激活状态
+                pathCards.forEach((c) => {
+                    c.classList.remove("is-active");
+                    c.querySelector(".path-selector-status").textContent = "点击激活";
+                });
+                moduleGrid.classList.remove("has-active-path");
+                moduleGrid.style.removeProperty("--highlight-color");
+                moduleGrid.style.removeProperty("--highlight-shadow");
+                moduleCards.forEach((mc) => mc.classList.remove("is-path-highlight"));
+
+                if (!isActive) {
+                    // 激活当前路径
+                    card.classList.add("is-active");
+                    card.querySelector(".path-selector-status").textContent = "已激活";
+                    moduleGrid.classList.add("has-active-path");
+
+                    // 设置高亮颜色变量
+                    if (color === "blue") {
+                        moduleGrid.style.setProperty("--highlight-color", "#2563eb");
+                        moduleGrid.style.setProperty("--highlight-shadow", "rgba(37, 99, 235, 0.12)");
+                    } else if (color === "purple") {
+                        moduleGrid.style.setProperty("--highlight-color", "#7c3aed");
+                        moduleGrid.style.setProperty("--highlight-shadow", "rgba(124, 58, 237, 0.12)");
+                    }
+
+                    // 高亮对应模块
+                    const activeModules = pathModules[filter] || [];
+                    moduleCards.forEach((mc) => {
+                        const moduleId = mc.dataset.learnModule;
+                        if (activeModules.includes(moduleId)) {
+                            mc.classList.add("is-path-highlight");
+                        }
+                    });
+                }
+            });
+        });
+
+        // 点击空白处取消激活
+        document.addEventListener("click", (event) => {
+            if (!event.target.closest(".path-selector-card") && !event.target.closest(".module-card")) {
+                pathCards.forEach((c) => {
+                    c.classList.remove("is-active");
+                    c.querySelector(".path-selector-status").textContent = "点击激活";
+                });
+                moduleGrid.classList.remove("has-active-path");
+                moduleGrid.style.removeProperty("--highlight-color");
+                moduleGrid.style.removeProperty("--highlight-shadow");
+                moduleCards.forEach((mc) => mc.classList.remove("is-path-highlight"));
+            }
+        });
+    }());
+
     window.addEventListener("storage", (event) => {
         if (event.key === LEARNED_MODULES_KEY) renderLearnedModules();
     });

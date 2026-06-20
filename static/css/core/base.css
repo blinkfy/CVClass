@@ -1430,86 +1430,141 @@ body.home-page-shell .content-shell {
     padding: 12px 22px 14px;
 }
 
-.path-list {
+.path-selector-container {
     display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
+    margin-top: 10px;
 }
 
-.path-row {
-    display: grid;
-    grid-template-columns: 47px 138px minmax(0, 1fr);
-    align-items: center;
-    min-height: 42px;
-    border: 1px solid #e2edf8;
-    border-radius: 11px;
-    padding: 0 18px 0 13px;
-    background: linear-gradient(90deg, #f8fbff, #ffffff);
-}
-
-.path-badge {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    border-radius: 50%;
-}
-
-.path-badge svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: #ffffff;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.path-badge--blue {
-    background: linear-gradient(135deg, #357cff, #0f55e7);
-}
-
-.path-badge--green {
-    background: linear-gradient(135deg, #24c06f, #0da34f);
-}
-
-.path-row > strong {
-    color: #0f60ea;
-    font-size: 15px;
-    font-weight: 950;
-    white-space: nowrap;
-}
-
-.path-row:nth-child(2) > strong {
-    color: #17a95d;
-}
-
-.path-steps {
+.path-selector-card {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    width: 100%;
+    border: 1px solid var(--path-border, #e2edf8);
+    border-radius: 12px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.path-selector-card:hover {
+    border-color: var(--path-accent);
+    box-shadow: 0 6px 16px var(--path-shadow, rgba(15, 23, 42, 0.05));
+    transform: translateY(-1px);
+}
+
+.path-selector-card.is-active {
+    border-color: var(--path-accent);
+    background: var(--path-active-bg);
+    box-shadow: inset 0 0 0 1px var(--path-accent), 0 6px 16px var(--path-shadow);
+}
+
+.path-selector-badge {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 8px;
+    color: #ffffff;
+    background: var(--path-accent-grad);
+    box-shadow: 0 3px 8px var(--path-accent-alpha);
+    flex-shrink: 0;
+}
+
+.path-selector-badge svg {
+    width: 18px;
+    height: 18px;
+}
+
+.path-selector-info {
+    flex: 1;
     min-width: 0;
-    color: #8aa0ba;
-    font-size: 12.5px;
-    font-weight: 850;
+}
+
+.path-selector-info h3 {
+    margin: 0 0 2px;
+    color: #0f172a;
+    font-size: 13.5px;
+    font-weight: 900;
+}
+
+.path-selector-info p {
+    margin: 0;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.path-steps a,
-.path-step-muted {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    color: #516680;
-    text-decoration: none;
+.path-selector-status {
+    font-size: 11px;
+    font-weight: 850;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.path-steps a:hover {
-    color: var(--home-blue);
+.path-selector-card:hover .path-selector-status {
+    color: var(--path-accent);
+    background: var(--path-active-bg);
 }
 
-.path-step-muted {
-    color: #6f8198;
+.path-selector-card.is-active .path-selector-status {
+    color: #ffffff;
+    background: var(--path-accent);
+}
+
+/* 路线颜色配置 */
+.path-selector-card[data-path-color="blue"] {
+    --path-accent: #2563eb;
+    --path-accent-alpha: rgba(37, 99, 235, 0.2);
+    --path-accent-grad: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    --path-border: #e2edf8;
+    --path-shadow: rgba(37, 99, 235, 0.08);
+    --path-active-bg: #eff6ff;
+}
+
+.path-selector-card[data-path-color="purple"] {
+    --path-accent: #7c3aed;
+    --path-accent-alpha: rgba(124, 58, 237, 0.2);
+    --path-accent-grad: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    --path-border: #ede9fe;
+    --path-shadow: rgba(124, 58, 237, 0.08);
+    --path-active-bg: #f5f3ff;
+}
+
+/* 核心模块卡片联动高亮样式 */
+.module-grid.has-active-path .module-card {
+    opacity: 0.35;
+    filter: grayscale(40%);
+    transform: scale(0.98);
+    transition: all 0.25s ease;
+}
+
+.module-grid.has-active-path .module-card.is-path-highlight {
+    opacity: 1;
+    filter: none;
+    transform: scale(1.02);
+    border-color: var(--highlight-color, #2563eb);
+    box-shadow: 0 12px 28px var(--highlight-shadow, rgba(37, 99, 235, 0.12));
+}
+
+.module-grid.has-active-path .module-card.is-path-highlight[data-learn-module="classification-lab"],
+.module-grid.has-active-path .module-card.is-path-highlight[data-learn-module="segmentation-basic"],
+.module-grid.has-active-path .module-card.is-path-highlight[data-learn-module="object-detection"],
+.module-grid.has-active-path .module-card.is-path-highlight[data-learn-module="segmentation-lab"] {
+    /* 保持原有强调色 */
 }
 
 .graph-entry-card {
@@ -1608,16 +1663,6 @@ body.home-page-shell .content-shell {
 
     .module-card {
         padding-inline: 14px;
-    }
-
-    .path-row {
-        grid-template-columns: 44px 120px minmax(0, 1fr);
-        padding-right: 12px;
-    }
-
-    .path-steps {
-        gap: 7px;
-        font-size: 12px;
     }
 }
 
@@ -1774,18 +1819,6 @@ body.home-page-shell .content-shell {
     .home-lower-grid {
         display: grid;
         margin-top: 12px;
-    }
-
-    .path-row {
-        grid-template-columns: 42px 1fr;
-        gap: 6px 10px;
-        padding: 10px 12px;
-    }
-
-    .path-steps {
-        grid-column: 1 / -1;
-        flex-wrap: wrap;
-        white-space: normal;
     }
 
     .graph-entry-card {

@@ -367,7 +367,7 @@
                     color,
                     borderColor: isSelected ? "#0f172a" : "rgba(255, 255, 255, 0.96)",
                     borderWidth: isSelected ? 4 : isFocus ? 3 : 2,
-                    opacity: isAdjacent ? 1 : 0.25,
+                    opacity: isAdjacent ? 1 : 0.45,
                     shadowBlur: isSelected || isFocus ? 16 : 8,
                     shadowColor: isSelected ? "rgba(15, 23, 42, 0.22)" : "rgba(37, 99, 235, 0.13)",
                 },
@@ -418,9 +418,9 @@
                     fontWeight: 800,
                 },
                 lineStyle: {
-                    color: isAdjacent ? "rgba(37, 99, 235, 0.62)" : "rgba(148, 163, 184, 0.28)",
-                    width: isAdjacent ? 2.2 : 1,
-                    opacity: selectedNodeId ? (isAdjacent ? 0.92 : 0.16) : 0.58,
+                    color: isAdjacent ? "rgba(37, 99, 235, 0.75)" : "rgba(148, 163, 184, 0.55)",
+                    width: isAdjacent ? 2.2 : 1.2,
+                    opacity: selectedNodeId ? (isAdjacent ? 1.0 : 0.42) : 0.75,
                     curveness: full ? 0.05 : 0.08,
                 },
                 emphasis: {
