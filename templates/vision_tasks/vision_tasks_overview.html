@@ -257,29 +257,19 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3>任务谱系说明</h3>
-                <p>Process Notes</p>
+                <h3>输出契约与评价</h3>
+                <p>Output Contract</p>
             </div>
         </div>
-        <div class="vision-note-list">
-            <article>
-                <span>01</span>
-                <div><strong>预测单位</strong><p>类别、目标、像素、实例对应不同监督粒度，输出数量逐步增加。</p></div>
-            </article>
-            <article>
-                <span>02</span>
-                <div><strong>空间结构</strong><p>分类无显式位置；检测使用 bbox；分割使用与图像对齐的 mask。</p></div>
-            </article>
-            <article>
-                <span>03</span>
-                <div><strong>评价协议</strong><p>Accuracy、IoU、AP、mIoU 和 Mask AP 针对不同输出结构。</p></div>
-            </article>
+
+        <div class="output-contract-body" data-output-contract>
+            <!-- Dynamic content injected by JS -->
         </div>
 
         <section class="overview-schema-table" aria-labelledby="overviewSchemaTitle">
             <div class="overview-control-title">
-                <strong id="overviewSchemaTitle">输出结构对照表</strong>
-                <span>SHAPE &amp; METRIC</span>
+                <strong id="overviewSchemaTitle">Shape &amp; Metric</strong>
+                <span>QUICK REF</span>
             </div>
             <article data-schema-task="classification">
                 <div><span>Classification</span><strong>图像级</strong></div>

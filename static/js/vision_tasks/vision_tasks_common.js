@@ -60,6 +60,7 @@
         instanceLegend: $("[data-instance-legend]"),
         instanceCount: $("[data-instance-count]"),
         instanceMap: $("[data-instance-map]"),
+        outputContract: $("[data-output-contract]"),
     };
 
     function esc(value) {
@@ -510,6 +511,74 @@
         if (isCurrentRun(token, sample)) els.status.textContent = `${sample.id.toUpperCase()} · MODEL + PRESET FALLBACK`;
     }
 
+    const outputContracts = {
+        classification: {
+            unit: "整张图像",
+            structure: "p(y | image) ∈ R<sup>C</sup>",
+            models: ["BoVW", "CNN", "ResNet"],
+            postprocess: "Top-k ranking",
+            metrics: ["Top-1 Accuracy", "Top-5 Accuracy"],
+            courses: ["特征表达", "分类器", "Softmax"],
+        },
+        detection: {
+            unit: "目标实例",
+            structure: "N × [x1, y1, x2, y2, score, class]",
+            models: ["R-CNN", "Faster R-CNN", "YOLO"],
+            postprocess: "Confidence Filter + NMS",
+            metrics: ["IoU", "AP", "mAP"],
+            courses: ["候选框", "IoU", "NMS", "Anchor"],
+        },
+        semantic: {
+            unit: "像素",
+            structure: "H × W class map",
+            models: ["FCN", "U-Net", "DeepLab", "SegFormer"],
+            postprocess: "argmax + color mapping",
+            metrics: ["Pixel Accuracy", "mIoU"],
+            courses: ["上采样", "跳跃连接", "逐像素分类"],
+        },
+        instance: {
+            unit: "对象实例",
+            structure: "N × {bbox, class, score, mask, id}",
+            models: ["Mask R-CNN", "YOLACT", "YOLO-seg"],
+            postprocess: "Mask threshold + NMS",
+            metrics: ["Mask AP"],
+            courses: ["检测头", "mask head", "instance id"],
+        },
+    };
+
+    function renderOutputContract() {
+        if (!els.outputContract) return;
+        const contract = outputContracts[state.task];
+        if (!contract) return;
+        const tags = (items) => items.map((item) => `<span class="oc-tag">${esc(item)}</span>`).join("");
+        els.outputContract.innerHTML = `
+            <div class="oc-row">
+                <span class="oc-label">预测单位</span>
+                <strong class="oc-value">${esc(contract.unit)}</strong>
+            </div>
+            <div class="oc-formula-box">
+                <span class="oc-label">输出结构</span>
+                <code class="oc-formula">${contract.structure}</code>
+            </div>
+            <div class="oc-row">
+                <span class="oc-label">典型模型</span>
+                <div class="oc-tags">${tags(contract.models)}</div>
+            </div>
+            <div class="oc-row">
+                <span class="oc-label">关键后处理</span>
+                <strong class="oc-value">${esc(contract.postprocess)}</strong>
+            </div>
+            <div class="oc-row">
+                <span class="oc-label">评价指标</span>
+                <div class="oc-tags oc-metric-tags">${tags(contract.metrics)}</div>
+            </div>
+            <div class="oc-row">
+                <span class="oc-label">课程关联</span>
+                <div class="oc-tags oc-course-tags">${tags(contract.courses)}</div>
+            </div>
+        `;
+    }
+
     function renderState() {
         workbench.dataset.colorScheme = state.colorScheme;
         els.resultGrid.dataset.displayMode = state.displayMode;
@@ -527,6 +596,7 @@
         els.taskCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.taskCard === state.task));
         els.lineageItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.lineageTask === state.task));
         els.schemaItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.schemaTask === state.task));
+        renderOutputContract();
     }
 
     function renderAll() {

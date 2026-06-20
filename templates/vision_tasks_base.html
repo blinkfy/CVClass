@@ -3,7 +3,7 @@
 {% block title %}{{ vision_module_title|default('视觉识别与分割实验室') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260621-segb-autograb2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260621-output-contract1">
 {% endblock %}
 
 {% block content %}
@@ -30,7 +30,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260618-overview-infer4"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260621-output-contract1"></script>
 {% if active_sub_page == 'classification' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260620-classification-lab1"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
