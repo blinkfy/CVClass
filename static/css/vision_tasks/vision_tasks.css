@@ -5244,7 +5244,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     gap: 12px;
     /* Safety margin so the AI assistant FAB (fixed at bottom-right) does not
        overlap the compressed Shape & Metric table at the panel bottom. */
-    padding-bottom: 84px;
+    padding-bottom: 24px;
 }
 @media (min-width: 1081px) {
     .overview-notes-panel {
@@ -5260,7 +5260,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .overview-schema-table article {
-    display: grid;
+    display: none;
     gap: 4px;
     border: 1px solid #e2e8f0;
     border-radius: 9px;
@@ -5270,6 +5270,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .overview-schema-table article.is-selected {
+    display: grid;
     border-color: #93c5fd;
     background: #eff6ff;
 }
@@ -5317,7 +5318,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     align-items: center;
     gap: 8px;
     border-bottom: 1px solid #eef2f7;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
 }
 
 .oc-row:last-child {
@@ -5341,10 +5342,10 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .oc-formula-box {
     display: grid;
-    gap: 5px;
+    gap: 4px;
     border: 1px solid #bfdbfe;
-    border-radius: 10px;
-    padding: 9px 11px;
+    border-radius: 8px;
+    padding: 6px 10px;
     background: linear-gradient(145deg, #eff6ff, #dbeafe);
 }
 
@@ -5400,7 +5401,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 /* ===== Task Knowledge Card sidebar ===== */
 .task-knowledge-card {
     display: grid;
-    gap: 12px;
+    gap: 8px;
 }
 
 .task-knowledge-card.is-transitioning .tk-principle,
@@ -5434,7 +5435,17 @@ body:has(.vision-lab) .ai-fab-icon img {
     overflow: hidden;
 }
 
+.tk-principle:has(.tk-principle-image) {
+    gap: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
 .tk-principle-figure {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5442,6 +5453,54 @@ body:has(.vision-lab) .ai-fab-icon img {
     border-radius: 8px;
     background: #f1f5f9;
     overflow: hidden;
+}
+
+.tk-principle:has(.tk-principle-image) .tk-principle-figure {
+    min-height: auto;
+    border-radius: 10px;
+    background: transparent;
+}
+
+.tk-principle-figure.is-loaded {
+    background: #ffffff;
+}
+
+.tk-principle-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 600 / 900; 
+    object-fit: fill; /* 允许拉伸以改变宽高比 */
+    border-radius: 10px;
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.tk-principle-figure.is-loaded .tk-principle-image {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.tk-image-placeholder {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.tk-principle-figure:not(.is-loaded) .tk-image-placeholder {
+    display: flex;
+}
+
+.tk-principle-caption.is-empty {
+    display: none;
 }
 
 .tk-figure-svg {
@@ -5486,10 +5545,10 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .tk-output-summary {
     display: grid;
-    gap: 9px;
+    gap: 6px;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 10px;
+    padding: 10px;
     background: #ffffff;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }

@@ -559,6 +559,7 @@
             title: "图像级分类",
             subtitle: "Image-level Classification",
             principle: "将整张图像映射为一个类别概率分布，强调全局语义理解。",
+            image: "/static/assets/img/classfication.webp",
             figure: `
                 <svg class="tk-figure-svg tk-figure--classification" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -612,6 +613,7 @@
             title: "目标检测",
             subtitle: "Object Detection",
             principle: "在图像中定位并分类所有感兴趣目标，输出带置信度的边界框。",
+            image: "/static/assets/img/detection.webp",
             figure: `
                 <svg class="tk-figure-svg tk-figure--detection" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -667,6 +669,7 @@
             title: "语义分割",
             subtitle: "Semantic Segmentation",
             principle: "为每个像素预测类别标签，获得与输入等分辨率的稠密类别图。",
+            image: "/static/assets/img/semantic-segment.webp",
             figure: `
                 <svg class="tk-figure-svg tk-figure--semantic" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -721,6 +724,7 @@
             title: "实例分割",
             subtitle: "Instance Segmentation",
             principle: "同时为每个目标实例生成检测框和像素级掩码，并赋予独立身份。",
+            image: "/static/assets/img/instance-segment.webp",
             figure: `
                 <svg class="tk-figure-svg tk-figure--instance" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -781,18 +785,38 @@
         const tags = (items) => items.map((item) => `<span class="oc-tag">${esc(item)}</span>`).join("");
 
         if (els.principleFigure) {
-            els.principleFigure.innerHTML = card.figure;
-            requestAnimationFrame(() => {
-                const svg = els.principleFigure.querySelector("svg");
-                if (svg) svg.classList.add("is-visible");
-            });
+            if (card.image) {
+                els.principleFigure.innerHTML = `
+                    <img class="tk-principle-image" src="${esc(window.cvclassUrl(card.image))}" alt="${esc(card.title)} 原理示意" loading="lazy">
+                    <div class="tk-image-placeholder">
+                        <strong>图片未找到</strong>
+                        <span>请检查 ${esc(card.image.split("/").pop())}</span>
+                    </div>
+                `;
+                const img = els.principleFigure.querySelector(".tk-principle-image");
+                img?.addEventListener("load", () => els.principleFigure.classList.add("is-loaded"), {once: true});
+                img?.addEventListener("error", () => els.principleFigure.classList.remove("is-loaded"), {once: true});
+                if (img?.complete && img.naturalWidth > 0) els.principleFigure.classList.add("is-loaded");
+            } else {
+                els.principleFigure.innerHTML = card.figure;
+                requestAnimationFrame(() => {
+                    const svg = els.principleFigure.querySelector("svg");
+                    if (svg) svg.classList.add("is-visible");
+                });
+            }
         }
         if (els.principleCaption) {
-            els.principleCaption.innerHTML = `
-                <strong>${esc(card.title)}</strong>
-                <span>${esc(card.subtitle)}</span>
-                <p>${esc(card.principle)}</p>
-            `;
+            if (card.image) {
+                els.principleCaption.innerHTML = "";
+                els.principleCaption.classList.add("is-empty");
+            } else {
+                els.principleCaption.classList.remove("is-empty");
+                els.principleCaption.innerHTML = `
+                    <strong>${esc(card.title)}</strong>
+                    <span>${esc(card.subtitle)}</span>
+                    <p>${esc(card.principle)}</p>
+                `;
+            }
         }
         if (els.outputSummary) {
             els.outputSummary.innerHTML = `
