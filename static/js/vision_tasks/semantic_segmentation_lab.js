@@ -5,7 +5,7 @@
     const UNKNOWN = 65535;
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const modelBaseUrl = window.cvclassUrl("/static/assets/data/segformer_b0_ade/");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260618-webgpu-fix2");
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/semantic_inference.js?v=20260621-sem-restore-512");
     const requiredModelFiles = ["config.json", "preprocessor_config.json", "quantize_config.json", "model_quantized.onnx", "model_fp16.onnx"];
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
@@ -746,7 +746,7 @@
         }
     }
 
-    fetch(`${dataRoot}/semantic_samples.json`)
+    fetch(`${dataRoot}/overview/semantic_samples.json`)
         .then((response) => response.json())
         .then((data) => {
             state.data = data;

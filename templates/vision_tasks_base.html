@@ -30,16 +30,16 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260621-output-contract1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260621-data-reorg1"></script>
 {% if active_sub_page == 'classification' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260620-classification-lab1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260621-data-reorg1"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260621-segb-notes-samples2"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260621-data-reorg1"></script>
 {% elif active_sub_page == 'detection' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}?v=20260621-detection-resize1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/detection_lab.js') }}?v=20260621-data-reorg1"></script>
 {% elif active_sub_page == 'semantic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260618-vision-final2"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260621-data-reorg1"></script>
 {% elif active_sub_page == 'instance' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260620-subpage-granularity1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260621-data-reorg1"></script>
 {% endif %}
 {% endblock %}

@@ -3,7 +3,6 @@
     if (!root) return;
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
-    const moduleDataRoot = window.CVClassVisionTasks?.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
     const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/detection_inference.js");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
@@ -945,7 +944,7 @@
         image.src = url;
     }
 
-    fetch(`${moduleDataRoot}/detection_rcnn_demo.json`)
+    fetch(`${dataRoot}/detection_lab/rcnn_demo.json`)
         .then((response) => response.json())
         .then((data) => {
             state.rcnnData = data;
@@ -955,7 +954,7 @@
             state.rcnnData = null;
         });
 
-    fetch(`${dataRoot}/detection_samples.json`)
+    fetch(`${dataRoot}/overview/detection_samples.json`)
         .then((response) => response.json())
         .then((data) => {
             state.data = data;

@@ -1,4 +1,4 @@
-const SEMANTIC_WORKER_URL = "/static/js/inference/semantic_inference_worker.js?v=20260618-webgpu-fix2";
+const SEMANTIC_WORKER_URL = "/static/js/inference/semantic_inference_worker.js?v=20260621-sem-restore-512";
 
 let semanticSequence = 0;
 

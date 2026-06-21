@@ -3,7 +3,6 @@
     if (!root) return;
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
-    const moduleDataRoot = window.CVClassVisionTasks?.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
     const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/instance_inference.js");
     const requiredModelFiles = ["yolo11n-seg.onnx", "labels_coco.json", "model_config.json"];
     const $ = (selector) => root.querySelector(selector);
@@ -1535,7 +1534,7 @@
         image.src = url;
     }
 
-    fetch(`${moduleDataRoot}/instance_maskrcnn_demo.json`)
+    fetch(`${dataRoot}/instance_lab/maskrcnn_demo.json`)
         .then((response) => response.json())
         .then((data) => {
             state.maskRcnnData = data;
@@ -1545,7 +1544,7 @@
             state.maskRcnnData = null;
         });
 
-    fetch(`${dataRoot}/instance_samples.json`)
+    fetch(`${dataRoot}/overview/instance_samples.json`)
         .then((response) => response.json())
         .then((data) => {
             state.data = data;

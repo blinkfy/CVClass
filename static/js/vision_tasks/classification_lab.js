@@ -3,7 +3,7 @@
     if (!root) return;
 
     const api = window.CVClassVisionTasks || {};
-    const dataRoot = api.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
+    const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
     const DATA_CACHE_VERSION = "v2";
     const $ = (selector) => root.querySelector(selector);
@@ -568,14 +568,14 @@
         }
 
         try {
-            const response = await fetch(`${dataRoot}/classification_samples.json`);
+            const response = await fetch(`${dataRoot}/classification_lab/classification_samples.json`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             writeCachedData(data);
             applyData(data);
         } catch (error) {
             console.error("classification lab data failed", error);
-            els.notesCompare.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/vision_tasks/data/classification_samples.json。</p>`;
+            els.notesCompare.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/data/vision_tasks/classification_lab/classification_samples.json。</p>`;
         }
     }
 

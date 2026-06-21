@@ -3,7 +3,7 @@
     if (!root) return;
 
     const api = window.CVClassVisionTasks || {};
-    const dataRoot = api.moduleDataRoot || window.cvclassUrl("/static/assets/vision_tasks/data");
+    const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const methodLabels = {
@@ -3582,7 +3582,7 @@
 
     async function init() {
         try {
-            const response = await fetch(`${dataRoot}/segmentation_basic_samples.json`);
+            const response = await fetch(`${dataRoot}/segmentation_basic/segmentation_basic_samples.json`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             state.data = await response.json();
             state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";
@@ -3592,7 +3592,7 @@
         } catch (error) {
             console.error("segmentation basic data failed", error);
             els.statusText.textContent = "加载失败";
-            els.notes.innerHTML = `<p class="method-error">传统分割演示数据加载失败，请检查 static/assets/vision_tasks/data/segmentation_basic_samples.json。</p>`;
+            els.notes.innerHTML = `<p class="method-error">传统分割演示数据加载失败，请检查 static/assets/data/vision_tasks/segmentation_basic/segmentation_basic_samples.json。</p>`;
         }
     }
 

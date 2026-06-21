@@ -7,7 +7,6 @@
     const api = {
         page: root.dataset.visionPage || "overview",
         dataRoot: window.cvclassUrl("/static/assets/data/vision_tasks"),
-        moduleDataRoot: window.cvclassUrl("/static/assets/vision_tasks/data"),
     };
     window.CVClassVisionTasks = Object.freeze(api);
 
@@ -114,6 +113,41 @@
 
     function isCurrentRun(token, sample) {
         return token === state.inferenceToken && sample?.id === state.sampleId;
+    }
+
+    function maskToCanvas(classMap, width, height, classResolver) {
+        if (!classMap || !width || !height) return null;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        canvas.style.display = "block";
+        canvas.style.pointerEvents = "none";
+        canvas.style.position = "absolute";
+        canvas.style.left = "0";
+        canvas.style.top = "0";
+        
+        const ctx = canvas.getContext("2d");
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        const colors = new Map();
+        
+        for (let i = 0; i < classMap.length; i += 1) {
+            const id = classMap[i];
+            const p = i * 4;
+            if (!colors.has(id)) {
+                const info = classResolver(id);
+                colors.set(id, info ? parseHexColor(info.color) : [0, 0, 0, 0]);
+            }
+            const [r, g, b] = colors.get(id);
+            data[p] = r;
+            data[p + 1] = g;
+            data[p + 2] = b;
+            data[p + 3] = id === 65535 ? 0 : 138; // 65535 为背景，设为透明；其他设为半透明
+        }
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
     }
 
     function maskToSvgCells(classMap, width, height, classResolver, maxCells = 1280) {
@@ -344,7 +378,13 @@
         const classMap = result?.classMap;
         const classes = result?.classes || [];
         const byId = new Map(classes.map((item) => [Number(item.id), item]));
-        els.semanticLayer.innerHTML = maskToSvgCells(classMap, width, height, (id) => byId.get(Number(id)) || classes[Number(id) % classes.length]);
+        
+        els.semanticLayer.innerHTML = "";
+        if (classMap) {
+            const canvas = maskToCanvas(classMap, width, height, (id) => byId.get(Number(id)) || classes[Number(id) % classes.length]);
+            if (canvas) els.semanticLayer.appendChild(canvas);
+        }
+        
         const top = result?.distribution?.[0];
         els.semanticMiou.textContent = `SegFormer · ${top ? `${top.name || top.className} ${(top.ratio * 100).toFixed(1)}%` : "mask"}`;
         els.semanticLegend.innerHTML = classes.slice(0, 7).map((item) => `<span><i style="background:${esc(item.color)}"></i>${esc(item.cn || item.name || item.className || item.id)}</span>`).join("");
@@ -645,7 +685,7 @@
     });
 
 
-    fetch(`${api.dataRoot}/vision_task_samples.json`)
+    fetch(`${api.dataRoot}/overview/task_samples.json`)
         .then((response) => {
             if (!response.ok) throw new Error(`sample data http ${response.status}`);
             return response.json();
@@ -658,6 +698,6 @@
         .catch(() => {
             els.status.textContent = "SAMPLE DATA ERROR";
             els.sampleName.textContent = "样例数据加载失败";
-            els.sampleResolution.textContent = "请检查 vision_task_samples.json";
+            els.sampleResolution.textContent = "请检查 overview/task_samples.json";
         });
 }());
