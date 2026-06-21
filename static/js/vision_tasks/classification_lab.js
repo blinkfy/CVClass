@@ -5,7 +5,7 @@
     const api = window.CVClassVisionTasks || {};
     const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
-    const DATA_CACHE_VERSION = "v2";
+    const DATA_CACHE_VERSION = "v3";
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
@@ -38,9 +38,11 @@
         classifier: "Classifier",
         topk: "Top-K Prediction",
     };
+    const bovwPrototypeLabels = ["原型 A", "原型 B", "原型 C", "原型 D", "原型 E", "原型 F"];
     const state = {
         data: null,
         sampleId: "",
+        uploadedItem: null,
         method: "bovw",
         vocabSize: 16,
         featureType: "sift",
@@ -50,6 +52,10 @@
         assignments: [],
         assignmentDistances: [],
         histogram: [],
+        normalizedHistogram: [],
+        bovwScores: [],
+        imageSignature: null,
+        imageBitmap: null,
         selectedFeatureId: 0,
         hoverFeatureId: null,
         representativeFeatureIds: new Set(),
@@ -58,6 +64,7 @@
 
     const els = {
         sample: $("[data-cls-sample]"),
+        upload: $("[data-cls-upload]"),
         methods: $$("[data-cls-method]"),
         bovwControls: $("[data-cls-bovw-controls]"),
         vocabSize: $("[data-cls-vocab-size]"),
@@ -137,6 +144,7 @@
         .replaceAll("'", "&#039;");
 
     function sample() {
+        if (state.uploadedItem) return state.uploadedItem;
         return state.data?.samples.find((item) => item.id === state.sampleId) || state.data?.samples[0];
     }
 
@@ -161,24 +169,106 @@
         els.stepper.forEach((item) => item.classList.toggle("is-active", item.dataset.clsPhase === phase));
     }
 
-    function bovwScores(item) {
-        return item.bovw?.top5 || [];
-    }
-
     function cnnScores(item) {
         return item.cnn?.top5 || [];
     }
 
-    function generateFeatures(item) {
-        const rand = randomFactory(hashSeed(`${item.id}-${state.featureType}-${state.vocabSize}`));
-        const countBase = state.featureType === "orb" ? 42 : state.featureType === "preset" ? 30 : 54;
-        const count = countBase + Math.round(rand() * 10);
-        const features = [];
-        const anchorSets = {
-            crosswalk_people: [[18, 48], [34, 64], [52, 52], [72, 38], [78, 66], [42, 28]],
-            classroom_students: [[22, 34], [42, 42], [63, 36], [78, 48], [55, 70], [30, 68]],
+    function bovwScores() {
+        return state.bovwScores || [];
+    }
+
+    function readPixel(data, width, height, x, y) {
+        const px = clamp(Math.round(x), 0, width - 1);
+        const py = clamp(Math.round(y), 0, height - 1);
+        const offset = (py * width + px) * 4;
+        const r = data[offset] / 255;
+        const g = data[offset + 1] / 255;
+        const b = data[offset + 2] / 255;
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        return { r, g, b, luma };
+    }
+
+    function patchDescriptor(imageData, px, py, patchRadius) {
+        const { data, width, height } = imageData;
+        let lumaSum = 0;
+        let rSum = 0;
+        let gSum = 0;
+        let bSum = 0;
+        let gradSum = 0;
+        let verticalSum = 0;
+        let horizontalSum = 0;
+        let sampleCount = 0;
+        const values = [];
+        const step = Math.max(1, Math.round(patchRadius / 3));
+        for (let yy = -patchRadius; yy <= patchRadius; yy += step) {
+            for (let xx = -patchRadius; xx <= patchRadius; xx += step) {
+                const pixel = readPixel(data, width, height, px + xx, py + yy);
+                const left = readPixel(data, width, height, px + xx - 1, py + yy).luma;
+                const right = readPixel(data, width, height, px + xx + 1, py + yy).luma;
+                const up = readPixel(data, width, height, px + xx, py + yy - 1).luma;
+                const down = readPixel(data, width, height, px + xx, py + yy + 1).luma;
+                const gx = right - left;
+                const gy = down - up;
+                lumaSum += pixel.luma;
+                rSum += pixel.r;
+                gSum += pixel.g;
+                bSum += pixel.b;
+                gradSum += Math.sqrt(gx * gx + gy * gy);
+                verticalSum += Math.abs(gx);
+                horizontalSum += Math.abs(gy);
+                values.push(pixel.luma);
+                sampleCount += 1;
+            }
+        }
+        const mean = lumaSum / Math.max(1, sampleCount);
+        const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(1, sampleCount);
+        const colorfulness = (Math.max(rSum, gSum, bSum) - Math.min(rSum, gSum, bSum)) / Math.max(1, sampleCount);
+        return [
+            clamp(mean, 0, 1),
+            clamp(Math.sqrt(variance) * 2.4, 0, 1),
+            clamp((gradSum / Math.max(1, sampleCount)) * 3.2, 0, 1),
+            clamp(verticalSum / Math.max(0.001, verticalSum + horizontalSum), 0, 1),
+            clamp(rSum / Math.max(1, sampleCount), 0, 1),
+            clamp(gSum / Math.max(1, sampleCount), 0, 1),
+            clamp(bSum / Math.max(1, sampleCount), 0, 1),
+            clamp(colorfulness * 2.2, 0, 1),
+        ];
+    }
+
+    function buildImageSignature(imageData) {
+        const { data, width, height } = imageData;
+        let luma = 0;
+        let saturation = 0;
+        let edge = 0;
+        let samples = 0;
+        const step = Math.max(4, Math.round(Math.min(width, height) / 32));
+        for (let y = step; y < height - step; y += step) {
+            for (let x = step; x < width - step; x += step) {
+                const pixel = readPixel(data, width, height, x, y);
+                const left = readPixel(data, width, height, x - 1, y).luma;
+                const right = readPixel(data, width, height, x + 1, y).luma;
+                const up = readPixel(data, width, height, x, y - 1).luma;
+                const down = readPixel(data, width, height, x, y + 1).luma;
+                luma += pixel.luma;
+                saturation += Math.max(pixel.r, pixel.g, pixel.b) - Math.min(pixel.r, pixel.g, pixel.b);
+                edge += Math.sqrt((right - left) ** 2 + (down - up) ** 2);
+                samples += 1;
+            }
+        }
+        return {
+            luma: luma / Math.max(1, samples),
+            saturation: saturation / Math.max(1, samples),
+            edge: edge / Math.max(1, samples),
+            aspect: width / Math.max(1, height),
         };
-        const anchors = anchorSets[item.id] || [[25, 35], [52, 42], [70, 65], [38, 72]];
+    }
+
+    function generateFeaturesFromImage(imageData) {
+        const rand = randomFactory(hashSeed(`${sample()?.id || "image"}-${state.featureType}-${state.vocabSize}-${imageData.width}x${imageData.height}`));
+        const countBase = state.featureType === "orb" ? 48 : state.featureType === "preset" ? 36 : 64;
+        const count = countBase + Math.round(rand() * 12);
+        const features = [];
+        const anchors = [[18, 48], [34, 64], [52, 52], [72, 38], [78, 66], [42, 28], [60, 76], [28, 30]];
         for (let i = 0; i < count; i += 1) {
             const anchor = anchors[i % anchors.length];
             const spread = state.featureType === "orb" ? 11 : state.featureType === "preset" ? 7 : 9;
@@ -186,12 +276,9 @@
             const y = Math.max(5, Math.min(95, anchor[1] + (rand() - 0.5) * spread * 2));
             const scale = state.featureType === "orb" ? 3 + rand() * 3 : 4 + rand() * 5;
             const angle = Math.round(rand() * 360);
-            const descriptor = [
-                Math.max(0, Math.min(1, x / 100 + (rand() - 0.5) * 0.12)),
-                Math.max(0, Math.min(1, y / 100 + (rand() - 0.5) * 0.12)),
-                rand(),
-                rand(),
-            ];
+            const px = (x / 100) * (imageData.width - 1);
+            const py = (y / 100) * (imageData.height - 1);
+            const descriptor = patchDescriptor(imageData, px, py, Math.max(4, Math.round(scale * 1.35)));
             features.push({ id: i, x, y, scale, angle, descriptor });
         }
         return features;
@@ -203,18 +290,75 @@
         for (let i = 0; i < state.vocabSize; i += 1) {
             const gx = (i % columns) / Math.max(1, columns - 1);
             const gy = Math.floor(i / columns) / Math.max(1, columns - 1);
+            const rand = randomFactory(hashSeed(`codebook-${state.vocabSize}-${i}`));
             words.push({
                 id: i,
                 color: palette[i % palette.length],
                 descriptor: [
-                    Math.max(0, Math.min(1, gx * 0.78 + 0.11)),
-                    Math.max(0, Math.min(1, gy * 0.78 + 0.11)),
-                    ((i * 37) % 101) / 100,
-                    ((i * 61) % 97) / 96,
+                    clamp(gx * 0.82 + 0.08 + (rand() - 0.5) * 0.12, 0, 1),
+                    clamp(gy * 0.82 + 0.08 + (rand() - 0.5) * 0.12, 0, 1),
+                    clamp(((i * 37) % 101) / 100 + (rand() - 0.5) * 0.18, 0, 1),
+                    clamp(((i * 61) % 97) / 96 + (rand() - 0.5) * 0.18, 0, 1),
+                    clamp(0.18 + ((i * 17) % 83) / 100 + (rand() - 0.5) * 0.14, 0, 1),
+                    clamp(0.16 + ((i * 29) % 79) / 100 + (rand() - 0.5) * 0.14, 0, 1),
+                    clamp(0.14 + ((i * 43) % 73) / 100 + (rand() - 0.5) * 0.14, 0, 1),
+                    clamp(((i * 19) % 89) / 88 + (rand() - 0.5) * 0.16, 0, 1),
                 ],
             });
         }
         return words;
+    }
+
+    function classifierWeights(classIndex, vocabSize) {
+        const rand = randomFactory(hashSeed(`bovw-linear-${vocabSize}-${classIndex}`));
+        const center = (classIndex * 5 + 3) % Math.max(1, vocabSize);
+        return Array.from({ length: vocabSize }, (_, wordIndex) => {
+            const circularDistance = Math.min(Math.abs(wordIndex - center), vocabSize - Math.abs(wordIndex - center));
+            const locality = Math.exp(-(circularDistance ** 2) / Math.max(6, vocabSize * 0.72));
+            const wave = Math.sin((wordIndex + 1) * (classIndex + 2) * 0.53) * 0.16;
+            return (locality * 1.05) + wave + (rand() - 0.5) * 0.2 - 0.18;
+        });
+    }
+
+    function calibratedBovwScores(item) {
+        const preset = item?.bovw?.top5;
+        if (!Array.isArray(preset) || !preset.length || item?.objectUrl) return null;
+        return preset.map((entry) => ({
+            label: entry.label,
+            score: entry.score,
+            source: "calibrated-demo",
+        }));
+    }
+
+    function computePrototypeScores(histogram, signature) {
+        const total = Math.max(1, histogram.reduce((sum, count) => sum + count, 0));
+        const normalized = histogram.map((count) => count / total);
+        state.normalizedHistogram = normalized;
+        const logits = bovwPrototypeLabels.map((label, classIndex) => {
+            const weights = classifierWeights(classIndex, histogram.length);
+            let logit = weights.reduce((sum, weight, index) => sum + weight * normalized[index], 0);
+            logit += (signature?.edge || 0) * (classIndex % 3 === 0 ? 0.72 : -0.12);
+            logit += (signature?.saturation || 0) * (classIndex % 3 === 1 ? 0.62 : -0.08);
+            logit += (signature?.luma || 0) * (classIndex % 3 === 2 ? 0.42 : -0.05);
+            logit += Math.abs((signature?.aspect || 1) - 1.4) * (classIndex === 0 || classIndex === 3 ? 0.18 : -0.04);
+            return { label, logit };
+        });
+        const maxLogit = Math.max(...logits.map((item) => item.logit));
+        const expScores = logits.map((item) => ({ ...item, exp: Math.exp((item.logit - maxLogit) * 4.2) }));
+        const expTotal = expScores.reduce((sum, item) => sum + item.exp, 0) || 1;
+        return expScores
+            .map((item) => ({ label: item.label, score: item.exp / expTotal, logit: item.logit, source: "prototype-demo" }))
+            .sort((a, b) => b.score - a.score);
+    }
+
+    function computeBovwScores(item, histogram, signature) {
+        const calibrated = calibratedBovwScores(item);
+        if (calibrated) {
+            const total = Math.max(1, histogram.reduce((sum, count) => sum + count, 0));
+            state.normalizedHistogram = histogram.map((count) => count / total);
+            return calibrated;
+        }
+        return computePrototypeScores(histogram, signature);
     }
 
     function distance(a, b) {
@@ -245,6 +389,31 @@
             histogram[best] += 1;
         });
         return { assignments, histogram, distances };
+    }
+
+    async function loadImageBitmap(item) {
+        if (!item?.image) return null;
+        if (state.imageBitmap?.key === item.image) return state.imageBitmap;
+        return new Promise((resolve) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => {
+                const maxSide = 320;
+                const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+                const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+                const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const context = canvas.getContext("2d", { willReadFrequently: true });
+                context.drawImage(image, 0, 0, width, height);
+                const imageData = context.getImageData(0, 0, width, height);
+                state.imageBitmap = { key: item.image, width, height, imageData };
+                resolve(state.imageBitmap);
+            };
+            image.onerror = () => resolve(null);
+            image.src = item.image;
+        });
     }
 
     function clamp(value, min, max) {
@@ -312,17 +481,34 @@
     function rebuildRepresentation() {
         const item = sample();
         if (!item) return;
-        state.features = generateFeatures(item);
+        const bitmap = state.imageBitmap?.key === item.image ? state.imageBitmap : null;
+        if (!bitmap) {
+            state.features = [];
+            state.words = generateWords();
+            state.assignments = [];
+            state.assignmentDistances = [];
+            state.histogram = new Array(state.vocabSize).fill(0);
+            state.normalizedHistogram = new Array(state.vocabSize).fill(0);
+            state.bovwScores = [];
+            return;
+        }
+        state.features = generateFeaturesFromImage(bitmap.imageData);
         state.words = generateWords();
         const assigned = assignFeatures(state.features, state.words);
         state.assignments = assigned.assignments;
         state.assignmentDistances = assigned.distances;
         state.histogram = assigned.histogram;
+        state.imageSignature = buildImageSignature(bitmap.imageData);
+        state.bovwScores = computeBovwScores(item, state.histogram, state.imageSignature);
         buildRepresentativeFeatures();
         ensureSelectedFeature();
     }
 
     function renderBovwOverlay(svg) {
+        if (!state.features.length) {
+            svg.innerHTML = "";
+            return;
+        }
         const active = activeBovwInfo();
         const topWords = state.histogram
             .map((count, id) => ({ count, id, word: state.words[id] }))
@@ -485,6 +671,11 @@
 
     function renderHistogramVector() {
         const active = activeBovwInfo();
+        if (!state.features.length) {
+            els.bovwHistVector.innerHTML = `<span>histogram vector</span><code>[computing from canvas image...]</code>`;
+            els.bovwHistVote.innerHTML = `<strong>等待图像采样</strong><span>patch descriptors → codebook assignment</span><em>hist[w] += count</em>`;
+            return;
+        }
         els.bovwHistVector.innerHTML = `
             <span>histogram vector</span>
             <code>[${state.histogram.map((count, index) => index === active.wordId ? `<b>${count}</b>` : count).join(", ")}]</code>
@@ -533,7 +724,7 @@
         target.innerHTML = sliced.map((item, index) => `
             <div class="classification-score-row ${index === 0 ? "is-top" : ""}" data-chain-node="${index === 0 ? chainNode : ""}">
                 <span>${index + 1}</span>
-                <strong>${escapeHtml(item.label)}</strong>
+                <strong>${escapeHtml(item.label)}${item.source === "prototype-demo" ? "<small>教学原型</small>" : ""}</strong>
                 <div><i style="width:${Math.round((item.score || 0) * 100)}%"></i></div>
                 <em>${Math.round((item.score || 0) * 100)}%</em>
             </div>
@@ -543,13 +734,14 @@
     function renderClassifierFlow(scores) {
         const active = activeBovwInfo();
         const top = scores[0];
+        const isPrototype = top?.source === "prototype-demo";
         els.bovwClassifierFlow.innerHTML = `
-            <span data-chain-node="classifier">histogram vector</span>
+            <span data-chain-node="classifier">computed histogram</span>
             <b aria-hidden="true">→</b>
-            <span>linear classifier / SVM</span>
+            <span>${isPrototype ? "untrained prototype weights" : "calibrated demo scores"}</span>
             <b aria-hidden="true">→</b>
             <strong>${top ? `${escapeHtml(top.label)} ${Math.round(top.score * 100)}%` : "Top-K scores"}</strong>
-            <small>当前选中 f${active.featureId + 1} 投票到 w${active.wordId + 1}，它贡献的是向量第 ${active.wordId + 1} 维。</small>
+            <small>${state.features.length ? `当前选中 f${active.featureId + 1} 投票到 w${active.wordId + 1}，它贡献的是向量第 ${active.wordId + 1} 维。${isPrototype ? "当前为未训练原型分数，不代表真实类别概率。" : "内置样例分数经过人工校准，用来演示分类器输出结构。"}` : "先从 Canvas 图像采样 patch descriptor，再由 histogram 进入分类器。"}</small>
         `;
     }
 
@@ -645,7 +837,10 @@
         const panel = root.querySelector('[data-cls-mode="bovw"]');
         if (!panel || panel.hidden) return;
         const active = activeBovwInfo();
-        if (!active.feature) return;
+        if (!active.feature) {
+            els.bovwChain.innerHTML = "";
+            return;
+        }
 
         const hostRect = panel.getBoundingClientRect();
         const overlayRect = els.bovwOverlay.getBoundingClientRect();
@@ -715,7 +910,7 @@
     }
 
     function renderNotes(item) {
-        const bScores = bovwScores(item);
+        const bScores = bovwScores();
         const cScores = cnnScores(item);
         const topB = bScores[0];
         const topC = cScores[0];
@@ -742,8 +937,8 @@
         }
         if (state.method === "compare") {
             els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
-            els.notesFormula.textContent = "BoVW: hist[w] = count(assign(f_i) = w)";
-            els.notesFormulaNote.textContent = "CNN: p = softmax(W · GAP(conv(image)) + b)。左侧稀疏直方图，右侧稠密全局特征。";
+            els.notesFormula.textContent = "BoVW: score_c = W_c · normalize(hist) + b_c";
+            els.notesFormulaNote.textContent = "真实 BoVW 需要用训练集学习 W 和 b；此页内置样例为校准演示分数，上传图只显示未训练原型分数。";
             els.notesCompare.innerHTML = `
                 <dl>
                     <div><dt>BoVW Top-1</dt><dd>${topB ? `${escapeHtml(topB.label)} · ${Math.round(topB.score * 100)}%` : "--"}</dd></div>
@@ -753,15 +948,16 @@
             `;
             return;
         }
+        const isPrototype = topB?.source === "prototype-demo";
         els.notesMethodDesc.textContent = `当前追踪 f${active.featureId + 1}：局部描述子先找最近 visual word，再把对应 histogram bin 加 1。`;
-        els.notesFormula.textContent = "hist[w] = count(assign(feature_i) = word_w)";
-        els.notesFormulaNote.textContent = `BoVW 核心思想：把许多局部视觉模式量化成词频向量。词典大小 ${state.vocabSize} 决定 histogram 是 ${state.vocabSize} 维。`;
+        els.notesFormula.textContent = "score_c = W_c · normalize(hist) + b_c";
+        els.notesFormulaNote.textContent = `BoVW 核心思想：从 Canvas 采样 patch descriptor，分配到 codebook，再用 ${state.vocabSize} 维 histogram 作为分类器输入。W_c 和 b_c 在真实系统里必须由训练集学习。`;
         els.notesCompare.innerHTML = `
             <dl>
                 <div><dt>当前 visual word</dt><dd>w${active.wordId + 1} · ${escapeHtml(active.meaning)} · count ${active.count}</dd></div>
                 <div><dt>当前 histogram bin</dt><dd>hist[w${active.wordId + 1}] += 1，向量第 ${active.wordId + 1} 维被累加。</dd></div>
                 <div><dt>输出结构</dt><dd>image → histogram vector (${state.vocabSize} bins) → class scores。</dd></div>
-                <div><dt>Top-K</dt><dd>histogram vector → linear classifier / SVM → Top-${state.topK} scores，Top-1 为 ${topB ? `${escapeHtml(topB.label)} ${Math.round(topB.score * 100)}%` : "--"}。</dd></div>
+                <div><dt>Top-K</dt><dd>${isPrototype ? "未训练原型分数，仅说明 histogram 如何变成分数" : "内置示例校准分数，用来演示分类器输出结构"}；Top-1 为 ${topB ? `${escapeHtml(topB.label)} ${Math.round(topB.score * 100)}%` : "--"}。</dd></div>
             </dl>
         `;
     }
@@ -771,14 +967,60 @@
         if (missing) missing.textContent = item.image;
     }
 
+    function revokeUploadedImage() {
+        if (state.uploadedItem?.objectUrl) {
+            URL.revokeObjectURL(state.uploadedItem.objectUrl);
+        }
+        state.uploadedItem = null;
+    }
+
+    function uploadedImageItem(file) {
+        return new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                resolve({
+                    id: `upload-${Date.now()}`,
+                    name: file.name || "Uploaded Image",
+                    image: objectUrl,
+                    objectUrl,
+                    width: image.naturalWidth || image.width,
+                    height: image.naturalHeight || image.height,
+                    bovw: { feature: "canvas patch descriptors -> codebook histogram" },
+                    cnn: {
+                        top5: [
+                            { label: "上传图像", score: 1 },
+                            { label: "未运行 CNN", score: 0 },
+                            { label: "仅 BoVW 实时计算", score: 0 },
+                        ],
+                    },
+                });
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("uploaded image failed to load"));
+            };
+            image.src = objectUrl;
+        });
+    }
+
+    async function prepareBovwImage(item) {
+        if (!item?.image) return;
+        const bitmap = await loadImageBitmap(item);
+        if (!bitmap) return;
+        const current = sample();
+        if (current?.image !== item.image) return;
+        render();
+    }
+
     function renderBovwFocus(item = sample()) {
         if (!item) return;
         renderBovwOverlay(els.bovwOverlay);
         renderDictionary(els.bovwDictionary);
         renderHistogram(els.bovwHistogram);
         renderHistogramVector();
-        renderClassifierFlow(bovwScores(item));
-        renderScores(els.bovwScoreList, bovwScores(item), { chainNode: "topk" });
+        renderClassifierFlow(bovwScores());
+        renderScores(els.bovwScoreList, bovwScores(), { chainNode: "topk" });
         renderFeatureCard();
         renderBovwFlow();
         renderNotes(item);
@@ -788,6 +1030,7 @@
     function renderBovw(item) {
         setImage(els.bovwImage, els.bovwMissing, item);
         renderBovwFocus(item);
+        if (state.imageBitmap?.key !== item.image) prepareBovwImage(item);
     }
 
     function renderCnn(item) {
@@ -803,7 +1046,7 @@
         setImage(els.compareCnnImage, null, item);
         renderBovwOverlay(els.compareBovwOverlay);
         renderMiniHistogram(els.compareBovwHist);
-        renderScores(els.compareBovwScores, bovwScores(item));
+        renderScores(els.compareBovwScores, bovwScores());
         renderCnnMaps(els.compareCnnMaps);
         renderGlobalFeature(els.compareCnnGlobal, 32);
         renderScores(els.compareCnnScores, cnnScores(item));
@@ -814,19 +1057,19 @@
         const item = sample();
         if (!item) return;
         rebuildRepresentation();
-        const bScores = bovwScores(item);
+        const bScores = bovwScores();
         const cScores = cnnScores(item);
         const activeScores = state.method === "cnn" ? cScores : bScores;
         const top = activeScores[0];
         const methodLabel = methodLabels[state.method];
 
         els.inputSize.textContent = `${item.width} × ${item.height}`;
-        els.featureCount.textContent = state.method === "cnn" ? "learned maps" : String(state.features.length);
+        els.featureCount.textContent = state.method === "cnn" ? "learned maps" : (state.features.length ? String(state.features.length) : "computing...");
         els.vocabReadout.textContent = String(state.vocabSize);
         els.vectorDim.textContent = vectorDimLabel();
-        els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%` : "--";
+        els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%${top.source === "prototype-demo" ? " demo" : ""}` : (state.method === "cnn" ? "--" : "computing...");
         els.activeMethod.textContent = methodLabel;
-        els.status.textContent = state.method === "cnn" ? "CNN CONCEPT VIEW" : state.method === "compare" ? "BOVW / CNN COMPARE" : "PRESET BOVW DATA";
+        els.status.textContent = state.method === "cnn" ? "CNN CONCEPT VIEW" : state.method === "compare" ? "BOVW / CNN COMPARE" : "BOVW TEACHING SCORES";
 
         els.bovwControls.hidden = state.method === "cnn";
         if (state.method === "cnn") {
@@ -897,9 +1140,25 @@
     }
 
     els.sample.addEventListener("change", () => {
+        revokeUploadedImage();
         state.sampleId = els.sample.value;
+        state.imageBitmap = null;
         render();
     });
+    if (els.upload) {
+        els.upload.addEventListener("change", async () => {
+            const file = els.upload.files?.[0];
+            if (!file) return;
+            try {
+                revokeUploadedImage();
+                state.uploadedItem = await uploadedImageItem(file);
+                state.imageBitmap = null;
+                render();
+            } catch (error) {
+                console.error("classification upload failed", error);
+            }
+        });
+    }
     els.methods.forEach((button) => {
         button.addEventListener("click", () => {
             state.method = button.dataset.clsMethod;

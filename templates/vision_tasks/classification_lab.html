@@ -13,6 +13,12 @@
             <select data-cls-sample></select>
         </label>
 
+        <label class="vision-field cls-upload-field">
+            <span>上传图片</span>
+            <input type="file" accept="image/*" data-cls-upload>
+            <small class="cls-field-hint">上传后演示 BoVW 编码链路；未训练真实语义分类器，Top-K 仅作教学分数。</small>
+        </label>
+
         <div class="overview-segmented-control method-segmented-control cls-methods" aria-label="分类方法选择">
             <button class="is-active" type="button" data-cls-method="bovw">BoVW 视觉词袋</button>
             <button type="button" data-cls-method="cnn">CNN 端到端分类</button>
@@ -71,7 +77,7 @@
                 <span>CLASSIFICATION PLAYGROUND</span>
                 <h3>图像分类实验：BoVW 与 CNN 路径对比</h3>
             </div>
-            <span class="vision-status-chip" data-cls-status>PRESET BOVW DATA</span>
+            <span class="vision-status-chip" data-cls-status>BOVW TEACHING SCORES</span>
         </div>
 
         <!-- BoVW mode -->
@@ -126,10 +132,10 @@
 
                 <div class="classification-topk-card">
                     <div class="classification-card-head">
-                        <strong>Top-K 分类概率</strong>
-                        <span>linear classifier over BoVW</span>
+                        <strong>Top-K 分类分数</strong>
+                        <span>teaching score over BoVW</span>
                     </div>
-                    <p class="cls-card-note">分类器输入的是 histogram vector，而不是原图像。</p>
+                    <p class="cls-card-note">真实 BoVW 需要训练线性分类器 / SVM；这里展示 histogram 如何进入分类器，上传图分数不是可靠语义概率。</p>
                     <div class="cls-classifier-flow" data-cls-bovw-classifier-flow></div>
                     <div class="classification-score-list" data-cls-bovw-score-list></div>
                 </div>

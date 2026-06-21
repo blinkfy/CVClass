@@ -119,7 +119,14 @@
         conceptMask: $("[data-segb-concept-mask]"),
         conceptResultTitle: $("[data-segb-concept-result-title]"),
         conceptResultCaption: $("[data-segb-concept-result-caption]"),
+        conceptResult: $("[data-segb-concept-result]"),
         frameStrip: $("[data-segb-frame-strip]"),
+        compareView: $("[data-segb-compare-view]"),
+        compareSlider: $("[data-segb-compare-slider]"),
+        compareSliderLeft: $("[data-segb-compare-slider-left]"),
+        compareSliderRight: $("[data-segb-compare-slider-right]"),
+        compareSliderDivider: $("[data-segb-compare-slider-divider]"),
+        compareSliderHandle: $("[data-segb-compare-slider-handle]"),
         grabcutToolbar: $("[data-segb-grabcut-toolbar]"),
         grabcutTools: $$("[data-segb-grabcut-tool]"),
         grabcutReset: $("[data-segb-grabcut-reset]"),
@@ -211,9 +218,7 @@
     }
 
     function setBusy(isBusy) {
-        const canPlay = activeFamily() === "cluster"
-            ? Boolean(state.result?.snapshots?.length && state.showIterations)
-            : Boolean(state.concept?.frames?.length > 1);
+        const canPlay = Boolean(state.concept?.frames?.length > 1) || Boolean(state.result?.snapshots?.length && state.showIterations);
         els.run.disabled = isBusy;
         els.play.disabled = isBusy || !canPlay;
         els.statusText.textContent = isBusy ? "计算中" : "就绪";
@@ -260,7 +265,7 @@
         }
         state.playing = false;
         els.frameStrip?.classList.remove("is-playing");
-        els.play.textContent = activeFamily() === "cluster" ? "播放迭代" : "播放流程";
+        els.play.textContent = "播放流程";
     }
 
     function drawImageToWorkCanvas(image) {
@@ -424,6 +429,378 @@
             if (finalMovement < 0.35) break;
         }
         return { width, height, dims, useXY, k: state.k, snapshots, elapsed: 0 };
+    }
+
+    function buildKMeansGridModel(useXY, cols = 14, rows = 10) {
+        const model = buildSampleGrid(cols, rows);
+        const cells = model.cells;
+        const count = cells.length;
+        const dims = useXY ? 5 : 3;
+        const features = new Float32Array(count * dims);
+        for (let i = 0; i < count; i += 1) {
+            const c = cells[i];
+            features[i * dims] = c.r;
+            features[i * dims + 1] = c.g;
+            features[i * dims + 2] = c.b;
+            if (useXY) {
+                features[i * dims + 3] = (c.x / Math.max(1, cols - 1)) * 255 * state.xyWeight;
+                features[i * dims + 4] = (c.y / Math.max(1, rows - 1)) * 255 * state.xyWeight;
+            }
+        }
+        return { model, features, dims, count, useXY, cols, rows };
+    }
+
+    function initCentersForGrid(features, dims, count, cols, rows) {
+        const centers = new Float32Array(state.k * dims);
+        const fixedPoints = [
+            [0.18, 0.22],
+            [0.78, 0.22],
+            [0.24, 0.76],
+            [0.76, 0.76],
+            [0.50, 0.50],
+            [0.50, 0.14],
+        ];
+        for (let k = 0; k < state.k; k += 1) {
+            let index;
+            if (state.init === "random") {
+                index = Math.floor(Math.random() * count);
+            } else {
+                const [fx, fy] = fixedPoints[k % fixedPoints.length];
+                const gx = Math.round(fx * (cols - 1));
+                const gy = Math.round(fy * (rows - 1));
+                index = Math.min(count - 1, Math.max(0, gy * cols + gx));
+            }
+            for (let d = 0; d < dims; d += 1) centers[k * dims + d] = features[index * dims + d];
+        }
+        return centers;
+    }
+
+    function runKMeansOnGrid(grid) {
+        const { features, dims, count, cols, rows } = grid;
+        const labels = new Uint8Array(count);
+        const counts = new Uint32Array(state.k);
+        const centers = initCentersForGrid(features, dims, count, cols, rows);
+        const snapshots = [];
+        let finalMovement = 0;
+        let finalDistance = 0;
+        for (let iter = 1; iter <= state.maxIter; iter += 1) {
+            finalDistance = assignClusters(features, centers, dims, labels, counts);
+            finalMovement = updateCenters(features, centers, dims, labels, counts);
+            snapshots.push({
+                iter,
+                labels: new Uint8Array(labels),
+                centers: new Float32Array(centers),
+                counts: Array.from(counts),
+                movement: finalMovement,
+                distance: finalDistance,
+            });
+            if (finalMovement < 0.35) break;
+        }
+        return { centers, labels, snapshots };
+    }
+
+    function kmeansCenterSeeds(model, centers, dims, useXY) {
+        return Array.from({ length: state.k }, (_, k) => {
+            const c = k * dims;
+            const cx = useXY
+                ? Math.round((centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * (model.cols - 1))
+                : Math.round(((k % 3) * 0.32 + 0.18) * (model.cols - 1));
+            const cy = useXY
+                ? Math.round((centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * (model.rows - 1))
+                : Math.round((Math.floor(k / 3) * 0.28 + 0.22) * (model.rows - 1));
+            const gx = clamp(cx, 0, model.cols - 1);
+            const gy = clamp(cy, 0, model.rows - 1);
+            return {
+                index: gy * model.cols + gx,
+                type: "fg",
+                text: `C${k + 1}`,
+            };
+        });
+    }
+
+    function kmeansDistanceTable(grid, centers, dims, sampleCount = 3) {
+        const { features, count } = grid;
+        const samples = [];
+        for (let i = 0; i < count && samples.length < sampleCount; i += 1) {
+            const x = i % grid.cols;
+            const y = Math.floor(i / grid.cols);
+            if ((x + y) % 3 === 0) samples.push(i);
+        }
+        return samples.map((i) => {
+            const f = i * dims;
+            let best = 0;
+            let bestDistance = Infinity;
+            const distances = [];
+            for (let k = 0; k < state.k; k += 1) {
+                const c = k * dims;
+                let distance = 0;
+                for (let d = 0; d < dims; d += 1) {
+                    const diff = features[f + d] - centers[c + d];
+                    distance += diff * diff;
+                }
+                distance = Math.sqrt(distance);
+                distances.push(distance.toFixed(1));
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = k;
+                }
+            }
+            return { index: i, best, distances, bestDistance: bestDistance.toFixed(1) };
+        });
+    }
+
+    function kmeansUpdateTable(oldCenters, newCenters, dims) {
+        return Array.from({ length: state.k }, (_, k) => {
+            const c = k * dims;
+            const oldRgb = `rgb(${Math.round(oldCenters[c])},${Math.round(oldCenters[c + 1])},${Math.round(oldCenters[c + 2])})`;
+            const newRgb = `rgb(${Math.round(newCenters[c])},${Math.round(newCenters[c + 1])},${Math.round(newCenters[c + 2])})`;
+            const move = Math.sqrt(
+                Array.from({ length: dims }, (_, d) => (newCenters[c + d] - oldCenters[c + d]) ** 2).reduce((a, b) => a + b, 0),
+            );
+            return { label: k + 1, oldRgb, newRgb, move: move.toFixed(1) };
+        });
+    }
+
+    function kmeansProps(grid, labels) {
+        const total = labels.length;
+        const counts = new Array(state.k).fill(0);
+        labels.forEach((label) => { counts[label] += 1; });
+        return counts.map((count, index) => ({
+            label: index + 1,
+            count,
+            ratio: count / total,
+            color: labelFill(index + 1),
+            name: `C${index + 1}`,
+        }));
+    }
+
+    function kmeansComputeSvg(grid, options = {}) {
+        const { model } = grid;
+        const { cells, cols, rows } = model;
+        const viewW = 520;
+        const viewH = 318;
+        const padX = 32;
+        const padY = 34;
+        const cellW = (viewW - padX * 2) / cols;
+        const cellH = (viewH - padY * 2) / rows;
+        const mode = options.mode || "assign";
+        const centers = options.centers || [];
+        const labels = options.labels || [];
+        const activeSet = new Set(options.activeCells || []);
+        const centerPositions = Array.from({ length: state.k }, (_, k) => {
+            const c = k * grid.dims;
+            const cx = grid.useXY
+                ? (centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * (cols - 1)
+                : (k % 3) * 0.32 * (cols - 1) + 0.18 * (cols - 1);
+            const cy = grid.useXY
+                ? (centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * (rows - 1)
+                : Math.floor(k / 3) * 0.28 * (rows - 1) + 0.22 * (rows - 1);
+            return { x: padX + (clamp(cx, 0, cols - 1) + 0.5) * cellW, y: padY + (clamp(cy, 0, rows - 1) + 0.5) * cellH };
+        });
+        const cellsHtml = cells.map((cell, index) => {
+            const x = padX + cell.x * cellW + 2;
+            const y = padY + cell.y * cellH + 2;
+            const label = labels[index];
+            const fill = mode === "image"
+                ? `rgb(${Math.round(cell.r)},${Math.round(cell.g)},${Math.round(cell.b)})`
+                : labelFill((label ?? 0) + 1);
+            const classes = ["seg-grid-cell", activeSet.has(index) ? "is-active" : ""].filter(Boolean).join(" ");
+            return `<rect class="${classes}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(5, cellW - 4).toFixed(1)}" height="${Math.max(5, cellH - 4).toFixed(1)}" rx="6" fill="${fill}"/>`;
+        }).join("");
+        const centerHtml = mode !== "image" ? centerPositions.map((pos, k) => `
+            <g class="seg-grid-seed is-fg">
+                <circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="12"/>
+                <text x="${pos.x.toFixed(1)}" y="${(pos.y + 4).toFixed(1)}" text-anchor="middle">C${k + 1}</text>
+            </g>
+        `).join("") : "";
+        const lineHtml = mode === "assign" && options.lines?.length ? options.lines.map((line) => {
+            const fromX = padX + (line.from % cols + 0.5) * cellW;
+            const fromY = padY + (Math.floor(line.from / cols) + 0.5) * cellH;
+            return `<line class="seg-kmeans-line" x1="${fromX.toFixed(1)}" y1="${fromY.toFixed(1)}" x2="${centerPositions[line.to].x.toFixed(1)}" y2="${centerPositions[line.to].y.toFixed(1)}" stroke="#f97316" stroke-width="3" stroke-dasharray="6,4" opacity="0.78"/>`;
+        }).join("") : "";
+        const caption = options.caption ? `<text x="260" y="304" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
+        return `
+            <svg class="seg-concept-svg seg-algo-grid" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="kmeans algorithm grid">
+                <rect x="16" y="18" width="488" height="276" rx="22" fill="#f8fafc" stroke="#dbeafe"/>
+                ${cellsHtml}
+                ${lineHtml}
+                ${centerHtml}
+                ${caption}
+            </svg>
+        `;
+    }
+
+    function buildKMeansConcept() {
+        const isCompare = state.method === "kmeans-compare";
+        const activeFeatureName = state.method === "kmeans-rgbxy" ? "RGB + XY" : "RGB";
+
+        function buildFrames(useXY, prefix) {
+            const featureName = useXY ? "RGB + XY" : "RGB";
+            const grid = buildKMeansGridModel(useXY, 14, 10);
+            const result = runKMeansOnGrid(grid);
+            const props = kmeansProps(grid, result.labels);
+
+            const sampleCells = [];
+            for (let i = 0; i < grid.count && sampleCells.length < 3; i += 1) {
+                const x = i % grid.cols;
+                const y = Math.floor(i / grid.cols);
+                if ((x + y) % 4 === 0) sampleCells.push(i);
+            }
+
+            const firstSnapshot = result.snapshots[0];
+            const finalSnapshot = result.snapshots[result.snapshots.length - 1];
+            const firstCenters = firstSnapshot.centers;
+            const finalCenters = finalSnapshot.centers;
+            const firstSeeds = kmeansCenterSeeds(grid.model, firstCenters, grid.dims, grid.useXY);
+            const finalSeeds = kmeansCenterSeeds(grid.model, finalCenters, grid.dims, grid.useXY);
+            const distanceTable = kmeansDistanceTable(grid, firstCenters, grid.dims, 3);
+            const updateTable = kmeansUpdateTable(firstCenters, finalCenters, grid.dims);
+
+            const commonShowcase = {
+                model: grid.model,
+                title: `${featureName} K-means 结果`,
+                caption: `K=${state.k}，在 ${grid.cols}×${grid.rows} 采样网格上完成 ${result.snapshots.length} 次迭代。`,
+                alpha: 0.72,
+            };
+
+            return [
+                {
+                    phase: "image",
+                    title: `${prefix}1. 输入图像与采样网格`,
+                    graph: kmeansComputeSvg(grid, { mode: "image", caption: "每个格子是该区域像素的平均颜色" }),
+                    matrix: metricCards([
+                        ["image", `${state.work?.width || "--"}×${state.work?.height || "--"}`],
+                        ["grid", `${grid.cols}×${grid.rows}=${grid.count} cells`],
+                        ["K", String(state.k)],
+                        ["max iter", String(state.maxIter)],
+                    ]),
+                    detail: noteRows([["采样", "把图像划分成规则网格，每个格子用一个颜色向量代表下方像素。"]]),
+                    stageNote: "K-means 先把图像采样成规则网格，减小计算量并保持空间结构。",
+                    showcase: { ...commonShowcase, labels: [], alpha: 0 },
+                },
+                {
+                    phase: "feature",
+                    title: `${prefix}2. 特征向量提取`,
+                    graph: kmeansComputeSvg(grid, { mode: "image", activeCells: sampleCells, caption: "高亮格子的颜色被提取为特征向量" }),
+                    matrix: barsHtml(sampleCells.map((i) => {
+                        const c = grid.model.cells[i];
+                        const xy = grid.useXY
+                            ? `· xy=(${(grid.features[i * grid.dims + 3] / 255 / state.xyWeight).toFixed(2)}, ${(grid.features[i * grid.dims + 4] / 255 / state.xyWeight).toFixed(2)})`
+                            : "";
+                        return { label: `cell ${i + 1}`, value: 1, color: `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`, note: `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})${xy}` };
+                    })),
+                    detail: noteRows([["特征", `${featureName} 向量决定像素在聚类空间中的位置。`]]),
+                    stageNote: `每个格子的特征向量是 ${featureName}，它把颜色（和位置）映射到聚类空间。`,
+                    showcase: { ...commonShowcase, labels: [], activeCells: sampleCells, alpha: 0 },
+                },
+                {
+                    phase: "assign",
+                    title: `${prefix}3. 初始化中心并分配最近类`,
+                    graph: kmeansComputeSvg(grid, {
+                        mode: "assign",
+                        labels: firstSnapshot.labels,
+                        centers: firstCenters,
+                        activeCells: distanceTable.map((d) => d.index),
+                        lines: distanceTable.map((d) => ({ from: d.index, to: d.best })),
+                        caption: "每个格子连到最近的聚类中心",
+                    }),
+                    matrix: barsHtml(distanceTable.map((d) => ({
+                        label: `cell ${d.index + 1}`,
+                        value: d.bestDistance,
+                        color: labelFill(d.best + 1),
+                        note: `C${d.best + 1}·${d.distances.join(" / ")}`,
+                    }))),
+                    detail: noteRows([["分配规则", "计算每个格子到所有中心的距离，取 argmin 作为新标签。"]]),
+                    stageNote: "初始化中心后，每个格子被分配给距离最近的中心，颜色相近的格子倾向同一类。",
+                    showcase: { ...commonShowcase, labels: Array.from(firstSnapshot.labels).map((l) => l + 1), seeds: firstSeeds },
+                },
+                {
+                    phase: "update",
+                    title: `${prefix}4. 更新聚类中心`,
+                    graph: kmeansComputeSvg(grid, {
+                        mode: "update",
+                        labels: finalSnapshot.labels,
+                        centers: finalCenters,
+                        activeCells: sampleCells,
+                        caption: "中心移动到同类格子的平均特征位置",
+                    }),
+                    matrix: barsHtml(updateTable.map((row) => ({
+                        label: `C${row.label}`,
+                        value: row.move,
+                        color: row.newRgb,
+                        note: `${row.oldRgb} → ${row.newRgb}`,
+                    }))),
+                    detail: noteRows([["更新规则", "c_k = mean(f(x))，中心移动到当前类所有格子的平均特征。"]]),
+                    stageNote: "根据上一步的分配结果，每个中心更新为同类格子的平均特征，然后再次分配。",
+                    showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1), seeds: finalSeeds },
+                },
+                {
+                    phase: "map",
+                    title: `${prefix}5. 迭代收敛 / 最终标签图`,
+                    graph: conceptGridSvg(grid.model, { labels: Array.from(finalSnapshot.labels).map((l) => l + 1), caption: "每个格子获得最终 cluster 标签" }),
+                    matrix: metricCards([
+                        ["iterations", String(result.snapshots.length)],
+                        ["final movement", finalSnapshot.movement.toFixed(2)],
+                        ["mean distance", finalSnapshot.distance.toFixed(1)],
+                        ["stop rule", "movement < 0.35"],
+                    ]),
+                    detail: noteRows([["收敛", "重复 分配→更新，直到中心移动足够小或达到最大迭代次数。"]]),
+                    stageNote: "最终每个格子拥有稳定的 cluster 标签，相同标签的格子构成一个分割区域。",
+                    showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1) },
+                },
+                {
+                    phase: "stats",
+                    title: `${prefix}6. 区域统计`,
+                    graph: conceptGridSvg(grid.model, { labels: Array.from(finalSnapshot.labels).map((l) => l + 1), caption: "按标签统计像素数与占比" }),
+                    matrix: barsHtml(props.map((p) => ({ label: p.name, value: p.count, color: p.color, note: `${Math.round(p.ratio * 100)}%` }))),
+                    detail: metricCards([
+                        ["regions", String(state.k)],
+                        ["largest", `C${props[0]?.label || 1} · ${Math.round((props[0]?.ratio || 0) * 100)}%`],
+                        ["grid cells", String(grid.count)],
+                        ["output", "label map"],
+                    ]),
+                    stageNote: "最终输出 label map，可用于统计每个区域的面积、占比和边界属性。",
+                    showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1) },
+                },
+            ];
+        }
+
+        const rgbFrames = buildFrames(false, "RGB ");
+        const rgbxyFrames = buildFrames(true, "RGB + XY ");
+        const frames = isCompare ? [...rgbFrames, ...rgbxyFrames] : (state.method === "kmeans-rgbxy" ? rgbxyFrames : rgbFrames);
+        const mainGrid = state.method === "kmeans-rgbxy" ? buildKMeansGridModel(true, 14, 10) : buildKMeansGridModel(false, 14, 10);
+        const mainResult = runKMeansOnGrid(mainGrid);
+        const mainFeatureName = activeFeatureName;
+        const displayFeatureName = isCompare ? "RGB / RGB+XY" : mainFeatureName;
+        const commonShowcase = {
+            model: mainGrid.model,
+            title: `${mainFeatureName} K-means 结果`,
+            caption: `K=${state.k}，在 ${mainGrid.cols}×${mainGrid.rows} 采样网格上完成 ${mainResult.snapshots.length} 次迭代。`,
+            alpha: 0.72,
+            labels: Array.from(mainResult.labels).map((l) => l + 1),
+        };
+
+        return {
+            stepperKind: "kmeans",
+            status: `K-means ${displayFeatureName}`,
+            activeMethod: `K-means ${displayFeatureName}`,
+            stageTitle: `当前实验模式：K-means ${displayFeatureName}${isCompare ? " 对比" : ""}`,
+            stripFeature: displayFeatureName,
+            stripK: `${state.k}`,
+            stripOutput: "label map",
+            regionCount: String(state.k),
+            formulaLabel: "K-means",
+            formula: "cluster(x)=\\arg\\min_k \\lVert f(x)-c_k\\rVert^2",
+            formulaNote: `${displayFeatureName} 模式下，每个像素被分配到特征空间中距离最近的中心。`,
+            notes: [
+                ["特征", displayFeatureName],
+                ["分配", "每个格子找最近的聚类中心"],
+                ["更新", "中心移动到同类格子的平均特征"],
+                ["输出", "每个格子的 cluster 标签组成 label map"],
+            ],
+            showcase: commonShowcase,
+            frames,
+        };
     }
 
     function colorFromCenter(centers, dims, index) {
@@ -798,6 +1175,85 @@
         const { title, caption } = meta;
         els.conceptResultTitle.textContent = title || "分割结果 label map";
         els.conceptResultCaption.textContent = caption || "算法输出的区域标签会在这里显示。";
+    }
+
+    function renderKMeansCompareSlider(ratio = 0.5) {
+        if (!els.compareSlider || !els.compareSliderLeft || !els.compareSliderRight) return;
+        const rgbGrid = buildKMeansGridModel(false, 14, 10);
+        const rgbResult = runKMeansOnGrid(rgbGrid);
+        const rgbxyGrid = buildKMeansGridModel(true, 14, 10);
+        const rgbxyResult = runKMeansOnGrid(rgbxyGrid);
+
+        const rgbShowcase = {
+            model: rgbGrid.model,
+            labels: Array.from(rgbResult.labels).map((l) => l + 1),
+            title: "RGB K-means 结果",
+            caption: `K=${state.k}，在 ${rgbGrid.cols}×${rgbGrid.rows} 采样网格上完成 ${rgbResult.snapshots.length} 次迭代。`,
+            alpha: 0.72,
+        };
+        const rgbxyShowcase = {
+            model: rgbxyGrid.model,
+            labels: Array.from(rgbxyResult.labels).map((l) => l + 1),
+            title: "RGB + XY K-means 结果",
+            caption: `K=${state.k}，在 ${rgbxyGrid.cols}×${rgbxyGrid.rows} 采样网格上完成 ${rgbxyResult.snapshots.length} 次迭代。`,
+            alpha: 0.72,
+        };
+
+        drawShowcaseCanvases(rgbShowcase, els.compareSliderLeft, els.compareSliderLeft, { showInputMarks: false, showMaskSeeds: false });
+        drawShowcaseCanvases(rgbxyShowcase, els.compareSliderRight, els.compareSliderRight, { showInputMarks: false, showMaskSeeds: false });
+        updateCompareSliderPosition(ratio);
+    }
+
+    function updateCompareSliderPosition(ratio) {
+        if (!els.compareSliderDivider || !els.compareSliderHandle) return;
+        const percent = Math.max(2, Math.min(98, Math.round(ratio * 100)));
+        els.compareSliderDivider.style.left = `${percent}%`;
+        els.compareSliderHandle.style.left = `${percent}%`;
+        els.compareSliderHandle.setAttribute("aria-valuenow", String(percent));
+        els.compareSliderLeft.style.clipPath = `inset(0 calc(100% - ${percent}%) 0 0)`;
+    }
+
+    function setupCompareSlider() {
+        if (!els.compareSlider || !els.compareSliderHandle) return;
+        let dragging = false;
+        const move = (clientX) => {
+            const rect = els.compareSlider.getBoundingClientRect();
+            const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+            updateCompareSliderPosition(ratio);
+        };
+        const onPointerMove = (event) => {
+            if (!dragging) return;
+            move(event.clientX);
+            event.preventDefault();
+        };
+        const onPointerUp = () => {
+            dragging = false;
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+        };
+        const onPointerDown = (event) => {
+            dragging = true;
+            move(event.clientX);
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+        };
+        els.compareSlider.addEventListener("pointerdown", onPointerDown);
+        els.compareSliderHandle.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+            dragging = true;
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+        });
+        els.compareSliderHandle.addEventListener("keydown", (event) => {
+            const current = Number(els.compareSliderHandle.getAttribute("aria-valuenow") || 50);
+            if (event.key === "ArrowLeft") {
+                updateCompareSliderPosition((current - 5) / 100);
+                event.preventDefault();
+            } else if (event.key === "ArrowRight") {
+                updateCompareSliderPosition((current + 5) / 100);
+                event.preventDefault();
+            }
+        });
     }
 
     function canvasObjectFitRect(canvas, width = canvas.width, height = canvas.height) {
@@ -1420,6 +1876,70 @@
                     latex: "table_k=(area,bbox,perimeter,ratio)",
                     flow: ["label map", "measure", "region table", "filter/sort"],
                     principle: "最终区域表可以直接用于筛选、排序、目标质量评价或后续识别。",
+                },
+            },
+            "K-means RGB": {
+                image: {
+                    latex: "I(x)\\in\\mathbb{R}^3",
+                    flow: ["image", "sample grid", "RGB cell", "input"],
+                    principle: "先把图像采样成规则网格，每个格子用平均 RGB 颜色代表。",
+                },
+                feature: {
+                    latex: "f(x)=[R,G,B]",
+                    flow: ["cell color", "RGB vector", "feature space", "distance"],
+                    principle: "RGB 模式只使用颜色向量，颜色相近的像素在特征空间中距离更近。",
+                },
+                assign: {
+                    latex: "L(x)=\\arg\\min_k \\lVert f(x)-c_k\\rVert^2",
+                    flow: ["feature", "centers", "nearest", "label"],
+                    principle: "每个格子计算到所有中心的欧氏距离，被分配给距离最近的中心。",
+                },
+                update: {
+                    latex: "c_k=\\frac{1}{|C_k|}\\sum_{x\\in C_k}f(x)",
+                    flow: ["cluster C_k", "mean feature", "new center", "next assign"],
+                    principle: "中心更新为当前类所有格子的平均特征，然后重复分配。",
+                },
+                map: {
+                    latex: "L(x)\\in\\{1,\\ldots,K\\}",
+                    flow: ["converged labels", "label map", "segmentation", "output"],
+                    principle: "迭代收敛后，每个格子拥有稳定的 cluster 标签，组成最终 label map。",
+                },
+                stats: {
+                    latex: "count_k=|\\{x\\mid L(x)=k\\}|,\\; ratio_k=count_k/|\\Omega|",
+                    flow: ["label map", "count", "ratio", "region stats"],
+                    principle: "统计每个聚类的像素数和占比，得到可解释的分割结果。",
+                },
+            },
+            "K-means RGB + XY": {
+                image: {
+                    latex: "I(x)\\in\\mathbb{R}^3,\\; x=(u,v)",
+                    flow: ["image", "sample grid", "color + position", "input"],
+                    principle: "同样先采样成规则网格，但后续会同时考虑颜色和空间位置。",
+                },
+                feature: {
+                    latex: "f(x)=[R,G,B,\\lambda u,\\lambda v]",
+                    flow: ["cell color", "normalized xy", "RGB+XY vector", "distance"],
+                    principle: "XY 项让空间上相距较远的同色像素更难被合并，增强区域连续性。",
+                },
+                assign: {
+                    latex: "L(x)=\\arg\\min_k \\lVert f(x)-c_k\\rVert^2",
+                    flow: ["feature", "centers", "nearest", "label"],
+                    principle: "同时考虑颜色与归一化坐标，最近中心决定每个格子的标签。",
+                },
+                update: {
+                    latex: "c_k=\\frac{1}{|C_k|}\\sum_{x\\in C_k}f(x)",
+                    flow: ["cluster C_k", "mean feature", "new center", "next assign"],
+                    principle: "中心在颜色-位置联合空间中移动到平均位置，兼顾颜色与空间分布。",
+                },
+                map: {
+                    latex: "L(x)\\in\\{1,\\ldots,K\\}",
+                    flow: ["converged labels", "label map", "spatial smoothness", "output"],
+                    principle: "最终标签图在空间上更连续，零散同色块更容易被分开。",
+                },
+                stats: {
+                    latex: "count_k=|\\{x\\mid L(x)=k\\}|,\\; ratio_k=count_k/|\\Omega|",
+                    flow: ["label map", "count", "ratio", "region stats"],
+                    principle: "与 RGB 模式相同，但区域通常更平滑、更连续。",
                 },
             },
         };
@@ -2768,6 +3288,25 @@
             els.grabcutToolbar.hidden = config.activeMethod !== "GrabCut";
         }
         renderStepper(config.stepperKind);
+        const isCompare = state.method === "kmeans-compare";
+        if (els.compareView) {
+            els.compareView.hidden = !isCompare;
+        }
+        if (isCompare) {
+            if (els.conceptResult) els.conceptResult.hidden = true;
+            els.frameStrip.hidden = true;
+            els.graphStage.hidden = true;
+            els.matrixStage.hidden = true;
+            els.conceptDetail.hidden = true;
+            renderKMeansCompareSlider(0.5);
+            setBusy(false);
+            return;
+        }
+        if (els.conceptResult) els.conceptResult.hidden = false;
+        els.frameStrip.hidden = false;
+        els.graphStage.hidden = false;
+        els.matrixStage.hidden = false;
+        els.conceptDetail.hidden = false;
         renderConceptFrameStrip(config);
         renderConceptFrame(0);
         setBusy(false);
@@ -2923,7 +3462,7 @@
     }
 
     function playSnapshots() {
-        if (activeFamily() !== "cluster") {
+        if (state.concept?.frames?.length > 1) {
             playConceptFrames();
             return;
         }
@@ -2950,49 +3489,16 @@
     }
 
     async function runKMeansMode() {
-        stopAnimation();
-        state.concept = null;
-        if (els.frameStrip) els.frameStrip.innerHTML = "";
         readControls();
         setBusy(true);
         setPhase("feature");
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
-        const isCompare = state.method === "kmeans-compare";
-        const useXY = state.method === "kmeans-rgbxy" || isCompare;
         const started = performance.now();
-        state.result = runKMeans(useXY);
-        state.result.elapsed = performance.now() - started;
-        state.compareResult = null;
-        if (useXY) {
-            const compareStarted = performance.now();
-            state.compareResult = runKMeans(false);
-            state.compareResult.elapsed = performance.now() - compareStarted;
-        }
-        const elapsed = state.result.elapsed + (state.compareResult?.elapsed || 0);
+        const config = buildKMeansConcept();
+        const elapsed = performance.now() - started;
         els.time.textContent = `${elapsed.toFixed(1)} ms`;
         els.statusText.textContent = "分割完成";
-        els.status.textContent = "Canvas K-means";
-        els.compareCard.hidden = false;
-        els.compareNote.hidden = state.method !== "kmeans-rgbxy";
-        els.featureSpace.hidden = state.method !== "kmeans-rgb";
-        els.compareCanvas.hidden = state.method === "kmeans-rgb";
-        els.resultTitle.textContent = isCompare ? "RGB-only 分割" : useXY ? "K-means RGB+XY 分割结果" : "K-means RGB 分割结果";
-        els.thirdTitle.textContent = isCompare ? "RGB+XY 分割" : useXY ? "空间连续性热力图" : "RGB 聚类中心 / 特征空间示意";
-        els.flowFeature.textContent = useXY ? "RGB + XY Vector" : "RGB Vector";
-        els.stripFeature.textContent = useXY ? "[R,G,B,λx,λy]" : "[R,G,B]";
-        els.stripMethod.textContent = methodLabels[state.method];
-        els.activeMethod.textContent = methodLabels[state.method];
-        els.stageTitle.textContent = `当前实验模式：${methodLabels[state.method]}`;
-        els.stripOutput.textContent = "label map";
-        renderStepper("kmeans");
-        setPhase("map");
-        renderKMeansResult(isCompare ? -1 : state.showIterations ? 0 : -1);
-        if (isCompare && state.compareResult?.snapshots?.length) {
-            renderSnapshot(state.compareResult, state.compareResult.snapshots[state.compareResult.snapshots.length - 1], els.resultCanvas);
-            renderSnapshot(state.result, state.result.snapshots[state.result.snapshots.length - 1], els.compareCanvas);
-        }
-        setBusy(false);
-        if (state.showIterations && !isCompare) playSnapshots();
+        renderAlgorithmConcept(config);
     }
 
     function tinyPixelSvg(mode) {
@@ -3539,9 +4045,6 @@
                 renderRegions();
                 return;
             }
-            els.kmeansView.hidden = false;
-            els.graphView.hidden = true;
-            els.kmeansControls.hidden = false;
             if (!state.image) {
                 const item = selectedSample();
                 await loadImage(item.image, item.name);
@@ -3636,6 +4139,7 @@
     els.run.addEventListener("click", runCurrentMode);
     els.play.addEventListener("click", playSnapshots);
     setupGrabCutInteraction();
+    setupCompareSlider();
 
     init();
 })();
