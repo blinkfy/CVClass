@@ -4,7 +4,7 @@
 
     const api = window.CVClassVisionTasks || {};
     const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
-    const bovwModelUrl = window.cvclassUrl("/static/assets/models/bovw/bovw_flowers17_model.json");
+    const bovwModelUrl = `${dataRoot}/classification_lab/bovw_flowers17_model.json`;
     const flowersSamplesUrl = `${dataRoot}/classification_lab/flowers17_samples.json`;
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
     const DATA_CACHE_VERSION = "v5";
@@ -134,9 +134,9 @@
         statSelectedWord: $("[data-cls-stat-selected-word]"),
         statSelectedDistance: $("[data-cls-stat-selected-distance]"),
         statSelectedBin: $("[data-cls-stat-selected-bin]"),
-        notesCompare: $("[data-cls-notes-compare]"),
+        notesSteps: $("[data-cls-notes-steps]"),
 
-        stepper: $$("[data-cls-phase]"),
+        stepper: $$("[data-cls-phase]").length ? $$("[data-cls-phase]") : null,
     };
 
     if (["bovw", "cnn", "compare"].includes(initialParams.get("method"))) {
@@ -154,12 +154,54 @@
     if (els.vocabSize) els.vocabSize.value = String(state.vocabSize);
     if (els.bovwEngine) els.bovwEngine.value = state.bovwEngine;
 
-    const escapeHtml = (value) => String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    const flowerNameTranslations = {
+        "daffodil": "黄水仙 (daffodil)",
+        "snowdrop": "雪滴花 (snowdrop)",
+        "lily_of_the_valley": "谷中百合 (lily of the valley)",
+        "bluebell": "蓝铃花 (bluebell)",
+        "crocus": "番红花 (crocus)",
+        "iris": "鸢尾花 (iris)",
+        "tigerlily": "虎皮百合 (tigerlily)",
+        "tulip": "郁金香 (tulip)",
+        "fritillary": "贝母花 (fritillary)",
+        "sunflower": "向日葵 (sunflower)",
+        "daisy": "雏菊 (daisy)",
+        "coltsfoot": "款冬 (coltsfoot)",
+        "dandelion": "蒲公英 (dandelion)",
+        "cowslip": "黄花九轮草 (cowslip)",
+        "buttercup": "毛茛花 (buttercup)",
+        "windflower": "秋牡丹 (windflower)",
+        "pansy": "三色堇 (pansy)",
+        // 示例图名称翻译
+        "Crosswalk People": "人行横道 (Crosswalk People)",
+        "Classroom Students": "教室学生 (Classroom Students)",
+        "Traffic Street": "交通街道 (Traffic Street)",
+        "Boat & Water": "船只与水面 (Boat & Water)",
+        "Red Apples": "红苹果 (Red Apples)",
+        "Market Stall": "市场摊位 (Market Stall)",
+        "Daffodil Flower": "黄水仙花 (Daffodil Flower)",
+        "Snowdrop Flower": "雪滴花 (Snowdrop Flower)",
+        "Lily of the Valley": "谷中百合 (Lily of the Valley)"
+    };
+
+    const translateSampleName = (name) => {
+        if (!name) return "";
+        // 匹配 "Daffodil · sample 01" 这种格式
+        const parts = name.split(" · ");
+        if (parts.length === 2) {
+            const key = parts[0].toLowerCase().replace(/\s+/g, "_");
+            const translatedKey = flowerNameTranslations[key] || parts[0];
+            // 提取括号前的中文，或者直接使用翻译后的文本
+            const chineseName = translatedKey.split(" (")[0];
+            return `${chineseName} · 样例 ${parts[1].replace("sample ", "")}`;
+        }
+        return flowerNameTranslations[name] || name;
+    };
+
+    const escapeHtml = (value) => {
+        const str = String(value ?? "");
+        return flowerNameTranslations[str] || str;
+    };
 
     function sample() {
         if (state.uploadedItem) return state.uploadedItem;
@@ -200,7 +242,9 @@
     }
 
     function setPhase(phase) {
-        els.stepper.forEach((item) => item.classList.toggle("is-active", item.dataset.clsPhase === phase));
+        if (els.stepper) {
+            els.stepper.forEach((item) => item.classList.toggle("is-active", item.dataset.clsPhase === phase));
+        }
     }
 
     function cnnScores(item) {
@@ -776,18 +820,13 @@
         const active = activeBovwInfo();
         const activeChip = els.bovwDictionary.querySelector(`[data-word-id="${active.wordId}"]`);
         if (!activeChip) return;
-        const chipTop = activeChip.offsetTop;
-        const chipBottom = chipTop + activeChip.offsetHeight;
-        const viewTop = els.bovwDictionary.scrollTop;
-        const viewBottom = viewTop + els.bovwDictionary.clientHeight;
-        const padding = 12;
-        if (chipTop < viewTop + padding) {
-            els.bovwDictionary.scrollTo({ top: Math.max(0, chipTop - padding), behavior: "smooth" });
-            return;
-        }
-        if (chipBottom > viewBottom - padding) {
-            els.bovwDictionary.scrollTo({ top: chipBottom - els.bovwDictionary.clientHeight + padding, behavior: "smooth" });
-        }
+        
+        // 使用 scrollIntoView 配合 block: "nearest" 确保元素滚动到可见区域，且不会引起页面整体抖动
+        activeChip.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "nearest"
+        });
     }
 
     function renderHistogram(target) {
@@ -837,8 +876,8 @@
     function renderHistogramVector() {
         const active = activeBovwInfo();
         if (!state.features.length) {
-            els.bovwHistVector.innerHTML = `<span>histogram vector</span><code>[computing from canvas image...]</code>`;
-            els.bovwHistVote.innerHTML = `<strong>等待图像采样</strong><span>patch descriptors → codebook assignment</span><em>hist[w] += count</em>`;
+            els.bovwHistVector.innerHTML = `<span>直方图特征向量</span><code>[正在从图像中计算...]</code>`;
+            els.bovwHistVote.innerHTML = `<strong>等待图像采样</strong><span>局部描述子 → 词典最近邻分配</span><em>hist[w] += count</em>`;
             return;
         }
         if (state.histogram.length >= 64) {
@@ -852,24 +891,24 @@
                 .join(" · ");
             els.bovwHistVector.hidden = true;
             els.bovwHistVector.innerHTML = `
-                <span>radial histogram summary</span>
-                <code>${nonZero}/${state.histogram.length} non-zero bins · active w${active.wordId + 1}=${active.count} · ${topBins}</code>
+                <span>径向直方图摘要</span>
+                <code>${nonZero}/${state.histogram.length} 个非零维度 · 当前选中 w${active.wordId + 1}=${active.count} · ${topBins}</code>
             `;
             els.bovwHistVote.innerHTML = `
-                <strong style="--word-color:${active.word.color}">feature f${active.featureId + 1} → w${active.wordId + 1}</strong>
-                <span>nearest word distance = ${active.distance.toFixed(3)}</span>
-                <em>radial spoke w${active.wordId + 1} extends from center</em>
+                <strong style="--word-color:${active.word.color}">特征点 f${active.featureId + 1} → 视觉单词 w${active.wordId + 1}</strong>
+                <span>最近邻词典距离 = ${active.distance.toFixed(3)}</span>
+                <em>从中心向外延伸的径向射线 w${active.wordId + 1}</em>
             `;
             return;
         }
         els.bovwHistVector.hidden = false;
         els.bovwHistVector.innerHTML = `
-            <span>histogram vector</span>
+            <span>直方图特征向量</span>
             <code>[${state.histogram.map((count, index) => index === active.wordId ? `<b>${count}</b>` : count).join(", ")}]</code>
         `;
         els.bovwHistVote.innerHTML = `
-            <strong style="--word-color:${active.word.color}">feature f${active.featureId + 1} → w${active.wordId + 1}</strong>
-            <span>nearest word distance = ${active.distance.toFixed(3)}</span>
+            <strong style="--word-color:${active.word.color}">特征点 f${active.featureId + 1} → 视觉单词 w${active.wordId + 1}</strong>
+            <span>最近邻词典距离 = ${active.distance.toFixed(3)}</span>
             <em>hist[w${active.wordId + 1}] += 1</em>
         `;
     }
@@ -899,7 +938,7 @@
         target.innerHTML = `
             <div class="cls-global-vector">${cells}</div>
             <div class="cls-global-meta">
-                <span>${dim} dims</span>
+                <span>${dim} 维特征</span>
                 <span>GAP: H×W×C → 1×1×C</span>
             </div>
         `;
@@ -924,21 +963,21 @@
         const isPrototype = top?.source === "prototype-demo";
         const isTrained = top?.source === "trained-flowers17";
         const classifierText = isTrained
-            ? "trained logistic regression"
+            ? "已训练的 Logistic Regression 分类器"
             : isPrototype
-                ? "untrained prototype weights"
-                : "calibrated demo scores";
+                ? "未训练的原型权重分类器"
+                : "已校准的演示分类器";
         const note = isTrained
             ? "当前 Top-K 由导出的 codebook、L1+sqrt histogram 和 logistic regression 权重在前端计算。"
             : isPrototype
                 ? "当前为未训练原型分数，只用于说明 histogram 如何进入分类器。"
                 : "内置样例分数经过人工校准，用来演示分类器输出结构。";
         els.bovwClassifierFlow.innerHTML = `
-            <span data-chain-node="classifier">computed histogram</span>
+            <span data-chain-node="classifier">计算得到的直方图</span>
             <b aria-hidden="true">→</b>
             <span>${classifierText}</span>
             <b aria-hidden="true">→</b>
-            <strong>${top ? `${escapeHtml(top.label)} ${Math.round(top.score * 100)}%` : "Top-K scores"}</strong>
+            <strong>${top ? `${escapeHtml(top.label)} ${Math.round(top.score * 100)}%` : "Top-K 预测分数"}</strong>
             <small>${state.features.length ? `当前选中 f${active.featureId + 1} 投票到 w${active.wordId + 1}，它贡献的是向量第 ${active.wordId + 1} 维。${note}` : "先从 Canvas 图像采样 patch descriptor，再由 histogram 进入分类器。"}</small>
         `;
     }
@@ -952,9 +991,9 @@
         els.bovwFeatureCard.style.top = `${top}%`;
         els.bovwFeatureCard.style.setProperty("--word-color", active.word.color);
         els.bovwFeatureCard.innerHTML = `
-            <strong>feature f${active.featureId + 1}</strong>
-            <span>assigned visual word: <b>w${active.wordId + 1}</b></span>
-            <span>nearest word distance: <b>${active.distance.toFixed(3)}</b></span>
+            <strong>特征点 f${active.featureId + 1}</strong>
+            <span>分配的视觉单词: <b>w${active.wordId + 1}</b></span>
+            <span>最近邻单词距离: <b>${active.distance.toFixed(3)}</b></span>
             <em>hist[w${active.wordId + 1}] += 1</em>
         `;
     }
@@ -1060,7 +1099,8 @@
         if (!isElementVisibleInside(wordNode, els.bovwDictionary)) {
             els.bovwChain.innerHTML = "";
             scrollActiveWordIntoView();
-            window.setTimeout(scheduleBovwChain, 180);
+            // 增加延迟，等待平滑滚动动画结束后再重新绘制连线，确保位置计算准确
+            window.setTimeout(scheduleBovwChain, 300);
             return;
         }
 
@@ -1131,56 +1171,161 @@
         const active = activeBovwInfo();
 
         els.notesMethod.textContent = state.method === "bovw" ? activeBovwLabel() : methodLabels[state.method];
-        els.statSelectedFeature.textContent = state.method === "cnn" ? "conv maps" : `f${active.featureId + 1}`;
-        els.statSelectedWord.textContent = state.method === "cnn" ? "--" : `w${active.wordId + 1}`;
+        els.statSelectedFeature.textContent = state.method === "cnn" ? "卷积特征图" : `f_{${active.featureId + 1}}`;
+        els.statSelectedWord.textContent = state.method === "cnn" ? "--" : `w_{${active.wordId + 1}}`;
         els.statSelectedDistance.textContent = state.method === "cnn" ? "--" : active.distance.toFixed(3);
-        els.statSelectedBin.textContent = state.method === "cnn" ? vectorDimLabel() : `hist[w${active.wordId + 1}] = ${active.count}`;
+        els.statSelectedBin.textContent = state.method === "cnn" ? vectorDimLabel() : `hist[w_{${active.wordId + 1}}] = ${active.count}`;
+
+        let stepsHtml = "";
 
         if (state.method === "cnn") {
             els.notesMethodDesc.textContent = "直接从像素学习卷积特征、全局语义向量和分类器参数。";
-            els.notesFormula.textContent = "p = softmax(W · GAP(conv(image)) + b)";
+            els.notesFormula.textContent = "p = \\operatorname{softmax}(W \\cdot \\operatorname{GAP}(\\operatorname{conv}(I)) + b)";
             els.notesFormulaNote.textContent = "CNN 通过卷积层提取层级特征，经全局平均池化得到图像级向量，再由全连接层输出类别概率。";
-            els.notesCompare.innerHTML = `
-                <dl>
-                    <div><dt>当前方法</dt><dd>CNN 端到端分类：输入 → 卷积特征图 → GAP → Softmax。</dd></div>
-                    <div><dt>与 BoVW 对比</dt><dd>不需要手工设计视觉词典，特征、聚合和分类器联合优化。</dd></div>
-                    <div><dt>Top-K 输出</dt><dd>展示 softmax 后的 Top-${state.topK} 类别概率。</dd></div>
-                </dl>
+
+            stepsHtml = `
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">1</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">层级特征提取 (Feature Extraction)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\mathbf{F} = \\operatorname{Conv}(I)"></div>
+                        <span class="cls-notes-step-desc">输入图像 <strong>280×187×3</strong> 经多层卷积，提取出高维语义特征图，尺寸为 <strong>18×12×64</strong>。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">2</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">全局平均池化 (Global Average Pooling)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\mathbf{v}_c = \\frac{1}{H \\times W} \\sum_{x,y} \\mathbf{F}_c(x,y)"></div>
+                        <span class="cls-notes-step-desc">将特征图在空间维度上求平均，压缩为一个 <strong>64</strong> 维的全局特征向量，代表整张图的全局语义。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">3</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">全连接层映射 (Fully Connected Layer)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\mathbf{s} = W \\mathbf{v} + \\mathbf{b}"></div>
+                        <span class="cls-notes-step-desc">将 64 维特征向量乘以权重矩阵 <strong>W (17×64)</strong> 并加上偏置 <strong>b</strong>，得到 17 个类别的原始得分。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">4</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">概率归一化 (Softmax Classifier)</span>
+                        <div class="cls-notes-step-formula" data-formula="p_c = \\frac{e^{s_c}}{\\sum_j e^{s_j}}"></div>
+                        <span class="cls-notes-step-desc">通过 Softmax 函数将原始得分转化为概率分布。Top-1 预测类别为 <strong>${topC ? escapeHtml(topC.label) : "--"}</strong>，置信度为 <strong>${topC ? Math.round(topC.score * 100) : 0}%</strong>。</span>
+                    </div>
+                </div>
             `;
-            return;
-        }
-        if (state.method === "compare") {
+        } else if (state.method === "compare") {
             els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
-            els.notesFormula.textContent = "BoVW: score_c = W_c · normalize(hist) + b_c";
+            els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
             els.notesFormulaNote.textContent = isTrainedBovwActive()
                 ? "BoVW 分支使用本地训练导出的 KMeans codebook 与 logistic regression 权重，在前端完成真实分类。"
-                : "Principle Demo 使用页面生成的视觉词典和原型权重，只用于解释 BoVW 原理。";
-            els.notesCompare.innerHTML = `
-                <dl>
-                    <div><dt>BoVW Top-1</dt><dd>${topB ? `${escapeHtml(topB.label)} · ${Math.round(topB.score * 100)}%` : "--"}</dd></div>
-                    <div><dt>CNN Top-1</dt><dd>${topC ? `${escapeHtml(topC.label)} · ${Math.round(topC.score * 100)}%` : "--"}</dd></div>
-                    <div><dt>关键差异</dt><dd>BoVW 把图像表示为可解释的视觉词频；CNN 把图像表示为端到端学习得到的语义向量。</dd></div>
-                </dl>
+                : "教学原型模式使用页面生成的视觉词典和原型权重，只用于解释 BoVW 原理。";
+
+            stepsHtml = `
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">1</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">BoVW 路径预测 (Top-1)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c"></div>
+                        <span class="cls-notes-step-desc">BoVW 预测 Top-1 类别为 <strong>${topB ? escapeHtml(topB.label) : "--"}</strong>，置信度为 <strong>${topB ? Math.round(topB.score * 100) : 0}%</strong>。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">2</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">CNN 路径预测 (Top-1)</span>
+                        <div class="cls-notes-step-formula" data-formula="p = \\operatorname{softmax}(W \\cdot \\operatorname{GAP}(\\mathbf{F}) + b)"></div>
+                        <span class="cls-notes-step-desc">CNN 预测 Top-1 类别为 <strong>${topC ? escapeHtml(topC.label) : "--"}</strong>，置信度为 <strong>${topC ? Math.round(topC.score * 100) : 0}%</strong>。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">3</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">核心表示差异 (Representation Difference)</span>
+                        <span class="cls-notes-step-desc"><strong>BoVW</strong> 将图像表示为可解释的<strong>视觉词频直方图</strong>（无空间结构）；<strong>CNN</strong> 将图像表示为端到端学习得到的<strong>高维语义向量</strong>（保留层级空间结构）。</span>
+                    </div>
+                </div>
             `;
-            return;
+        } else {
+            const isPrototype = topB?.source === "prototype-demo";
+            const isTrained = topB?.source === "trained-flowers17";
+            els.notesMethodDesc.textContent = isTrained
+                ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
+                : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
+            els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
+            els.notesFormulaNote.textContent = isTrained
+                ? "前端从 Canvas 采样 patch descriptor，分配到导出的 128 个 visual words，执行 L1+sqrt 归一化，再用 JSON 中的 W 和 b 计算 softmax。"
+                : `BoVW 教学原型模式：从 Canvas 采样 patch descriptor，分配到页面生成的 codebook，再用 ${state.vocabSize} 维直方图展示分类器输入。`;
+
+            const totalFeatures = state.features?.length || 140;
+            const normVal = Math.sqrt(active.count / totalFeatures).toFixed(3);
+
+            stepsHtml = `
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">1</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">特征描述子量化 (Quantization)</span>
+                        <div class="cls-notes-step-formula" data-formula="k^* = \\arg\\min_{k} \\|\\mathbf{f}_{${active.featureId + 1}} - \\mathbf{c}_k\\|_2"></div>
+                        <span class="cls-notes-step-desc">计算当前特征点 <strong>f_{${active.featureId + 1}}</strong> 与词典中心的欧氏距离，最近邻为 <strong>w_{${active.wordId + 1}}</strong>，距离为 <strong>${active.distance.toFixed(3)}</strong>。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">2</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">直方图频数投递 (Histogram Pooling)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\mathbf{h}[w_{${active.wordId + 1}}] \\leftarrow \\mathbf{h}[w_{${active.wordId + 1}}] + 1"></div>
+                        <span class="cls-notes-step-desc">将特征点投递到对应的直方图通道，通道 <strong>w_{${active.wordId + 1}}</strong> 的频数累加为 <strong>${active.count}</strong>。整图共投递了 <strong>${totalFeatures}</strong> 个特征点。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">3</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">直方图归一化 (L1-sqrt Normalization)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\mathbf{h}' = \\sqrt{\\frac{\\mathbf{h}}{\\sum \\mathbf{h}}}"></div>
+                        <span class="cls-notes-step-desc">消除图像大小和特征点总数的影响。当前通道归一化后的特征值：<strong>\\sqrt{${active.count} / ${totalFeatures}} \\approx ${normVal}</strong>。</span>
+                    </div>
+                </div>
+                <div class="cls-notes-step-item">
+                    <span class="cls-notes-step-num">4</span>
+                    <div class="cls-notes-step-content">
+                        <span class="cls-notes-step-title">线性分类器决策 (Linear Classifier)</span>
+                        <div class="cls-notes-step-formula" data-formula="\\text{score}_c = W_c \\cdot \\mathbf{h}' + b_c"></div>
+                        <span class="cls-notes-step-desc">使用训练好的分类器权重与直方图向量做内积。Top-1 预测类别为 <strong>${topB ? escapeHtml(topB.label) : "--"}</strong>，置信度为 <strong>${topB ? Math.round(topB.score * 100) : 0}%</strong>。</span>
+                    </div>
+                </div>
+            `;
         }
-        const isPrototype = topB?.source === "prototype-demo";
-        const isTrained = topB?.source === "trained-flowers17";
-        els.notesMethodDesc.textContent = isTrained
-            ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
-            : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
-        els.notesFormula.textContent = "score_c = W_c · normalize(hist) + b_c";
-        els.notesFormulaNote.textContent = isTrained
-            ? "前端从 Canvas 采样 patch descriptor，分配到导出的 128 个 visual words，执行 L1+sqrt 归一化，再用 JSON 中的 W 和 b 计算 softmax。"
-            : `BoVW Principle Demo：从 Canvas 采样 patch descriptor，分配到页面生成的 codebook，再用 ${state.vocabSize} 维 histogram 展示分类器输入。`;
-        els.notesCompare.innerHTML = `
-            <dl>
-                <div><dt>当前 visual word</dt><dd>w${active.wordId + 1} · ${escapeHtml(active.meaning)} · count ${active.count}</dd></div>
-                <div><dt>当前 histogram bin</dt><dd>hist[w${active.wordId + 1}] += 1，向量第 ${active.wordId + 1} 维被累加。</dd></div>
-                <div><dt>输出结构</dt><dd>image → histogram vector (${isTrained ? state.bovwModel.vocab_size : state.vocabSize} bins) → class scores。</dd></div>
-                <div><dt>Top-K</dt><dd>${isTrained ? "真实 Flowers17 分类分数" : isPrototype ? "未训练原型分数，仅说明 histogram 如何变成分数" : "内置示例校准分数，用来演示分类器输出结构"}；Top-1 为 ${topB ? `${escapeHtml(topB.label)} ${Math.round(topB.score * 100)}%` : "--"}。</dd></div>
-            </dl>
-        `;
+
+        els.notesSteps.innerHTML = stepsHtml;
+
+        // 渲染 KaTeX 公式
+        if (window.katex) {
+            try {
+                // 渲染主公式
+                window.katex.render(els.notesFormula.textContent, els.notesFormula, { throwOnError: false, displayMode: false });
+                
+                // 渲染当前选中特征的 LaTeX 符号
+                if (state.method !== "cnn") {
+                    window.katex.render(`f_{${active.featureId + 1}}`, els.statSelectedFeature, { throwOnError: false });
+                    window.katex.render(`w_{${active.wordId + 1}}`, els.statSelectedWord, { throwOnError: false });
+                    window.katex.render(`\\mathbf{h}[w_{${active.wordId + 1}}] = ${active.count}`, els.statSelectedBin, { throwOnError: false });
+                } else {
+                    els.statSelectedWord.textContent = "--";
+                    els.statSelectedBin.textContent = vectorDimLabel();
+                }
+
+                // 渲染步骤流中的公式
+                els.notesSteps.querySelectorAll("[data-formula]").forEach((el) => {
+                    const formula = el.dataset.formula;
+                    window.katex.render(formula, el, { throwOnError: false, displayMode: false });
+                });
+            } catch (e) {
+                console.error("KaTeX render error:", e);
+            }
+        }
     }
 
     function setImage(img, missing, item) {
@@ -1253,10 +1398,10 @@
     function renderBovwModeText() {
         const trained = isTrainedBovwActive();
         if (els.bovwTopkTitle) {
-            els.bovwTopkTitle.textContent = trained ? "Top-K Flower Prediction" : "Top-K Principle Score";
+            els.bovwTopkTitle.textContent = trained ? "Top-K 花卉预测" : "Top-K 原型预测分数";
         }
         if (els.bovwTopkSubtitle) {
-            els.bovwTopkSubtitle.textContent = trained ? "trained classifier over BoVW" : "principle demo over BoVW";
+            els.bovwTopkSubtitle.textContent = trained ? "基于 BoVW 的已训练分类器" : "基于 BoVW 的教学原型演示";
         }
         if (els.bovwTopkNote) {
             els.bovwTopkNote.textContent = trained
@@ -1268,19 +1413,19 @@
                 const model = state.bovwModel;
                 els.bovwInferenceProof.hidden = false;
                 els.bovwInferenceProof.innerHTML = `
-                    <span>browser-side inference</span>
-                    <strong>model JSON loaded</strong>
-                    <code>codebook ${model.vocab_size}×${model.descriptor.dimension}</code>
-                    <code>W ${model.labels.length}×${model.vocab_size} + b</code>
-                    <em>no backend scoring request</em>
+                    <span>前端推理</span>
+                    <strong>模型配置已加载</strong>
+                    <code>词典大小 ${model.vocab_size}×${model.descriptor.dimension}</code>
+                    <code>权重 W ${model.labels.length}×${model.vocab_size} + b</code>
+                    <em>无后端评分请求</em>
                 `;
             } else {
                 els.bovwInferenceProof.hidden = false;
                 els.bovwInferenceProof.innerHTML = `
-                    <span>principle demo</span>
-                    <strong>generated codebook</strong>
-                    <code>prototype weights</code>
-                    <em>not class probability</em>
+                    <span>原理演示</span>
+                    <strong>已生成词典</strong>
+                    <code>原型权重</code>
+                    <em>非真实分类概率</em>
                 `;
             }
         }
@@ -1391,7 +1536,7 @@
             state.sampleId = data.defaultSample || data.samples[0].id;
         }
         els.sample.innerHTML = data.samples
-            .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`)
+            .map((item) => `<option value="${item.id}">${translateSampleName(item.name)}</option>`)
             .join("");
         els.sample.value = state.sampleId;
     }

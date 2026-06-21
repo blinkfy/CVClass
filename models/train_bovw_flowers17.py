@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description="Train a frontend-compatible BoVW classifier on Oxford 17 Flowers.")
     parser.add_argument("--data-dir", type=Path, default=root / "models" / "data" / "17flowers")
-    parser.add_argument("--model-out", type=Path, default=root / "static" / "assets" / "models" / "bovw" / "bovw_flowers17_model.json")
+    parser.add_argument("--model-out", type=Path, default=root / "static" / "assets" / "data" / "vision_tasks" / "classification_lab" / "bovw_flowers17_model.json")
     parser.add_argument("--samples-out", type=Path, default=root / "static" / "assets" / "data" / "vision_tasks" / "classification_lab" / "flowers17_samples.json")
     parser.add_argument("--sample-img-dir", type=Path, default=root / "static" / "assets" / "img" / "flowers17")
     parser.add_argument("--vocab-size", type=int, default=128)

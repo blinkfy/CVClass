@@ -1,5 +1,10 @@
 {% extends "vision_tasks_base.html" %}
 
+{% block extra_css %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+{% endblock %}
+
 {% block vision_content %}
 <section id="bovw-classification" class="vision-workbench method-lab-workbench classification-lab-workbench" data-classification-lab aria-label="图像分类实验工作台">
     <aside class="vision-panel vision-control-panel">
@@ -85,23 +90,23 @@
         <div class="cls-mode-panel" data-cls-mode="bovw">
             <svg class="cls-bovw-chain-svg" data-cls-bovw-chain aria-hidden="true"></svg>
             <div class="cls-bovw-flow" data-cls-bovw-flow aria-label="BoVW 处理流程">
-                <div data-cls-bovw-step="image"><span>01</span><strong>Image</strong><small>输入图像</small></div>
+                <div data-cls-bovw-step="image"><span>01</span><strong>输入图像</strong><small>Image</small></div>
                 <b aria-hidden="true"></b>
-                <div data-cls-bovw-step="local-features"><span>02</span><strong>Local Features</strong><small>局部描述子</small></div>
+                <div data-cls-bovw-step="local-features"><span>02</span><strong>局部特征</strong><small>Local Features</small></div>
                 <b aria-hidden="true"></b>
-                <div data-cls-bovw-step="visual-words"><span>03</span><strong>Visual Words</strong><small>最近词典中心</small></div>
+                <div data-cls-bovw-step="visual-words"><span>03</span><strong>视觉单词</strong><small>Visual Words</small></div>
                 <b aria-hidden="true"></b>
-                <div data-cls-bovw-step="histogram"><span>04</span><strong>Histogram</strong><small>hist[w] += 1</small></div>
+                <div data-cls-bovw-step="histogram"><span>04</span><strong>特征直方图</strong><small>Histogram</small></div>
                 <b aria-hidden="true"></b>
-                <div data-cls-bovw-step="classifier"><span>05</span><strong>Classifier</strong><small>linear / SVM</small></div>
+                <div data-cls-bovw-step="classifier"><span>05</span><strong>分类器</strong><small>Classifier</small></div>
                 <b aria-hidden="true"></b>
-                <div data-cls-bovw-step="topk"><span>06</span><strong>Top-K</strong><small>类别分数</small></div>
+                <div data-cls-bovw-step="topk"><span>06</span><strong>Top-K 预测</strong><small>Top-K Prediction</small></div>
             </div>
             <div class="cls-grid-2x2">
                 <div class="classification-image-card">
                     <div class="classification-card-head">
                         <strong>原图 + 局部特征点</strong>
-                        <span>hover / click a representative feature</span>
+                        <span>悬停/点击查看特征点详情</span>
                     </div>
                     <div class="classification-image-stage">
                         <img data-cls-bovw-image alt="分类样例图">
@@ -113,8 +118,8 @@
 
                 <div class="classification-side-card">
                     <div class="classification-card-head">
-                        <strong>Visual Dictionary</strong>
-                        <span>K-means visual dictionary</span>
+                        <strong>视觉词典</strong>
+                        <span>K-means 聚类中心</span>
                     </div>
                     <p class="cls-card-note">每个 visual word 是一种局部视觉模式中心，不是类别标签。</p>
                     <div class="cls-dictionary-grid" data-cls-bovw-dictionary></div>
@@ -123,7 +128,7 @@
                 <div class="classification-hist-card">
                     <div class="classification-card-head">
                         <strong>视觉单词直方图</strong>
-                        <span>histogram encoding</span>
+                        <span>直方图编码</span>
                     </div>
                     <p class="cls-card-note">BoVW histogram 表示每个 visual word 在当前图像中出现的次数。</p>
                     <div class="cls-hist-vector" data-cls-bovw-hist-vector></div>
@@ -133,8 +138,8 @@
 
                 <div class="classification-topk-card">
                     <div class="classification-card-head">
-                        <strong data-cls-bovw-topk-title>Top-K Flower Prediction</strong>
-                        <span data-cls-bovw-topk-subtitle>trained classifier over BoVW</span>
+                        <strong data-cls-bovw-topk-title>Top-K 花卉预测</strong>
+                        <span>基于 BoVW 的分类器</span>
                     </div>
                     <div class="cls-inference-proof" data-cls-bovw-inference-proof></div>
                     <div class="cls-classifier-flow" data-cls-bovw-classifier-flow></div>
@@ -149,7 +154,7 @@
                 <div class="classification-image-card">
                     <div class="classification-card-head">
                         <strong>输入图像</strong>
-                        <span>input image to CNN</span>
+                        <span>CNN 输入图像</span>
                     </div>
                     <div class="classification-image-stage">
                         <img data-cls-cnn-image alt="CNN 输入图">
@@ -161,15 +166,15 @@
                 <div class="classification-side-card">
                     <div class="classification-card-head">
                         <strong>卷积特征图</strong>
-                        <span>learned filters and activation maps</span>
+                        <span>卷积核与激活特征图</span>
                     </div>
                     <div class="cls-cnn-map-grid" data-cls-cnn-maps></div>
                 </div>
 
                 <div class="classification-hist-card">
                     <div class="classification-card-head">
-                        <strong>Global Feature / GAP</strong>
-                        <span>global average pooled feature</span>
+                        <strong>全局特征 (GAP)</strong>
+                        <span>全局平均池化特征向量</span>
                     </div>
                     <div class="cls-global-feature" data-cls-cnn-global></div>
                 </div>
@@ -177,7 +182,7 @@
                 <div class="classification-topk-card">
                     <div class="classification-card-head">
                         <strong>Softmax Top-K 输出</strong>
-                        <span>end-to-end CNN classifier scores</span>
+                        <span>端到端 CNN 分类器得分</span>
                     </div>
                     <div class="classification-score-list" data-cls-cnn-score-list></div>
                 </div>
@@ -188,9 +193,9 @@
         <div class="cls-mode-panel" data-cls-mode="compare" hidden>
             <div class="cls-compare-grid">
                 <section class="cls-compare-route">
-                    <h4>BoVW Route</h4>
+                    <h4>BoVW 路径</h4>
                     <div class="cls-route-steps">
-                        <span>image</span><b></b><span>keypoints</span><b></b><span>visual words</span><b></b><span>histogram</span><b></b><span>classifier</span>
+                        <span>图像</span><b></b><span>局部特征点</span><b></b><span>视觉单词</span><b></b><span>直方图</span><b></b><span>分类器</span>
                     </div>
                     <div class="cls-compare-preview" data-cls-compare-bovw>
                         <div class="cls-compare-preview-image">
@@ -203,9 +208,9 @@
                 </section>
 
                 <section class="cls-compare-route">
-                    <h4>CNN Route</h4>
+                    <h4>CNN 路径</h4>
                     <div class="cls-route-steps">
-                        <span>image</span><b></b><span>conv maps</span><b></b><span>global feature</span><b></b><span>softmax</span>
+                        <span>图像</span><b></b><span>卷积特征图</span><b></b><span>全局特征</span><b></b><span>Softmax 输出</span>
                     </div>
                     <div class="cls-compare-preview" data-cls-compare-cnn>
                         <div class="cls-compare-preview-image">
@@ -228,7 +233,7 @@
     <aside class="vision-panel vision-notes-panel method-notes-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>Process Notes</h3><p>BoVW / CNN Classification</p></div>
+            <div><h3>过程笔记</h3><p>BoVW / CNN 图像分类</p></div>
         </div>
         <div class="cls-notes-grid">
             <div class="vision-formula-card">
@@ -244,30 +249,21 @@
             <div class="vision-formula-card">
                 <span>当前选中特征</span>
                 <div class="vision-kv-grid cls-notes-kv" data-cls-notes-stats>
-                    <div><span>feature</span><strong data-cls-stat-selected-feature>--</strong></div>
-                    <div><span>visual word</span><strong data-cls-stat-selected-word>--</strong></div>
-                    <div><span>distance</span><strong data-cls-stat-selected-distance>--</strong></div>
-                    <div><span>hist bin</span><strong data-cls-stat-selected-bin>--</strong></div>
+                    <div><span>特征点</span><strong data-cls-stat-selected-feature>--</strong></div>
+                    <div><span>视觉单词</span><strong data-cls-stat-selected-word>--</strong></div>
+                    <div><span>最近邻距离</span><strong data-cls-stat-selected-distance>--</strong></div>
+                    <div><span>直方图维度</span><strong data-cls-stat-selected-bin>--</strong></div>
                 </div>
             </div>
             <div class="vision-formula-card">
-                <span>输出结构</span>
-                <div class="method-notes-data" data-cls-notes-compare>
-                    <dl>
-                        <div><dt>image</dt><dd>输入整图</dd></div>
-                        <div><dt>histogram vector</dt><dd>视觉词频向量</dd></div>
-                        <div><dt>class scores</dt><dd>Top-K 类别分数</dd></div>
-                    </dl>
+                <span>输出结构与计算步骤</span>
+                <div class="cls-notes-steps" data-cls-notes-steps>
+                    <!-- 动态渲染步骤流 -->
                 </div>
             </div>
         </div>
     </aside>
 </section>
 
-<ol class="vision-stepper method-stepper classification-stepper" aria-label="图像分类处理流程" data-cls-stepper>
-    <li data-cls-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
-    <li data-cls-phase="representation"><span>2</span><div><strong>Representation</strong><small>BoVW histogram / CNN feature</small></div></li>
-    <li data-cls-phase="classifier"><span>3</span><div><strong>Classifier</strong><small>linear / fully-connected</small></div></li>
-    <li data-cls-phase="topk"><span>4</span><div><strong>Top-K Prediction</strong><small>ranked class scores</small></div></li>
-</ol>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 {% endblock %}

@@ -98,7 +98,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 .vision-workbench {
     display: grid;
     grid-template-columns: minmax(252px, 278px) minmax(420px, 1fr) minmax(292px, 330px);
-    align-items: stretch;
+    align-items: start;
     gap: 14px;
 }
 
@@ -117,6 +117,8 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .vision-control-panel,
 .vision-notes-panel {
+    position: sticky;
+    top: 14px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -5479,6 +5481,85 @@ body:has(.vision-lab) .ai-fab-icon img {
     font-size: 11px;
 }
 
+/* 垂直步骤流样式 */
+.cls-notes-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 6px;
+    position: relative;
+}
+
+.cls-notes-step-item {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
+    position: relative;
+}
+
+.cls-notes-step-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 9px;
+    top: 20px;
+    bottom: -14px;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.cls-notes-step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 900;
+    z-index: 1;
+}
+
+.cls-notes-step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cls-notes-step-title {
+    color: #1e293b;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.cls-notes-step-formula {
+    padding: 4px 6px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 6px;
+    font-size: 11px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.cls-notes-step-formula::-webkit-scrollbar {
+    display: none;
+}
+
+.cls-notes-step-desc {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.cls-notes-step-desc strong {
+    color: #2563eb;
+    font-weight: 900;
+}
+
 .cls-notes-kv {
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
@@ -5702,7 +5783,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .cls-mode-panel[data-cls-mode="bovw"] .classification-image-stage {
-    min-height: 332px;
+    height: clamp(240px, 28vw, 340px);
 }
 
 .cls-feature-popover {
@@ -5749,7 +5830,8 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .cls-mode-panel[data-cls-mode="bovw"] .cls-dictionary-grid {
     grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
-    max-height: clamp(260px, 31vw, 430px);
+    height: clamp(240px, 28vw, 340px);
+    max-height: 340px;
     flex: 1 1 auto;
     overflow: auto;
     padding: 1px 6px 8px 0;
@@ -5901,11 +5983,11 @@ body:has(.vision-lab) .ai-fab-icon img {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
-    margin: 8px 0;
+    gap: 4px;
+    margin: 4px 0;
     border: 1px solid #bfdbfe;
-    border-radius: 10px;
-    padding: 7px;
+    border-radius: 8px;
+    padding: 4px;
     background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
 }
 
@@ -5915,9 +5997,9 @@ body:has(.vision-lab) .ai-fab-icon img {
 .cls-inference-proof em {
     border: 1px solid #dbeafe;
     border-radius: 999px;
-    padding: 4px 7px;
+    padding: 2px 5px;
     color: #1e3a8a;
-    font-size: 9px;
+    font-size: 8px;
     font-style: normal;
     font-weight: 950;
     line-height: 1.1;
