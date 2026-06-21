@@ -8,7 +8,7 @@
     "enabled": true,
     "provider": "bailian",
     "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "api_key": "sk-466729435eb74092aad43f2d2f541c05",
+    "api_key": "sk-",
     "model": "qwen3-vl-flash",
     "temperature": 0.1,
     "max_tokens": 800
