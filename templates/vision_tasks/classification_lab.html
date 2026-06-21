@@ -27,6 +27,7 @@
                     <option value="32">32</option>
                     <option value="64">64</option>
                 </select>
+                <small class="cls-field-hint">词典大小决定 BoVW histogram 维度：16 / 32 / 64 bins。</small>
             </label>
 
             <label class="vision-field">
@@ -75,16 +76,31 @@
 
         <!-- BoVW mode -->
         <div class="cls-mode-panel" data-cls-mode="bovw">
+            <svg class="cls-bovw-chain-svg" data-cls-bovw-chain aria-hidden="true"></svg>
+            <div class="cls-bovw-flow" data-cls-bovw-flow aria-label="BoVW 处理流程">
+                <div data-cls-bovw-step="image"><span>01</span><strong>Image</strong><small>输入图像</small></div>
+                <b aria-hidden="true"></b>
+                <div data-cls-bovw-step="local-features"><span>02</span><strong>Local Features</strong><small>局部描述子</small></div>
+                <b aria-hidden="true"></b>
+                <div data-cls-bovw-step="visual-words"><span>03</span><strong>Visual Words</strong><small>最近词典中心</small></div>
+                <b aria-hidden="true"></b>
+                <div data-cls-bovw-step="histogram"><span>04</span><strong>Histogram</strong><small>hist[w] += 1</small></div>
+                <b aria-hidden="true"></b>
+                <div data-cls-bovw-step="classifier"><span>05</span><strong>Classifier</strong><small>linear / SVM</small></div>
+                <b aria-hidden="true"></b>
+                <div data-cls-bovw-step="topk"><span>06</span><strong>Top-K</strong><small>类别分数</small></div>
+            </div>
             <div class="cls-grid-2x2">
                 <div class="classification-image-card">
                     <div class="classification-card-head">
                         <strong>原图 + 局部特征点</strong>
-                        <span>keypoints assigned to visual words</span>
+                        <span>hover / click a representative feature</span>
                     </div>
                     <div class="classification-image-stage">
                         <img data-cls-bovw-image alt="分类样例图">
                         <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-cls-bovw-missing></span></div>
                         <svg data-cls-bovw-overlay viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="BoVW 特征点覆盖层"></svg>
+                        <div class="cls-feature-popover" data-cls-bovw-feature-card></div>
                     </div>
                 </div>
 
@@ -93,6 +109,7 @@
                         <strong>Visual Dictionary</strong>
                         <span>K-means visual dictionary</span>
                     </div>
+                    <p class="cls-card-note">每个 visual word 是一种局部视觉模式中心，不是类别标签。</p>
                     <div class="cls-dictionary-grid" data-cls-bovw-dictionary></div>
                 </div>
 
@@ -101,6 +118,9 @@
                         <strong>视觉单词直方图</strong>
                         <span>histogram encoding</span>
                     </div>
+                    <p class="cls-card-note">BoVW histogram 表示每个 visual word 在当前图像中出现的次数。</p>
+                    <div class="cls-hist-vector" data-cls-bovw-hist-vector></div>
+                    <div class="cls-hist-vote" data-cls-bovw-hist-vote></div>
                     <div class="cls-histogram" data-cls-bovw-histogram></div>
                 </div>
 
@@ -109,6 +129,8 @@
                         <strong>Top-K 分类概率</strong>
                         <span>linear classifier over BoVW</span>
                     </div>
+                    <p class="cls-card-note">分类器输入的是 histogram vector，而不是原图像。</p>
+                    <div class="cls-classifier-flow" data-cls-bovw-classifier-flow></div>
                     <div class="classification-score-list" data-cls-bovw-score-list></div>
                 </div>
             </div>
@@ -203,31 +225,31 @@
         </div>
         <div class="cls-notes-grid">
             <div class="vision-formula-card">
-                <span>当前方法</span>
+                <span>当前步骤</span>
                 <strong data-cls-notes-method>BoVW 视觉词袋</strong>
                 <small data-cls-notes-method-desc>用局部特征和视觉词典生成图像级直方图表示。</small>
             </div>
             <div class="vision-formula-card">
-                <span>核心公式</span>
+                <span>BoVW 核心思想</span>
                 <strong data-cls-notes-formula>hist[w] = count(assign(feature_i) = word_w)</strong>
                 <small data-cls-notes-formula-note>BoW 将局部特征量化为视觉单词，再把整图编码为词频直方图。</small>
             </div>
             <div class="vision-formula-card">
-                <span>当前统计</span>
+                <span>当前选中特征</span>
                 <div class="vision-kv-grid cls-notes-kv" data-cls-notes-stats>
-                    <div><span>样本</span><strong data-cls-stat-sample>--</strong></div>
-                    <div><span>Top-K</span><strong data-cls-stat-topk>Top-3</strong></div>
-                    <div><span>表示</span><strong data-cls-stat-repr>--</strong></div>
-                    <div><span>Top-1</span><strong data-cls-stat-top1>--</strong></div>
+                    <div><span>feature</span><strong data-cls-stat-selected-feature>--</strong></div>
+                    <div><span>visual word</span><strong data-cls-stat-selected-word>--</strong></div>
+                    <div><span>distance</span><strong data-cls-stat-selected-distance>--</strong></div>
+                    <div><span>hist bin</span><strong data-cls-stat-selected-bin>--</strong></div>
                 </div>
             </div>
             <div class="vision-formula-card">
-                <span>BoVW / CNN 对比</span>
+                <span>输出结构</span>
                 <div class="method-notes-data" data-cls-notes-compare>
                     <dl>
-                        <div><dt>表示形式</dt><dd>BoVW 用稀疏词频直方图；CNN 用全局稠密特征向量。</dd></div>
-                        <div><dt>特征来源</dt><dd>BoVW 依赖手工局部描述子；CNN 从数据学习层级卷积核。</dd></div>
-                        <div><dt>端到端</dt><dd>BoVW 分阶段设计词典和分类器；CNN 统一优化特征与分类。</dd></div>
+                        <div><dt>image</dt><dd>输入整图</dd></div>
+                        <div><dt>histogram vector</dt><dd>视觉词频向量</dd></div>
+                        <div><dt>class scores</dt><dd>Top-K 类别分数</dd></div>
                     </dl>
                 </div>
             </div>
