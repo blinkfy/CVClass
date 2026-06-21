@@ -4,15 +4,21 @@
 
     const api = window.CVClassVisionTasks || {};
     const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
+    const bovwModelUrl = window.cvclassUrl("/static/assets/models/bovw/bovw_flowers17_model.json");
+    const flowersSamplesUrl = `${dataRoot}/classification_lab/flowers17_samples.json`;
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
-    const DATA_CACHE_VERSION = "v3";
+    const DATA_CACHE_VERSION = "v5";
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
     const methodLabels = {
-        bovw: "BoVW 视觉词袋",
+        bovw: "Trained BoVW · Oxford Flowers17",
         cnn: "CNN 端到端分类",
         compare: "BoVW vs CNN 对比",
+    };
+    const bovwEngineLabels = {
+        trained: "Trained BoVW · Oxford Flowers17",
+        principle: "BoVW Principle Demo",
     };
     const featureLabels = {
         sift: "SIFT-like",
@@ -41,12 +47,17 @@
     const bovwPrototypeLabels = ["原型 A", "原型 B", "原型 C", "原型 D", "原型 E", "原型 F"];
     const state = {
         data: null,
+        demoData: null,
+        flowerData: null,
+        bovwModel: null,
+        bovwModelReady: false,
         sampleId: "",
         uploadedItem: null,
         method: "bovw",
-        vocabSize: 16,
+        bovwEngine: "trained",
+        vocabSize: 128,
         featureType: "sift",
-        topK: 3,
+        topK: 5,
         features: [],
         words: [],
         assignments: [],
@@ -67,9 +78,10 @@
         upload: $("[data-cls-upload]"),
         methods: $$("[data-cls-method]"),
         bovwControls: $("[data-cls-bovw-controls]"),
+        bovwEngine: $("[data-cls-bovw-engine]"),
         vocabSize: $("[data-cls-vocab-size]"),
         featureType: $("[data-cls-feature-type]"),
-        topK: $("[data-cls-topk]"),
+        topK: null,
         activeMethod: $("[data-cls-active-method]"),
         inputSize: $("[data-cls-input-size]"),
         featureCount: $("[data-cls-feature-count]"),
@@ -92,6 +104,10 @@
         bovwHistVote: $("[data-cls-bovw-hist-vote]"),
         bovwClassifierFlow: $("[data-cls-bovw-classifier-flow]"),
         bovwScoreList: $("[data-cls-bovw-score-list]"),
+        bovwTopkTitle: $("[data-cls-bovw-topk-title]"),
+        bovwTopkSubtitle: $("[data-cls-bovw-topk-subtitle]"),
+        bovwTopkNote: $("[data-cls-bovw-topk-note]"),
+        bovwInferenceProof: $("[data-cls-bovw-inference-proof]"),
 
         cnnImage: $("[data-cls-cnn-image]"),
         cnnMissing: $("[data-cls-cnn-missing]"),
@@ -134,7 +150,9 @@
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", active ? "true" : "false");
     });
-    els.topK.value = String(state.topK);
+    if (els.topK) els.topK.value = String(state.topK);
+    if (els.vocabSize) els.vocabSize.value = String(state.vocabSize);
+    if (els.bovwEngine) els.bovwEngine.value = state.bovwEngine;
 
     const escapeHtml = (value) => String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -145,7 +163,23 @@
 
     function sample() {
         if (state.uploadedItem) return state.uploadedItem;
-        return state.data?.samples.find((item) => item.id === state.sampleId) || state.data?.samples[0];
+        const data = activeData();
+        return data?.samples.find((item) => item.id === state.sampleId) || data?.samples[0];
+    }
+
+    function activeData() {
+        if (state.method === "cnn") return state.demoData || state.data;
+        if (isTrainedBovwActive()) return state.flowerData || state.demoData || state.data;
+        return state.demoData || state.data;
+    }
+
+    function isTrainedBovwActive() {
+        return state.bovwEngine === "trained" && state.bovwModelReady && !!state.bovwModel;
+    }
+
+    function activeBovwLabel() {
+        if (state.bovwEngine === "principle" || !state.bovwModelReady) return bovwEngineLabels.principle;
+        return bovwEngineLabels.trained;
     }
 
     function hashSeed(text) {
@@ -284,7 +318,47 @@
         return features;
     }
 
+    function generateTrainedBovwFeatures(imageData) {
+        const count = 128;
+        const width = imageData.width;
+        const height = imageData.height;
+        const patchRadius = Math.max(4, Math.round(Math.min(width, height) * 0.018));
+        const stride = Math.max(8, Math.round(Math.min(width, height) / 16));
+        const candidates = [];
+        for (let y = patchRadius; y < height - patchRadius; y += stride) {
+            for (let x = patchRadius; x < width - patchRadius; x += stride) {
+                const descriptor = patchDescriptor(imageData, x, y, patchRadius);
+                candidates.push({ x, y, descriptor, strength: descriptor[2] });
+            }
+        }
+        candidates.sort((a, b) => b.strength - a.strength);
+        const strongCount = Math.min(candidates.length, Math.round(count * 0.72));
+        const selected = candidates.slice(0, strongCount);
+        const step = Math.max(1, Math.floor(candidates.length / Math.max(1, count - selected.length)));
+        for (let i = 0; selected.length < count && i < candidates.length; i += step) {
+            if (!selected.includes(candidates[i])) selected.push(candidates[i]);
+        }
+        for (let i = 0; selected.length < count && i < candidates.length; i += 1) {
+            if (!selected.includes(candidates[i])) selected.push(candidates[i]);
+        }
+        return selected.slice(0, count).map((feature, index) => ({
+            id: index,
+            x: clamp((feature.x / Math.max(1, width - 1)) * 100, 4, 96),
+            y: clamp((feature.y / Math.max(1, height - 1)) * 100, 5, 95),
+            scale: Math.max(3.2, patchRadius * 0.85),
+            angle: Math.round((Math.atan2(feature.descriptor[3] - 0.5, feature.descriptor[2]) * 180) / Math.PI),
+            descriptor: feature.descriptor,
+        }));
+    }
+
     function generateWords() {
+        if (isTrainedBovwActive()) {
+            return state.bovwModel.codebook.map((descriptor, index) => ({
+                id: index,
+                color: palette[index % palette.length],
+                descriptor,
+            }));
+        }
         const words = [];
         const columns = Math.ceil(Math.sqrt(state.vocabSize));
         for (let i = 0; i < state.vocabSize; i += 1) {
@@ -351,7 +425,47 @@
             .sort((a, b) => b.score - a.score);
     }
 
+    function normalizeBovwHistogram(histogram) {
+        const total = Math.max(1, histogram.reduce((sum, count) => sum + count, 0));
+        const normalized = histogram.map((count) => count / total);
+        if (state.bovwModel?.histogram?.normalization === "l1_sqrt") {
+            return normalized.map((value) => Math.sqrt(value));
+        }
+        return normalized;
+    }
+
+    function computeTrainedBovwScores(histogram) {
+        if (!isTrainedBovwActive()) return null;
+        const model = state.bovwModel;
+        const normalized = normalizeBovwHistogram(histogram);
+        state.normalizedHistogram = normalized;
+        const logits = model.labels.map((label, classIndex) => {
+            const weights = model.classifier.weights[classIndex] || [];
+            let logit = model.classifier.bias[classIndex] || 0;
+            for (let index = 0; index < normalized.length; index += 1) {
+                logit += (weights[index] || 0) * normalized[index];
+            }
+            return { label, logit };
+        });
+        const maxLogit = Math.max(...logits.map((item) => item.logit));
+        const expScores = logits.map((item) => ({ ...item, exp: Math.exp(item.logit - maxLogit) }));
+        const expTotal = expScores.reduce((sum, item) => sum + item.exp, 0) || 1;
+        return expScores
+            .map((item) => ({
+                label: item.label,
+                score: item.exp / expTotal,
+                logit: item.logit,
+                source: "trained-flowers17",
+            }))
+            .sort((a, b) => b.score - a.score);
+    }
+
     function computeBovwScores(item, histogram, signature) {
+        const trainedScores = computeTrainedBovwScores(histogram);
+        if (trainedScores) return trainedScores;
+        if (state.bovwEngine === "principle") {
+            return computePrototypeScores(histogram, signature);
+        }
         const calibrated = calibratedBovwScores(item);
         if (calibrated) {
             const total = Math.max(1, histogram.reduce((sum, count) => sum + count, 0));
@@ -481,18 +595,21 @@
     function rebuildRepresentation() {
         const item = sample();
         if (!item) return;
+        const activeVocabSize = isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize;
         const bitmap = state.imageBitmap?.key === item.image ? state.imageBitmap : null;
         if (!bitmap) {
             state.features = [];
             state.words = generateWords();
             state.assignments = [];
             state.assignmentDistances = [];
-            state.histogram = new Array(state.vocabSize).fill(0);
-            state.normalizedHistogram = new Array(state.vocabSize).fill(0);
+            state.histogram = new Array(activeVocabSize).fill(0);
+            state.normalizedHistogram = new Array(activeVocabSize).fill(0);
             state.bovwScores = [];
             return;
         }
-        state.features = generateFeaturesFromImage(bitmap.imageData);
+        state.features = isTrainedBovwActive()
+            ? generateTrainedBovwFeatures(bitmap.imageData)
+            : generateFeaturesFromImage(bitmap.imageData);
         state.words = generateWords();
         const assigned = assignFeatures(state.features, state.words);
         state.assignments = assigned.assignments;
@@ -654,9 +771,57 @@
         }).join("");
     }
 
+    function scrollActiveWordIntoView() {
+        if (!els.bovwDictionary || state.method !== "bovw") return;
+        const active = activeBovwInfo();
+        const activeChip = els.bovwDictionary.querySelector(`[data-word-id="${active.wordId}"]`);
+        if (!activeChip) return;
+        const chipTop = activeChip.offsetTop;
+        const chipBottom = chipTop + activeChip.offsetHeight;
+        const viewTop = els.bovwDictionary.scrollTop;
+        const viewBottom = viewTop + els.bovwDictionary.clientHeight;
+        const padding = 12;
+        if (chipTop < viewTop + padding) {
+            els.bovwDictionary.scrollTo({ top: Math.max(0, chipTop - padding), behavior: "smooth" });
+            return;
+        }
+        if (chipBottom > viewBottom - padding) {
+            els.bovwDictionary.scrollTo({ top: chipBottom - els.bovwDictionary.clientHeight + padding, behavior: "smooth" });
+        }
+    }
+
     function renderHistogram(target) {
         const active = activeBovwInfo();
         const max = Math.max(1, ...state.histogram);
+        const radial = state.histogram.length >= 64;
+        target.classList.toggle("is-radial", radial);
+        target.classList.toggle("is-linear", !radial);
+        if (radial) {
+            const bins = state.histogram.map((count, index) => {
+                const angle = (index / Math.max(1, state.histogram.length)) * 360;
+                const strength = Math.sqrt(count / max);
+                const length = 42 + Math.round(strength * 78);
+                const selectedClass = index === active.wordId ? " is-active" : "";
+                const labelClass = index % 16 === 0 || index === active.wordId ? " is-labeled" : "";
+                return `
+                    <div class="cls-hist-bin cls-radial-bin${selectedClass}${labelClass}" data-bin-id="${index}" data-chain-node="${index === active.wordId ? "histogram" : ""}" title="w${index + 1}: ${count}" style="--angle:${angle.toFixed(3)}deg; --len:${length}px; --word-color:${palette[index % palette.length]}; --delay:${(index * 0.006).toFixed(3)}s">
+                        <i style="background:${palette[index % palette.length]}"></i>
+                        <span>${index + 1}</span>
+                    </div>
+                `;
+            }).join("");
+            target.innerHTML = `
+                <div class="cls-radial-shell" aria-label="128-dimensional BoVW radial histogram">
+                    <div class="cls-radial-grid" aria-hidden="true"></div>
+                    <div class="cls-radial-center">
+                        <strong>${state.histogram.length}</strong>
+                        <span>visual words</span>
+                    </div>
+                    ${bins}
+                </div>
+            `;
+            return;
+        }
         target.innerHTML = state.histogram.map((count, index) => {
             const height = Math.max(5, Math.round((count / max) * 100));
             const selectedClass = index === active.wordId ? " is-active" : "";
@@ -676,6 +841,28 @@
             els.bovwHistVote.innerHTML = `<strong>等待图像采样</strong><span>patch descriptors → codebook assignment</span><em>hist[w] += count</em>`;
             return;
         }
+        if (state.histogram.length >= 64) {
+            const nonZero = state.histogram.filter((count) => count > 0).length;
+            const topBins = state.histogram
+                .map((count, index) => ({ count, index }))
+                .filter((item) => item.count > 0)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 8)
+                .map((item) => `w${item.index + 1}=${item.count}`)
+                .join(" · ");
+            els.bovwHistVector.hidden = true;
+            els.bovwHistVector.innerHTML = `
+                <span>radial histogram summary</span>
+                <code>${nonZero}/${state.histogram.length} non-zero bins · active w${active.wordId + 1}=${active.count} · ${topBins}</code>
+            `;
+            els.bovwHistVote.innerHTML = `
+                <strong style="--word-color:${active.word.color}">feature f${active.featureId + 1} → w${active.wordId + 1}</strong>
+                <span>nearest word distance = ${active.distance.toFixed(3)}</span>
+                <em>radial spoke w${active.wordId + 1} extends from center</em>
+            `;
+            return;
+        }
+        els.bovwHistVector.hidden = false;
         els.bovwHistVector.innerHTML = `
             <span>histogram vector</span>
             <code>[${state.histogram.map((count, index) => index === active.wordId ? `<b>${count}</b>` : count).join(", ")}]</code>
@@ -735,13 +922,24 @@
         const active = activeBovwInfo();
         const top = scores[0];
         const isPrototype = top?.source === "prototype-demo";
+        const isTrained = top?.source === "trained-flowers17";
+        const classifierText = isTrained
+            ? "trained logistic regression"
+            : isPrototype
+                ? "untrained prototype weights"
+                : "calibrated demo scores";
+        const note = isTrained
+            ? "当前 Top-K 由导出的 codebook、L1+sqrt histogram 和 logistic regression 权重在前端计算。"
+            : isPrototype
+                ? "当前为未训练原型分数，只用于说明 histogram 如何进入分类器。"
+                : "内置样例分数经过人工校准，用来演示分类器输出结构。";
         els.bovwClassifierFlow.innerHTML = `
             <span data-chain-node="classifier">computed histogram</span>
             <b aria-hidden="true">→</b>
-            <span>${isPrototype ? "untrained prototype weights" : "calibrated demo scores"}</span>
+            <span>${classifierText}</span>
             <b aria-hidden="true">→</b>
             <strong>${top ? `${escapeHtml(top.label)} ${Math.round(top.score * 100)}%` : "Top-K scores"}</strong>
-            <small>${state.features.length ? `当前选中 f${active.featureId + 1} 投票到 w${active.wordId + 1}，它贡献的是向量第 ${active.wordId + 1} 维。${isPrototype ? "当前为未训练原型分数，不代表真实类别概率。" : "内置样例分数经过人工校准，用来演示分类器输出结构。"}` : "先从 Canvas 图像采样 patch descriptor，再由 histogram 进入分类器。"}</small>
+            <small>${state.features.length ? `当前选中 f${active.featureId + 1} 投票到 w${active.wordId + 1}，它贡献的是向量第 ${active.wordId + 1} 维。${note}` : "先从 Canvas 图像采样 patch descriptor，再由 histogram 进入分类器。"}</small>
         `;
     }
 
@@ -827,6 +1025,16 @@
         };
     }
 
+    function isElementVisibleInside(element, container) {
+        if (!element || !container) return false;
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return elementRect.bottom > containerRect.top
+            && elementRect.top < containerRect.bottom
+            && elementRect.right > containerRect.left
+            && elementRect.left < containerRect.right;
+    }
+
     function segmentPath(from, to) {
         const dx = Math.max(36, Math.abs(to.x - from.x) * 0.42);
         return `M${from.x.toFixed(1)} ${from.y.toFixed(1)} C${(from.x + dx).toFixed(1)} ${from.y.toFixed(1)}, ${(to.x - dx).toFixed(1)} ${to.y.toFixed(1)}, ${to.x.toFixed(1)} ${to.y.toFixed(1)}`;
@@ -849,6 +1057,12 @@
         const classifierNode = panel.querySelector('[data-chain-node="classifier"]');
         const topkNode = panel.querySelector('[data-chain-node="topk"]');
         if (!wordNode || !histNode || !classifierNode || !topkNode || !hostRect.width || !hostRect.height) return;
+        if (!isElementVisibleInside(wordNode, els.bovwDictionary)) {
+            els.bovwChain.innerHTML = "";
+            scrollActiveWordIntoView();
+            window.setTimeout(scheduleBovwChain, 180);
+            return;
+        }
 
         els.bovwChain.setAttribute("viewBox", `0 0 ${hostRect.width} ${hostRect.height}`);
         els.bovwChain.setAttribute("width", hostRect.width);
@@ -906,7 +1120,7 @@
 
     function vectorDimLabel() {
         if (state.method === "cnn") return "GAP 1×C";
-        return `${state.vocabSize} bins`;
+        return `${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} bins`;
     }
 
     function renderNotes(item) {
@@ -916,7 +1130,7 @@
         const topC = cScores[0];
         const active = activeBovwInfo();
 
-        els.notesMethod.textContent = state.method === "bovw" ? bovwStepLabels[state.activeBovwStep] || "Local Features" : methodLabels[state.method];
+        els.notesMethod.textContent = state.method === "bovw" ? activeBovwLabel() : methodLabels[state.method];
         els.statSelectedFeature.textContent = state.method === "cnn" ? "conv maps" : `f${active.featureId + 1}`;
         els.statSelectedWord.textContent = state.method === "cnn" ? "--" : `w${active.wordId + 1}`;
         els.statSelectedDistance.textContent = state.method === "cnn" ? "--" : active.distance.toFixed(3);
@@ -938,7 +1152,9 @@
         if (state.method === "compare") {
             els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
             els.notesFormula.textContent = "BoVW: score_c = W_c · normalize(hist) + b_c";
-            els.notesFormulaNote.textContent = "真实 BoVW 需要用训练集学习 W 和 b；此页内置样例为校准演示分数，上传图只显示未训练原型分数。";
+            els.notesFormulaNote.textContent = isTrainedBovwActive()
+                ? "BoVW 分支使用本地训练导出的 KMeans codebook 与 logistic regression 权重，在前端完成真实分类。"
+                : "Principle Demo 使用页面生成的视觉词典和原型权重，只用于解释 BoVW 原理。";
             els.notesCompare.innerHTML = `
                 <dl>
                     <div><dt>BoVW Top-1</dt><dd>${topB ? `${escapeHtml(topB.label)} · ${Math.round(topB.score * 100)}%` : "--"}</dd></div>
@@ -949,15 +1165,20 @@
             return;
         }
         const isPrototype = topB?.source === "prototype-demo";
-        els.notesMethodDesc.textContent = `当前追踪 f${active.featureId + 1}：局部描述子先找最近 visual word，再把对应 histogram bin 加 1。`;
+        const isTrained = topB?.source === "trained-flowers17";
+        els.notesMethodDesc.textContent = isTrained
+            ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
+            : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
         els.notesFormula.textContent = "score_c = W_c · normalize(hist) + b_c";
-        els.notesFormulaNote.textContent = `BoVW 核心思想：从 Canvas 采样 patch descriptor，分配到 codebook，再用 ${state.vocabSize} 维 histogram 作为分类器输入。W_c 和 b_c 在真实系统里必须由训练集学习。`;
+        els.notesFormulaNote.textContent = isTrained
+            ? "前端从 Canvas 采样 patch descriptor，分配到导出的 128 个 visual words，执行 L1+sqrt 归一化，再用 JSON 中的 W 和 b 计算 softmax。"
+            : `BoVW Principle Demo：从 Canvas 采样 patch descriptor，分配到页面生成的 codebook，再用 ${state.vocabSize} 维 histogram 展示分类器输入。`;
         els.notesCompare.innerHTML = `
             <dl>
                 <div><dt>当前 visual word</dt><dd>w${active.wordId + 1} · ${escapeHtml(active.meaning)} · count ${active.count}</dd></div>
                 <div><dt>当前 histogram bin</dt><dd>hist[w${active.wordId + 1}] += 1，向量第 ${active.wordId + 1} 维被累加。</dd></div>
-                <div><dt>输出结构</dt><dd>image → histogram vector (${state.vocabSize} bins) → class scores。</dd></div>
-                <div><dt>Top-K</dt><dd>${isPrototype ? "未训练原型分数，仅说明 histogram 如何变成分数" : "内置示例校准分数，用来演示分类器输出结构"}；Top-1 为 ${topB ? `${escapeHtml(topB.label)} ${Math.round(topB.score * 100)}%` : "--"}。</dd></div>
+                <div><dt>输出结构</dt><dd>image → histogram vector (${isTrained ? state.bovwModel.vocab_size : state.vocabSize} bins) → class scores。</dd></div>
+                <div><dt>Top-K</dt><dd>${isTrained ? "真实 Flowers17 分类分数" : isPrototype ? "未训练原型分数，仅说明 histogram 如何变成分数" : "内置示例校准分数，用来演示分类器输出结构"}；Top-1 为 ${topB ? `${escapeHtml(topB.label)} ${Math.round(topB.score * 100)}%` : "--"}。</dd></div>
             </dl>
         `;
     }
@@ -1015,8 +1236,10 @@
 
     function renderBovwFocus(item = sample()) {
         if (!item) return;
+        renderBovwModeText();
         renderBovwOverlay(els.bovwOverlay);
         renderDictionary(els.bovwDictionary);
+        scrollActiveWordIntoView();
         renderHistogram(els.bovwHistogram);
         renderHistogramVector();
         renderClassifierFlow(bovwScores());
@@ -1025,6 +1248,42 @@
         renderBovwFlow();
         renderNotes(item);
         scheduleBovwChain();
+    }
+
+    function renderBovwModeText() {
+        const trained = isTrainedBovwActive();
+        if (els.bovwTopkTitle) {
+            els.bovwTopkTitle.textContent = trained ? "Top-K Flower Prediction" : "Top-K Principle Score";
+        }
+        if (els.bovwTopkSubtitle) {
+            els.bovwTopkSubtitle.textContent = trained ? "trained classifier over BoVW" : "principle demo over BoVW";
+        }
+        if (els.bovwTopkNote) {
+            els.bovwTopkNote.textContent = trained
+                ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
+                : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
+        }
+        if (els.bovwInferenceProof) {
+            if (trained) {
+                const model = state.bovwModel;
+                els.bovwInferenceProof.hidden = false;
+                els.bovwInferenceProof.innerHTML = `
+                    <span>browser-side inference</span>
+                    <strong>model JSON loaded</strong>
+                    <code>codebook ${model.vocab_size}×${model.descriptor.dimension}</code>
+                    <code>W ${model.labels.length}×${model.vocab_size} + b</code>
+                    <em>no backend scoring request</em>
+                `;
+            } else {
+                els.bovwInferenceProof.hidden = false;
+                els.bovwInferenceProof.innerHTML = `
+                    <span>principle demo</span>
+                    <strong>generated codebook</strong>
+                    <code>prototype weights</code>
+                    <em>not class probability</em>
+                `;
+            }
+        }
     }
 
     function renderBovw(item) {
@@ -1061,17 +1320,31 @@
         const cScores = cnnScores(item);
         const activeScores = state.method === "cnn" ? cScores : bScores;
         const top = activeScores[0];
-        const methodLabel = methodLabels[state.method];
+        const methodLabel = state.method === "bovw" ? activeBovwLabel() : methodLabels[state.method];
+        const effectiveVocabSize = isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize;
 
-        els.inputSize.textContent = `${item.width} × ${item.height}`;
+        els.inputSize.textContent = item.width && item.height ? `${item.width} × ${item.height}` : "--";
         els.featureCount.textContent = state.method === "cnn" ? "learned maps" : (state.features.length ? String(state.features.length) : "computing...");
-        els.vocabReadout.textContent = String(state.vocabSize);
+        els.vocabReadout.textContent = String(effectiveVocabSize);
         els.vectorDim.textContent = vectorDimLabel();
         els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%${top.source === "prototype-demo" ? " demo" : ""}` : (state.method === "cnn" ? "--" : "computing...");
         els.activeMethod.textContent = methodLabel;
-        els.status.textContent = state.method === "cnn" ? "CNN CONCEPT VIEW" : state.method === "compare" ? "BOVW / CNN COMPARE" : "BOVW TEACHING SCORES";
+        els.status.textContent = state.method === "cnn"
+            ? "CNN CONCEPT VIEW"
+            : state.method === "compare"
+                ? "BOVW / CNN COMPARE"
+                : isTrainedBovwActive()
+                    ? "TRAINED FLOWERS17 BOVW"
+                    : "BOVW PRINCIPLE DEMO";
 
         els.bovwControls.hidden = state.method === "cnn";
+        if (els.vocabSize) {
+            els.vocabSize.value = String(effectiveVocabSize);
+            els.vocabSize.disabled = isTrainedBovwActive();
+        }
+        if (els.featureType) {
+            els.featureType.disabled = isTrainedBovwActive();
+        }
         if (state.method === "cnn") {
             els.featureCount.textContent = "learned maps";
             els.vocabReadout.textContent = "--";
@@ -1110,29 +1383,61 @@
         }
     }
 
-    function applyData(data) {
-        state.data = data;
-        state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";
-        els.sample.innerHTML = (state.data.samples || [])
+    function updateSampleOptions() {
+        const data = activeData();
+        if (!data?.samples?.length) return;
+        const currentStillExists = data.samples.some((item) => item.id === state.sampleId);
+        if (!currentStillExists) {
+            state.sampleId = data.defaultSample || data.samples[0].id;
+        }
+        els.sample.innerHTML = data.samples
             .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`)
             .join("");
         els.sample.value = state.sampleId;
+    }
+
+    function validateBovwModel(model) {
+        return model?.model_type === "frontend_bovw_patch"
+            && model?.descriptor?.dimension === 8
+            && Array.isArray(model.codebook)
+            && Array.isArray(model.labels)
+            && Array.isArray(model.classifier?.weights)
+            && Array.isArray(model.classifier?.bias)
+            && model.codebook.length === model.vocab_size;
+    }
+
+    async function loadJson(url, label, required = false) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            if (required) throw new Error(`${label} HTTP ${response.status}`);
+            return null;
+        }
+        return response.json();
+    }
+
+    function applyData(payload) {
+        state.demoData = payload.demoData;
+        state.flowerData = payload.flowerData;
+        state.bovwModel = payload.bovwModel;
+        state.bovwModelReady = validateBovwModel(payload.bovwModel);
+        state.data = state.demoData;
+        if (state.bovwModelReady) {
+            state.vocabSize = state.bovwModel.vocab_size;
+        }
+        updateSampleOptions();
         render();
     }
 
     async function init() {
-        const cached = readCachedData();
-        if (cached) {
-            applyData(cached);
-            return;
-        }
-
         try {
-            const response = await fetch(`${dataRoot}/classification_lab/classification_samples.json`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            writeCachedData(data);
-            applyData(data);
+            sessionStorage.removeItem(DATA_CACHE_KEY);
+            const [demoData, flowerData, bovwModel] = await Promise.all([
+                loadJson(`${dataRoot}/classification_lab/classification_samples.json`, "classification samples", true),
+                loadJson(flowersSamplesUrl, "flowers17 samples", false),
+                loadJson(bovwModelUrl, "flowers17 bovw model", false),
+            ]);
+            const payload = { demoData, flowerData, bovwModel };
+            applyData(payload);
         } catch (error) {
             console.error("classification lab data failed", error);
             els.notesCompare.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/data/vision_tasks/classification_lab/classification_samples.json。</p>`;
@@ -1167,19 +1472,25 @@
                 item.classList.toggle("is-active", active);
                 item.setAttribute("aria-pressed", active ? "true" : "false");
             });
+            updateSampleOptions();
+            state.imageBitmap = null;
             render();
         });
     });
+    if (els.bovwEngine) {
+        els.bovwEngine.addEventListener("change", () => {
+            state.bovwEngine = els.bovwEngine.value;
+            updateSampleOptions();
+            state.imageBitmap = null;
+            render();
+        });
+    }
     els.vocabSize.addEventListener("change", () => {
         state.vocabSize = Number(els.vocabSize.value);
         render();
     });
     els.featureType.addEventListener("change", () => {
         state.featureType = els.featureType.value;
-        render();
-    });
-    els.topK.addEventListener("change", () => {
-        state.topK = Number(els.topK.value);
         render();
     });
     els.bovwOverlay.addEventListener("pointermove", (event) => {

@@ -16,7 +16,7 @@
         <label class="vision-field cls-upload-field">
             <span>上传图片</span>
             <input type="file" accept="image/*" data-cls-upload>
-            <small class="cls-field-hint">上传后演示 BoVW 编码链路；未训练真实语义分类器，Top-K 仅作教学分数。</small>
+            <small class="cls-field-hint">BoVW 默认使用本地训练的 Flowers17 参数；Principle Demo 仅解释编码链路。</small>
         </label>
 
         <div class="overview-segmented-control method-segmented-control cls-methods" aria-label="分类方法选择">
@@ -27,13 +27,23 @@
 
         <div class="cls-control-group" data-cls-bovw-controls>
             <label class="vision-field">
+                <span>BoVW 模式</span>
+                <select data-cls-bovw-engine>
+                    <option value="trained" selected>Trained Flowers17 BoVW</option>
+                    <option value="principle">BoVW Principle Demo</option>
+                </select>
+                <small class="cls-field-hint">Trained 模式加载 Oxford Flowers17 的 codebook 与 logistic regression 参数。</small>
+            </label>
+
+            <label class="vision-field">
                 <span>视觉词典大小</span>
                 <select data-cls-vocab-size>
                     <option value="16" selected>16</option>
                     <option value="32">32</option>
                     <option value="64">64</option>
+                    <option value="128">128</option>
                 </select>
-                <small class="cls-field-hint">词典大小决定 BoVW histogram 维度：16 / 32 / 64 bins。</small>
+                <small class="cls-field-hint">Trained 模式固定使用 128 bins；Principle Demo 可切换 16 / 32 / 64 bins。</small>
             </label>
 
             <label class="vision-field">
@@ -45,15 +55,6 @@
                 </select>
             </label>
         </div>
-
-        <label class="vision-field">
-            <span>Top-K</span>
-            <select data-cls-topk>
-                <option value="1">Top-1</option>
-                <option value="3" selected>Top-3</option>
-                <option value="5">Top-5</option>
-            </select>
-        </label>
 
         <div class="vision-kv-grid">
             <div><span>当前方法</span><strong data-cls-active-method>BoVW</strong></div>
@@ -132,10 +133,10 @@
 
                 <div class="classification-topk-card">
                     <div class="classification-card-head">
-                        <strong>Top-K 分类分数</strong>
-                        <span>teaching score over BoVW</span>
+                        <strong data-cls-bovw-topk-title>Top-K Flower Prediction</strong>
+                        <span data-cls-bovw-topk-subtitle>trained classifier over BoVW</span>
                     </div>
-                    <p class="cls-card-note">真实 BoVW 需要训练线性分类器 / SVM；这里展示 histogram 如何进入分类器，上传图分数不是可靠语义概率。</p>
+                    <div class="cls-inference-proof" data-cls-bovw-inference-proof></div>
                     <div class="cls-classifier-flow" data-cls-bovw-classifier-flow></div>
                     <div class="classification-score-list" data-cls-bovw-score-list></div>
                 </div>
