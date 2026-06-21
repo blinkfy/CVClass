@@ -59,7 +59,10 @@
         instanceLegend: $("[data-instance-legend]"),
         instanceCount: $("[data-instance-count]"),
         instanceMap: $("[data-instance-map]"),
-        outputContract: $("[data-output-contract]"),
+        taskKnowledgeCard: $("[data-task-knowledge-card]"),
+        principleFigure: $("[data-principle-figure]"),
+        principleCaption: $("[data-principle-caption]"),
+        outputSummary: $("[data-output-summary]"),
     };
 
     function esc(value) {
@@ -551,8 +554,53 @@
         if (isCurrentRun(token, sample)) els.status.textContent = `${sample.id.toUpperCase()} · MODEL + PRESET FALLBACK`;
     }
 
-    const outputContracts = {
+    const taskKnowledgeCards = {
         classification: {
+            title: "图像级分类",
+            subtitle: "Image-level Classification",
+            principle: "将整张图像映射为一个类别概率分布，强调全局语义理解。",
+            figure: `
+                <svg class="tk-figure-svg tk-figure--classification" viewBox="0 0 280 140" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="tk-cls-input" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#dbeafe"/><stop offset="100%" stop-color="#bfdbfe"/>
+                        </linearGradient>
+                        <linearGradient id="tk-cls-bar" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- input image -->
+                    <rect x="12" y="30" width="60" height="80" rx="6" fill="url(#tk-cls-input)" stroke="#93c5fd" stroke-width="1.5"/>
+                    <circle cx="42" cy="58" r="14" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                    <path d="M28 90 L38 74 L50 86 L58 66 L72 90" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- arrow -->
+                    <path d="M78 70 H98" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="96,66 104,70 96,74" fill="#94a3b8"/>
+                    <!-- feature vector -->
+                    <rect x="110" y="40" width="14" height="60" rx="3" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
+                    <g fill="#64748b"><rect x="113" y="46" width="8" height="4" rx="1"/><rect x="113" y="54" width="8" height="4" rx="1"/><rect x="113" y="62" width="8" height="4" rx="1"/><rect x="113" y="70" width="8" height="4" rx="1"/><rect x="113" y="78" width="8" height="4" rx="1"/><rect x="113" y="86" width="8" height="4" rx="1"/></g>
+                    <!-- arrow -->
+                    <path d="M128 70 H148" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="146,66 154,70 146,74" fill="#94a3b8"/>
+                    <!-- softmax -->
+                    <rect x="160" y="50" width="44" height="40" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+                    <text x="182" y="68" text-anchor="middle" fill="#1d4ed8" font-size="9" font-weight="800">softmax</text>
+                    <text x="182" y="80" text-anchor="middle" fill="#3b82f6" font-size="8">f:ℝ<sup>d</sup>→Δ<sup>C</sup></text>
+                    <!-- arrow -->
+                    <path d="M208 70 H228" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="226,66 234,70 226,74" fill="#94a3b8"/>
+                    <!-- probability bars -->
+                    <g transform="translate(240, 38)">
+                        <rect x="0" y="0" width="28" height="10" rx="2" fill="url(#tk-cls-bar)"/>
+                        <text x="32" y="8" fill="#1e3a8a" font-size="8" font-weight="700">cat</text>
+                        <rect x="0" y="16" width="18" height="10" rx="2" fill="#93c5fd"/>
+                        <text x="22" y="24" fill="#475569" font-size="8">dog</text>
+                        <rect x="0" y="32" width="10" height="10" rx="2" fill="#bfdbfe"/>
+                        <text x="14" y="40" fill="#64748b" font-size="8">...</text>
+                        <rect x="0" y="48" width="6" height="10" rx="2" fill="#dbeafe"/>
+                    </g>
+                </svg>
+            `,
             unit: "整张图像",
             structure: "p(y | image) ∈ R<sup>C</sup>",
             models: ["BoVW", "CNN", "ResNet"],
@@ -561,22 +609,163 @@
             courses: ["特征表达", "分类器", "Softmax"],
         },
         detection: {
+            title: "目标检测",
+            subtitle: "Object Detection",
+            principle: "在图像中定位并分类所有感兴趣目标，输出带置信度的边界框。",
+            figure: `
+                <svg class="tk-figure-svg tk-figure--detection" viewBox="0 0 280 140" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="tk-det-input" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#fef3c7"/><stop offset="100%" stop-color="#fde68a"/>
+                        </linearGradient>
+                        <linearGradient id="tk-det-box" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="#fb923c"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- input image -->
+                    <rect x="12" y="25" width="90" height="90" rx="6" fill="url(#tk-det-input)" stroke="#fcd34d" stroke-width="1.5"/>
+                    <circle cx="45" cy="55" r="12" fill="#fbbf24" opacity="0.7"/>
+                    <rect x="60" y="75" width="28" height="18" rx="3" fill="#f59e0b" opacity="0.7"/>
+                    <rect x="28" y="82" width="20" height="14" rx="2" fill="#d97706" opacity="0.7"/>
+                    <!-- feature grid -->
+                    <g transform="translate(118, 35)" stroke="#cbd5e1" stroke-width="0.8">
+                        <rect x="0" y="0" width="70" height="70" rx="4" fill="#f8fafc"/>
+                        <line x1="14" y1="0" x2="14" y2="70"/><line x1="28" y1="0" x2="28" y2="70"/><line x1="42" y1="0" x2="42" y2="70"/><line x1="56" y1="0" x2="56" y2="70"/>
+                        <line x1="0" y1="14" x2="70" y2="14"/><line x1="0" y1="28" x2="70" y2="28"/><line x1="0" y1="42" x2="70" y2="42"/><line x1="0" y1="56" x2="70" y2="56"/>
+                    </g>
+                    <!-- anchors / boxes -->
+                    <g transform="translate(118, 35)">
+                        <rect x="18" y="16" width="22" height="22" rx="2" fill="none" stroke="#f97316" stroke-width="1.5" stroke-dasharray="3 2"/>
+                        <rect x="12" y="12" width="34" height="34" rx="2" fill="none" stroke="#fdba74" stroke-width="1"/>
+                        <rect x="44" y="42" width="18" height="14" rx="2" fill="none" stroke="#f97316" stroke-width="1.5"/>
+                        <rect x="38" y="38" width="30" height="22" rx="2" fill="none" stroke="#fdba74" stroke-width="1"/>
+                    </g>
+                    <!-- arrow -->
+                    <path d="M196 70 H216" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="214,66 222,70 214,74" fill="#94a3b8"/>
+                    <!-- output boxes -->
+                    <g transform="translate(232, 30)">
+                        <rect x="0" y="0" width="38" height="22" rx="3" fill="url(#tk-det-box)" opacity="0.15" stroke="#f97316" stroke-width="1.5"/>
+                        <text x="4" y="9" fill="#c2410c" font-size="7" font-weight="800">person</text>
+                        <text x="4" y="17" fill="#f97316" font-size="7">0.92</text>
+                        <rect x="0" y="30" width="34" height="22" rx="3" fill="url(#tk-det-box)" opacity="0.15" stroke="#f97316" stroke-width="1.5"/>
+                        <text x="4" y="39" fill="#c2410c" font-size="7" font-weight="800">car</text>
+                        <text x="4" y="47" fill="#f97316" font-size="7">0.87</text>
+                        <rect x="0" y="60" width="30" height="18" rx="3" fill="url(#tk-det-box)" opacity="0.12" stroke="#fdba74" stroke-width="1"/>
+                        <text x="4" y="72" fill="#9a3412" font-size="6">box + cls</text>
+                    </g>
+                </svg>
+            `,
             unit: "目标实例",
-            structure: "N × [x1, y1, x2, y2, score, class]",
+            structure: "N × [x<sub>1</sub>, y<sub>1</sub>, x<sub>2</sub>, y<sub>2</sub>, score, class]",
             models: ["R-CNN", "Faster R-CNN", "YOLO"],
             postprocess: "Confidence Filter + NMS",
             metrics: ["IoU", "AP", "mAP"],
             courses: ["候选框", "IoU", "NMS", "Anchor"],
         },
         semantic: {
+            title: "语义分割",
+            subtitle: "Semantic Segmentation",
+            principle: "为每个像素预测类别标签，获得与输入等分辨率的稠密类别图。",
+            figure: `
+                <svg class="tk-figure-svg tk-figure--semantic" viewBox="0 0 280 140" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="tk-sem-input" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#ede9fe"/><stop offset="100%" stop-color="#ddd6fe"/>
+                        </linearGradient>
+                        <linearGradient id="tk-sem-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#93c5fd"/></linearGradient>
+                        <linearGradient id="tk-sem-road" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#64748b"/><stop offset="100%" stop-color="#94a3b8"/></linearGradient>
+                        <linearGradient id="tk-sem-tree" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#4ade80"/></linearGradient>
+                    </defs>
+                    <!-- input image -->
+                    <rect x="10" y="28" width="84" height="84" rx="6" fill="url(#tk-sem-input)" stroke="#c4b5fd" stroke-width="1.5"/>
+                    <rect x="10" y="28" width="84" height="30" rx="6" fill="#bfdbfe"/>
+                    <path d="M10 58 L84 58 L74 112 L20 112 Z" fill="#e2e8f0"/>
+                    <circle cx="40" cy="48" r="8" fill="#fbbf24"/>
+                    <rect x="36" y="72" width="12" height="28" fill="#a16207" rx="2"/>
+                    <circle cx="42" cy="66" r="14" fill="#22c55e" opacity="0.8"/>
+                    <!-- arrow -->
+                    <path d="M100 70 H120" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="118,66 126,70 118,74" fill="#94a3b8"/>
+                    <!-- encoder-decoder -->
+                    <g transform="translate(132, 36)">
+                        <rect x="0" y="24" width="18" height="18" rx="2" fill="#e0e7ff" stroke="#6366f1" stroke-width="1"/>
+                        <rect x="22" y="18" width="18" height="24" rx="2" fill="#c7d2fe" stroke="#6366f1" stroke-width="1"/>
+                        <rect x="44" y="12" width="18" height="30" rx="2" fill="#a5b4fc" stroke="#6366f1" stroke-width="1"/>
+                        <rect x="66" y="18" width="18" height="24" rx="2" fill="#c7d2fe" stroke="#6366f1" stroke-width="1"/>
+                        <rect x="88" y="24" width="18" height="18" rx="2" fill="#e0e7ff" stroke="#6366f1" stroke-width="1"/>
+                        <text x="52" y="58" text-anchor="middle" fill="#4338ca" font-size="8" font-weight="800">Encoder · Decoder</text>
+                    </g>
+                    <!-- arrow -->
+                    <path d="M244 70 H264" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="262,66 270,70 262,74" fill="#94a3b8"/>
+                    <!-- pixel map -->
+                    <g transform="translate(272, 28)">
+                        <rect x="0" y="0" width="84" height="84" rx="6" fill="url(#tk-sem-sky)" stroke="#818cf8" stroke-width="1.5"/>
+                        <rect x="0" y="30" width="84" height="54" rx="6" fill="url(#tk-sem-road)"/>
+                        <rect x="0" y="30" width="84" height="8" fill="#94a3b8"/>
+                        <rect x="30" y="0" width="12" height="84" fill="url(#tk-sem-tree)" opacity="0.9"/>
+                        <rect x="36" y="42" width="12" height="24" fill="#f97316" opacity="0.85" rx="2"/>
+                        <text x="42" y="104" text-anchor="middle" fill="#5b21b6" font-size="8" font-weight="800">H × W class map</text>
+                    </g>
+                </svg>
+            `,
             unit: "像素",
-            structure: "H × W class map",
+            structure: "mask ∈ {0…C-1}<sup>H×W</sup>",
             models: ["FCN", "U-Net", "DeepLab", "SegFormer"],
             postprocess: "argmax + color mapping",
             metrics: ["Pixel Accuracy", "mIoU"],
             courses: ["上采样", "跳跃连接", "逐像素分类"],
         },
         instance: {
+            title: "实例分割",
+            subtitle: "Instance Segmentation",
+            principle: "同时为每个目标实例生成检测框和像素级掩码，并赋予独立身份。",
+            figure: `
+                <svg class="tk-figure-svg tk-figure--instance" viewBox="0 0 280 140" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="tk-ins-input" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#fce7f3"/><stop offset="100%" stop-color="#fbcfe8"/>
+                        </linearGradient>
+                        <linearGradient id="tk-ins-mask1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ec4899"/><stop offset="100%" stop-color="#f472b6"/></linearGradient>
+                        <linearGradient id="tk-ins-mask2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient>
+                    </defs>
+                    <!-- input image -->
+                    <rect x="10" y="28" width="84" height="84" rx="6" fill="url(#tk-ins-input)" stroke="#f9a8d4" stroke-width="1.5"/>
+                    <circle cx="38" cy="58" r="14" fill="#fbbf24" opacity="0.7"/>
+                    <rect x="56" y="72" width="26" height="18" rx="3" fill="#f43f5e" opacity="0.7"/>
+                    <rect x="22" y="80" width="20" height="14" rx="2" fill="#3b82f6" opacity="0.7"/>
+                    <!-- arrow -->
+                    <path d="M100 70 H120" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="118,66 126,70 118,74" fill="#94a3b8"/>
+                    <!-- mask branch -->
+                    <g transform="translate(128, 30)">
+                        <rect x="0" y="0" width="44" height="50" rx="5" fill="#fdf2f8" stroke="#ec4899" stroke-width="1.5"/>
+                        <text x="22" y="16" text-anchor="middle" fill="#be185d" font-size="8" font-weight="800">Detection</text>
+                        <text x="22" y="26" text-anchor="middle" fill="#9d174d" font-size="7">Head</text>
+                        <rect x="8" y="34" width="28" height="10" rx="2" fill="#fbcfe8"/>
+                        <text x="22" y="41" text-anchor="middle" fill="#be185d" font-size="6">bbox + cls</text>
+                    </g>
+                    <g transform="translate(128, 86)">
+                        <rect x="0" y="0" width="44" height="26" rx="5" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+                        <text x="22" y="11" text-anchor="middle" fill="#6d28d9" font-size="8" font-weight="800">Mask</text>
+                        <text x="22" y="20" text-anchor="middle" fill="#7c3aed" font-size="7">Head</text>
+                    </g>
+                    <!-- arrow -->
+                    <path d="M176 70 H196" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 2"/>
+                    <polygon points="194,66 202,70 194,74" fill="#94a3b8"/>
+                    <!-- output instances -->
+                    <g transform="translate(206, 24)">
+                        <rect x="0" y="0" width="64" height="92" rx="6" fill="#fff1f2" stroke="#fda4af" stroke-width="1.5"/>
+                        <rect x="6" y="6" width="24" height="30" rx="3" fill="url(#tk-ins-mask1)" opacity="0.45" stroke="#db2777" stroke-width="1"/>
+                        <rect x="5" y="5" width="26" height="32" rx="3" fill="none" stroke="#db2777" stroke-width="1.5"/>
+                        <text x="18" y="47" text-anchor="middle" fill="#be185d" font-size="7" font-weight="800">ID-1</text>
+                        <rect x="34" y="52" width="22" height="24" rx="3" fill="url(#tk-ins-mask2)" opacity="0.45" stroke="#7c3aed" stroke-width="1"/>
+                        <rect x="33" y="51" width="24" height="26" rx="3" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+                        <text x="45" y="83" text-anchor="middle" fill="#6d28d9" font-size="7" font-weight="800">ID-2</text>
+                    </g>
+                </svg>
+            `,
             unit: "对象实例",
             structure: "N × {bbox, class, score, mask, id}",
             models: ["Mask R-CNN", "YOLACT", "YOLO-seg"],
@@ -586,37 +775,59 @@
         },
     };
 
-    function renderOutputContract() {
-        if (!els.outputContract) return;
-        const contract = outputContracts[state.task];
-        if (!contract) return;
+    function renderTaskKnowledgeCard() {
+        const card = taskKnowledgeCards[state.task];
+        if (!card || !els.taskKnowledgeCard) return;
         const tags = (items) => items.map((item) => `<span class="oc-tag">${esc(item)}</span>`).join("");
-        els.outputContract.innerHTML = `
-            <div class="oc-row">
-                <span class="oc-label">预测单位</span>
-                <strong class="oc-value">${esc(contract.unit)}</strong>
-            </div>
-            <div class="oc-formula-box">
-                <span class="oc-label">输出结构</span>
-                <code class="oc-formula">${contract.structure}</code>
-            </div>
-            <div class="oc-row">
-                <span class="oc-label">典型模型</span>
-                <div class="oc-tags">${tags(contract.models)}</div>
-            </div>
-            <div class="oc-row">
-                <span class="oc-label">关键后处理</span>
-                <strong class="oc-value">${esc(contract.postprocess)}</strong>
-            </div>
-            <div class="oc-row">
-                <span class="oc-label">评价指标</span>
-                <div class="oc-tags oc-metric-tags">${tags(contract.metrics)}</div>
-            </div>
-            <div class="oc-row">
-                <span class="oc-label">课程关联</span>
-                <div class="oc-tags oc-course-tags">${tags(contract.courses)}</div>
-            </div>
-        `;
+
+        if (els.principleFigure) {
+            els.principleFigure.innerHTML = card.figure;
+            requestAnimationFrame(() => {
+                const svg = els.principleFigure.querySelector("svg");
+                if (svg) svg.classList.add("is-visible");
+            });
+        }
+        if (els.principleCaption) {
+            els.principleCaption.innerHTML = `
+                <strong>${esc(card.title)}</strong>
+                <span>${esc(card.subtitle)}</span>
+                <p>${esc(card.principle)}</p>
+            `;
+        }
+        if (els.outputSummary) {
+            els.outputSummary.innerHTML = `
+                <div class="tk-summary-heading">输出摘要</div>
+                <div class="oc-row">
+                    <span class="oc-label">预测单位</span>
+                    <strong class="oc-value">${esc(card.unit)}</strong>
+                </div>
+                <div class="oc-formula-box">
+                    <span class="oc-label">输出结构</span>
+                    <code class="oc-formula">${card.structure}</code>
+                </div>
+                <div class="oc-row">
+                    <span class="oc-label">典型模型</span>
+                    <div class="oc-tags">${tags(card.models)}</div>
+                </div>
+                <div class="oc-row">
+                    <span class="oc-label">关键后处理</span>
+                    <strong class="oc-value">${esc(card.postprocess)}</strong>
+                </div>
+                <div class="oc-row">
+                    <span class="oc-label">评价指标</span>
+                    <div class="oc-tags oc-metric-tags">${tags(card.metrics)}</div>
+                </div>
+                <div class="oc-row">
+                    <span class="oc-label">课程关联</span>
+                    <div class="oc-tags oc-course-tags">${tags(card.courses)}</div>
+                </div>
+            `;
+        }
+
+        // trigger content transition animation
+        els.taskKnowledgeCard.classList.remove("is-transitioning");
+        void els.taskKnowledgeCard.offsetWidth; // force reflow
+        els.taskKnowledgeCard.classList.add("is-transitioning");
     }
 
     function renderState() {
@@ -636,7 +847,7 @@
         els.taskCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.taskCard === state.task));
         els.lineageItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.lineageTask === state.task));
         els.schemaItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.schemaTask === state.task));
-        renderOutputContract();
+        renderTaskKnowledgeCard();
     }
 
     function renderAll() {

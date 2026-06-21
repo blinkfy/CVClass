@@ -5397,6 +5397,166 @@ body:has(.vision-lab) .ai-fab-icon img {
     filter: saturate(0.88) hue-rotate(12deg);
 }
 
+/* ===== Task Knowledge Card sidebar ===== */
+.task-knowledge-card {
+    display: grid;
+    gap: 12px;
+}
+
+.task-knowledge-card.is-transitioning .tk-principle,
+.task-knowledge-card.is-transitioning .tk-output-summary {
+    animation: tk-card-fade-in 0.35s ease both;
+}
+
+.task-knowledge-card.is-transitioning .tk-output-summary {
+    animation-delay: 0.08s;
+}
+
+@keyframes tk-card-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tk-principle {
+    display: grid;
+    gap: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+}
+
+.tk-principle-figure {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 110px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+
+.tk-figure-svg {
+    width: 100%;
+    height: auto;
+    max-height: 150px;
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.tk-figure-svg.is-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.tk-principle-caption {
+    display: grid;
+    gap: 3px;
+}
+
+.tk-principle-caption strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.tk-principle-caption span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.tk-principle-caption p {
+    margin: 5px 0 0;
+    color: #475569;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.tk-output-summary {
+    display: grid;
+    gap: 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.tk-summary-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.tk-summary-heading::before {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 14px;
+    border-radius: 999px;
+    background: #3b82f6;
+}
+
+/* Compact sidebar fit for 1366px laptop screens */
+@media (max-width: 1400px) {
+    .tk-principle {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .tk-principle-figure {
+        min-height: 92px;
+    }
+
+    .tk-figure-svg {
+        max-height: 120px;
+    }
+
+    .tk-principle-caption strong {
+        font-size: 13px;
+    }
+
+    .tk-principle-caption p {
+        font-size: 10px;
+    }
+
+    .tk-output-summary {
+        padding: 10px;
+        gap: 7px;
+    }
+
+    .oc-row {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 6px;
+        padding-bottom: 6px;
+    }
+
+    .oc-formula-box {
+        padding: 7px 9px;
+    }
+
+    .oc-formula {
+        font-size: 10px;
+    }
+}
+
 @media (max-width: 1320px) {
     .vision-overview-workbench {
         grid-template-columns: minmax(220px, 240px) minmax(0, 1fr) minmax(270px, 300px);
