@@ -165,6 +165,34 @@
         <!-- CNN mode -->
         <div class="cls-mode-panel" data-cls-mode="cnn" hidden>
             <div class="cls-cnn-guidance" data-cls-cnn-guidance></div>
+            <div class="cls-cnn-stage-strip" data-cls-cnn-stage-steps aria-label="CNN animation stages"></div>
+            <div class="cls-cnn-animation-grid">
+                <section class="cls-cnn-animation-card">
+                    <div class="classification-card-head">
+                        <strong>CNN Process Animation</strong>
+                        <span>teaching visualization, synced with real ONNX inference</span>
+                    </div>
+                    <div class="cls-cnn-animation-stage" data-cls-cnn-animation-stage></div>
+                    <div class="cls-cnn-animation-controls">
+                        <button type="button" data-cls-cnn-play>播放动画</button>
+                        <button type="button" data-cls-cnn-pause>暂停</button>
+                        <button type="button" data-cls-cnn-next>下一步</button>
+                        <button type="button" data-cls-cnn-auto>自动播放</button>
+                    </div>
+                </section>
+                <aside class="cls-cnn-stage-panel">
+                    <div class="classification-card-head">
+                        <strong data-cls-cnn-stage-title>Input Image</strong>
+                        <span data-cls-cnn-stage-kicker>current stage</span>
+                    </div>
+                    <p data-cls-cnn-stage-explanation></p>
+                    <div class="cls-cnn-stage-io">
+                        <div><span>current input</span><strong data-cls-cnn-stage-input>image</strong></div>
+                        <div><span>current output</span><strong data-cls-cnn-stage-output>tensor</strong></div>
+                    </div>
+                    <code data-cls-cnn-stage-formula></code>
+                </aside>
+            </div>
             <div class="cls-cnn-flow" aria-label="CNN inference flow">
                 <span>Input Image</span>
                 <b></b>

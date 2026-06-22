@@ -55,6 +55,71 @@
         classifier: "Classifier",
         topk: "Top-K Prediction",
     };
+    const cnnAnimationStages = [
+        {
+            key: "input",
+            label: "Input",
+            title: "Input Image",
+            input: "uploaded / sample image",
+            output: "browser image pixels",
+            formula: "I \\in R^{H\\times W\\times 3}",
+            explanation: "读取当前图片。动画展示的是教学化路径，真实分类仍由 ONNX Runtime Web 对当前图片执行 session.run。",
+        },
+        {
+            key: "preprocess",
+            label: "Resize/Normalize",
+            title: "Resize / Normalize / NCHW Tensor",
+            input: "image pixels",
+            output: "1x3x224x224 tensor",
+            formula: "x = normalize(resize(I, 224))",
+            explanation: "原图缩放到模型输入尺寸，RGB 三通道拆成平面并按 mean/std 归一化，再组织成 NCHW tensor。",
+        },
+        {
+            key: "conv",
+            label: "Conv",
+            title: "3x3 Convolution Window",
+            input: "local 3x3 patch",
+            output: "one feature value",
+            formula: "y = sum(x_i * w_i) + b",
+            explanation: "卷积核在局部窗口滑动，对应像素值与权重相乘并累加，生成 feature map 中的一个响应值。",
+        },
+        {
+            key: "feature",
+            label: "Feature Maps",
+            title: "Feature Maps",
+            input: "many convolution responses",
+            output: "shallow / middle / high-level maps",
+            formula: "F = CNNFeatureExtractor(x)",
+            explanation: "浅层关注边缘、颜色和纹理；中层响应局部形状；高层形成物体部件和类别相关响应。",
+        },
+        {
+            key: "pooling",
+            label: "Global Pooling",
+            title: "Global Pooling",
+            input: "H x W x C feature maps",
+            output: "1 x 1 x C vector",
+            formula: "v_c = mean_{h,w}(F_{h,w,c})",
+            explanation: "每张 feature map 的空间响应向下汇聚，压缩成一个 pooled 数值，多张图组成表示向量。",
+        },
+        {
+            key: "classifier",
+            label: "Classifier",
+            title: "Classifier Head",
+            input: "pooled vector",
+            output: "class logits",
+            formula: "z = Wv + b",
+            explanation: "表示向量通过分类器权重连接到类别节点，数值沿连线流动并形成 logits。",
+        },
+        {
+            key: "softmax",
+            label: "Softmax Top-5",
+            title: "Softmax Top-5",
+            input: "logits",
+            output: "ranked probabilities",
+            formula: "p_i = exp(z_i) / sum_j exp(z_j)",
+            explanation: "logits 条形图经 softmax 转为概率，Top-5 重新排序并与真实 session.run 输出联动。",
+        },
+    ];
     const bovwPrototypeLabels = ["原型 A", "原型 B", "原型 C", "原型 D", "原型 E", "原型 F"];
     const state = {
         data: null,
@@ -97,6 +162,13 @@
         cnnInferencePendingKey: "",
         cnnModelChoice: "flowers17",
         cnnLoadedChoice: "",
+        imagenetZhLabels: [],
+        cnnStageIndex: 0,
+        cnnAnimationPlaying: true,
+        cnnAnimationAutoplay: true,
+        cnnAnimationTick: 0,
+        cnnAnimationTimer: null,
+        cnnAnimationImageKey: "",
     };
 
     const els = {
@@ -142,6 +214,18 @@
         cnnMissing: $("[data-cls-cnn-missing]"),
         cnnInputOverlay: $("[data-cls-cnn-input-overlay]"),
         cnnGuidance: $("[data-cls-cnn-guidance]"),
+        cnnStageSteps: $("[data-cls-cnn-stage-steps]"),
+        cnnAnimationStage: $("[data-cls-cnn-animation-stage]"),
+        cnnStageTitle: $("[data-cls-cnn-stage-title]"),
+        cnnStageKicker: $("[data-cls-cnn-stage-kicker]"),
+        cnnStageExplanation: $("[data-cls-cnn-stage-explanation]"),
+        cnnStageInput: $("[data-cls-cnn-stage-input]"),
+        cnnStageOutput: $("[data-cls-cnn-stage-output]"),
+        cnnStageFormula: $("[data-cls-cnn-stage-formula]"),
+        cnnPlay: $("[data-cls-cnn-play]"),
+        cnnPause: $("[data-cls-cnn-pause]"),
+        cnnNext: $("[data-cls-cnn-next]"),
+        cnnAuto: $("[data-cls-cnn-auto]"),
         cnnMaps: $("[data-cls-cnn-maps]"),
         cnnGlobal: $("[data-cls-cnn-global]"),
         cnnScoreList: $("[data-cls-cnn-score-list]"),
@@ -1002,9 +1086,11 @@
             const logits = Array.from(output.data || []);
             const probabilities = softmax(logits);
             const labels = state.cnnLabels.length ? state.cnnLabels : probabilities.map((_, index) => `class_${index}`);
+            const isImagenet = state.cnnModelKind === "imagenet";
+            const zhLabels = isImagenet ? (state.imagenetZhLabels || []) : [];
             state.cnnRealScores = probabilities
                 .map((score, index) => ({
-                    label: labels[index] || `class_${index}`,
+                    label: zhLabels[index] || labels[index] || `class_${index}`,
                     score,
                     source: "onnx-session-run",
                 }))
@@ -1419,6 +1505,162 @@
         `;
     }
 
+    function resetCnnAnimation() {
+        state.cnnStageIndex = 0;
+        state.cnnAnimationTick += 1;
+        state.cnnAnimationPlaying = true;
+        state.cnnAnimationAutoplay = true;
+        if (state.cnnAnimationTimer) clearTimeout(state.cnnAnimationTimer);
+        state.cnnAnimationTimer = null;
+    }
+
+    function setCnnStage(index, options = {}) {
+        const count = cnnAnimationStages.length;
+        state.cnnStageIndex = ((index % count) + count) % count;
+        state.cnnAnimationTick += 1;
+        if (options.play !== undefined) state.cnnAnimationPlaying = options.play;
+        render();
+    }
+
+    function scheduleCnnAnimation() {
+        if (state.cnnAnimationTimer) clearTimeout(state.cnnAnimationTimer);
+        state.cnnAnimationTimer = null;
+        if (state.method !== "cnn" || !state.cnnAnimationPlaying || !state.cnnAnimationAutoplay) return;
+        state.cnnAnimationTimer = setTimeout(() => {
+            state.cnnAnimationTimer = null;
+            if (state.method === "cnn" && state.cnnAnimationPlaying && state.cnnAnimationAutoplay) {
+                setCnnStage(state.cnnStageIndex + 1, { play: true });
+            }
+        }, 3300);
+    }
+
+    function renderCnnStageSteps() {
+        if (!els.cnnStageSteps) return;
+        els.cnnStageSteps.innerHTML = cnnAnimationStages.map((stage, index) => `
+            <button type="button" class="${index === state.cnnStageIndex ? "is-active" : ""}" data-cnn-stage-index="${index}">
+                <span>${String(index + 1).padStart(2, "0")}</span>
+                <strong>${stage.label}</strong>
+            </button>
+        `).join("");
+    }
+
+    function renderCnnAnimationVisual(item) {
+        const stage = cnnAnimationStages[state.cnnStageIndex] || cnnAnimationStages[0];
+        const scores = cnnScores(item);
+        const topScores = scores.length ? scores : [
+            { label: "waiting for ONNX", score: 0.34 },
+            { label: "logit candidate", score: 0.22 },
+            { label: "class response", score: 0.17 },
+            { label: "softmax bin", score: 0.12 },
+            { label: "next class", score: 0.08 },
+        ];
+        const image = item?.image || "";
+        const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
+        const tensorSize = state.cnnOnnxConfig?.inputSize || 224;
+        const heatCells = Array.from({ length: 36 }, (_, index) => `<i style="--d:${(index * 0.025).toFixed(3)}s; --o:${(0.22 + ((index * 7) % 13) / 18).toFixed(3)}"></i>`).join("");
+        const bars = topScores.slice(0, 5).map((score, index) => `
+            <div class="cls-cnn-prob-row ${index === 0 ? "is-top" : ""}" style="--p:${Math.max(6, Math.round((score.score || 0) * 100))}%">
+                <span>${index + 1}</span><strong>${escapeHtml(score.label)}</strong><i></i><em>${Math.round((score.score || 0) * 100)}%</em>
+            </div>
+        `).join("");
+
+        if (stage.key === "input") {
+            return `
+                <div class="cls-cnn-anim-input">
+                    <img src="${image}" alt="">
+                    <div class="cls-cnn-scanline"></div>
+                    <p>current image pixels</p>
+                </div>
+            `;
+        }
+        if (stage.key === "preprocess") {
+            return `
+                <div class="cls-cnn-anim-preprocess">
+                    <img src="${image}" alt="">
+                    <div class="cls-rgb-planes"><b>R</b><b>G</b><b>B</b></div>
+                    <div class="cls-tensor-grid">${heatCells}</div>
+                    <strong>H×W×3 → 1×3×${tensorSize}×${tensorSize}</strong>
+                </div>
+            `;
+        }
+        if (stage.key === "conv") {
+            const patch = Array.from({ length: 9 }, (_, index) => `<i>${((index + 2) / 10).toFixed(1)}</i>`).join("");
+            const weights = ["0.2", "-0.1", "0.3", "0.0", "0.5", "-0.2", "0.1", "0.4", "0.2"].map((value) => `<i>${value}</i>`).join("");
+            return `
+                <div class="cls-cnn-anim-conv">
+                    <div class="cls-cnn-patch">${patch}</div>
+                    <svg viewBox="0 0 100 58" preserveAspectRatio="none">
+                        <path d="M28 8 C43 8 54 13 70 8"></path>
+                        <path d="M28 28 C44 24 54 30 70 28"></path>
+                        <path d="M28 48 C43 44 54 48 70 48"></path>
+                    </svg>
+                    <div class="cls-cnn-kernel">${weights}</div>
+                    <div class="cls-cnn-sum">Σ x·w + b → 0.82</div>
+                    <div class="cls-cnn-feature-drop"></div>
+                </div>
+            `;
+        }
+        if (stage.key === "feature") {
+            return `
+                <div class="cls-cnn-anim-featuremaps">
+                    <article><strong>shallow</strong><span>edges / colors / textures</span><div>${heatCells}</div></article>
+                    <article><strong>middle</strong><span>patterns / local shapes</span><div>${heatCells}</div></article>
+                    <article><strong>high-level</strong><span>object parts / category responses</span><div>${heatCells}</div></article>
+                </div>
+            `;
+        }
+        if (stage.key === "pooling") {
+            return `
+                <div class="cls-cnn-anim-pooling">
+                    <div class="cls-pool-maps">
+                        ${[0, 1, 2, 3].map(() => `<article>${heatCells}</article>`).join("")}
+                    </div>
+                    <div class="cls-pool-vector">${Array.from({ length: 18 }, (_, i) => `<i style="--h:${26 + ((i * 11) % 54)}%"></i>`).join("")}</div>
+                    <strong>H×W×C → 1×1×C representation vector</strong>
+                </div>
+            `;
+        }
+        if (stage.key === "classifier") {
+            return `
+                <div class="cls-cnn-anim-classifier">
+                    <div class="cls-class-vector">${Array.from({ length: 14 }, (_, i) => `<i style="--h:${28 + ((i * 9) % 58)}%"></i>`).join("")}</div>
+                    <svg viewBox="0 0 100 72" preserveAspectRatio="none">
+                        ${[12, 25, 38, 51, 64].map((y, i) => `<path class="${i < 2 ? "is-hot" : ""}" d="M24 36 C45 ${y} 60 ${y} 82 ${y}"></path>`).join("")}
+                    </svg>
+                    <div class="cls-class-nodes">
+                        ${topScores.slice(0, 5).map((score, index) => `<span class="${index === 0 ? "is-top" : ""}">${escapeHtml(score.label)}</span>`).join("")}
+                    </div>
+                    <strong>W × vector + b → ${classCount} logits</strong>
+                </div>
+            `;
+        }
+        return `
+            <div class="cls-cnn-anim-softmax">
+                <div class="cls-logit-bars">${bars}</div>
+                <strong>logits → softmax probabilities → sorted Top-5</strong>
+            </div>
+        `;
+    }
+
+    function renderCnnAnimation(item) {
+        if (!els.cnnAnimationStage) return;
+        const stage = cnnAnimationStages[state.cnnStageIndex] || cnnAnimationStages[0];
+        renderCnnStageSteps();
+        els.cnnAnimationStage.dataset.stage = stage.key;
+        els.cnnAnimationStage.dataset.tick = String(state.cnnAnimationTick);
+        els.cnnAnimationStage.innerHTML = renderCnnAnimationVisual(item);
+        if (els.cnnStageTitle) els.cnnStageTitle.textContent = stage.title;
+        if (els.cnnStageKicker) els.cnnStageKicker.textContent = `stage ${state.cnnStageIndex + 1} / ${cnnAnimationStages.length}`;
+        if (els.cnnStageExplanation) els.cnnStageExplanation.textContent = stage.explanation;
+        if (els.cnnStageInput) els.cnnStageInput.textContent = stage.input;
+        if (els.cnnStageOutput) els.cnnStageOutput.textContent = stage.output;
+        if (els.cnnStageFormula) els.cnnStageFormula.textContent = stage.formula;
+        if (els.cnnPlay) els.cnnPlay.classList.toggle("is-active", state.cnnAnimationPlaying && !state.cnnAnimationAutoplay);
+        if (els.cnnPause) els.cnnPause.classList.toggle("is-active", !state.cnnAnimationPlaying);
+        if (els.cnnAuto) els.cnnAuto.classList.toggle("is-active", state.cnnAnimationAutoplay);
+        scheduleCnnAnimation();
+    }
+
     function renderScores(target, scores, options = {}) {
         const sliced = scores.slice(0, state.topK);
         const chainNode = options.chainNode || "";
@@ -1670,26 +1912,26 @@
         if (state.method === "cnn") {
             const onnxReady = state.cnnOnnxStatus === "ready";
             const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
+            const currentStage = cnnAnimationStages[state.cnnStageIndex] || cnnAnimationStages[0];
             const modelIdea = state.cnnModelKind === "flowers17"
                 ? "Flowers17 CNN 使用微调后的卷积特征提取器，把花卉图像映射到 17 个花卉类别。"
                 : "ImageNet CNN 使用通用卷积特征提取器，把图像映射到 1000 个物体类别。";
             const fitNote = state.cnnModelKind === "imagenet"
                 ? "ImageNet 更适合单个主体明确的物体图像；复杂街景、多人场景和道路场景通常会产生不稳定或看似奇怪的 Top-5。"
                 : "Flowers17 更适合单朵或主体明确的花卉图像；非花卉图片只能得到 17 个花卉类别中的相对最高分。";
-            els.notesMethodDesc.textContent = onnxReady
-                ? `${state.cnnModelKind === "flowers17" ? "Flowers17" : "ImageNet"} CNN 正在浏览器端通过 ONNX Runtime Web 执行真实推理。`
-                : "未加载 CNN ONNX 时保留概念展示和预设 Top-K。";
-            els.notesFormula.textContent = "p = \\operatorname{softmax}(W \\cdot \\operatorname{GAP}(\\operatorname{conv}(I)) + b)";
+            els.notesMethod.textContent = `CNN · ${currentStage.title}`;
+            els.notesMethodDesc.textContent = currentStage.explanation;
+            els.notesFormula.textContent = currentStage.formula;
             els.notesFormulaNote.textContent = onnxReady
-                ? `输入图像在前端 resize / normalize 为 ${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224} tensor，再交给 ONNX session.run，输出 ${classCount} 类 logits 并经 softmax 得到 Top-5。`
-                : "CNN 通过卷积层提取层级特征，经全局平均池化得到图像级向量，再由全连接层输出类别概率。";
+                ? `当前动画阶段是教学化简化视图；真实链路仍是 resize / normalize -> ONNX session.run -> ${classCount} logits -> softmax Top-5。`
+                : "ONNX 尚未就绪时只展示教学动画结构。";
 
             stepsHtml = `
                 <div class="cls-notes-step-item">
                     <span class="cls-notes-step-num">1</span>
                     <div class="cls-notes-step-content">
-                        <span class="cls-notes-step-title">当前模型：${state.cnnModelKind === "flowers17" ? "Flowers17" : "ImageNet"} 核心思想</span>
-                        <span class="cls-notes-step-desc">${modelIdea} 当前 Top-5 ${onnxReady ? "来自 ONNX Runtime Web session.run 的真实输出" : "暂未连接 ONNX session"}。</span>
+                        <span class="cls-notes-step-title">当前阶段：${currentStage.title}</span>
+                        <span class="cls-notes-step-desc">${currentStage.explanation} ${modelIdea} 当前 Top-5 ${onnxReady ? "来自 ONNX Runtime Web session.run 的真实输出" : "暂未连接 ONNX session"}。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
@@ -1996,6 +2238,7 @@
         setImage(els.cnnImage, els.cnnMissing, item);
         renderCnnOverlay(els.cnnInputOverlay);
         renderCnnGuidance();
+        renderCnnAnimation(item);
         renderCnnMaps(els.cnnMaps);
         renderGlobalFeature(els.cnnGlobal, state.cnnModelKind === "imagenet" ? 128 : 64);
         renderCnnModelProof();
@@ -2151,6 +2394,9 @@
             ]);
             const payload = { demoData, flowerData, bovwModel };
             applyData(payload);
+            loadJson(`${dataRoot}/classification_lab/imagenet_classes_zh.json`, "imagenet zh labels", false).then((zh) => {
+                if (Array.isArray(zh) && zh.length) state.imagenetZhLabels = zh;
+            }).catch(() => {});
             loadSelectedCnnOnnxModel().then(() => {
                 updateSampleOptions();
                 state.cnnRealScores = [];
@@ -2167,6 +2413,7 @@
         revokeUploadedImage();
         state.sampleId = els.sample.value;
         state.imageBitmap = null;
+        resetCnnAnimation();
         render();
     });
     if (els.upload) {
@@ -2177,6 +2424,7 @@
                 revokeUploadedImage();
                 state.uploadedItem = await uploadedImageItem(file);
                 state.imageBitmap = null;
+                resetCnnAnimation();
                 render();
             } catch (error) {
                 console.error("classification upload failed", error);
@@ -2208,6 +2456,7 @@
         els.cnnModel.addEventListener("change", () => {
             state.cnnModelChoice = els.cnnModel.value;
             resetCnnInferenceState(`Switching to ${cnnModelLabels[state.cnnModelChoice] || "CNN"}...`);
+            resetCnnAnimation();
             updateSampleOptions();
             state.imageBitmap = null;
             render();
@@ -2215,6 +2464,45 @@
                 updateSampleOptions();
                 render();
             });
+        });
+    }
+    if (els.cnnStageSteps) {
+        els.cnnStageSteps.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-cnn-stage-index]");
+            if (!button) return;
+            state.cnnAnimationAutoplay = false;
+            setCnnStage(Number(button.dataset.cnnStageIndex), { play: true });
+        });
+    }
+    if (els.cnnPlay) {
+        els.cnnPlay.addEventListener("click", () => {
+            state.cnnAnimationPlaying = true;
+            state.cnnAnimationAutoplay = false;
+            state.cnnAnimationTick += 1;
+            render();
+        });
+    }
+    if (els.cnnPause) {
+        els.cnnPause.addEventListener("click", () => {
+            state.cnnAnimationPlaying = false;
+            state.cnnAnimationAutoplay = false;
+            if (state.cnnAnimationTimer) clearTimeout(state.cnnAnimationTimer);
+            state.cnnAnimationTimer = null;
+            render();
+        });
+    }
+    if (els.cnnNext) {
+        els.cnnNext.addEventListener("click", () => {
+            state.cnnAnimationAutoplay = false;
+            setCnnStage(state.cnnStageIndex + 1, { play: true });
+        });
+    }
+    if (els.cnnAuto) {
+        els.cnnAuto.addEventListener("click", () => {
+            state.cnnAnimationPlaying = true;
+            state.cnnAnimationAutoplay = !state.cnnAnimationAutoplay;
+            state.cnnAnimationTick += 1;
+            render();
         });
     }
     els.vocabSize.addEventListener("change", () => {
