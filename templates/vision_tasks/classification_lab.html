@@ -61,6 +61,20 @@
             </label>
         </div>
 
+        <div class="cls-control-group" data-cls-cnn-controls hidden>
+			<label class="vision-field">
+				<span>CNN model</span>
+				<select data-cls-cnn-model>
+					<option value="flowers17" selected>Flowers17 CNN</option>
+					<option value="squeezenet">SqueezeNet 1.1 · ImageNet</option>
+					<option value="mobilenetv2">MobileNetV2 · ImageNet</option>
+				</select>
+				<small class="cls-field-hint">切换模型将重新加载 ONNX Runtime Web 推理。</small>
+			</label>
+		</div>
+
+        <small class="cls-field-hint cls-cnn-sample-hint" data-cls-cnn-sample-hint></small>
+
         <div class="vision-kv-grid">
             <div><span>当前方法</span><strong data-cls-active-method>BoVW</strong></div>
             <div><span>输入尺寸</span><strong data-cls-input-size>--</strong></div>
@@ -150,6 +164,18 @@
 
         <!-- CNN mode -->
         <div class="cls-mode-panel" data-cls-mode="cnn" hidden>
+            <div class="cls-cnn-guidance" data-cls-cnn-guidance></div>
+            <div class="cls-cnn-flow" aria-label="CNN inference flow">
+                <span>Input Image</span>
+                <b></b>
+                <span>Resize / Normalize / NCHW Tensor</span>
+                <b></b>
+                <span>CNN Feature Extractor</span>
+                <b></b>
+                <span>Global Pooling / Classifier</span>
+                <b></b>
+                <span>Softmax Top-5</span>
+            </div>
             <div class="cls-grid-2x2">
                 <div class="classification-image-card">
                     <div class="classification-card-head">
@@ -165,16 +191,16 @@
 
                 <div class="classification-side-card">
                     <div class="classification-card-head">
-                        <strong>卷积特征图</strong>
-                        <span>卷积核与激活特征图</span>
+                        <strong>Feature Extractor Explanation</strong>
+                        <span>CNN feature hierarchy</span>
                     </div>
                     <div class="cls-cnn-map-grid" data-cls-cnn-maps></div>
                 </div>
 
                 <div class="classification-hist-card">
                     <div class="classification-card-head">
-                        <strong>全局特征 (GAP)</strong>
-                        <span>全局平均池化特征向量</span>
+                        <strong>Representation Vector</strong>
+                        <span>pooling / classifier stage</span>
                     </div>
                     <div class="cls-global-feature" data-cls-cnn-global></div>
                 </div>
@@ -184,6 +210,7 @@
                         <strong>Softmax Top-K 输出</strong>
                         <span>端到端 CNN 分类器得分</span>
                     </div>
+                    <div class="cls-cnn-model-proof" data-cls-cnn-model-proof></div>
                     <div class="classification-score-list" data-cls-cnn-score-list></div>
                 </div>
             </div>

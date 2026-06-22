@@ -1,0 +1,12 @@
+{
+  "model_name": "SqueezeNet 1.1 ImageNet",
+  "model_kind": "imagenet",
+  "model_url": "/static/assets/data/classification/squeezenet1_1.onnx",
+  "labels_url": "/static/assets/data/classification/imagenet_classes.json",
+  "input_size": 224,
+  "input_layout": "NCHW",
+  "mean": [0.485, 0.456, 0.406],
+  "std": [0.229, 0.224, 0.225],
+  "top_k": 5,
+  "preprocess": "center_crop_resize_normalize_imagenet"
+}

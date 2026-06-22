@@ -1,0 +1,33 @@
+{
+  "available": true,
+  "model_name": "Flowers17 CNN (squeezenet1_1)",
+  "model_kind": "flowers17",
+  "model_url": "/static/assets/data/classification/flowers17_cnn.onnx",
+  "labels_url": "/static/assets/data/classification/flowers17_classes.json",
+  "input_size": 224,
+  "input_layout": "NCHW",
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "top_k": 5,
+  "preprocess": "center_crop_resize_normalize_imagenet",
+  "metrics": {
+    "train_accuracy": 0.961765,
+    "train_top3_accuracy": 0.996078,
+    "test_accuracy": 0.832353,
+    "top3_accuracy": 0.938235,
+    "train_loss": 0.126009,
+    "test_loss": 0.680591,
+    "epochs": 10,
+    "seed": 42,
+    "model": "squeezenet1_1",
+    "split": "per_class_first_60_train_last_20_test"
+  }
+}

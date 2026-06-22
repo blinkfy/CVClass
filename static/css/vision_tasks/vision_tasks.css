@@ -2134,7 +2134,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .cls-cnn-map-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 8px;
 }
 
@@ -2152,6 +2152,64 @@ body:has(.vision-lab) .ai-fab-icon img {
 .cls-cnn-map span {
     border-radius: 3px;
     background: linear-gradient(145deg, #60a5fa, #a78bfa);
+}
+
+.cls-cnn-feature-layer {
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 10px;
+    background: #f8fbff;
+}
+
+.cls-cnn-feature-layer span {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    background: #dbeafe;
+}
+
+.cls-cnn-feature-layer strong {
+    margin-left: 6px;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.cls-cnn-feature-layer p {
+    margin: 7px 0 8px;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.cls-cnn-feature-layer div {
+    display: grid;
+    gap: 4px;
+}
+
+.cls-cnn-feature-layer i {
+    display: block;
+    width: var(--w);
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2563eb, #22c55e);
+}
+
+.cls-cnn-feature-note {
+    margin: 0;
+    border: 1px dashed #bfdbfe;
+    border-radius: 10px;
+    padding: 8px;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.45;
+    background: #ffffff;
 }
 
 .classification-flow-band {
@@ -5272,6 +5330,94 @@ body:has(.vision-lab) .ai-fab-icon img {
     display: none !important;
 }
 
+.cls-cnn-guidance {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.cls-cnn-guidance-main {
+    display: grid;
+    grid-template-columns: minmax(190px, 1.1fr) repeat(2, minmax(160px, 0.95fr));
+    gap: 8px;
+}
+
+.cls-cnn-guidance strong,
+.cls-cnn-guidance span {
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.35;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.cls-cnn-guidance span {
+    color: #475569;
+}
+
+.cls-cnn-guidance p {
+    margin: 0;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.cls-cnn-sample-hint:empty {
+    display: none;
+}
+
+.cls-cnn-flow {
+    display: grid;
+    grid-template-columns: minmax(88px, 0.8fr) 18px minmax(150px, 1.25fr) 18px minmax(130px, 1fr) 18px minmax(150px, 1.1fr) 18px minmax(110px, 0.85fr);
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.cls-cnn-flow span {
+    display: grid;
+    place-items: center;
+    min-height: 42px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 7px;
+    color: #1e3a8a;
+    font-size: 10px;
+    font-weight: 950;
+    line-height: 1.2;
+    text-align: center;
+    background: #f8fbff;
+}
+
+.cls-cnn-flow b {
+    height: 2px;
+    border-radius: 99px;
+    background: #93c5fd;
+    position: relative;
+}
+
+.cls-cnn-flow b::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid #93c5fd;
+    border-right: 2px solid #93c5fd;
+    transform: translateY(-50%) rotate(45deg);
+}
+
 .cls-grid-2x2 {
     display: grid;
     grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.75fr);
@@ -5305,6 +5451,39 @@ body:has(.vision-lab) .ai-fab-icon img {
     gap: 12px;
 }
 
+.cls-representation-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.cls-representation-summary div {
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 8px;
+    background: #f8fbff;
+}
+
+.cls-representation-summary div:last-child {
+    grid-column: 1 / -1;
+}
+
+.cls-representation-summary span {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.cls-representation-summary strong {
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1.25;
+}
+
 .cls-global-vector {
     display: grid;
     grid-template-columns: repeat(16, 1fr);
@@ -5324,7 +5503,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .cls-global-meta {
-    display: flex;
+    display: none;
     justify-content: space-between;
     gap: 8px;
     color: #64748b;
@@ -6022,6 +6201,57 @@ body:has(.vision-lab) .ai-fab-icon img {
     background: #ecfdf5;
 }
 
+.cls-cnn-model-proof {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 7px;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.cls-cnn-model-proof span,
+.cls-cnn-model-proof strong,
+.cls-cnn-model-proof code,
+.cls-cnn-model-proof em {
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    padding: 4px 7px;
+    color: #1e3a8a;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 950;
+    line-height: 1.1;
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.cls-cnn-model-proof span {
+    border-color: #60a5fa;
+    color: #1d4ed8;
+    text-transform: uppercase;
+}
+
+.cls-cnn-model-proof code {
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.cls-cnn-model-proof em {
+    color: #047857;
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+.cls-cnn-model-proof small {
+    flex-basis: 100%;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
 .cls-classifier-flow span,
 .cls-classifier-flow strong {
     display: grid;
@@ -6218,6 +6448,24 @@ body:has(.vision-lab) .ai-fab-icon img {
 
     .cls-compare-diff {
         grid-column: auto;
+    }
+
+    .cls-cnn-guidance-main,
+    .cls-cnn-flow {
+        grid-template-columns: 1fr;
+    }
+
+    .cls-cnn-flow b {
+        width: 2px;
+        height: 14px;
+        justify-self: center;
+    }
+
+    .cls-cnn-flow b::after {
+        right: 50%;
+        top: auto;
+        bottom: -2px;
+        transform: translateX(50%) rotate(135deg);
     }
 
     .cls-notes-grid {

@@ -6,6 +6,11 @@
     const dataRoot = api.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
     const bovwModelUrl = `${dataRoot}/classification_lab/bovw_flowers17_model.json`;
     const flowersSamplesUrl = `${dataRoot}/classification_lab/flowers17_samples.json`;
+    const cnnDataRoot = window.cvclassUrl("/static/assets/data/classification");
+    const legacyClassificationLabRoot = `${dataRoot}/classification_lab`;
+    const localOrtScriptUrl = window.cvclassUrl("/static/vendor/onnxruntime-web/ort.min.js");
+    const localOrtWasmBase = window.cvclassUrl("/static/vendor/onnxruntime-web/");
+    const cdnOrtScriptUrl = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js";
     const DATA_CACHE_KEY = "cvclass.classification_lab.data";
     const DATA_CACHE_VERSION = "v5";
     const $ = (selector) => root.querySelector(selector);
@@ -15,6 +20,12 @@
         bovw: "Trained BoVW · Oxford Flowers17",
         cnn: "CNN 端到端分类",
         compare: "BoVW vs CNN 对比",
+    };
+    const cnnModelLabels = {
+        auto: "Auto CNN",
+        flowers17: "Flowers17 CNN",
+        squeezenet: "SqueezeNet 1.1",
+        mobilenetv2: "MobileNetV2",
     };
     const bovwEngineLabels = {
         trained: "Trained BoVW · Oxford Flowers17",
@@ -71,6 +82,21 @@
         hoverFeatureId: null,
         representativeFeatureIds: new Set(),
         activeBovwStep: "local-features",
+        cnnOnnxSession: null,
+        cnnOnnxStatus: "idle",
+        cnnOnnxConfig: null,
+        cnnLabels: [],
+        cnnRealScores: [],
+        cnnInferenceMs: 0,
+        cnnInputName: null,
+        cnnOutputName: null,
+        cnnModelKind: "concept",
+        cnnModelMessage: "",
+        cnnModelUrl: "",
+        cnnInferenceKey: "",
+        cnnInferencePendingKey: "",
+        cnnModelChoice: "flowers17",
+        cnnLoadedChoice: "",
     };
 
     const els = {
@@ -78,6 +104,9 @@
         upload: $("[data-cls-upload]"),
         methods: $$("[data-cls-method]"),
         bovwControls: $("[data-cls-bovw-controls]"),
+        cnnControls: $("[data-cls-cnn-controls]"),
+        cnnModel: $("[data-cls-cnn-model]"),
+        cnnSampleHint: $("[data-cls-cnn-sample-hint]"),
         bovwEngine: $("[data-cls-bovw-engine]"),
         vocabSize: $("[data-cls-vocab-size]"),
         featureType: $("[data-cls-feature-type]"),
@@ -112,9 +141,11 @@
         cnnImage: $("[data-cls-cnn-image]"),
         cnnMissing: $("[data-cls-cnn-missing]"),
         cnnInputOverlay: $("[data-cls-cnn-input-overlay]"),
+        cnnGuidance: $("[data-cls-cnn-guidance]"),
         cnnMaps: $("[data-cls-cnn-maps]"),
         cnnGlobal: $("[data-cls-cnn-global]"),
         cnnScoreList: $("[data-cls-cnn-score-list]"),
+        cnnModelProof: $("[data-cls-cnn-model-proof]"),
 
         compareBovwImage: $("[data-cls-compare-bovw-image]"),
         compareBovwOverlay: $("[data-cls-compare-bovw-overlay]"),
@@ -145,6 +176,9 @@
     if (initialParams.get("focus") === "topk") {
         state.topK = 5;
     }
+    if (["flowers17", "squeezenet", "mobilenetv2"].includes(initialParams.get("cnnModel"))) {
+        state.cnnModelChoice = initialParams.get("cnnModel");
+    }
     els.methods.forEach((item) => {
         const active = item.dataset.clsMethod === state.method;
         item.classList.toggle("is-active", active);
@@ -153,6 +187,7 @@
     if (els.topK) els.topK.value = String(state.topK);
     if (els.vocabSize) els.vocabSize.value = String(state.vocabSize);
     if (els.bovwEngine) els.bovwEngine.value = state.bovwEngine;
+    if (els.cnnModel) els.cnnModel.value = state.cnnModelChoice;
 
     const flowerNameTranslations = {
         "daffodil": "黄水仙 (daffodil)",
@@ -181,7 +216,38 @@
         "Market Stall": "市场摊位 (Market Stall)",
         "Daffodil Flower": "黄水仙花 (Daffodil Flower)",
         "Snowdrop Flower": "雪滴花 (Snowdrop Flower)",
-        "Lily of the Valley": "谷中百合 (Lily of the Valley)"
+        "Lily of the Valley": "谷中百合 (Lily of the Valley)",
+        // ImageNet 常见类别翻译 (用于 CNN 真实推理结果展示)
+        "trombone": "长号 (trombone)",
+        "cornet": "短号 (cornet)",
+        "kimono": "和服 (kimono)",
+        "grocery store": "杂货店 (grocery store)",
+        "grocery_store": "杂货店 (grocery store)",
+        "bow": "蝴蝶结/弓 (bow)",
+        "violin": "小提琴 (violin)",
+        "flute": "长笛 (flute)",
+        "oboe": "双簧管 (oboe)",
+        "sax": "萨克斯 (sax)",
+        "saxophone": "萨克斯 (saxophone)",
+        "french horn": "圆号 (french horn)",
+        "french_horn": "圆号 (french horn)",
+        "acoustic guitar": "原声吉他 (acoustic guitar)",
+        "acoustic_guitar": "原声吉他 (acoustic guitar)",
+        "electric guitar": "电吉他 (electric guitar)",
+        "electric_guitar": "电吉他 (electric guitar)",
+        "banjo": "班卓琴 (banjo)",
+        "harp": "竖琴 (harp)",
+        "cello": "大提琴 (cello)",
+        "grand piano": "大钢琴 (grand piano)",
+        "grand_piano": "大钢琴 (grand piano)",
+        "upright piano": "立式钢琴 (upright piano)",
+        "upright_piano": "立式钢琴 (upright piano)",
+        "accordion": "手风琴 (accordion)",
+        "chime": "编钟 (chime)",
+        "marimba": "马林巴 (marimba)",
+        "drum": "鼓 (drum)",
+        "gong": "锣 (gong)",
+        "tambourine": "铃鼓 (tambourine)"
     };
 
     const translateSampleName = (name) => {
@@ -200,7 +266,10 @@
 
     const escapeHtml = (value) => {
         const str = String(value ?? "");
-        return flowerNameTranslations[str] || str;
+        // 优先匹配翻译表，如果没匹配到，则尝试将下划线替换为空格后再次匹配
+        const key = str.toLowerCase();
+        const keyWithSpaces = key.replace(/_/g, " ");
+        return flowerNameTranslations[key] || flowerNameTranslations[keyWithSpaces] || str;
     };
 
     function sample() {
@@ -210,7 +279,10 @@
     }
 
     function activeData() {
-        if (state.method === "cnn") return state.demoData || state.data;
+        if (state.method === "cnn") {
+            if (state.cnnModelKind === "flowers17") return state.flowerData || state.demoData || state.data;
+            return state.demoData || state.data;
+        }
         if (isTrainedBovwActive()) return state.flowerData || state.demoData || state.data;
         return state.demoData || state.data;
     }
@@ -248,6 +320,10 @@
     }
 
     function cnnScores(item) {
+        const key = item?.image ? `${state.cnnModelKind}|${state.cnnModelUrl}|${item.image}` : "";
+        if (key && state.cnnInferenceKey === key && Array.isArray(state.cnnRealScores) && state.cnnRealScores.length) {
+            return state.cnnRealScores;
+        }
         return item.cnn?.top5 || [];
     }
 
@@ -572,6 +648,379 @@
             image.onerror = () => resolve(null);
             image.src = item.image;
         });
+    }
+
+    async function fetchOk(url) {
+        try {
+            const response = await fetch(url, { method: "HEAD", cache: "no-store" });
+            return response.ok;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function loadScript(url) {
+        return new Promise((resolve, reject) => {
+            const existing = document.querySelector(`script[data-cls-dynamic-script="${url}"]`);
+            if (existing) {
+                if (existing.dataset.loaded === "true") resolve();
+                else existing.addEventListener("load", resolve, { once: true });
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = url;
+            script.async = true;
+            script.dataset.clsDynamicScript = url;
+            script.onload = () => {
+                script.dataset.loaded = "true";
+                resolve();
+            };
+            script.onerror = () => reject(new Error(`script failed: ${url}`));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensureOrtRuntime() {
+        if (!window.ort) {
+            try {
+                await loadScript(localOrtScriptUrl);
+            } catch (_localError) {
+                await loadScript(cdnOrtScriptUrl);
+            }
+        }
+        if (!window.ort) throw new Error("ONNX Runtime Web 加载失败");
+        const wasmEnv = window.ort.env?.wasm;
+        if (wasmEnv) {
+            wasmEnv.wasmPaths = localOrtWasmBase;
+            wasmEnv.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
+        }
+        if (window.ort.env) window.ort.env.logLevel = "error";
+        return window.ort;
+    }
+
+    function normalizeCnnConfig(config = {}) {
+        return {
+            inputSize: Number(config.input_size || config.inputSize || 224),
+            mean: Array.isArray(config.mean) ? config.mean : [0.485, 0.456, 0.406],
+            std: Array.isArray(config.std) ? config.std : [0.229, 0.224, 0.225],
+            topK: Number(config.top_k || config.topK || 5),
+            inputLayout: config.input_layout || config.inputLayout || "NCHW",
+            modelName: config.model_name || config.modelName || "CNN ONNX",
+            modelUrl: config.model_url || config.modelUrl || "",
+            labelsUrl: config.labels_url || config.labelsUrl || "",
+            inputName: config.input_name || config.inputName || "",
+            outputName: config.output_name || config.outputName || "",
+        };
+    }
+
+    async function loadLabelsFromCandidates(candidates) {
+        for (const url of candidates.filter(Boolean)) {
+            try {
+                const labels = await loadJson(url, "cnn labels", false);
+                if (Array.isArray(labels) && labels.length) return labels;
+                if (Array.isArray(labels?.labels) && labels.labels.length) return labels.labels;
+            } catch (_error) {
+                // try next candidate
+            }
+        }
+        return [];
+    }
+
+    async function createCnnSession(modelUrl, config, labels, kind, message) {
+        const ortRuntime = await ensureOrtRuntime();
+        const session = await ortRuntime.InferenceSession.create(modelUrl, {
+            executionProviders: ["wasm"],
+            graphOptimizationLevel: "all",
+        });
+        state.cnnOnnxSession = session;
+        state.cnnOnnxConfig = normalizeCnnConfig(config);
+        state.cnnLabels = labels;
+        state.cnnInputName = state.cnnOnnxConfig.inputName || session.inputNames?.[0] || null;
+        state.cnnOutputName = state.cnnOnnxConfig.outputName || session.outputNames?.[0] || null;
+        state.cnnModelKind = kind;
+        state.cnnModelUrl = modelUrl;
+        state.cnnModelMessage = message;
+        state.cnnOnnxStatus = "ready";
+        state.cnnLoadedChoice = state.cnnModelChoice;
+        return session;
+    }
+
+    function resetCnnInferenceState(message = "") {
+        if (state.cnnOnnxSession?.release) {
+            state.cnnOnnxSession.release().catch((error) => console.warn("classification cnn session release failed", error));
+        }
+        state.cnnOnnxSession = null;
+        state.cnnOnnxStatus = "idle";
+        state.cnnOnnxConfig = null;
+        state.cnnLabels = [];
+        state.cnnRealScores = [];
+        state.cnnInferenceMs = 0;
+        state.cnnInputName = null;
+        state.cnnOutputName = null;
+        state.cnnModelKind = "concept";
+        state.cnnModelMessage = message;
+        state.cnnModelUrl = "";
+        state.cnnInferenceKey = "";
+        state.cnnInferencePendingKey = "";
+        state.cnnLoadedChoice = "";
+    }
+
+    function cloneCnnConfig(config, overrides = {}) {
+        return normalizeCnnConfig({ ...(config || {}), ...overrides });
+    }
+
+    async function tryLoadCnnCandidate(candidate) {
+        const modelUrl = candidate.config.modelUrl || candidate.modelUrl;
+        if (!modelUrl || !(await fetchOk(modelUrl))) return null;
+        const labels = await loadLabelsFromCandidates(candidate.labelUrls);
+        if (!labels.length) return null;
+        return createCnnSession(modelUrl, candidate.config, labels, candidate.kind, candidate.message);
+    }
+
+    async function loadCnnOnnxModel() {
+        if (state.cnnOnnxStatus === "ready" && state.cnnOnnxSession && state.cnnLoadedChoice === state.cnnModelChoice) return state.cnnOnnxSession;
+        if (state.cnnOnnxStatus === "loading") return null;
+        state.cnnOnnxStatus = "loading";
+        state.cnnModelMessage = "正在加载 CNN ONNX 模型...";
+        render();
+
+        try {
+            const rawFlowersConfig = await loadJson(`${cnnDataRoot}/flowers17_cnn_config.json`, "flowers17 cnn config", false);
+            const flowersConfig = normalizeCnnConfig(rawFlowersConfig || {});
+            const flowersModelUrl = flowersConfig.modelUrl || `${cnnDataRoot}/flowers17_cnn.onnx`;
+            if (rawFlowersConfig?.available !== false && await fetchOk(flowersModelUrl)) {
+                const flowersLabels = await loadLabelsFromCandidates([
+                    flowersConfig.labelsUrl,
+                    `${cnnDataRoot}/flowers17_classes.json`,
+                ]);
+                if (flowersLabels.length) {
+                    return createCnnSession(flowersModelUrl, flowersConfig, flowersLabels, "flowers17", "Flowers17 CNN ONNX 已加载，Top-K 来自 session.run。");
+                }
+            }
+
+            const imagenetConfig = normalizeCnnConfig(await loadJson(`${cnnDataRoot}/classification_config.json`, "classification config", false) || {});
+            const imagenetModelCandidates = [
+                imagenetConfig.modelUrl,
+                `${cnnDataRoot}/squeezenet1_1.onnx`,
+                `${cnnDataRoot}/mobilenetv2-10.onnx`,
+                `${legacyClassificationLabRoot}/squeezenet1.1-7.onnx`,
+                `${legacyClassificationLabRoot}/mobilenetv2-10.onnx`,
+            ];
+            const imagenetLabels = await loadLabelsFromCandidates([
+                imagenetConfig.labelsUrl,
+                `${cnnDataRoot}/imagenet_classes.json`,
+                `${legacyClassificationLabRoot}/imagenet-simple-labels.json`,
+            ]);
+            for (const modelUrl of imagenetModelCandidates.filter(Boolean)) {
+                if (!(await fetchOk(modelUrl))) continue;
+                return createCnnSession(modelUrl, imagenetConfig, imagenetLabels, "imagenet", "ImageNet CNN ONNX 已加载，类别体系为 1000 类 ImageNet。");
+            }
+
+            state.cnnOnnxStatus = "missing";
+            state.cnnModelKind = "concept";
+            state.cnnModelMessage = "未找到 CNN ONNX 模型，当前保留概念展示。";
+        } catch (error) {
+            state.cnnOnnxStatus = "error";
+            state.cnnModelKind = "concept";
+            state.cnnModelMessage = `CNN ONNX 加载失败：${error.message || error}`;
+            console.error("classification cnn model failed", error);
+        }
+        render();
+        return null;
+    }
+
+    async function loadSelectedCnnOnnxModel() {
+        if (state.cnnOnnxStatus === "ready" && state.cnnOnnxSession && state.cnnLoadedChoice === state.cnnModelChoice) return state.cnnOnnxSession;
+        if (state.cnnOnnxStatus === "loading") return null;
+        state.cnnOnnxStatus = "loading";
+        state.cnnModelMessage = `Loading ${cnnModelLabels[state.cnnModelChoice] || "CNN"} ONNX model...`;
+        render();
+
+        try {
+            const rawFlowersConfig = await loadJson(`${cnnDataRoot}/flowers17_cnn_config.json`, "flowers17 cnn config", false);
+            const flowersConfig = normalizeCnnConfig(rawFlowersConfig || {});
+            const flowersModelUrl = flowersConfig.modelUrl || `${cnnDataRoot}/flowers17_cnn.onnx`;
+            const rawImagenetConfig = await loadJson(`${cnnDataRoot}/classification_config.json`, "classification config", false) || {};
+            const imagenetConfig = normalizeCnnConfig(rawImagenetConfig);
+            const imagenetLabelUrls = [
+                imagenetConfig.labelsUrl,
+                `${cnnDataRoot}/imagenet_classes.json`,
+                `${legacyClassificationLabRoot}/imagenet-simple-labels.json`,
+            ];
+            const candidates = [
+                {
+                    key: "flowers17",
+                    kind: "flowers17",
+                    enabled: rawFlowersConfig?.available !== false,
+                    modelUrl: flowersModelUrl,
+                    config: flowersConfig,
+                    labelUrls: [flowersConfig.labelsUrl, `${cnnDataRoot}/flowers17_classes.json`],
+                    message: "Flowers17 CNN ONNX loaded. Top-K comes from session.run.",
+                },
+                {
+                    key: "squeezenet",
+                    kind: "imagenet",
+                    enabled: true,
+                    modelUrl: `${cnnDataRoot}/squeezenet1_1.onnx`,
+                    config: cloneCnnConfig(rawImagenetConfig, {
+                        model_name: "SqueezeNet 1.1 ImageNet",
+                        model_url: `${cnnDataRoot}/squeezenet1_1.onnx`,
+                    }),
+                    labelUrls: imagenetLabelUrls,
+                    message: "SqueezeNet 1.1 ImageNet ONNX loaded. Top-K comes from session.run.",
+                },
+                {
+                    key: "squeezenet",
+                    kind: "imagenet",
+                    enabled: true,
+                    modelUrl: `${legacyClassificationLabRoot}/squeezenet1.1-7.onnx`,
+                    config: cloneCnnConfig(rawImagenetConfig, {
+                        model_name: "SqueezeNet 1.1 ImageNet",
+                        model_url: `${legacyClassificationLabRoot}/squeezenet1.1-7.onnx`,
+                    }),
+                    labelUrls: imagenetLabelUrls,
+                    message: "SqueezeNet 1.1 ImageNet ONNX loaded from legacy assets. Top-K comes from session.run.",
+                },
+                {
+                    key: "mobilenetv2",
+                    kind: "imagenet",
+                    enabled: true,
+                    modelUrl: `${cnnDataRoot}/mobilenetv2-10.onnx`,
+                    config: cloneCnnConfig(rawImagenetConfig, {
+                        model_name: "MobileNetV2 ImageNet",
+                        model_url: `${cnnDataRoot}/mobilenetv2-10.onnx`,
+                    }),
+                    labelUrls: imagenetLabelUrls,
+                    message: "MobileNetV2 ImageNet ONNX loaded. Top-K comes from session.run.",
+                },
+                {
+                    key: "mobilenetv2",
+                    kind: "imagenet",
+                    enabled: true,
+                    modelUrl: `${legacyClassificationLabRoot}/mobilenetv2-10.onnx`,
+                    config: cloneCnnConfig(rawImagenetConfig, {
+                        model_name: "MobileNetV2 ImageNet",
+                        model_url: `${legacyClassificationLabRoot}/mobilenetv2-10.onnx`,
+                    }),
+                    labelUrls: imagenetLabelUrls,
+                    message: "MobileNetV2 ImageNet ONNX loaded from legacy assets. Top-K comes from session.run.",
+                },
+            ];
+            if (imagenetConfig.modelUrl && !candidates.some((candidate) => candidate.modelUrl === imagenetConfig.modelUrl)) {
+                candidates.splice(1, 0, {
+                    key: "squeezenet",
+                    kind: "imagenet",
+                    enabled: true,
+                    modelUrl: imagenetConfig.modelUrl,
+                    config: imagenetConfig,
+                    labelUrls: imagenetLabelUrls,
+                    message: "ImageNet CNN ONNX loaded. Top-K comes from session.run.",
+                });
+            }
+            const requestedCandidates = candidates.filter((candidate) => candidate.key === state.cnnModelChoice);
+            for (const candidate of requestedCandidates) {
+                if (!candidate.enabled) continue;
+                const session = await tryLoadCnnCandidate(candidate);
+                if (session) return session;
+            }
+            state.cnnOnnxStatus = "missing";
+            state.cnnModelKind = "concept";
+            state.cnnModelMessage = `${cnnModelLabels[state.cnnModelChoice] || "Selected CNN"} ONNX model was not found. Concept display is kept.`;
+        } catch (error) {
+            state.cnnOnnxStatus = "error";
+            state.cnnModelKind = "concept";
+            state.cnnModelMessage = `CNN ONNX load failed: ${error.message || error}`;
+            console.error("classification cnn model failed", error);
+        }
+        render();
+        return null;
+    }
+
+    function softmax(values) {
+        const maxValue = Math.max(...values);
+        const expValues = values.map((value) => Math.exp(value - maxValue));
+        const total = expValues.reduce((sum, value) => sum + value, 0) || 1;
+        return expValues.map((value) => value / total);
+    }
+
+    function buildCnnInputTensor(item) {
+        const config = state.cnnOnnxConfig || normalizeCnnConfig();
+        const size = config.inputSize || 224;
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => {
+                const sourceWidth = image.naturalWidth || image.width;
+                const sourceHeight = image.naturalHeight || image.height;
+                const cropSize = Math.min(sourceWidth, sourceHeight);
+                const sx = Math.max(0, Math.round((sourceWidth - cropSize) / 2));
+                const sy = Math.max(0, Math.round((sourceHeight - cropSize) / 2));
+                const canvas = document.createElement("canvas");
+                canvas.width = size;
+                canvas.height = size;
+                const context = canvas.getContext("2d", { willReadFrequently: true });
+                context.drawImage(image, sx, sy, cropSize, cropSize, 0, 0, size, size);
+                const pixels = context.getImageData(0, 0, size, size).data;
+                const input = new Float32Array(3 * size * size);
+                const mean = config.mean;
+                const std = config.std;
+                for (let y = 0; y < size; y += 1) {
+                    for (let x = 0; x < size; x += 1) {
+                        const pixelOffset = (y * size + x) * 4;
+                        const tensorOffset = y * size + x;
+                        input[tensorOffset] = (pixels[pixelOffset] / 255 - mean[0]) / std[0];
+                        input[size * size + tensorOffset] = (pixels[pixelOffset + 1] / 255 - mean[1]) / std[1];
+                        input[2 * size * size + tensorOffset] = (pixels[pixelOffset + 2] / 255 - mean[2]) / std[2];
+                    }
+                }
+                resolve(new window.ort.Tensor("float32", input, [1, 3, size, size]));
+            };
+            image.onerror = () => reject(new Error(`CNN image failed to load: ${item?.image || ""}`));
+            image.src = item.image;
+        });
+    }
+
+    async function runCnnInference(item) {
+        if (!item?.image || state.cnnOnnxStatus !== "ready" || !state.cnnOnnxSession || !state.cnnInputName) return;
+        const key = `${state.cnnModelKind}|${state.cnnModelUrl}|${item.image}`;
+        if (state.cnnInferenceKey === key && state.cnnRealScores.length) return;
+        if (state.cnnInferencePendingKey === key) return;
+        state.cnnInferencePendingKey = key;
+        state.cnnRealScores = [];
+        state.cnnInferenceMs = 0;
+        state.cnnModelMessage = state.cnnModelKind === "flowers17"
+            ? "正在用 Flowers17 CNN 执行浏览器端推理..."
+            : "正在用 ImageNet CNN 执行浏览器端推理...";
+        render();
+        try {
+            const tensor = await buildCnnInputTensor(item);
+            const startedAt = performance.now();
+            const outputs = await state.cnnOnnxSession.run({ [state.cnnInputName]: tensor });
+            state.cnnInferenceMs = performance.now() - startedAt;
+            const outputName = state.cnnOutputName || Object.keys(outputs)[0];
+            const output = outputs[outputName];
+            const logits = Array.from(output.data || []);
+            const probabilities = softmax(logits);
+            const labels = state.cnnLabels.length ? state.cnnLabels : probabilities.map((_, index) => `class_${index}`);
+            state.cnnRealScores = probabilities
+                .map((score, index) => ({
+                    label: labels[index] || `class_${index}`,
+                    score,
+                    source: "onnx-session-run",
+                }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 5);
+            state.cnnInferenceKey = key;
+            state.cnnModelMessage = `ONNX session.run 完成，耗时 ${Math.round(state.cnnInferenceMs)} ms。`;
+        } catch (error) {
+            state.cnnOnnxStatus = "error";
+            state.cnnModelKind = "concept";
+            state.cnnModelMessage = `CNN 推理失败：${error.message || error}`;
+            console.error("classification cnn inference failed", error);
+        } finally {
+            state.cnnInferencePendingKey = "";
+            render();
+        }
     }
 
     function clamp(value, min, max) {
@@ -923,19 +1372,45 @@
     }
 
     function renderCnnMaps(target) {
-        target.innerHTML = Array.from({ length: 12 }, (_, i) => `
-            <div class="cls-cnn-map">
-                ${Array.from({ length: 16 }, (_, j) => `<span style="opacity:${0.25 + (((i * 7 + j * 5) % 9) / 12)}; --delay:${((i * 4 + j) * 0.01).toFixed(2)}s"></span>`).join("")}
-            </div>
-        `).join("");
+        target.innerHTML = `
+            <article class="cls-cnn-feature-layer">
+                <span>01</span>
+                <strong>shallow features</strong>
+                <p>edges / colors / textures</p>
+                <div><i style="--w:72%"></i><i style="--w:54%"></i><i style="--w:63%"></i></div>
+            </article>
+            <article class="cls-cnn-feature-layer">
+                <span>02</span>
+                <strong>middle features</strong>
+                <p>patterns / local shapes</p>
+                <div><i style="--w:58%"></i><i style="--w:82%"></i><i style="--w:49%"></i></div>
+            </article>
+            <article class="cls-cnn-feature-layer">
+                <span>03</span>
+                <strong>high-level features</strong>
+                <p>object parts / category responses</p>
+                <div><i style="--w:88%"></i><i style="--w:61%"></i><i style="--w:75%"></i></div>
+            </article>
+            <p class="cls-cnn-feature-note">这是 CNN 特征提取过程示意；当前 Top-5 来自 ONNX session.run 的真实输出。</p>
+        `;
     }
 
     function renderGlobalFeature(target, dim = 64) {
-        const cells = Array.from({ length: dim }, (_, i) => {
+        const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
+        const infer = state.cnnInferenceMs ? `${Math.round(state.cnnInferenceMs)} ms` : "--";
+        const vectorDim = state.cnnModelKind === "flowers17" ? "17 logits" : state.cnnModelKind === "imagenet" ? "1000 logits" : `${dim} dims`;
+        const cells = Array.from({ length: Math.min(dim, 96) }, (_, i) => {
             const intensity = 0.12 + ((i * 13) % 17) / 28;
             return `<span style="opacity:${intensity.toFixed(3)}; --delay:${(i * 0.01).toFixed(2)}s"></span>`;
         }).join("");
         target.innerHTML = `
+            <div class="cls-representation-summary">
+                <div><span>stage</span><strong>pooling / classifier stage</strong></div>
+                <div><span>feature vector</span><strong>pooled feature vector</strong></div>
+                <div><span>logits vector</span><strong>${vectorDim}</strong></div>
+                <div><span>output size</span><strong>${classCount} classes</strong></div>
+                <div><span>inference time</span><strong>${infer}</strong></div>
+            </div>
             <div class="cls-global-vector">${cells}</div>
             <div class="cls-global-meta">
                 <span>${dim} 维特征</span>
@@ -1144,15 +1619,29 @@
     }
 
     function renderDiffTable() {
+        const cnnIsFlowers = state.cnnModelKind === "flowers17";
+        const cnnIsImagenet = state.cnnModelKind === "imagenet";
+        const cnnTitle = cnnIsFlowers ? "CNN Flowers17" : cnnIsImagenet ? "CNN ImageNet" : "CNN Concept";
+        const cnnClasses = cnnIsFlowers ? "17 flower classes" : cnnIsImagenet ? "1000 ImageNet classes" : "concept classes";
+        const cnnRoute = cnnIsFlowers
+            ? "image tensor → CNN feature extractor → classifier head → 17 flower classes"
+            : cnnIsImagenet
+                ? "image tensor → CNN feature extractor → classifier head → 1000 ImageNet classes"
+                : "image → conceptual feature maps → softmax scores";
+        const compareNote = cnnIsImagenet
+            ? "二者类别体系不同：BoVW 是 17 类花卉，CNN 是 1000 类 ImageNet。本页只比较传统特征分类与深度模型推理路径，不比较准确率。"
+            : cnnIsFlowers
+                ? "二者同为 Flowers17 分类，但表示学习路径不同：BoVW 使用手工 patch descriptor，CNN 使用深度特征提取器。"
+                : "当前未加载 CNN ONNX，仅保留概念路径对比。";
         els.compareDiff.innerHTML = `
             <table>
-                <thead><tr><th>对比维度</th><th>BoVW</th><th>CNN</th></tr></thead>
+                <thead><tr><th>对比维度</th><th>BoVW Flowers17</th><th>${cnnTitle}</th></tr></thead>
                 <tbody>
-                    <tr><td>表示形式</td><td>稀疏词频直方图<br><small>${state.vocabSize} bins</small></td><td>全局稠密特征向量<br><small>via GAP</small></td></tr>
-                    <tr><td>特征来源</td><td>手工局部描述子<br><small>${featureLabels[state.featureType]}</small></td><td>数据驱动的卷积核<br><small>端到端学习</small></td></tr>
-                    <tr><td>空间信息</td><td>弱（需 SPM 增强）</td><td>保留在特征图中，<br>池化后压缩</td></tr>
-                    <tr><td>训练方式</td><td>分阶段：词典 + 分类器</td><td>统一反向传播优化</td></tr>
-                    <tr><td>可解释性</td><td>词频、关键点可见</td><td>特征图可视化较抽象</td></tr>
+                    <tr><td>类别体系</td><td>17 flower classes</td><td>${cnnClasses}</td></tr>
+                    <tr><td>推理路径</td><td>patch descriptor → KMeans codebook → BoVW histogram → Logistic Regression → 17 flower classes</td><td>${cnnRoute}</td></tr>
+                    <tr><td>推理实现</td><td>前端 JSON codebook + classifier 权重</td><td>${state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web session.run" : "概念展示 / 预设分数"}</td></tr>
+                    <tr><td>表示形式</td><td>稀疏词频直方图<br><small>${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} bins</small></td><td>深度特征向量<br><small>resize + normalize + CNN</small></td></tr>
+                    <tr><td>说明</td><td colspan="2">${compareNote}</td></tr>
                 </tbody>
             </table>
         `;
@@ -1179,50 +1668,60 @@
         let stepsHtml = "";
 
         if (state.method === "cnn") {
-            els.notesMethodDesc.textContent = "直接从像素学习卷积特征、全局语义向量和分类器参数。";
+            const onnxReady = state.cnnOnnxStatus === "ready";
+            const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
+            const modelIdea = state.cnnModelKind === "flowers17"
+                ? "Flowers17 CNN 使用微调后的卷积特征提取器，把花卉图像映射到 17 个花卉类别。"
+                : "ImageNet CNN 使用通用卷积特征提取器，把图像映射到 1000 个物体类别。";
+            const fitNote = state.cnnModelKind === "imagenet"
+                ? "ImageNet 更适合单个主体明确的物体图像；复杂街景、多人场景和道路场景通常会产生不稳定或看似奇怪的 Top-5。"
+                : "Flowers17 更适合单朵或主体明确的花卉图像；非花卉图片只能得到 17 个花卉类别中的相对最高分。";
+            els.notesMethodDesc.textContent = onnxReady
+                ? `${state.cnnModelKind === "flowers17" ? "Flowers17" : "ImageNet"} CNN 正在浏览器端通过 ONNX Runtime Web 执行真实推理。`
+                : "未加载 CNN ONNX 时保留概念展示和预设 Top-K。";
             els.notesFormula.textContent = "p = \\operatorname{softmax}(W \\cdot \\operatorname{GAP}(\\operatorname{conv}(I)) + b)";
-            els.notesFormulaNote.textContent = "CNN 通过卷积层提取层级特征，经全局平均池化得到图像级向量，再由全连接层输出类别概率。";
+            els.notesFormulaNote.textContent = onnxReady
+                ? `输入图像在前端 resize / normalize 为 ${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224} tensor，再交给 ONNX session.run，输出 ${classCount} 类 logits 并经 softmax 得到 Top-5。`
+                : "CNN 通过卷积层提取层级特征，经全局平均池化得到图像级向量，再由全连接层输出类别概率。";
 
             stepsHtml = `
                 <div class="cls-notes-step-item">
                     <span class="cls-notes-step-num">1</span>
                     <div class="cls-notes-step-content">
-                        <span class="cls-notes-step-title">层级特征提取 (Feature Extraction)</span>
-                        <div class="cls-notes-step-formula" data-formula="\\mathbf{F} = \\operatorname{Conv}(I)"></div>
-                        <span class="cls-notes-step-desc">输入图像 <strong>280×187×3</strong> 经多层卷积，提取出高维语义特征图，尺寸为 <strong>18×12×64</strong>。</span>
+                        <span class="cls-notes-step-title">当前模型：${state.cnnModelKind === "flowers17" ? "Flowers17" : "ImageNet"} 核心思想</span>
+                        <span class="cls-notes-step-desc">${modelIdea} 当前 Top-5 ${onnxReady ? "来自 ONNX Runtime Web session.run 的真实输出" : "暂未连接 ONNX session"}。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
                     <span class="cls-notes-step-num">2</span>
                     <div class="cls-notes-step-content">
-                        <span class="cls-notes-step-title">全局平均池化 (Global Average Pooling)</span>
-                        <div class="cls-notes-step-formula" data-formula="\\mathbf{v}_c = \\frac{1}{H \\times W} \\sum_{x,y} \\mathbf{F}_c(x,y)"></div>
-                        <span class="cls-notes-step-desc">将特征图在空间维度上求平均，压缩为一个 <strong>64</strong> 维的全局特征向量，代表整张图的全局语义。</span>
+                        <span class="cls-notes-step-title">输入预处理：resize / normalize / tensor shape</span>
+                        <span class="cls-notes-step-desc">前端用 Canvas 中心裁剪并 resize 到 <strong>${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224}</strong>，按 ImageNet mean/std normalize，组织为 <strong>1×3×${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224}</strong> 的 NCHW tensor。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
                     <span class="cls-notes-step-num">3</span>
                     <div class="cls-notes-step-content">
-                        <span class="cls-notes-step-title">全连接层映射 (Fully Connected Layer)</span>
-                        <div class="cls-notes-step-formula" data-formula="\\mathbf{s} = W \\mathbf{v} + \\mathbf{b}"></div>
-                        <span class="cls-notes-step-desc">将 64 维特征向量乘以权重矩阵 <strong>W (17×64)</strong> 并加上偏置 <strong>b</strong>，得到 17 个类别的原始得分。</span>
+                        <span class="cls-notes-step-title">输出结构与计算步骤</span>
+                        <span class="cls-notes-step-desc">tensor 进入 CNN feature extractor，经 pooling / classifier 得到 <strong>${classCount}</strong> 维 logits，再做 softmax 并排序得到 Top-5。推理耗时：<strong>${state.cnnInferenceMs ? `${Math.round(state.cnnInferenceMs)} ms` : "--"}</strong>。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
                     <span class="cls-notes-step-num">4</span>
                     <div class="cls-notes-step-content">
-                        <span class="cls-notes-step-title">概率归一化 (Softmax Classifier)</span>
-                        <div class="cls-notes-step-formula" data-formula="p_c = \\frac{e^{s_c}}{\\sum_j e^{s_j}}"></div>
-                        <span class="cls-notes-step-desc">通过 Softmax 函数将原始得分转化为概率分布。Top-1 预测类别为 <strong>${topC ? escapeHtml(topC.label) : "--"}</strong>，置信度为 <strong>${topC ? Math.round(topC.score * 100) : 0}%</strong>。</span>
+                        <span class="cls-notes-step-title">适用性与结果解释</span>
+                        <span class="cls-notes-step-desc">${fitNote} 当前 Top-1：<strong>${topC ? escapeHtml(topC.label) : "--"}</strong>，分数 <strong>${topC ? Math.round(topC.score * 100) : 0}%</strong>。</span>
                     </div>
                 </div>
             `;
         } else if (state.method === "compare") {
             els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
             els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
-            els.notesFormulaNote.textContent = isTrainedBovwActive()
-                ? "BoVW 分支使用本地训练导出的 KMeans codebook 与 logistic regression 权重，在前端完成真实分类。"
-                : "教学原型模式使用页面生成的视觉词典和原型权重，只用于解释 BoVW 原理。";
+            els.notesFormulaNote.textContent = state.cnnModelKind === "imagenet"
+                ? "CNN 分支使用 ImageNet 1000 类模型；BoVW 分支使用 Flowers17 17 类模型，二者类别体系不同，只比较推理路径。"
+                : state.cnnModelKind === "flowers17"
+                    ? "BoVW 与 CNN 均输出 Flowers17 类别，但一个使用视觉词袋，一个使用深度特征。"
+                    : "CNN ONNX 未加载时，比较页保留概念展示。";
 
             stepsHtml = `
                 <div class="cls-notes-step-item">
@@ -1437,12 +1936,71 @@
         if (state.imageBitmap?.key !== item.image) prepareBovwImage(item);
     }
 
+    function renderCnnModelProof() {
+        if (!els.cnnModelProof) return;
+        const statusText = {
+            idle: "等待加载",
+            loading: "正在加载 ONNX",
+            ready: state.cnnModelKind === "flowers17" ? "Flowers17 CNN ready" : "ImageNet CNN ready",
+            missing: "未找到 ONNX",
+            error: "ONNX 错误",
+        }[state.cnnOnnxStatus] || state.cnnOnnxStatus;
+        const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
+        const runtime = state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web" : "concept fallback";
+        const infer = state.cnnInferenceMs ? `${Math.round(state.cnnInferenceMs)} ms` : "--";
+        els.cnnModelProof.innerHTML = `
+            <span>${escapeHtml(statusText)}</span>
+            <strong>${escapeHtml(runtime)}</strong>
+            <code>${escapeHtml(state.cnnOnnxConfig?.modelName || cnnModelLabels[state.cnnModelChoice] || "CNN ONNX")}</code>
+            <code>${escapeHtml(state.cnnModelKind)} · ${classCount} classes</code>
+            <code>input ${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224}</code>
+            <em>inference ${infer}</em>
+            <small>${escapeHtml(state.cnnModelMessage || "CNN 模型状态等待初始化。")}</small>
+        `;
+    }
+
+    function renderCnnGuidance() {
+        if (!els.cnnGuidance) return;
+        const isImagenet = state.cnnModelKind === "imagenet";
+        const isFlowers = state.cnnModelKind === "flowers17";
+        const modelText = isFlowers
+            ? "当前模型：Oxford Flowers17 17 类花卉分类模型"
+            : isImagenet
+                ? "当前模型：ImageNet 1000 类物体分类模型"
+                : "当前模型：CNN ONNX 模型尚未加载";
+        const fitText = isFlowers
+            ? "适合输入：单朵或主体明确的花卉图片"
+            : "适合输入：单个主体明确的物体图像";
+        const avoidText = isFlowers
+            ? "不适合输入：街景、多人场景、非花卉物体"
+            : "不适合输入：复杂街景、多人场景、道路场景";
+        const sampleHint = isImagenet
+            ? "左侧内置样例偏街景/多人场景，不是 ImageNet 的理想输入；建议上传主体明确的单物体图片，例如 dog / cat / car / cup。"
+            : "当前样例会随模型类别体系切换；上传图片仍会直接进入前端 ONNX 推理。";
+        els.cnnGuidance.innerHTML = `
+            <div class="cls-cnn-guidance-main">
+                <strong>${modelText}</strong>
+                <span>${fitText}</span>
+                <span>${avoidText}</span>
+            </div>
+            <p>${sampleHint}</p>
+        `;
+        if (els.cnnSampleHint) {
+            els.cnnSampleHint.textContent = isImagenet
+                ? "ImageNet 提示：内置街景/多人样例不理想，建议上传 dog / cat / car / cup 等单主体物体图片。"
+                : "Flowers17 提示：优先使用花卉样例或上传主体明确的花朵图片。";
+        }
+    }
+
     function renderCnn(item) {
         setImage(els.cnnImage, els.cnnMissing, item);
         renderCnnOverlay(els.cnnInputOverlay);
+        renderCnnGuidance();
         renderCnnMaps(els.cnnMaps);
-        renderGlobalFeature(els.cnnGlobal, 64);
+        renderGlobalFeature(els.cnnGlobal, state.cnnModelKind === "imagenet" ? 128 : 64);
+        renderCnnModelProof();
         renderScores(els.cnnScoreList, cnnScores(item));
+        if (state.method === "cnn" || state.method === "compare") runCnnInference(item);
     }
 
     function renderCompare(item) {
@@ -1465,7 +2023,11 @@
         const cScores = cnnScores(item);
         const activeScores = state.method === "cnn" ? cScores : bScores;
         const top = activeScores[0];
-        const methodLabel = state.method === "bovw" ? activeBovwLabel() : methodLabels[state.method];
+        const methodLabel = state.method === "bovw"
+            ? activeBovwLabel()
+            : state.method === "cnn"
+                ? `CNN · ${cnnModelLabels[state.cnnModelChoice] || state.cnnModelChoice}`
+                : methodLabels[state.method];
         const effectiveVocabSize = isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize;
 
         els.inputSize.textContent = item.width && item.height ? `${item.width} × ${item.height}` : "--";
@@ -1475,7 +2037,7 @@
         els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%${top.source === "prototype-demo" ? " demo" : ""}` : (state.method === "cnn" ? "--" : "computing...");
         els.activeMethod.textContent = methodLabel;
         els.status.textContent = state.method === "cnn"
-            ? "CNN CONCEPT VIEW"
+            ? (state.cnnOnnxStatus === "ready" ? `CNN ONNX · ${state.cnnModelKind.toUpperCase()}` : "CNN CONCEPT VIEW")
             : state.method === "compare"
                 ? "BOVW / CNN COMPARE"
                 : isTrainedBovwActive()
@@ -1483,6 +2045,8 @@
                     : "BOVW PRINCIPLE DEMO";
 
         els.bovwControls.hidden = state.method === "cnn";
+        if (els.cnnControls) els.cnnControls.hidden = state.method === "bovw";
+        if (els.cnnModel) els.cnnModel.value = state.cnnModelChoice;
         if (els.vocabSize) {
             els.vocabSize.value = String(effectiveVocabSize);
             els.vocabSize.disabled = isTrainedBovwActive();
@@ -1491,8 +2055,12 @@
             els.featureType.disabled = isTrainedBovwActive();
         }
         if (state.method === "cnn") {
-            els.featureCount.textContent = "learned maps";
+            els.featureCount.textContent = state.cnnOnnxStatus === "ready" ? "ONNX feature maps" : "learned maps";
             els.vocabReadout.textContent = "--";
+            els.vectorDim.textContent = state.cnnModelKind === "flowers17" ? "17 classes" : state.cnnModelKind === "imagenet" ? "1000 classes" : "GAP 1×C";
+            if (state.cnnInferenceMs) {
+                els.top1.textContent = `${top ? top.label : "--"} ${top ? Math.round(top.score * 100) : 0}% · ${Math.round(state.cnnInferenceMs)} ms`;
+            }
         }
 
         els.modePanels.forEach((panel) => {
@@ -1583,6 +2151,12 @@
             ]);
             const payload = { demoData, flowerData, bovwModel };
             applyData(payload);
+            loadSelectedCnnOnnxModel().then(() => {
+                updateSampleOptions();
+                state.cnnRealScores = [];
+                state.cnnInferenceKey = "";
+                render();
+            });
         } catch (error) {
             console.error("classification lab data failed", error);
             els.notesCompare.innerHTML = `<p class="method-error">分类演示数据加载失败，请检查 static/assets/data/vision_tasks/classification_lab/classification_samples.json。</p>`;
@@ -1628,6 +2202,19 @@
             updateSampleOptions();
             state.imageBitmap = null;
             render();
+        });
+    }
+    if (els.cnnModel) {
+        els.cnnModel.addEventListener("change", () => {
+            state.cnnModelChoice = els.cnnModel.value;
+            resetCnnInferenceState(`Switching to ${cnnModelLabels[state.cnnModelChoice] || "CNN"}...`);
+            updateSampleOptions();
+            state.imageBitmap = null;
+            render();
+            loadSelectedCnnOnnxModel().then(() => {
+                updateSampleOptions();
+                render();
+            });
         });
     }
     els.vocabSize.addEventListener("change", () => {
