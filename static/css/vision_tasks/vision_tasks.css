@@ -5595,20 +5595,90 @@ body:has(.vision-lab) .ai-fab-icon img {
 .cls-cnn-anim-pooling,
 .cls-cnn-anim-classifier,
 .cls-cnn-anim-softmax {
-    width: min(100%, 640px);
-    min-height: 310px;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.cls-cnn-data-journey {
     position: relative;
+    width: 90%;
+    margin: 0 auto 12px;
+    display: grid;
+    grid-template-columns: minmax(80px, 0.7fr) 1fr minmax(110px, 0.95fr) 1fr minmax(80px, 0.7fr);
+    align-items: center;
+    gap: 6px;
+    z-index: 3;
+}
+
+.cls-cnn-data-journey span,
+.cls-cnn-data-journey strong {
+    display: grid;
+    place-items: center;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 3px 6px;
+    color: #1e3a8a;
+    font-size: 10px;
+    font-weight: 950;
+    line-height: 1.15;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.94);
+    white-space: nowrap;
+}
+
+.cls-cnn-data-journey strong {
+    border-color: #60a5fa;
+    background: #eff6ff;
+    padding: 3px 6px;
+}
+
+.cls-cnn-data-journey i {
+    position: relative;
+    height: 2px;
+    border-radius: 999px;
+    background: #93c5fd;
+    overflow: hidden;
+}
+
+.cls-cnn-data-journey i::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 30%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, #2563eb, transparent);
+    animation: clsDataSegment 2.8s linear infinite;
+}
+
+.cls-cnn-data-journey b {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+    transform: translateY(-50%);
+    animation: clsDataTravel 4.2s linear infinite;
 }
 
 .cls-cnn-anim-input {
-    display: grid;
-    place-items: center;
+    width: 100%;
 }
 
 .cls-cnn-anim-input img,
 .cls-cnn-anim-preprocess img {
     max-width: 46%;
-    max-height: 230px;
+    max-height: 180px;
     border-radius: 12px;
     object-fit: cover;
     box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
@@ -5630,14 +5700,15 @@ body:has(.vision-lab) .ai-fab-icon img {
     border-radius: 999px;
     background: #22c55e;
     box-shadow: 0 0 18px rgba(34, 197, 94, 0.6);
-    animation: clsCnnScan 2.3s ease-in-out infinite;
+    animation: clsCnnScan 3.2s linear infinite;
 }
 
 .cls-cnn-anim-preprocess {
     display: grid;
     grid-template-columns: 0.9fr 1fr 1fr;
     align-items: center;
-    gap: 22px;
+    gap: 16px;
+    width: 100%;
 }
 
 .cls-rgb-planes {
@@ -5657,7 +5728,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     font-size: 26px;
     font-weight: 950;
     opacity: 0.68;
-    animation: clsRgbPlane 2.6s ease-in-out infinite;
+    animation: clsRgbPlane 3.8s linear infinite;
 }
 
 .cls-rgb-planes b:nth-child(1) { top: 8px; color: #ef4444; background: rgba(239, 68, 68, 0.16); }
@@ -5678,8 +5749,8 @@ body:has(.vision-lab) .ai-fab-icon img {
     aspect-ratio: 1;
     border-radius: 5px;
     background: #2563eb;
-    opacity: var(--o);
-    animation: clsTensorPop 1.8s ease-in-out infinite;
+    opacity: 0.18;
+    animation: clsCellFill 3.2s linear infinite;
     animation-delay: var(--d);
 }
 
@@ -5696,9 +5767,10 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .cls-cnn-anim-conv {
     display: grid;
-    grid-template-columns: 150px 1fr 150px;
+    grid-template-columns: 120px 1fr 120px;
     align-items: center;
-    gap: 22px;
+    gap: 12px;
+    width: 100%;
 }
 
 .cls-cnn-patch,
@@ -5722,11 +5794,11 @@ body:has(.vision-lab) .ai-fab-icon img {
     font-size: 12px;
     font-weight: 950;
     background: #eff6ff;
-    animation: clsCnnNumberFly 2.8s ease-in-out infinite;
+    animation: clsNumberSend 3.4s linear infinite;
 }
 
 .cls-cnn-kernel {
-    animation: clsKernelSlide 2.8s ease-in-out infinite;
+    animation: clsKernelSlide 3.4s linear infinite;
 }
 
 .cls-cnn-anim-conv svg {
@@ -5764,7 +5836,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     height: 34px;
     border-radius: 9px;
     background: #22c55e;
-    animation: clsFeatureDrop 2.8s ease-in-out infinite;
+    animation: clsFeatureDrop 3.4s linear infinite;
 }
 
 .cls-cnn-anim-featuremaps {
@@ -5772,6 +5844,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     align-content: center;
+    width: 100%;
 }
 
 .cls-cnn-anim-featuremaps article {
@@ -5800,6 +5873,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     display: grid;
     gap: 18px;
     align-content: center;
+    width: 100%;
 }
 
 .cls-pool-maps {
@@ -5813,7 +5887,7 @@ body:has(.vision-lab) .ai-fab-icon img {
     border-radius: 12px;
     padding: 8px;
     background: #ffffff;
-    animation: clsPoolShrink 2.8s ease-in-out infinite;
+    animation: clsPoolShrink 3.6s linear infinite;
 }
 
 .cls-pool-vector,
@@ -5831,19 +5905,20 @@ body:has(.vision-lab) .ai-fab-icon img {
     height: var(--h);
     border-radius: 999px 999px 3px 3px;
     background: #2563eb;
-    animation: clsVectorPulse 1.8s ease-in-out infinite;
+    animation: clsVectorFill 3.2s linear infinite;
 }
 
 .cls-cnn-anim-classifier {
     display: grid;
-    grid-template-columns: 120px 1fr 190px;
+    grid-template-columns: 100px 1fr 160px;
     align-items: center;
     gap: 12px;
+    width: 100%;
 }
 
 .cls-cnn-anim-classifier svg {
     width: 100%;
-    height: 230px;
+    height: 180px;
 }
 
 .cls-cnn-anim-classifier path {
@@ -5882,24 +5957,26 @@ body:has(.vision-lab) .ai-fab-icon img {
 
 .cls-logit-bars {
     display: grid;
-    gap: 9px;
-    width: min(100%, 520px);
-    margin: 34px auto 18px;
+    gap: 5px;
+    width: 90%;
+    margin: 0 auto;
 }
 
 .cls-cnn-prob-row {
     display: grid;
-    grid-template-columns: 28px minmax(100px, 0.8fr) minmax(150px, 1fr) 42px;
+    grid-template-columns: 20px 1.2fr 2fr 36px;
     align-items: center;
     gap: 8px;
-    animation: clsSoftmaxSort 2.6s ease-in-out infinite;
+    animation: clsSoftmaxSort 3.6s linear infinite;
+    line-height: 1;
+    width: 100%;
 }
 
 .cls-cnn-prob-row span {
     display: grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 999px;
     color: #ffffff;
     font-size: 10px;
@@ -5907,44 +5984,79 @@ body:has(.vision-lab) .ai-fab-icon img {
     background: #2563eb;
 }
 
-.cls-cnn-prob-row strong,
-.cls-cnn-prob-row em {
+.cls-cnn-prob-row strong {
     color: #1e3a8a;
-    font-size: 11px;
+    font-size: 10px;
     font-style: normal;
     font-weight: 950;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    text-align: right;
+    padding-right: 4px;
+}
+.cls-cnn-prob-row em {
+    color: #1e3a8a;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 950;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .cls-cnn-prob-row i {
-    height: 9px;
+    height: 7px;
     border-radius: 999px;
     background: linear-gradient(90deg, #2563eb, #22c55e);
     width: var(--p);
 }
 
+@keyframes clsDataTravel {
+    0% { left: 0; opacity: 0; }
+    8% { opacity: 1; }
+    82% { left: calc(100% - 13px); opacity: 1; }
+    100% { left: calc(100% - 13px); opacity: 0; }
+}
+
+@keyframes clsDataSegment {
+    from { transform: translateX(-110%); }
+    to { transform: translateX(260%); }
+}
+
 @keyframes clsCnnScan {
-    0%, 100% { transform: translateY(0); opacity: 0.35; }
-    50% { transform: translateY(210px); opacity: 0.9; }
+    0% { transform: translateY(0); opacity: 0; }
+    12% { opacity: 0.9; }
+    78% { transform: translateY(210px); opacity: 0.9; }
+    100% { transform: translateY(210px); opacity: 0; }
 }
 
 @keyframes clsRgbPlane {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(34px); }
+    0% { transform: translateX(0); opacity: 0.38; }
+    35% { transform: translateX(34px); opacity: 0.74; }
+    78% { transform: translateX(102px); opacity: 0.74; }
+    100% { transform: translateX(102px); opacity: 0; }
 }
 
-@keyframes clsTensorPop {
-    0%, 100% { transform: scale(0.86); }
-    50% { transform: scale(1.08); }
+@keyframes clsCellFill {
+    0% { opacity: 0.16; transform: none; }
+    35% { opacity: 0.16; }
+    72% { opacity: var(--o); }
+    100% { opacity: var(--o); }
 }
 
 @keyframes clsKernelSlide {
-    0%, 100% { transform: translateX(14px); }
-    50% { transform: translateX(-4px); }
+    0% { transform: translateX(64px); opacity: 0; }
+    28% { opacity: 1; }
+    62% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes clsCnnNumberFly {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08) translateY(-2px); }
+@keyframes clsNumberSend {
+    0% { opacity: 0.45; }
+    30% { opacity: 0.45; }
+    55% { opacity: 1; }
+    100% { opacity: 1; }
 }
 
 @keyframes clsLineDash {
@@ -5952,24 +6064,26 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 @keyframes clsFeatureDrop {
-    0%, 20% { transform: translate(-120px, -90px) scale(0.6); opacity: 0; }
-    60% { opacity: 1; }
-    100% { transform: translate(0, 0) scale(1); opacity: 1; }
+    0%, 28% { transform: translate(-160px, -100px); opacity: 0; }
+    48% { opacity: 1; }
+    82%, 100% { transform: translate(0, 0); opacity: 1; }
 }
 
 @keyframes clsPoolShrink {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(22px) scale(0.72); }
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    55% { transform: translateY(72px) scale(0.62); opacity: 0.72; }
+    100% { transform: translateY(72px) scale(0.62); opacity: 0.28; }
 }
 
-@keyframes clsVectorPulse {
-    0%, 100% { opacity: 0.45; }
-    50% { opacity: 1; }
+@keyframes clsVectorFill {
+    0%, 40% { opacity: 0.28; }
+    74%, 100% { opacity: 1; }
 }
 
 @keyframes clsSoftmaxSort {
-    0% { transform: translateX(-8px); opacity: 0.78; }
-    45%, 100% { transform: translateX(0); opacity: 1; }
+    0% { transform: translateX(-24px); opacity: 0.45; }
+    45% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(0); opacity: 1; }
 }
 
 .cls-grid-2x2 {

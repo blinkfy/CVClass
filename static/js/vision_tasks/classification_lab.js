@@ -58,64 +58,64 @@
     const cnnAnimationStages = [
         {
             key: "input",
-            label: "Input",
-            title: "Input Image",
-            input: "uploaded / sample image",
-            output: "browser image pixels",
+            label: "输入图像",
+            title: "当前输入图像",
+            input: "上传或样例图像",
+            output: "浏览器图像像素",
             formula: "I \\in R^{H\\times W\\times 3}",
             explanation: "读取当前图片。动画展示的是教学化路径，真实分类仍由 ONNX Runtime Web 对当前图片执行 session.run。",
         },
         {
             key: "preprocess",
-            label: "Resize/Normalize",
-            title: "Resize / Normalize / NCHW Tensor",
-            input: "image pixels",
-            output: "1x3x224x224 tensor",
+            label: "图像预处理",
+            title: "尺寸缩放 / 归一化 / NCHW 张量",
+            input: "图像像素",
+            output: "1x3x224x224 张量",
             formula: "x = normalize(resize(I, 224))",
             explanation: "原图缩放到模型输入尺寸，RGB 三通道拆成平面并按 mean/std 归一化，再组织成 NCHW tensor。",
         },
         {
             key: "conv",
-            label: "Conv",
-            title: "3x3 Convolution Window",
-            input: "local 3x3 patch",
-            output: "one feature value",
+            label: "卷积计算",
+            title: "3x3 卷积滑动窗口",
+            input: "局部 3x3 图像块",
+            output: "单个特征响应值",
             formula: "y = sum(x_i * w_i) + b",
             explanation: "卷积核在局部窗口滑动，对应像素值与权重相乘并累加，生成 feature map 中的一个响应值。",
         },
         {
             key: "feature",
-            label: "Feature Maps",
-            title: "Feature Maps",
-            input: "many convolution responses",
-            output: "shallow / middle / high-level maps",
+            label: "特征图组",
+            title: "多层级特征提取图组",
+            input: "多通道卷积响应值",
+            output: "浅层 / 中层 / 深层语义特征图",
             formula: "F = CNNFeatureExtractor(x)",
             explanation: "浅层关注边缘、颜色和纹理；中层响应局部形状；高层形成物体部件和类别相关响应。",
         },
         {
             key: "pooling",
-            label: "Global Pooling",
-            title: "Global Pooling",
-            input: "H x W x C feature maps",
-            output: "1 x 1 x C vector",
+            label: "全局池化",
+            title: "全局池化特征降维",
+            input: "H x W x C 特征图",
+            output: "1 x 1 x C 紧凑向量",
             formula: "v_c = mean_{h,w}(F_{h,w,c})",
             explanation: "每张 feature map 的空间响应向下汇聚，压缩成一个 pooled 数值，多张图组成表示向量。",
         },
         {
             key: "classifier",
-            label: "Classifier",
-            title: "Classifier Head",
-            input: "pooled vector",
-            output: "class logits",
+            label: "模型分类器",
+            title: "分类决策头 (Linear Head)",
+            input: "池化后的特征向量",
+            output: "类别置信度 (Logits)",
             formula: "z = Wv + b",
             explanation: "表示向量通过分类器权重连接到类别节点，数值沿连线流动并形成 logits。",
         },
         {
             key: "softmax",
-            label: "Softmax Top-5",
-            title: "Softmax Top-5",
-            input: "logits",
-            output: "ranked probabilities",
+            label: "Softmax 输出",
+            title: "Softmax 归一化 Top-5",
+            input: "置信度 (Logits)",
+            output: "排序后的预测概率",
             formula: "p_i = exp(z_i) / sum_j exp(z_j)",
             explanation: "logits 条形图经 softmax 转为概率，Top-5 重新排序并与真实 session.run 输出联动。",
         },
@@ -243,6 +243,7 @@
 
         notesMethod: $("[data-cls-notes-method]"),
         notesMethodDesc: $("[data-cls-notes-method-desc]"),
+        notesFormulaTitle: $("[data-cls-notes-formula-title]"),
         notesFormula: $("[data-cls-notes-formula]"),
         notesFormulaNote: $("[data-cls-notes-formula-note]"),
         statSelectedFeature: $("[data-cls-stat-selected-feature]"),
@@ -917,7 +918,7 @@
         if (state.cnnOnnxStatus === "ready" && state.cnnOnnxSession && state.cnnLoadedChoice === state.cnnModelChoice) return state.cnnOnnxSession;
         if (state.cnnOnnxStatus === "loading") return null;
         state.cnnOnnxStatus = "loading";
-        state.cnnModelMessage = `Loading ${cnnModelLabels[state.cnnModelChoice] || "CNN"} ONNX model...`;
+        state.cnnModelMessage = `正在加载 ${cnnModelLabels[state.cnnModelChoice] || "CNN"} ONNX 模型...`;
         render();
 
         try {
@@ -939,7 +940,7 @@
                     modelUrl: flowersModelUrl,
                     config: flowersConfig,
                     labelUrls: [flowersConfig.labelsUrl, `${cnnDataRoot}/flowers17_classes.json`],
-                    message: "Flowers17 CNN ONNX loaded. Top-K comes from session.run.",
+                    message: "Flowers17 CNN ONNX 已加载，Top-K 分数由 session.run 实时推理生成。",
                 },
                 {
                     key: "squeezenet",
@@ -951,7 +952,7 @@
                         model_url: `${cnnDataRoot}/squeezenet1_1.onnx`,
                     }),
                     labelUrls: imagenetLabelUrls,
-                    message: "SqueezeNet 1.1 ImageNet ONNX loaded. Top-K comes from session.run.",
+                    message: "SqueezeNet 1.1 ImageNet ONNX 已加载，Top-K 分数由 session.run 实时推理生成。",
                 },
                 {
                     key: "squeezenet",
@@ -963,7 +964,7 @@
                         model_url: `${legacyClassificationLabRoot}/squeezenet1.1-7.onnx`,
                     }),
                     labelUrls: imagenetLabelUrls,
-                    message: "SqueezeNet 1.1 ImageNet ONNX loaded from legacy assets. Top-K comes from session.run.",
+                    message: "SqueezeNet 1.1 ImageNet ONNX 已从备用路径加载，Top-K 分数由 session.run 实时推理生成。",
                 },
                 {
                     key: "mobilenetv2",
@@ -975,7 +976,7 @@
                         model_url: `${cnnDataRoot}/mobilenetv2-10.onnx`,
                     }),
                     labelUrls: imagenetLabelUrls,
-                    message: "MobileNetV2 ImageNet ONNX loaded. Top-K comes from session.run.",
+                    message: "MobileNetV2 ImageNet ONNX 已加载，Top-K 分数由 session.run 实时推理生成。",
                 },
                 {
                     key: "mobilenetv2",
@@ -987,7 +988,7 @@
                         model_url: `${legacyClassificationLabRoot}/mobilenetv2-10.onnx`,
                     }),
                     labelUrls: imagenetLabelUrls,
-                    message: "MobileNetV2 ImageNet ONNX loaded from legacy assets. Top-K comes from session.run.",
+                    message: "MobileNetV2 ImageNet ONNX 已从备用路径加载，Top-K 分数由 session.run 实时推理生成。",
                 },
             ];
             if (imagenetConfig.modelUrl && !candidates.some((candidate) => candidate.modelUrl === imagenetConfig.modelUrl)) {
@@ -998,7 +999,7 @@
                     modelUrl: imagenetConfig.modelUrl,
                     config: imagenetConfig,
                     labelUrls: imagenetLabelUrls,
-                    message: "ImageNet CNN ONNX loaded. Top-K comes from session.run.",
+                    message: "ImageNet CNN ONNX 已加载，Top-K 分数由 session.run 实时推理生成。",
                 });
             }
             const requestedCandidates = candidates.filter((candidate) => candidate.key === state.cnnModelChoice);
@@ -1009,11 +1010,11 @@
             }
             state.cnnOnnxStatus = "missing";
             state.cnnModelKind = "concept";
-            state.cnnModelMessage = `${cnnModelLabels[state.cnnModelChoice] || "Selected CNN"} ONNX model was not found. Concept display is kept.`;
+            state.cnnModelMessage = `未找到选定的 ${cnnModelLabels[state.cnnModelChoice] || "CNN"} ONNX 模型文件。当前保留概念流程演示。`;
         } catch (error) {
             state.cnnOnnxStatus = "error";
             state.cnnModelKind = "concept";
-            state.cnnModelMessage = `CNN ONNX load failed: ${error.message || error}`;
+            state.cnnModelMessage = `CNN ONNX 模型加载失败: ${error.message || error}`;
             console.error("classification cnn model failed", error);
         }
         render();
@@ -1461,20 +1462,20 @@
         target.innerHTML = `
             <article class="cls-cnn-feature-layer">
                 <span>01</span>
-                <strong>shallow features</strong>
-                <p>edges / colors / textures</p>
+                <strong>浅层特征提取 (shallow)</strong>
+                <p>提取边缘、颜色和纹理特征 (edges / colors / textures)</p>
                 <div><i style="--w:72%"></i><i style="--w:54%"></i><i style="--w:63%"></i></div>
             </article>
             <article class="cls-cnn-feature-layer">
                 <span>02</span>
-                <strong>middle features</strong>
-                <p>patterns / local shapes</p>
+                <strong>中层特征提取 (middle)</strong>
+                <p>提取模式和局部形状 (patterns / local shapes)</p>
                 <div><i style="--w:58%"></i><i style="--w:82%"></i><i style="--w:49%"></i></div>
             </article>
             <article class="cls-cnn-feature-layer">
                 <span>03</span>
-                <strong>high-level features</strong>
-                <p>object parts / category responses</p>
+                <strong>深层特征提取 (high-level)</strong>
+                <p>关联物体部件和类别响应 (object parts / category responses)</p>
                 <div><i style="--w:88%"></i><i style="--w:61%"></i><i style="--w:75%"></i></div>
             </article>
             <p class="cls-cnn-feature-note">这是 CNN 特征提取过程示意；当前 Top-5 来自 ONNX session.run 的真实输出。</p>
@@ -1491,15 +1492,15 @@
         }).join("");
         target.innerHTML = `
             <div class="cls-representation-summary">
-                <div><span>stage</span><strong>pooling / classifier stage</strong></div>
-                <div><span>feature vector</span><strong>pooled feature vector</strong></div>
-                <div><span>logits vector</span><strong>${vectorDim}</strong></div>
-                <div><span>output size</span><strong>${classCount} classes</strong></div>
-                <div><span>inference time</span><strong>${infer}</strong></div>
+                <div><span>推理阶段</span><strong>全局平均池化 / 分类决策段 (GAP / Classifier)</strong></div>
+                <div><span>特征向量</span><strong>全局池化所得表征向量 (pooled vector)</strong></div>
+                <div><span>向量维度</span><strong>${vectorDim}</strong></div>
+                <div><span>输出结构</span><strong>类别总数：${classCount} 类</strong></div>
+                <div><span>当前耗时</span><strong>${infer}</strong></div>
             </div>
             <div class="cls-global-vector">${cells}</div>
             <div class="cls-global-meta">
-                <span>${dim} 维特征</span>
+                <span>当前显示：${dim} 维特征</span>
                 <span>GAP: H×W×C → 1×1×C</span>
             </div>
         `;
@@ -1548,11 +1549,11 @@
         const stage = cnnAnimationStages[state.cnnStageIndex] || cnnAnimationStages[0];
         const scores = cnnScores(item);
         const topScores = scores.length ? scores : [
-            { label: "waiting for ONNX", score: 0.34 },
-            { label: "logit candidate", score: 0.22 },
-            { label: "class response", score: 0.17 },
-            { label: "softmax bin", score: 0.12 },
-            { label: "next class", score: 0.08 },
+            { label: "等待 ONNX 推理", score: 0.34 },
+            { label: "候选分类 Logit", score: 0.22 },
+            { label: "类别响应值", score: 0.17 },
+            { label: "Softmax 概率值", score: 0.12 },
+            { label: "次高置信类别", score: 0.08 },
         ];
         const image = item?.image || "";
         const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
@@ -1563,23 +1564,35 @@
                 <span>${index + 1}</span><strong>${escapeHtml(score.label)}</strong><i></i><em>${Math.round((score.score || 0) * 100)}%</em>
             </div>
         `).join("");
+        const journey = (from, via, to) => `
+            <div class="cls-cnn-data-journey">
+                <span>${from}</span>
+                <i></i>
+                <strong>${via}</strong>
+                <i></i>
+                <span>${to}</span>
+                <b></b>
+            </div>
+        `;
 
         if (stage.key === "input") {
             return `
                 <div class="cls-cnn-anim-input">
+                    ${journey("样例/上传图像", "读取图像像素", "内存像素缓冲区")}
                     <img src="${image}" alt="">
                     <div class="cls-cnn-scanline"></div>
-                    <p>current image pixels</p>
+                    <p>当前输入图像像素</p>
                 </div>
             `;
         }
         if (stage.key === "preprocess") {
             return `
                 <div class="cls-cnn-anim-preprocess">
+                    ${journey("H×W×3 输入图像", "尺寸重缩放 + 归一化", `1×3×${tensorSize}×${tensorSize} 张量`)}
                     <img src="${image}" alt="">
                     <div class="cls-rgb-planes"><b>R</b><b>G</b><b>B</b></div>
                     <div class="cls-tensor-grid">${heatCells}</div>
-                    <strong>H×W×3 → 1×3×${tensorSize}×${tensorSize}</strong>
+                    <strong>输入格式转换: H×W×3 → 1×3×${tensorSize}×${tensorSize}</strong>
                 </div>
             `;
         }
@@ -1588,6 +1601,7 @@
             const weights = ["0.2", "-0.1", "0.3", "0.0", "0.5", "-0.2", "0.1", "0.4", "0.2"].map((value) => `<i>${value}</i>`).join("");
             return `
                 <div class="cls-cnn-anim-conv">
+                    ${journey("3×3 局部图像块", "权重乘加积求和", "特征图单个神经元单元")}
                     <div class="cls-cnn-patch">${patch}</div>
                     <svg viewBox="0 0 100 58" preserveAspectRatio="none">
                         <path d="M28 8 C43 8 54 13 70 8"></path>
@@ -1595,7 +1609,7 @@
                         <path d="M28 48 C43 44 54 48 70 48"></path>
                     </svg>
                     <div class="cls-cnn-kernel">${weights}</div>
-                    <div class="cls-cnn-sum">Σ x·w + b → 0.82</div>
+                    <div class="cls-cnn-sum">局部乘加求和: Σ x·w + b → 0.82</div>
                     <div class="cls-cnn-feature-drop"></div>
                 </div>
             `;
@@ -1603,26 +1617,29 @@
         if (stage.key === "feature") {
             return `
                 <div class="cls-cnn-anim-featuremaps">
-                    <article><strong>shallow</strong><span>edges / colors / textures</span><div>${heatCells}</div></article>
-                    <article><strong>middle</strong><span>patterns / local shapes</span><div>${heatCells}</div></article>
-                    <article><strong>high-level</strong><span>object parts / category responses</span><div>${heatCells}</div></article>
+                    ${journey("多通道卷积响应", "层级特征图组堆叠", "语义特征提取层级")}
+                    <article><strong>浅层特征 (shallow)</strong><span>检测基础边缘、颜色和纹理</span><div>${heatCells}</div></article>
+                    <article><strong>中层特征 (middle)</strong><span>组合局部结构和纹理模式</span><div>${heatCells}</div></article>
+                    <article><strong>深层特征 (high-level)</strong><span>抽象物体部件和全局类别响应</span><div>${heatCells}</div></article>
                 </div>
             `;
         }
         if (stage.key === "pooling") {
             return `
                 <div class="cls-cnn-anim-pooling">
+                    ${journey("H×W×C 空间特征图组", "全局均值池化降维", "1×1×C 表征特征向量")}
                     <div class="cls-pool-maps">
                         ${[0, 1, 2, 3].map(() => `<article>${heatCells}</article>`).join("")}
                     </div>
                     <div class="cls-pool-vector">${Array.from({ length: 18 }, (_, i) => `<i style="--h:${26 + ((i * 11) % 54)}%"></i>`).join("")}</div>
-                    <strong>H×W×C → 1×1×C representation vector</strong>
+                    <strong>空间维度压缩: H×W×C → 1×1×C 表征特征向量</strong>
                 </div>
             `;
         }
         if (stage.key === "classifier") {
             return `
                 <div class="cls-cnn-anim-classifier">
+                    ${journey("1×1×C 表征向量", "全连接层线性决策", `${classCount} 维 Logits 输出`)}
                     <div class="cls-class-vector">${Array.from({ length: 14 }, (_, i) => `<i style="--h:${28 + ((i * 9) % 58)}%"></i>`).join("")}</div>
                     <svg viewBox="0 0 100 72" preserveAspectRatio="none">
                         ${[12, 25, 38, 51, 64].map((y, i) => `<path class="${i < 2 ? "is-hot" : ""}" d="M24 36 C45 ${y} 60 ${y} 82 ${y}"></path>`).join("")}
@@ -1630,14 +1647,15 @@
                     <div class="cls-class-nodes">
                         ${topScores.slice(0, 5).map((score, index) => `<span class="${index === 0 ? "is-top" : ""}">${escapeHtml(score.label)}</span>`).join("")}
                     </div>
-                    <strong>W × vector + b → ${classCount} logits</strong>
+                    <strong>线性映射计算: W × 特征向量 + b → ${classCount} 维 Logits</strong>
                 </div>
             `;
         }
         return `
             <div class="cls-cnn-anim-softmax">
+                ${journey(`${classCount} 维 Logits`, "Softmax 归一化并排序", "Top-5 类别概率分布")}
                 <div class="cls-logit-bars">${bars}</div>
-                <strong>logits → softmax probabilities → sorted Top-5</strong>
+                <strong>概率分布映射: Logits → Softmax 概率标准化 → Top-5 排序输出</strong>
             </div>
         `;
     }
@@ -1650,7 +1668,7 @@
         els.cnnAnimationStage.dataset.tick = String(state.cnnAnimationTick);
         els.cnnAnimationStage.innerHTML = renderCnnAnimationVisual(item);
         if (els.cnnStageTitle) els.cnnStageTitle.textContent = stage.title;
-        if (els.cnnStageKicker) els.cnnStageKicker.textContent = `stage ${state.cnnStageIndex + 1} / ${cnnAnimationStages.length}`;
+        if (els.cnnStageKicker) els.cnnStageKicker.textContent = `阶段 ${state.cnnStageIndex + 1} / ${cnnAnimationStages.length}`;
         if (els.cnnStageExplanation) els.cnnStageExplanation.textContent = stage.explanation;
         if (els.cnnStageInput) els.cnnStageInput.textContent = stage.input;
         if (els.cnnStageOutput) els.cnnStageOutput.textContent = stage.output;
@@ -1863,13 +1881,13 @@
     function renderDiffTable() {
         const cnnIsFlowers = state.cnnModelKind === "flowers17";
         const cnnIsImagenet = state.cnnModelKind === "imagenet";
-        const cnnTitle = cnnIsFlowers ? "CNN Flowers17" : cnnIsImagenet ? "CNN ImageNet" : "CNN Concept";
-        const cnnClasses = cnnIsFlowers ? "17 flower classes" : cnnIsImagenet ? "1000 ImageNet classes" : "concept classes";
+        const cnnTitle = cnnIsFlowers ? "CNN Flowers17" : cnnIsImagenet ? "CNN ImageNet" : "CNN 概念演示";
+        const cnnClasses = cnnIsFlowers ? "17 类花卉" : cnnIsImagenet ? "1000 类 ImageNet 物体" : "概念分类";
         const cnnRoute = cnnIsFlowers
-            ? "image tensor → CNN feature extractor → classifier head → 17 flower classes"
+            ? "图像张量 → CNN 特征提取器 → 分类检测头 → 17 类花卉"
             : cnnIsImagenet
-                ? "image tensor → CNN feature extractor → classifier head → 1000 ImageNet classes"
-                : "image → conceptual feature maps → softmax scores";
+                ? "图像张量 → CNN 特征提取器 → 分类检测头 → 1000 类 ImageNet"
+                : "图像 → 概念特征图组 → Softmax 得分";
         const compareNote = cnnIsImagenet
             ? "二者类别体系不同：BoVW 是 17 类花卉，CNN 是 1000 类 ImageNet。本页只比较传统特征分类与深度模型推理路径，不比较准确率。"
             : cnnIsFlowers
@@ -1879,11 +1897,11 @@
             <table>
                 <thead><tr><th>对比维度</th><th>BoVW Flowers17</th><th>${cnnTitle}</th></tr></thead>
                 <tbody>
-                    <tr><td>类别体系</td><td>17 flower classes</td><td>${cnnClasses}</td></tr>
-                    <tr><td>推理路径</td><td>patch descriptor → KMeans codebook → BoVW histogram → Logistic Regression → 17 flower classes</td><td>${cnnRoute}</td></tr>
-                    <tr><td>推理实现</td><td>前端 JSON codebook + classifier 权重</td><td>${state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web session.run" : "概念展示 / 预设分数"}</td></tr>
-                    <tr><td>表示形式</td><td>稀疏词频直方图<br><small>${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} bins</small></td><td>深度特征向量<br><small>resize + normalize + CNN</small></td></tr>
-                    <tr><td>说明</td><td colspan="2">${compareNote}</td></tr>
+                    <tr><td>类别体系</td><td>17 类花卉</td><td>${cnnClasses}</td></tr>
+                    <tr><td>推理路径</td><td>图像分块描述子 → KMeans 视觉词典 → 词包直方图 → 逻辑回归分类器 → 17 类花卉</td><td>${cnnRoute}</td></tr>
+                    <tr><td>推理实现</td><td>前端通过本地 JSON 词典 + 分类器权重实时计算</td><td>${state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web 浏览器端 session.run 推理" : "概念展示 / 预设分数"}</td></tr>
+                    <tr><td>特征表示形式</td><td>稀疏词频直方图<br><small>${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} 维</small></td><td>深度特征向量<br><small>缩放 + 归一化 + CNN 特征抽取</small></td></tr>
+                    <tr><td>对比说明</td><td colspan="2">${compareNote}</td></tr>
                 </tbody>
             </table>
         `;
@@ -1921,6 +1939,7 @@
                 : "Flowers17 更适合单朵或主体明确的花卉图像；非花卉图片只能得到 17 个花卉类别中的相对最高分。";
             els.notesMethod.textContent = `CNN · ${currentStage.title}`;
             els.notesMethodDesc.textContent = currentStage.explanation;
+            if (els.notesFormulaTitle) els.notesFormulaTitle.textContent = "CNN 阶段计算公式";
             els.notesFormula.textContent = currentStage.formula;
             els.notesFormulaNote.textContent = onnxReady
                 ? `当前动画阶段是教学化简化视图；真实链路仍是 resize / normalize -> ONNX session.run -> ${classCount} logits -> softmax Top-5。`
@@ -1958,6 +1977,7 @@
             `;
         } else if (state.method === "compare") {
             els.notesMethodDesc.textContent = "并置 BoVW 与 CNN 两条路径，对比它们的表示与输出结构。";
+            if (els.notesFormulaTitle) els.notesFormulaTitle.textContent = "推理决策公式对比";
             els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
             els.notesFormulaNote.textContent = state.cnnModelKind === "imagenet"
                 ? "CNN 分支使用 ImageNet 1000 类模型；BoVW 分支使用 Flowers17 17 类模型，二者类别体系不同，只比较推理路径。"
@@ -1996,6 +2016,7 @@
             els.notesMethodDesc.textContent = isTrained
                 ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
                 : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
+            if (els.notesFormulaTitle) els.notesFormulaTitle.textContent = "BoVW 核心思想";
             els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
             els.notesFormulaNote.textContent = isTrained
                 ? "前端从 Canvas 采样 patch descriptor，分配到导出的 128 个 visual words，执行 L1+sqrt 归一化，再用 JSON 中的 W 和 b 计算 softmax。"
@@ -2183,21 +2204,21 @@
         const statusText = {
             idle: "等待加载",
             loading: "正在加载 ONNX",
-            ready: state.cnnModelKind === "flowers17" ? "Flowers17 CNN ready" : "ImageNet CNN ready",
+            ready: state.cnnModelKind === "flowers17" ? "Flowers17 CNN 就绪" : "ImageNet CNN 就绪",
             missing: "未找到 ONNX",
             error: "ONNX 错误",
         }[state.cnnOnnxStatus] || state.cnnOnnxStatus;
         const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
-        const runtime = state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web" : "concept fallback";
+        const runtime = state.cnnOnnxStatus === "ready" ? "ONNX 运行时 (Web)" : "概念演示模式";
         const infer = state.cnnInferenceMs ? `${Math.round(state.cnnInferenceMs)} ms` : "--";
         els.cnnModelProof.innerHTML = `
-            <span>${escapeHtml(statusText)}</span>
-            <strong>${escapeHtml(runtime)}</strong>
-            <code>${escapeHtml(state.cnnOnnxConfig?.modelName || cnnModelLabels[state.cnnModelChoice] || "CNN ONNX")}</code>
-            <code>${escapeHtml(state.cnnModelKind)} · ${classCount} classes</code>
-            <code>input ${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224}</code>
-            <em>inference ${infer}</em>
-            <small>${escapeHtml(state.cnnModelMessage || "CNN 模型状态等待初始化。")}</small>
+            <span>状态: ${escapeHtml(statusText)}</span>
+            <strong>计算后端: ${escapeHtml(runtime)}</strong>
+            <code>当前模型: ${escapeHtml(state.cnnOnnxConfig?.modelName || cnnModelLabels[state.cnnModelChoice] || "CNN ONNX")}</code>
+            <code>类别体系: ${escapeHtml(state.cnnModelKind)} · ${classCount} 类</code>
+            <code>输入分辨率: ${state.cnnOnnxConfig?.inputSize || 224}×${state.cnnOnnxConfig?.inputSize || 224}</code>
+            <em>单次推理耗时: ${infer}</em>
+            <small>信息: ${escapeHtml(state.cnnModelMessage || "等待初始化模型状态。")}</small>
         `;
     }
 
@@ -2274,18 +2295,18 @@
         const effectiveVocabSize = isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize;
 
         els.inputSize.textContent = item.width && item.height ? `${item.width} × ${item.height}` : "--";
-        els.featureCount.textContent = state.method === "cnn" ? "learned maps" : (state.features.length ? String(state.features.length) : "computing...");
+        els.featureCount.textContent = state.method === "cnn" ? "卷积特征图" : (state.features.length ? String(state.features.length) : "正在计算...");
         els.vocabReadout.textContent = String(effectiveVocabSize);
         els.vectorDim.textContent = vectorDimLabel();
-        els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%${top.source === "prototype-demo" ? " demo" : ""}` : (state.method === "cnn" ? "--" : "computing...");
+        els.top1.textContent = top ? `${top.label} ${Math.round(top.score * 100)}%${top.source === "prototype-demo" ? " 演示" : ""}` : (state.method === "cnn" ? "--" : "正在计算...");
         els.activeMethod.textContent = methodLabel;
         els.status.textContent = state.method === "cnn"
-            ? (state.cnnOnnxStatus === "ready" ? `CNN ONNX · ${state.cnnModelKind.toUpperCase()}` : "CNN CONCEPT VIEW")
+            ? (state.cnnOnnxStatus === "ready" ? `CNN ONNX 推理 · ${state.cnnModelKind.toUpperCase()}` : "CNN 概念视图")
             : state.method === "compare"
-                ? "BOVW / CNN COMPARE"
+                ? "BOVW / CNN 对比模式"
                 : isTrainedBovwActive()
-                    ? "TRAINED FLOWERS17 BOVW"
-                    : "BOVW PRINCIPLE DEMO";
+                    ? "已训练 FLOWERS17 BOVW"
+                    : "BOVW 原理演示模式";
 
         els.bovwControls.hidden = state.method === "cnn";
         if (els.cnnControls) els.cnnControls.hidden = state.method === "bovw";
@@ -2298,11 +2319,11 @@
             els.featureType.disabled = isTrainedBovwActive();
         }
         if (state.method === "cnn") {
-            els.featureCount.textContent = state.cnnOnnxStatus === "ready" ? "ONNX feature maps" : "learned maps";
+            els.featureCount.textContent = state.cnnOnnxStatus === "ready" ? "ONNX 特征激活图" : "卷积特征图";
             els.vocabReadout.textContent = "--";
-            els.vectorDim.textContent = state.cnnModelKind === "flowers17" ? "17 classes" : state.cnnModelKind === "imagenet" ? "1000 classes" : "GAP 1×C";
+            els.vectorDim.textContent = state.cnnModelKind === "flowers17" ? "17 类置信度" : state.cnnModelKind === "imagenet" ? "1000 类置信度" : "GAP 特征维";
             if (state.cnnInferenceMs) {
-                els.top1.textContent = `${top ? top.label : "--"} ${top ? Math.round(top.score * 100) : 0}% · ${Math.round(state.cnnInferenceMs)} ms`;
+                els.top1.textContent = `${top ? top.label : "--"} ${top ? Math.round(top.score * 100) : 0}% · 推理耗时 ${Math.round(state.cnnInferenceMs)} ms`;
             }
         }
 

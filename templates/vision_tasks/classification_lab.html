@@ -10,7 +10,7 @@
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>Input &amp; Params</h3><p>Classification Controls</p></div>
+            <div><h3>输入与参数</h3><p>分类控制</p></div>
         </div>
 
         <label class="vision-field">
@@ -63,7 +63,7 @@
 
         <div class="cls-control-group" data-cls-cnn-controls hidden>
 			<label class="vision-field">
-				<span>CNN model</span>
+				<span>CNN 模型</span>
 				<select data-cls-cnn-model>
 					<option value="flowers17" selected>Flowers17 CNN</option>
 					<option value="squeezenet">SqueezeNet 1.1 · ImageNet</option>
@@ -85,8 +85,8 @@
         </div>
 
         <div class="vision-shape-card">
-            <span>Classification Output</span>
-            <strong>image → representation → class scores</strong>
+            <span>图像分类流程</span>
+            <strong>图像 → 复合表示 → 类别得分</strong>
             <small>图像分类输出整图类别概率，不产生 bbox、mask 或实例 id。</small>
         </div>
     </aside>
@@ -97,7 +97,7 @@
                 <span>CLASSIFICATION PLAYGROUND</span>
                 <h3>图像分类实验：BoVW 与 CNN 路径对比</h3>
             </div>
-            <span class="vision-status-chip" data-cls-status>BOVW TEACHING SCORES</span>
+            <span class="vision-status-chip" data-cls-status>BOVW 教学评分</span>
         </div>
 
         <!-- BoVW mode -->
@@ -169,8 +169,8 @@
             <div class="cls-cnn-animation-grid">
                 <section class="cls-cnn-animation-card">
                     <div class="classification-card-head">
-                        <strong>CNN Process Animation</strong>
-                        <span>teaching visualization, synced with real ONNX inference</span>
+                        <strong>CNN 推理过程演示</strong>
+                        <span>教学可视化动画，与 ONNX 实时推理同步</span>
                     </div>
                     <div class="cls-cnn-animation-stage" data-cls-cnn-animation-stage></div>
                     <div class="cls-cnn-animation-controls">
@@ -182,25 +182,25 @@
                 </section>
                 <aside class="cls-cnn-stage-panel">
                     <div class="classification-card-head">
-                        <strong data-cls-cnn-stage-title>Input Image</strong>
-                        <span data-cls-cnn-stage-kicker>current stage</span>
+                        <strong data-cls-cnn-stage-title>输入图像</strong>
+                        <span data-cls-cnn-stage-kicker>当前阶段</span>
                     </div>
                     <p data-cls-cnn-stage-explanation></p>
                     <div class="cls-cnn-stage-io">
-                        <div><span>current input</span><strong data-cls-cnn-stage-input>image</strong></div>
-                        <div><span>current output</span><strong data-cls-cnn-stage-output>tensor</strong></div>
+                        <div><span>当前输入</span><strong data-cls-cnn-stage-input>图像</strong></div>
+                        <div><span>当前输出</span><strong data-cls-cnn-stage-output>张量</strong></div>
                     </div>
                     <code data-cls-cnn-stage-formula></code>
                 </aside>
             </div>
-            <div class="cls-cnn-flow" aria-label="CNN inference flow">
-                <span>Input Image</span>
+            <div class="cls-cnn-flow" aria-label="CNN 推理流程">
+                <span>输入图像</span>
                 <b></b>
-                <span>Resize / Normalize / NCHW Tensor</span>
+                <span>缩放/归一化/NCHW张量</span>
                 <b></b>
-                <span>CNN Feature Extractor</span>
+                <span>CNN 特征提取器</span>
                 <b></b>
-                <span>Global Pooling / Classifier</span>
+                <span>全局池化/分类器</span>
                 <b></b>
                 <span>Softmax Top-5</span>
             </div>
@@ -219,16 +219,16 @@
 
                 <div class="classification-side-card">
                     <div class="classification-card-head">
-                        <strong>Feature Extractor Explanation</strong>
-                        <span>CNN feature hierarchy</span>
+                        <strong>特征提取过程说明</strong>
+                        <span>CNN 层级特征提取示意</span>
                     </div>
                     <div class="cls-cnn-map-grid" data-cls-cnn-maps></div>
                 </div>
 
                 <div class="classification-hist-card">
                     <div class="classification-card-head">
-                        <strong>Representation Vector</strong>
-                        <span>pooling / classifier stage</span>
+                        <strong>全局特征向量</strong>
+                        <span>全局池化/分类器阶段</span>
                     </div>
                     <div class="cls-global-feature" data-cls-cnn-global></div>
                 </div>
@@ -297,7 +297,7 @@
                 <small data-cls-notes-method-desc>用局部特征和视觉词典生成图像级直方图表示。</small>
             </div>
             <div class="vision-formula-card">
-                <span>BoVW 核心思想</span>
+                <span data-cls-notes-formula-title>BoVW 核心思想</span>
                 <strong data-cls-notes-formula>hist[w] = count(assign(feature_i) = word_w)</strong>
                 <small data-cls-notes-formula-note>BoW 将局部特征量化为视觉单词，再把整图编码为词频直方图。</small>
             </div>
