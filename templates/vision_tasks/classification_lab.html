@@ -246,8 +246,9 @@
 
         <!-- Compare mode -->
         <div class="cls-mode-panel" data-cls-mode="compare" hidden>
+            <div class="cls-compare-sync-flow" data-cls-compare-flow aria-label="BoVW and CNN synchronized comparison flow"></div>
             <div class="cls-compare-grid">
-                <section class="cls-compare-route">
+                <section class="cls-compare-route" data-cls-compare-bovw-route>
                     <h4>BoVW 路径</h4>
                     <div class="cls-route-steps">
                         <span>图像</span><b></b><span>局部特征点</span><b></b><span>视觉单词</span><b></b><span>直方图</span><b></b><span>分类器</span>
@@ -262,7 +263,7 @@
                     </div>
                 </section>
 
-                <section class="cls-compare-route">
+                <section class="cls-compare-route" data-cls-compare-cnn-route>
                     <h4>CNN 路径</h4>
                     <div class="cls-route-steps">
                         <span>图像</span><b></b><span>卷积特征图</span><b></b><span>全局特征</span><b></b><span>Softmax 输出</span>
@@ -270,6 +271,7 @@
                     <div class="cls-compare-preview" data-cls-compare-cnn>
                         <div class="cls-compare-preview-image">
                             <img data-cls-compare-cnn-image alt="CNN 输入">
+                            <svg data-cls-compare-cnn-overlay viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
                         </div>
                         <div class="cls-cnn-map-grid" data-cls-compare-cnn-maps></div>
                         <div class="cls-global-feature" data-cls-compare-cnn-global></div>

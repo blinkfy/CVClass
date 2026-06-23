@@ -15,7 +15,7 @@ def register_page_routes(app, get_model_status):
                 "active_page": "segmentation_basic",
                 "eyebrow": "STATION 07 · TRADITIONAL SEGMENTATION",
                 "title": "图像分割与区域提取",
-                "subtitle": "像素聚类、图切割、交互式前景提取与区域分割流程",
+                "subtitle": "从聚类、图割到区域统计，理解传统图像分割如何把像素组织成可分析的区域。",
                 "badge": "CLUSTER · GRAPH CUT · REGION MAP",
             },
             "object_detection": {
@@ -114,7 +114,7 @@ def register_page_routes(app, get_model_status):
             ("segmentation_basic", "segmentation_basic"): {
                 "eyebrow": "STATION 07 · TRADITIONAL SEGMENTATION",
                 "title": "图像分割与区域提取",
-                "subtitle": "从像素颜色聚类、图切割、GrabCut 前景提取到 Watershed label map，理解传统区域分割如何连接边缘、轮廓和语义 mask。",
+                "subtitle": "从聚类、图割到区域统计，理解传统图像分割如何把像素组织成可分析的区域。",
                 "badge": "CLUSTER · GRAPH CUT · REGION MAP",
             },
             ("object_detection", "detection"): {

@@ -116,52 +116,68 @@
 
         <div class="seg-basic-playground" data-segb-kmeans-view>
             <div class="seg-basic-canvas-grid">
-                <figure>
-                    <figcaption>原图</figcaption>
+                <figure class="seg-basic-input-card">
+                    <figcaption><strong>输入图像</strong><small>Image pixels</small></figcaption>
                     <canvas data-segb-original width="256" height="180"></canvas>
                 </figure>
-                <figure>
-                    <figcaption data-segb-result-title>RGB 聚类分割结果</figcaption>
-                    <canvas data-segb-result width="256" height="180"></canvas>
-                </figure>
-                <figure class="seg-basic-compare-card" data-segb-compare-card>
-                    <figcaption data-segb-third-title>RGB 聚类中心 / 特征空间示意</figcaption>
-                    <canvas data-segb-compare width="256" height="180"></canvas>
+                <figure class="seg-basic-process-card" data-segb-compare-card>
+                    <figcaption><strong data-segb-third-title>RGB 特征空间 / 聚类中心</strong><small data-segb-feature-iteration>iteration --</small></figcaption>
                     <div class="seg-basic-feature-space" data-segb-feature-space></div>
+                </figure>
+                <figure class="seg-basic-output-card">
+                    <figcaption><strong data-segb-result-title>分割结果 overlay + 边界</strong><small>mask overlay</small></figcaption>
+                    <canvas data-segb-result width="256" height="180"></canvas>
+                    <div class="seg-basic-region-popover" data-segb-region-popover hidden></div>
                 </figure>
             </div>
 
             <div class="seg-basic-flow-band" aria-hidden="true">
-                <div class="flow-node is-image">Pixels</div>
+                <div class="flow-node is-image">Input Image</div>
                 <div class="flow-arrow"></div>
                 <div class="flow-node is-feature" data-segb-flow-feature>RGB Vector</div>
                 <div class="flow-arrow"></div>
-                <div class="flow-node is-score">Region Map</div>
+                <div class="flow-node is-score">Overlay Mask</div>
             </div>
 
-            <div class="seg-basic-kmeans-summary seg-basic-analysis-grid">
-                <section>
-                    <div class="method-result-head">
-                        <strong>Iteration Monitor</strong>
-                        <span data-segb-center-subtitle>center movement</span>
-                    </div>
-                    <div class="seg-basic-iteration-monitor" data-segb-iteration-monitor></div>
-                </section>
-                <section>
-                    <div class="method-result-head">
-                        <strong>Cluster Distribution</strong>
-                        <span data-segb-ratio-subtitle>pixel count ratio</span>
-                    </div>
-                    <div class="seg-basic-region-list" data-segb-region-list></div>
-                </section>
-                <section>
-                    <div class="method-result-head">
-                        <strong>Feature Space</strong>
-                        <span data-segb-feature-subtitle>RGB centers</span>
-                    </div>
-                    <div class="seg-basic-center-list" data-segb-center-list></div>
-                </section>
+            <div class="seg-basic-step-focus" data-segb-step-focus>
+                <section class="seg-basic-step-visual" data-segb-step-visual></section>
+                <section class="seg-basic-step-matrix" data-segb-step-matrix></section>
+                <section class="seg-basic-step-detail" data-segb-step-detail></section>
             </div>
+
+            <details class="seg-basic-kmeans-support" data-segb-support>
+                <summary>辅助输出：label map / 迭代曲线 / 区域统计</summary>
+                <div class="seg-basic-kmeans-summary seg-basic-analysis-grid">
+                    <section class="seg-basic-label-card">
+                        <div class="method-result-head">
+                            <strong>Pure Label Map</strong>
+                            <span data-segb-label-subtitle>cluster id only</span>
+                        </div>
+                        <canvas data-segb-compare width="256" height="180"></canvas>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Iteration Monitor</strong>
+                            <span data-segb-center-subtitle>center movement</span>
+                        </div>
+                        <div class="seg-basic-iteration-monitor" data-segb-iteration-monitor></div>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Cluster Distribution</strong>
+                            <span data-segb-ratio-subtitle>pixel count ratio</span>
+                        </div>
+                        <div class="seg-basic-region-list" data-segb-region-list></div>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Feature Space</strong>
+                            <span data-segb-feature-subtitle>RGB centers</span>
+                        </div>
+                        <div class="seg-basic-center-list" data-segb-center-list></div>
+                    </section>
+                </div>
+            </details>
 
             <div class="vision-info-callout seg-basic-compare-note" data-segb-compare-note>
                 RGB + XY 把像素坐标加入特征向量，颜色相近但空间分散的像素更难被合并，通常能减少离散噪点并增强区域连续性。

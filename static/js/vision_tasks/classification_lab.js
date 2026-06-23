@@ -120,6 +120,12 @@
             explanation: "logits 条形图经 softmax 转为概率，Top-5 重新排序并与真实 session.run 输出联动。",
         },
     ];
+    const compareStages = [
+        { key: "input", label: "Input", bovw: "image + feature points", cnn: "image tensor + sliding window" },
+        { key: "representation", label: "Representation", bovw: "visual words + histogram", cnn: "feature maps + pooled vector" },
+        { key: "classifier", label: "Classifier", bovw: "logistic regression", cnn: "classifier head logits" },
+        { key: "topk", label: "Top-K", bovw: "flower class scores", cnn: "softmax Top-5" },
+    ];
     const bovwPrototypeLabels = ["原型 A", "原型 B", "原型 C", "原型 D", "原型 E", "原型 F"];
     const state = {
         data: null,
@@ -169,6 +175,7 @@
         cnnAnimationTick: 0,
         cnnAnimationTimer: null,
         cnnAnimationImageKey: "",
+        compareStage: "representation",
     };
 
     const els = {
@@ -232,10 +239,14 @@
         cnnModelProof: $("[data-cls-cnn-model-proof]"),
 
         compareBovwImage: $("[data-cls-compare-bovw-image]"),
+        compareFlow: $("[data-cls-compare-flow]"),
+        compareBovwRoute: $("[data-cls-compare-bovw-route]"),
+        compareCnnRoute: $("[data-cls-compare-cnn-route]"),
         compareBovwOverlay: $("[data-cls-compare-bovw-overlay]"),
         compareBovwHist: $("[data-cls-compare-bovw-hist]"),
         compareBovwScores: $("[data-cls-compare-bovw-scores]"),
         compareCnnImage: $("[data-cls-compare-cnn-image]"),
+        compareCnnOverlay: $("[data-cls-compare-cnn-overlay]"),
         compareCnnMaps: $("[data-cls-compare-cnn-maps]"),
         compareCnnGlobal: $("[data-cls-compare-cnn-global]"),
         compareCnnScores: $("[data-cls-compare-cnn-scores]"),
@@ -1558,12 +1569,7 @@
         const image = item?.image || "";
         const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
         const tensorSize = state.cnnOnnxConfig?.inputSize || 224;
-        const heatCells = Array.from({ length: 36 }, (_, index) => `<i style="--d:${(index * 0.025).toFixed(3)}s; --o:${(0.22 + ((index * 7) % 13) / 18).toFixed(3)}"></i>`).join("");
-        const bars = topScores.slice(0, 5).map((score, index) => `
-            <div class="cls-cnn-prob-row ${index === 0 ? "is-top" : ""}" style="--p:${Math.max(6, Math.round((score.score || 0) * 100))}%">
-                <span>${index + 1}</span><strong>${escapeHtml(score.label)}</strong><i></i><em>${Math.round((score.score || 0) * 100)}%</em>
-            </div>
-        `).join("");
+        
         const journey = (from, via, to) => `
             <div class="cls-cnn-data-journey">
                 <span>${from}</span>
@@ -1576,87 +1582,175 @@
         `;
 
         if (stage.key === "input") {
+            const width = item?.width || 689;
+            const height = item?.height || 500;
             return `
-                <div class="cls-cnn-anim-input">
-                    ${journey("样例/上传图像", "读取图像像素", "内存像素缓冲区")}
-                    <img src="${image}" alt="">
-                    <div class="cls-cnn-scanline"></div>
-                    <p>当前输入图像像素</p>
+                ${journey("进入前原始输入", "加载输入图像", "待处理物理图像")}
+                <div class="cls-anim-img-container">
+                    <img src="${image}" alt="CNN Input">
+                    <span class="cls-input-rgb-label">RGB IMAGE</span>
+                    <span class="cls-input-badge-size">${width} × ${height}</span>
                 </div>
             `;
         }
         if (stage.key === "preprocess") {
             return `
+                ${journey("图像数据", "缩放并归一化为 Tensor", "归一化张量")}
                 <div class="cls-cnn-anim-preprocess">
-                    ${journey("H×W×3 输入图像", "尺寸重缩放 + 归一化", `1×3×${tensorSize}×${tensorSize} 张量`)}
-                    <img src="${image}" alt="">
-                    <div class="cls-rgb-planes"><b>R</b><b>G</b><b>B</b></div>
-                    <div class="cls-tensor-grid">${heatCells}</div>
-                    <strong>输入格式转换: H×W×3 → 1×3×${tensorSize}×${tensorSize}</strong>
+                    <div class="cls-anim-crop-rect-wrap" style="position: relative;">
+                        <div class="cls-anim-crop-rect"></div>
+                        <img src="${image}" style="width: 80px; height: 80px; border-radius: 6px; object-fit: cover;" alt="">
+                        <div class="cls-input-badge-size" style="position:static; margin-top:4px; font-size:9px; text-align:center; transform: none; opacity: 1;">689×500 → 224×224</div>
+                    </div>
+                    <div class="cls-resize-planes-container">
+                        <div class="cls-rgb-slices">
+                            <i class="r" style="--z: 0; background-image: url('${image}')"></i>
+                            <i class="g" style="--z: -24; background-image: url('${image}')"></i>
+                            <i class="b" style="--z: -48; background-image: url('${image}')"></i>
+                        </div>
+                    </div>
+                    <div class="cls-tensor-glow-grid">
+                        ${Array.from({ length: 36 }, (_, i) => `<i style="animation-delay: ${(i * 0.035).toFixed(3)}s"></i>`).join("")}
+                    </div>
                 </div>
+                <strong style="margin-top: 8px;">1 × 3 × ${tensorSize} × ${tensorSize} Tensor 就绪</strong>
             `;
         }
         if (stage.key === "conv") {
-            const patch = Array.from({ length: 9 }, (_, index) => `<i>${((index + 2) / 10).toFixed(1)}</i>`).join("");
-            const weights = ["0.2", "-0.1", "0.3", "0.0", "0.5", "-0.2", "0.1", "0.4", "0.2"].map((value) => `<i>${value}</i>`).join("");
+            const patch = ["0.9", "0.8", "0.5", "0.2", "0.9", "0.1", "0.3", "0.2", "0.4"];
+            const weights = ["0.2", "-0.1", "0.3", "0.0", "0.5", "-0.2", "0.1", "0.4", "0.2"];
             return `
-                <div class="cls-cnn-anim-conv">
-                    ${journey("3×3 局部图像块", "权重乘加积求和", "特征图单个神经元单元")}
-                    <div class="cls-cnn-patch">${patch}</div>
-                    <svg viewBox="0 0 100 58" preserveAspectRatio="none">
-                        <path d="M28 8 C43 8 54 13 70 8"></path>
-                        <path d="M28 28 C44 24 54 30 70 28"></path>
-                        <path d="M28 48 C43 44 54 48 70 48"></path>
+                ${journey("特征局部切片", "数字对齐相乘并累加", "单个神经元输出")}
+                <div class="cls-anim-conv-interactive">
+                    <div class="cls-interactive-patch-box">
+                        ${patch.map((val) => `<i>${val}</i>`).join("")}
+                    </div>
+                    <svg class="cls-conv-lines-svg">
+                        ${Array.from({ length: 9 }, (_, i) => {
+                            const row = Math.floor(i / 3);
+                            const col = i % 3;
+                            const startX = 20 + col * 15;
+                            const startY = 30 + row * 40;
+                            const endX = 140 + col * 15;
+                            const endY = 30 + row * 40;
+                            return `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" style="animation-delay:${(i * 0.1).toFixed(2)}s" />`;
+                        }).join("")}
                     </svg>
-                    <div class="cls-cnn-kernel">${weights}</div>
-                    <div class="cls-cnn-sum">局部乘加求和: Σ x·w + b → 0.82</div>
-                    <div class="cls-cnn-feature-drop"></div>
+                    <div class="cls-interactive-kernel-box">
+                        ${weights.map((val) => `<i>${val}</i>`).join("")}
+                    </div>
+                    <div class="cls-animated-mult-spark">
+                        <span class="cls-mult-number">Σ x_i · w_i = 0.82</span>
+                    </div>
+                    <div class="cls-conv-out-grid">
+                        <i></i><i></i><i></i>
+                        <i></i><i class="highlight"></i><i></i>
+                        <i></i><i></i><i></i>
+                    </div>
                 </div>
+                <strong style="margin-top: 4px;">滑动窗口提取特征：W × 局部区域 + b → 神经元单元激活值</strong>
             `;
         }
         if (stage.key === "feature") {
+            const xCoords = [55, 38, 62];
+            const yCoords = [48, 42, 58];
+            const layerLabels = [
+                { title: "浅层特征 · Edges", desc: "主导色彩与轮廓边缘" },
+                { title: "中层特征 · Patterns", desc: "花瓣局部斑点与结构模式" },
+                { title: "深层特征 · Object Parts", desc: "抽象花卉类别高维语义" }
+            ];
+            
             return `
-                <div class="cls-cnn-anim-featuremaps">
-                    ${journey("多通道卷积响应", "层级特征图组堆叠", "语义特征提取层级")}
-                    <article><strong>浅层特征 (shallow)</strong><span>检测基础边缘、颜色和纹理</span><div>${heatCells}</div></article>
-                    <article><strong>中层特征 (middle)</strong><span>组合局部结构和纹理模式</span><div>${heatCells}</div></article>
-                    <article><strong>深层特征 (high-level)</strong><span>抽象物体部件和全局类别响应</span><div>${heatCells}</div></article>
+                ${journey("多通道卷积响应", "提取语义特征层级", "高层特征表示")}
+                <div class="cls-interactive-maps-view">
+                    ${[0, 1, 2].map((idx) => `
+                        <div class="cls-feature-hotspot-card">
+                            <strong style="font-size: 11px;">${layerLabels[idx].title}</strong>
+                            <span style="font-size: 9px; color: #64748b; display: block; margin-top:2px;">${layerLabels[idx].desc}</span>
+                            <div class="cls-hot-thumbnail" style="background-image: url('${image}')">
+                                <div class="cls-hot-overlay" style="--cx: ${xCoords[idx]}%; --cy: ${yCoords[idx]}%"></div>
+                            </div>
+                        </div>
+                    `).join("")}
                 </div>
             `;
         }
         if (stage.key === "pooling") {
-            return `
-                <div class="cls-cnn-anim-pooling">
-                    ${journey("H×W×C 空间特征图组", "全局均值池化降维", "1×1×C 表征特征向量")}
-                    <div class="cls-pool-maps">
-                        ${[0, 1, 2, 3].map(() => `<article>${heatCells}</article>`).join("")}
-                    </div>
-                    <div class="cls-pool-vector">${Array.from({ length: 18 }, (_, i) => `<i style="--h:${26 + ((i * 11) % 54)}%"></i>`).join("")}</div>
-                    <strong>空间维度压缩: H×W×C → 1×1×C 表征特征向量</strong>
+            const sourceGrids = Array.from({ length: 4 }, (_, gridIdx) => `
+                <div class="cls-pooling-source-grid">
+                    ${Array.from({ length: 9 }, (_, cellIdx) => {
+                        const row = Math.floor(cellIdx / 3);
+                        const col = cellIdx % 3;
+                        return `<i style="--cx: ${col}; --cy: ${row}; animation-delay: ${(gridIdx * 0.15 + cellIdx * 0.04).toFixed(2)}s"></i>`;
+                    }).join("")}
                 </div>
+            `).join("");
+            
+            return `
+                ${journey("H × W × C 特征空间图", "执行全局平均池化 (GAP)", "1 × 1 × C 特征表示")}
+                <div class="cls-pooling-shrink-view">
+                    <div class="cls-pool-grids-wrap">
+                        ${sourceGrids}
+                    </div>
+                    <div class="cls-vector-stretch-line"></div>
+                    <div class="cls-pool-vector-final">
+                        ${Array.from({ length: 6 }, (_, i) => `<i style="--delay: ${(i * 0.12).toFixed(2)}s"></i>`).join("")}
+                    </div>
+                </div>
+                <strong>全局信息压缩：对每个通道取均值以压缩空间维度</strong>
             `;
         }
         if (stage.key === "classifier") {
+            const visualLabels = topScores.slice(0, 4).map(s => s.label).concat(["干扰项类别"]);
+            
             return `
-                <div class="cls-cnn-anim-classifier">
-                    ${journey("1×1×C 表征向量", "全连接层线性决策", `${classCount} 维 Logits 输出`)}
-                    <div class="cls-class-vector">${Array.from({ length: 14 }, (_, i) => `<i style="--h:${28 + ((i * 9) % 58)}%"></i>`).join("")}</div>
-                    <svg viewBox="0 0 100 72" preserveAspectRatio="none">
-                        ${[12, 25, 38, 51, 64].map((y, i) => `<path class="${i < 2 ? "is-hot" : ""}" d="M24 36 C45 ${y} 60 ${y} 82 ${y}"></path>`).join("")}
-                    </svg>
-                    <div class="cls-class-nodes">
-                        ${topScores.slice(0, 5).map((score, index) => `<span class="${index === 0 ? "is-top" : ""}">${escapeHtml(score.label)}</span>`).join("")}
+                ${journey("1×1×C 紧致表示", "全连接层线性决策", `${classCount} 维 Logits`)}
+                <div class="cls-classifier-links-view">
+                    <div class="cls-nodes-vector-list">
+                        ${Array.from({ length: 6 }, (_, i) => `<i>v_{${i+1}}</i>`).join("")}
                     </div>
-                    <strong>线性映射计算: W × 特征向量 + b → ${classCount} 维 Logits</strong>
+                    <svg class="cls-links-connect-svg">
+                        ${Array.from({ length: 15 }, (_, i) => {
+                            const srcIdx = i % 5;
+                            const destIdx = Math.floor(i / 3);
+                            const y1 = 15 + srcIdx * 32;
+                            const y2 = 12 + destIdx * 34;
+                            const op = 0.12 + ((i * 7) % 9) / 12;
+                            const activeColor = destIdx === 0 && srcIdx < 3 ? "#22c55e" : "#bfdbfe";
+                            return `<line x1="28" y1="${y1}" x2="260" y2="${y2}" style="stroke:${activeColor}; stroke-width:${(op*3).toFixed(1)}; opacity:${op.toFixed(2)}; stroke-dasharray:5 3;" />`;
+                        }).join("")}
+                    </svg>
+                    <div class="cls-nodes-output-list">
+                        ${visualLabels.map((lbl, idx) => `
+                            <span class="${idx === 0 ? "is-target" : ""}">${idx === 4 ? "其他 " + (classCount - 4) + " 个" : escapeHtml(lbl)}</span>
+                        `).join("")}
+                    </div>
                 </div>
+                <strong>运算：W^T v + b → 各类别置信度 Logits</strong>
             `;
         }
+        
+        const barsHtml = topScores.slice(0, 5).map((score, index) => {
+            const isTop = index === 0;
+            const pct = Math.round((score.score || 0) * 100);
+            return `
+                <div class="cls-softmax-row-wrap ${isTop ? "is-top-prediction" : ""}">
+                    <span>${index + 1}</span>
+                    <strong>${escapeHtml(score.label)}</strong>
+                    <div class="cls-softmax-bar-flow">
+                        <i style="width: ${pct}%"></i>
+                    </div>
+                    <em>${pct}%</em>
+                </div>
+            `;
+        }).join("");
+
         return `
-            <div class="cls-cnn-anim-softmax">
-                ${journey(`${classCount} 维 Logits`, "Softmax 归一化并排序", "Top-5 类别概率分布")}
-                <div class="cls-logit-bars">${bars}</div>
-                <strong>概率分布映射: Logits → Softmax 概率标准化 → Top-5 排序输出</strong>
+            ${journey(`Logits 置信度`, "Softmax 归一化并重新排序", "Top-5 概率输出")}
+            <div class="cls-softmax-bars-view">
+                ${barsHtml}
             </div>
+            <strong style="margin-top: 10px;">归一化指数：e^{z_i} / \\sum e^{z_j}。Top-1 类别锁定输出。</strong>
         `;
     }
 
@@ -1883,25 +1977,55 @@
         const cnnIsImagenet = state.cnnModelKind === "imagenet";
         const cnnTitle = cnnIsFlowers ? "CNN Flowers17" : cnnIsImagenet ? "CNN ImageNet" : "CNN 概念演示";
         const cnnClasses = cnnIsFlowers ? "17 类花卉" : cnnIsImagenet ? "1000 类 ImageNet 物体" : "概念分类";
-        const cnnRoute = cnnIsFlowers
-            ? "图像张量 → CNN 特征提取器 → 分类检测头 → 17 类花卉"
+        
+        // 使用结构化徽章拆分推理路径表现
+        const bovwRouteBadges = [
+            "图像分块",
+            "SIFT 描述子",
+            "KMeans 词汇汇聚",
+            "词频直方图 (Bag of Visual Words)",
+            "线性逻辑回归",
+            "分类输出"
+        ].map(step => `<span class="cls-route-badge bovw">${step}</span>`).join('<i class="cls-route-arrow">→</i>');
+
+        const cnnRouteBadges = (cnnIsFlowers
+            ? ["图像 Tensor", "输入归一化", "多层卷积与下采样", "Global Average Pooling", "线性全连接分类头", "Softmax 17类花卉"]
             : cnnIsImagenet
-                ? "图像张量 → CNN 特征提取器 → 分类检测头 → 1000 类 ImageNet"
-                : "图像 → 概念特征图组 → Softmax 得分";
+                ? ["图像 Tensor", "输入归一化", "骨干网络特征提取", "全局池化 GAP", "Linear Classification Head", "ONNX ImageNet 1000类"]
+                : ["二维图像", "尺寸归一化", "卷积与池化层", "Softmax 分数输出"]
+        ).map(step => `<span class="cls-route-badge cnn">${step}</span>`).join('<i class="cls-route-arrow">→</i>');
+
         const compareNote = cnnIsImagenet
             ? "二者类别体系不同：BoVW 是 17 类花卉，CNN 是 1000 类 ImageNet。本页只比较传统特征分类与深度模型推理路径，不比较准确率。"
             : cnnIsFlowers
-                ? "二者同为 Flowers17 分类，但表示学习路径不同：BoVW 使用手工 patch descriptor，CNN 使用深度特征提取器。"
+                ? "二者同为 Flowers17 分类，但表示学习路径不同：BoVW 使用手工特征描述子（手工设计），CNN 使用端到端自适应特征提取器（数据驱动）。"
                 : "当前未加载 CNN ONNX，仅保留概念路径对比。";
+                
         els.compareDiff.innerHTML = `
             <table>
-                <thead><tr><th>对比维度</th><th>BoVW Flowers17</th><th>${cnnTitle}</th></tr></thead>
+                <thead><tr><th>对比维度</th><th>BoVW 视觉词袋模型</th><th>${cnnTitle}</th></tr></thead>
                 <tbody>
-                    <tr><td>类别体系</td><td>17 类花卉</td><td>${cnnClasses}</td></tr>
-                    <tr><td>推理路径</td><td>图像分块描述子 → KMeans 视觉词典 → 词包直方图 → 逻辑回归分类器 → 17 类花卉</td><td>${cnnRoute}</td></tr>
-                    <tr><td>推理实现</td><td>前端通过本地 JSON 词典 + 分类器权重实时计算</td><td>${state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web 浏览器端 session.run 推理" : "概念展示 / 预设分数"}</td></tr>
-                    <tr><td>特征表示形式</td><td>稀疏词频直方图<br><small>${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} 维</small></td><td>深度特征向量<br><small>缩放 + 归一化 + CNN 特征抽取</small></td></tr>
-                    <tr><td>对比说明</td><td colspan="2">${compareNote}</td></tr>
+                    <tr><td>类别体系</td><td><span class="cls-table-pill light-blue">17 类花卉数据集</span></td><td><span class="cls-table-pill orange">${cnnClasses}</span></td></tr>
+                    <tr><td>逻辑流程</td><td><div class="cls-route-badge-container">${bovwRouteBadges}</div></td><td><div class="cls-route-badge-container">${cnnRouteBadges}</div></td></tr>
+                    <tr><td>推理实现</td><td><span class="cls-status-dot green"></span> 前端通过本地数学计算进行词表最近邻量化及 Softmax 逻辑回归预测</td><td><span class="cls-status-dot blue"></span> ${state.cnnOnnxStatus === "ready" ? "ONNX Runtime Web 浏览器端 WebGL/WASM 硬件加速实时推理" : "概念数据渲染 / 纯前端过渡"}</td></tr>
+                    <tr>
+                        <td>表征设计</td>
+                        <td>
+                            <div class="cls-feat-desc-container">
+                                <strong>高维稀疏特征直方图</strong>
+                                <span>利用统计直方图完全丢弃了各个分块的原始几何位置关系信息。</span>
+                                <small>${isTrainedBovwActive() ? state.bovwModel.vocab_size : state.vocabSize} 维直方图</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cls-feat-desc-container">
+                                <strong>端到端稠密多阶层描述子</strong>
+                                <span>在不同层级自动保留并提炼了从「边缘」到「高阶语义」的空间层级感受野表征。</span>
+                                <small>高度压缩的语义通道向量</small>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td>比对说明</td><td colspan="2"><div class="cls-table-note-box">${compareNote}</div></td></tr>
                 </tbody>
             </table>
         `;
@@ -2267,15 +2391,110 @@
         if (state.method === "cnn" || state.method === "compare") runCnnInference(item);
     }
 
+    function renderCompareFlow() {
+        if (!els.compareFlow) return;
+        els.compareFlow.innerHTML = compareStages.map((stage, index) => `
+            <button type="button" class="${stage.key === state.compareStage ? "is-active" : ""}" data-compare-stage="${stage.key}">
+                <span>${index + 1}</span>
+                <strong>${stage.label}</strong>
+            </button>
+        `).join("");
+    }
+
+    function renderCompareCnnOverlay() {
+        if (!els.compareCnnOverlay) return;
+        const active = state.compareStage;
+        const windowClass = active === "input" || active === "representation" ? " is-active" : "";
+        els.compareCnnOverlay.innerHTML = `
+            <rect class="cls-compare-cnn-window${windowClass}" x="16" y="18" width="22" height="22" rx="2"></rect>
+            <path class="cls-compare-cnn-flowline ${active === "input" ? "is-active" : ""}" d="M38 29 C52 28 58 36 69 36"></path>
+            <path class="cls-compare-cnn-flowline ${active === "representation" ? "is-active" : ""}" d="M68 36 C76 45 78 58 82 69"></path>
+            <path class="cls-compare-cnn-flowline ${active === "classifier" || active === "topk" ? "is-active" : ""}" d="M82 69 C88 72 92 76 96 82"></path>
+            <circle class="cls-compare-cnn-token" cx="16" cy="29" r="1.8"></circle>
+        `;
+    }
+
+    function renderCompareCnnMaps(target) {
+        if (!target) return;
+        const heatCells = Array.from({ length: 12 }, (_, index) => `<i style="--d:${(index * 0.035).toFixed(3)}s; --o:${(0.22 + ((index * 7) % 11) / 16).toFixed(3)}"></i>`).join("");
+        target.innerHTML = `
+            <article class="${state.compareStage === "input" ? "is-active" : ""}">
+                <strong>patch × kernel</strong>
+                <p>sliding 3×3 window → output value</p>
+                <div class="cls-compare-kernel-row"><span>3×3 patch × kernel → 0.82</span></div>
+            </article>
+            <article class="${state.compareStage === "representation" ? "is-active" : ""}">
+                <strong>shallow features</strong>
+                <p>edges / colors / textures</p>
+                <div class="cls-compare-map-cells">${heatCells}</div>
+            </article>
+            <article class="${state.compareStage === "representation" ? "is-active" : ""}">
+                <strong>middle features</strong>
+                <p>patterns / local shapes</p>
+                <div class="cls-compare-map-cells">${heatCells}</div>
+            </article>
+            <article class="${state.compareStage === "classifier" ? "is-active" : ""}">
+                <strong>high-level features</strong>
+                <p>object parts / category responses</p>
+                <div class="cls-compare-map-cells">${heatCells}</div>
+            </article>
+        `;
+    }
+
+    function renderCompareCnnVector(target, scores) {
+        if (!target) return;
+        const topScores = scores.length ? scores.slice(0, 5) : [{ label: "waiting", score: 0.2 }];
+        const vector = Array.from({ length: 18 }, (_, index) => `<i class="${index % 5 === 0 ? "is-hot" : ""}" style="--h:${24 + ((index * 13) % 62)}%"></i>`).join("");
+        const nodes = topScores.map((score, index) => `<span class="${index === 0 ? "is-top" : ""}">${escapeHtml(score.label)}</span>`).join("");
+        target.innerHTML = `
+            <div class="cls-compare-pooling-flow ${state.compareStage === "representation" ? "is-active" : ""}">
+                <div class="cls-compare-pool-source">
+                    ${Array.from({ length: 4 }, () => `<article>${Array.from({ length: 9 }, (_, i) => `<i style="--d:${(i * 0.025).toFixed(3)}s"></i>`).join("")}</article>`).join("")}
+                </div>
+                <strong>global pooling</strong>
+            </div>
+            <div class="cls-compare-vector-classifier ${state.compareStage === "classifier" || state.compareStage === "topk" ? "is-active" : ""}">
+                <strong class="cls-compare-vector-title">pooled vector → classifier → Top-K nodes</strong>
+                <div class="cls-compare-vector">${vector}</div>
+                <svg viewBox="0 0 100 64" preserveAspectRatio="none">
+                    ${[10, 22, 34, 46, 58].map((y, i) => `<path class="${i < 2 ? "is-hot" : ""}" d="M18 32 C39 ${y} 58 ${y} 82 ${y}"></path>`).join("")}
+                </svg>
+                <div class="cls-compare-class-nodes">${nodes}</div>
+            </div>
+        `;
+    }
+
+    function renderCompareCnnScores(target, scores) {
+        if (!target) return;
+        const topScores = scores.slice(0, 5);
+        target.innerHTML = `
+            <div class="cls-compare-softmax ${state.compareStage === "topk" ? "is-active" : ""}">
+                <div class="cls-compare-softmax-title">ONNX logits → softmax probability bars → Top-5 ranking</div>
+                ${topScores.map((item, index) => `
+                    <div class="classification-score-row ${index === 0 ? "is-top" : ""}" style="--p:${Math.max(5, Math.round((item.score || 0) * 100))}%">
+                        <span>${index + 1}</span>
+                        <strong>${escapeHtml(item.label)}</strong>
+                        <div><i style="width:${Math.round((item.score || 0) * 100)}%"></i></div>
+                        <em>${Math.round((item.score || 0) * 100)}%</em>
+                    </div>
+                `).join("")}
+            </div>
+        `;
+    }
+
     function renderCompare(item) {
         setImage(els.compareBovwImage, null, item);
         setImage(els.compareCnnImage, null, item);
+        renderCompareFlow();
+        if (els.compareBovwRoute) els.compareBovwRoute.dataset.compareStage = state.compareStage;
+        if (els.compareCnnRoute) els.compareCnnRoute.dataset.compareStage = state.compareStage;
         renderBovwOverlay(els.compareBovwOverlay);
         renderMiniHistogram(els.compareBovwHist);
         renderScores(els.compareBovwScores, bovwScores());
-        renderCnnMaps(els.compareCnnMaps);
-        renderGlobalFeature(els.compareCnnGlobal, 32);
-        renderScores(els.compareCnnScores, cnnScores(item));
+        renderCompareCnnOverlay();
+        renderCompareCnnMaps(els.compareCnnMaps);
+        renderCompareCnnVector(els.compareCnnGlobal, cnnScores(item));
+        renderCompareCnnScores(els.compareCnnScores, cnnScores(item));
         renderDiffTable();
     }
 
@@ -2523,6 +2742,14 @@
             state.cnnAnimationPlaying = true;
             state.cnnAnimationAutoplay = !state.cnnAnimationAutoplay;
             state.cnnAnimationTick += 1;
+            render();
+        });
+    }
+    if (els.compareFlow) {
+        els.compareFlow.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-compare-stage]");
+            if (!button) return;
+            state.compareStage = button.dataset.compareStage;
             render();
         });
     }

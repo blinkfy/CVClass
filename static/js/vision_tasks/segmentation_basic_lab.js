@@ -66,6 +66,9 @@
         animationTimer: 0,
         playing: false,
         currentSnapshot: 0,
+        selectedLabel: null,
+        kmeansPhase: "stats",
+        kmeansFrameIndex: 0,
     };
 
     const els = {
@@ -108,10 +111,17 @@
         resultTitle: $("[data-segb-result-title]"),
         thirdTitle: $("[data-segb-third-title]"),
         featureSpace: $("[data-segb-feature-space]"),
+        featureIteration: $("[data-segb-feature-iteration]"),
+        labelSubtitle: $("[data-segb-label-subtitle]"),
         flowFeature: $("[data-segb-flow-feature]"),
         centerList: $("[data-segb-center-list]"),
         regionList: $("[data-segb-region-list]"),
+        regionPopover: $("[data-segb-region-popover]"),
         iterationMonitor: $("[data-segb-iteration-monitor]"),
+        stepFocus: $("[data-segb-step-focus]"),
+        stepVisual: $("[data-segb-step-visual]"),
+        stepMatrix: $("[data-segb-step-matrix]"),
+        stepDetail: $("[data-segb-step-detail]"),
         graphStage: $("[data-segb-graph-stage]"),
         matrixStage: $("[data-segb-matrix-stage]"),
         conceptDetail: $("[data-segb-concept-detail]"),
@@ -630,6 +640,49 @@
         `;
     }
 
+    function kmeansStatsSvg(props, totalCells) {
+        const sorted = [...props].sort((a, b) => b.count - a.count);
+        const maxCount = Math.max(1, ...sorted.map((item) => item.count));
+        const previewLabels = sorted.flatMap((item) => {
+            const cellsForCluster = Math.max(1, Math.round(item.ratio * 48));
+            return Array.from({ length: cellsForCluster }, () => item.label);
+        });
+        while (previewLabels.length < 48) previewLabels.push(sorted[0]?.label || 1);
+        const cells = previewLabels.slice(0, 48).map((label, index) => {
+            const x = 36 + (index % 12) * 13;
+            const y = 68 + Math.floor(index / 12) * 13;
+            return `<rect x="${x}" y="${y}" width="10" height="10" rx="2.5" fill="${labelFill(label)}"/>`;
+        }).join("");
+        const bars = sorted.map((item, index) => {
+            const y = 67 + index * 34;
+            const width = 112 * (item.count / maxCount);
+            const percent = Math.round(item.ratio * 100);
+            return `
+                <g>
+                    <text x="255" y="${y + 8}" class="seg-svg-title">C${item.label}</text>
+                    <rect x="288" y="${y - 3}" width="122" height="14" rx="7" fill="#e2e8f0"/>
+                    <rect x="288" y="${y - 3}" width="${width.toFixed(1)}" height="14" rx="7" fill="${item.color}"/>
+                    <text x="420" y="${y + 8}" class="seg-svg-note">${item.count}/${totalCells} · ${percent}%</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-stats-svg" viewBox="0 0 520 270" role="img" aria-label="kmeans region statistics flow">
+                <rect x="24" y="36" width="176" height="114" rx="18" fill="#f8fafc" stroke="#bfdbfe"/>
+                ${cells}
+                <text x="112" y="174" text-anchor="middle" class="seg-svg-title">label map</text>
+                <path d="M210 98 H242" class="seg-edge"/>
+                <text x="262" y="38" class="seg-svg-title">count / ratio</text>
+                ${bars}
+                <path d="M438 98 H474" class="seg-edge"/>
+                <rect x="386" y="184" width="110" height="48" rx="13" fill="#eff6ff" stroke="#bfdbfe"/>
+                <text x="441" y="205" text-anchor="middle" class="seg-svg-title">region table</text>
+                <text x="441" y="222" text-anchor="middle" class="seg-svg-note">area / bbox / centroid</text>
+                <text x="260" y="254" text-anchor="middle" class="seg-svg-note">扫描每个 label 的像素数，再计算占比与区域属性</text>
+            </svg>
+        `;
+    }
+
     function buildKMeansConcept() {
         const isCompare = state.method === "kmeans-compare";
         const activeFeatureName = state.method === "kmeans-rgbxy" ? "RGB + XY" : "RGB";
@@ -639,6 +692,7 @@
             const grid = buildKMeansGridModel(useXY, 14, 10);
             const result = runKMeansOnGrid(grid);
             const props = kmeansProps(grid, result.labels);
+            const largestProp = [...props].sort((a, b) => b.count - a.count)[0];
 
             const sampleCells = [];
             for (let i = 0; i < grid.count && sampleCells.length < 3; i += 1) {
@@ -751,11 +805,11 @@
                 {
                     phase: "stats",
                     title: `${prefix}6. 区域统计`,
-                    graph: conceptGridSvg(grid.model, { labels: Array.from(finalSnapshot.labels).map((l) => l + 1), caption: "按标签统计像素数与占比" }),
+                    graph: kmeansStatsSvg(props, grid.count),
                     matrix: barsHtml(props.map((p) => ({ label: p.name, value: p.count, color: p.color, note: `${Math.round(p.ratio * 100)}%` }))),
                     detail: metricCards([
                         ["regions", String(state.k)],
-                        ["largest", `C${props[0]?.label || 1} · ${Math.round((props[0]?.ratio || 0) * 100)}%`],
+                        ["largest", `C${largestProp?.label || 1} · ${Math.round((largestProp?.ratio || 0) * 100)}%`],
                         ["grid cells", String(grid.count)],
                         ["output", "label map"],
                     ]),
@@ -828,18 +882,166 @@
         ctx.putImageData(image, 0, 0);
     }
 
-    function regionRows(result, snapshot) {
+    function clusterRgb(index) {
+        return hexToRgb(labelFill(index + 1));
+    }
+
+    function computeRegionStats(result, snapshot) {
         const total = result.width * result.height;
+        const stats = Array.from({ length: result.k }, (_, index) => ({
+            label: index,
+            count: 0,
+            minX: result.width,
+            minY: result.height,
+            maxX: -1,
+            maxY: -1,
+            sumX: 0,
+            sumY: 0,
+            boundary: 0,
+        }));
+        for (let y = 0; y < result.height; y += 1) {
+            for (let x = 0; x < result.width; x += 1) {
+                const i = y * result.width + x;
+                const label = snapshot.labels[i];
+                const item = stats[label];
+                item.count += 1;
+                item.sumX += x;
+                item.sumY += y;
+                item.minX = Math.min(item.minX, x);
+                item.minY = Math.min(item.minY, y);
+                item.maxX = Math.max(item.maxX, x);
+                item.maxY = Math.max(item.maxY, y);
+                if (
+                    x === 0 || y === 0 || x === result.width - 1 || y === result.height - 1 ||
+                    snapshot.labels[i - 1] !== label ||
+                    snapshot.labels[i + 1] !== label ||
+                    snapshot.labels[i - result.width] !== label ||
+                    snapshot.labels[i + result.width] !== label
+                ) {
+                    item.boundary += 1;
+                }
+            }
+        }
+        return stats.map((item) => {
+            const empty = item.count === 0;
+            return {
+                ...item,
+                ratio: item.count / Math.max(1, total),
+                centroidX: empty ? 0 : item.sumX / item.count,
+                centroidY: empty ? 0 : item.sumY / item.count,
+                width: empty ? 0 : item.maxX - item.minX + 1,
+                height: empty ? 0 : item.maxY - item.minY + 1,
+                color: clusterRgb(item.label),
+            };
+        });
+    }
+
+    function drawLabelMap(result, snapshot, canvas) {
+        const ctx = canvas.getContext("2d");
+        canvas.width = result.width;
+        canvas.height = result.height;
+        const image = ctx.createImageData(result.width, result.height);
+        const data = image.data;
+        for (let i = 0; i < snapshot.labels.length; i += 1) {
+            const label = snapshot.labels[i];
+            const color = clusterRgb(label);
+            const p = i * 4;
+            data[p] = color.r;
+            data[p + 1] = color.g;
+            data[p + 2] = color.b;
+            data[p + 3] = 255;
+        }
+        ctx.putImageData(image, 0, 0);
+    }
+
+    function drawKMeansOverlay(result, snapshot, canvas, stats) {
+        const work = ensureWorkData();
+        const ctx = canvas.getContext("2d");
+        canvas.width = result.width;
+        canvas.height = result.height;
+        const output = ctx.createImageData(result.width, result.height);
+        const src = work.imageData.data;
+        const dst = output.data;
+        const progress = state.playing
+            ? Math.max(0.16, (state.currentSnapshot + 1) / Math.max(1, result.snapshots.length))
+            : 1;
+        const selected = Number.isInteger(state.selectedLabel) ? state.selectedLabel : null;
+        for (let y = 0; y < result.height; y += 1) {
+            for (let x = 0; x < result.width; x += 1) {
+                const i = y * result.width + x;
+                const p = i * 4;
+                const label = snapshot.labels[i];
+                const color = clusterRgb(label);
+                const reveal = x / Math.max(1, result.width - 1) <= progress;
+                const selectedBoost = selected === null || selected === label ? 1 : 0.34;
+                const mix = reveal ? 0.48 * selectedBoost : 0;
+                dst[p] = Math.round(src[p] * (1 - mix) + color.r * mix);
+                dst[p + 1] = Math.round(src[p + 1] * (1 - mix) + color.g * mix);
+                dst[p + 2] = Math.round(src[p + 2] * (1 - mix) + color.b * mix);
+                dst[p + 3] = 255;
+            }
+        }
+        ctx.putImageData(output, 0, 0);
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (let y = 1; y < result.height - 1; y += 1) {
+            for (let x = 1; x < result.width - 1; x += 1) {
+                const i = y * result.width + x;
+                const label = snapshot.labels[i];
+                if (snapshot.labels[i - 1] !== label || snapshot.labels[i + 1] !== label || snapshot.labels[i - result.width] !== label || snapshot.labels[i + result.width] !== label) {
+                    ctx.fillStyle = selected === null || selected === label ? "rgba(15, 23, 42, 0.72)" : "rgba(255, 255, 255, 0.32)";
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+        if (selected !== null && stats?.[selected]?.count) {
+            const item = stats[selected];
+            ctx.strokeStyle = "#f97316";
+            ctx.lineWidth = Math.max(2, Math.round(result.width / 150));
+            ctx.setLineDash([7, 4]);
+            ctx.strokeRect(item.minX + 0.5, item.minY + 0.5, Math.max(1, item.width), Math.max(1, item.height));
+            ctx.setLineDash([]);
+            ctx.fillStyle = "#f97316";
+            ctx.beginPath();
+            ctx.arc(item.centroidX, item.centroidY, Math.max(3, result.width / 70), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+        canvas.classList.remove("is-mask-fade");
+        void canvas.offsetWidth;
+        canvas.classList.add("is-mask-fade");
+    }
+
+    function showRegionPopover(stats) {
+        if (!els.regionPopover) return;
+        const selected = Number.isInteger(state.selectedLabel) ? state.selectedLabel : null;
+        const item = selected === null ? null : stats?.[selected];
+        if (!item || !item.count) {
+            els.regionPopover.hidden = true;
+            els.regionPopover.innerHTML = "";
+            return;
+        }
+        els.regionPopover.hidden = false;
+        els.regionPopover.innerHTML = `
+            <strong>C${item.label + 1} region</strong>
+            <span>area ${item.count} px · ${Math.round(item.ratio * 100)}%</span>
+            <span>bbox ${item.width}×${item.height} @ (${item.minX}, ${item.minY})</span>
+            <span>centroid (${Math.round(item.centroidX)}, ${Math.round(item.centroidY)})</span>
+        `;
+    }
+
+    function regionRows(result, snapshot, stats) {
         return snapshot.counts.map((count, index) => {
-            const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
-            const ratio = count / total;
+            const color = clusterRgb(index);
+            const ratio = stats?.[index]?.ratio ?? (count / Math.max(1, result.width * result.height));
+            const active = state.selectedLabel === index ? " is-selected" : "";
             return `
-                <div class="seg-basic-region-row">
-                    <i style="background:rgb(${r},${g},${b})"></i>
+                <button type="button" class="seg-basic-region-row${active}" data-segb-region-label="${index}">
+                    <i style="background:rgb(${color.r},${color.g},${color.b})"></i>
                     <strong>Cluster ${index + 1}</strong>
                     <div><span style="width:${Math.round(ratio * 100)}%"></span></div>
                     <em>${count} px · ${Math.round(ratio * 100)}%</em>
-                </div>
+                </button>
             `;
         }).join("");
     }
@@ -850,12 +1052,16 @@
         }
         return snapshot.counts.map((count, index) => {
             const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
+            const previous = result.snapshots[Math.max(0, state.currentSnapshot - 1)];
+            const movement = previous && previous !== snapshot
+                ? Math.sqrt(Array.from({ length: result.dims }, (_, d) => (snapshot.centers[index * result.dims + d] - previous.centers[index * result.dims + d]) ** 2).reduce((a, b) => a + b, 0))
+                : snapshot.movement / Math.max(1, result.k);
             const xy = result.useXY ? `<small>xy=(${Math.round(snapshot.centers[index * result.dims + 3])}, ${Math.round(snapshot.centers[index * result.dims + 4])})</small>` : "";
             return `
                 <div class="seg-basic-center-row">
                     <i style="background:rgb(${r},${g},${b})"></i>
                     <strong>C${index + 1}</strong>
-                    <span>rgb(${r}, ${g}, ${b})</span>
+                    <span>rgb(${r}, ${g}, ${b}) · move ${movement.toFixed(1)}</span>
                     ${xy}
                 </div>
             `;
@@ -864,16 +1070,173 @@
 
     function renderFeatureSpace(result, snapshot) {
         const maxCount = Math.max(1, ...snapshot.counts);
+        const currentIndex = Math.max(0, state.currentSnapshot);
+        const visibleSnapshots = result.snapshots.slice(0, currentIndex + 1);
+        function pointFor(centerSnapshot, index) {
+            const c = index * result.dims;
+            if (result.useXY) {
+                return {
+                    x: Math.max(7, Math.min(93, (centerSnapshot.centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * 100)),
+                    y: Math.max(9, Math.min(88, (centerSnapshot.centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * 100)),
+                };
+            }
+            const r = centerSnapshot.centers[c];
+            const g = centerSnapshot.centers[c + 1];
+            const b = centerSnapshot.centers[c + 2];
+            return {
+                x: Math.max(8, Math.min(92, 10 + (r / 255) * 74)),
+                y: Math.max(10, Math.min(86, 88 - (g / 255) * 68 + (b / 255) * 8)),
+            };
+        }
+        const trails = Array.from({ length: result.k }, (_, index) => {
+            const points = visibleSnapshots.map((item) => pointFor(item, index));
+            const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
+            const size = 18 + (snapshot.counts[index] / maxCount) * 20;
+            const line = points.length > 1
+                ? `<polyline points="${points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" style="--c:rgb(${r},${g},${b})"></polyline>`
+                : "";
+            const current = points[points.length - 1] || { x: 50, y: 50 };
+            return `
+                ${line}
+                ${points.slice(0, -1).map((p, step) => `<circle class="seg-feature-trail-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" style="--c:rgb(${r},${g},${b});animation-delay:${step * 60}ms"></circle>`).join("")}
+                <g class="seg-feature-center" style="--c:rgb(${r},${g},${b})">
+                    <circle cx="${current.x.toFixed(1)}" cy="${current.y.toFixed(1)}" r="${(size / 2).toFixed(1)}"></circle>
+                    <text x="${current.x.toFixed(1)}" y="${(current.y + 3.5).toFixed(1)}">C${index + 1}</text>
+                </g>
+            `;
+        }).join("");
         return `
             <div class="seg-basic-feature-cloud" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
-                ${snapshot.counts.map((count, index) => {
-                    const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
-                    const x = result.useXY ? Math.max(8, Math.min(92, (snapshot.centers[index * result.dims + 3] / Math.max(1, 255 * state.xyWeight)) * 100)) : 12 + (index % 3) * 34;
-                    const y = result.useXY ? Math.max(10, Math.min(90, (snapshot.centers[index * result.dims + 4] / Math.max(1, 255 * state.xyWeight)) * 100)) : 18 + Math.floor(index / 3) * 34;
-                    const size = 16 + (count / maxCount) * 22;
-                    return `<span style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:rgb(${r},${g},${b})"><b>C${index + 1}</b></span>`;
-                }).join("")}
-                <em>${result.useXY ? "XY position pulls centers into local regions" : "RGB distance only: same colors can merge across space"}</em>
+                <div class="seg-feature-axis"><span>R / X</span><span>${result.useXY ? "Y" : "G with B offset"}</span></div>
+                <svg viewBox="0 0 100 100" role="img" aria-label="${result.useXY ? "RGB XY feature space" : "RGB feature space"}">
+                    <rect x="4" y="6" width="92" height="82" rx="8"></rect>
+                    ${trails}
+                </svg>
+                <em>${result.useXY ? "RGB+XY: centers move through color and position space" : "RGB feature space: C1-C4 move toward mean color centers"}</em>
+            </div>
+        `;
+    }
+
+    function snapshotIndexForKMeansPhase(phase, result) {
+        const last = Math.max(0, result.snapshots.length - 1);
+        if (phase === "image" || phase === "feature" || phase === "assign") return 0;
+        if (phase === "update") return Math.min(1, last);
+        return last;
+    }
+
+    function kmeansTheoryForPhase(result, snapshot, stats, frame) {
+        const feature = result.useXY ? "RGB + XY" : "RGB";
+        const selected = Number.isInteger(state.selectedLabel) ? stats?.[state.selectedLabel] : null;
+        const ratio = stats.map((item) => `C${item.label + 1}=${Math.round(item.ratio * 100)}%`).join(" / ");
+        const commonFacts = [
+            ["K", String(result.k)],
+            ["feature", feature],
+            ["iteration", `${snapshot.iter}/${result.snapshots.length}`],
+            ["output", state.kmeansPhase === "stats" ? "region table" : state.kmeansPhase === "map" ? "overlay mask" : "intermediate state"],
+        ];
+        const byPhase = {
+            image: {
+                label: "输入采样",
+                formula: "I(x,y) = [R,G,B],  x ∈ Ω",
+                principle: "把输入图像视为像素集合 Ω。每个像素保留原始颜色，后续所有聚类、mask 与区域统计都从这些像素出发。",
+                flow: ["image canvas", "pixel grid Ω", "RGB value", "feature sample"],
+                theory: [
+                    ["计算对象", "不是整张图一次性分类，而是把每个像素看作一个待分配的数据点。"],
+                    ["教学尺寸", `${result.width}×${result.height} 像素；页面缩放只影响计算量，不改变 K-means 逻辑。`],
+                    ["下一步", "为每个像素构造 f(x)，把图像空间转换成可计算距离的特征空间。"],
+                ],
+            },
+            feature: {
+                label: "构造特征空间",
+                formula: result.useXY ? "f_i = [R_i,G_i,B_i, λx_i, λy_i]" : "f_i = [R_i,G_i,B_i]",
+                principle: result.useXY ? "RGB+XY 把位置也放入距离计算，颜色相似但相距很远的像素不再轻易合并。" : "RGB 模式只使用颜色距离，因此相同颜色会在特征空间中靠近，即使它们在图像上相隔较远。",
+                flow: ["pixel", "feature vector", "RGB space", "cluster centers"],
+                theory: [
+                    ["特征向量", result.useXY ? `λ=${state.xyWeight.toFixed(2)}，坐标项被缩放到与颜色同量级。` : "每个像素只由三维颜色向量表示。"],
+                    ["中心含义", "C1-C4 是当前特征空间中的均值点，动画轨迹表示每次迭代的中心移动。"],
+                    ["可视化", "中央图中的中心不是装饰，它对应当前 snapshot 的真实 center 数值。"],
+                ],
+            },
+            assign: {
+                label: "分配最近中心",
+                formula: "z_i = arg min_k || f_i - c_k ||²",
+                principle: "对每个像素分别计算到 C1-C4 的平方距离，距离最小的中心获得该像素的当前标签。",
+                flow: ["feature f_i", "distance to Ck", "argmin", "label z_i"],
+                theory: [
+                    ["距离度量", "平方欧氏距离会放大较大的颜色/位置差异。"],
+                    ["标签图", "一次 assignment 后已经得到临时 label map，但中心还不是最终均值。"],
+                    ["当前代价", `mean distance=${snapshot.distance.toFixed(1)}，越小表示像素更贴近自己的中心。`],
+                ],
+            },
+            update: {
+                label: "更新聚类中心",
+                formula: "c_k = (1 / N_k) Σ_{i:z_i=k} f_i",
+                principle: "每个中心移动到当前所属像素的平均特征位置；这一步让下一轮分配更稳定。",
+                flow: ["cluster pixels", "mean feature", "new center", "next iteration"],
+                theory: [
+                    ["均值更新", "中心颜色等于该类像素颜色均值；RGB+XY 下还会更新空间均值。"],
+                    ["收敛判断", "movement 记录中心总移动量，低于阈值或达到最大迭代次数后停止。"],
+                    ["当前移动", `movement=${snapshot.movement.toFixed(2)}。`],
+                ],
+            },
+            map: {
+                label: "生成分割 mask",
+                formula: "M(x,y)=z_i,  B=∂M",
+                principle: "最终 label map 被映射成半透明 mask 叠加到原图；相邻像素标签不同的位置绘制为区域边界。",
+                flow: ["label map", "color mask", "boundary", "overlay"],
+                theory: [
+                    ["mask", "彩色 mask 来自整数标签，不再用中心颜色直接替代原图。"],
+                    ["边界", "边界线由邻域标签变化产生，比马赛克结果更能表达区域轮廓。"],
+                    ["输出用途", "overlay 用于观察分割质量，pure label map 用于后续统计。"],
+                ],
+            },
+            stats: {
+                label: "区域统计",
+                formula: "count_k = Σ 1[M_i=k],  ratio_k=count_k/|Ω|",
+                principle: "从 label map 扫描每个 cluster 的像素数量、占比、bbox 与 centroid，把分割结果变成可分析数据。",
+                flow: ["label map", "count", "bbox", "centroid"],
+                theory: [
+                    ["区域数量", `region count=${result.k}，这里的区域是 cluster label，不等价于连通域数量。`],
+                    ["类别占比", ratio],
+                    ["点击区域", selected ? `C${selected.label + 1}: area=${selected.count}px, bbox=${selected.width}×${selected.height}, centroid=(${Math.round(selected.centroidX)},${Math.round(selected.centroidY)})。` : "点击 overlay 或统计行可查看 bbox / area / centroid。"],
+                ],
+            },
+        };
+        const meta = byPhase[state.kmeansPhase] || byPhase.stats;
+        return {
+            ...meta,
+            title: frame?.title || meta.label,
+            stageNote: frame?.stageNote || meta.principle,
+            facts: commonFacts,
+        };
+    }
+
+    function renderKMeansStepFocus(frame, result, snapshot, stats) {
+        if (!els.stepFocus || !frame) return;
+        const theory = kmeansTheoryForPhase(result, snapshot, stats, frame);
+        els.stepFocus.dataset.phase = state.kmeansPhase;
+        els.stepVisual.innerHTML = conceptCard(theory.title, frame.graph, theory.stageNote);
+        els.stepMatrix.innerHTML = conceptCard("当前中间量", frame.matrix);
+        els.stepDetail.innerHTML = conceptCard("计算输出", frame.detail);
+        els.notesSubtitle.textContent = theory.label;
+        els.formulaLabel.textContent = "K-means";
+        els.formula.innerHTML = renderLatexFormula(theory.formula);
+        els.formulaNote.textContent = theory.principle;
+        els.notes.innerHTML = `
+            <div class="seg-basic-note-current">
+                <span>当前步骤 ${state.kmeansFrameIndex + 1}/${state.concept?.frames?.length || 1}</span>
+                <strong>${escapeHtml(theory.label)}</strong>
+                <p>${escapeHtml(theory.stageNote)}</p>
+            </div>
+            <div class="seg-notes-flowline">
+                ${theory.flow.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+            </div>
+            <dl>
+                ${theory.facts.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}
+                ${theory.theory.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}
+            </dl>
+            <div class="seg-basic-cluster-legend" aria-label="聚类颜色图例">
+                ${stats.map((item) => `<span><i style="background:rgb(${item.color.r},${item.color.g},${item.color.b})"></i>C${item.label + 1}</span>`).join("")}
             </div>
         `;
     }
@@ -914,7 +1277,9 @@
     }
 
     function updateKMeansReadout(result, snapshot) {
+        if (state.selectedLabel !== null && state.selectedLabel >= result.k) state.selectedLabel = null;
         const counts = snapshot.counts;
+        const stats = computeRegionStats(result, snapshot);
         const maxCount = Math.max(...counts);
         const mainIndex = counts.indexOf(maxCount);
         const ratioText = `${Math.round((maxCount / (result.width * result.height)) * 100)}%`;
@@ -922,50 +1287,80 @@
         els.regionCount.textContent = String(result.k);
         els.stripIter.textContent = `${snapshot.iter}`;
         els.stripK.textContent = String(result.k);
-        els.regionList.innerHTML = regionRows(result, snapshot);
+        if (els.featureIteration) els.featureIteration.textContent = `iteration ${snapshot.iter} / ${result.snapshots.length}`;
+        if (els.labelSubtitle) els.labelSubtitle.textContent = `synced with iteration ${snapshot.iter}`;
+        els.regionList.innerHTML = regionRows(result, snapshot, stats);
         els.centerList.innerHTML = centerRows(result, snapshot);
         els.featureSpace.innerHTML = renderFeatureSpace(result, snapshot);
         renderIterationMonitor(result);
-        renderNotesForKMeans(result, snapshot, mainIndex, ratioText);
+        showRegionPopover(stats);
+        renderNotesForKMeans(result, snapshot, stats, mainIndex, ratioText);
+        return stats;
     }
 
-    function renderNotesForKMeans(result, snapshot, mainIndex, ratioText) {
+    function renderNotesForKMeans(result, snapshot, stats, mainIndex, ratioText) {
         const feature = result.useXY ? "RGB + XY" : "RGB";
         const ratios = snapshot.counts.map((count, index) => `C${index + 1}: ${Math.round((count / (result.width * result.height)) * 100)}%`).join(" / ");
-        els.notesSubtitle.textContent = result.useXY ? "RGB + XY Spatial Constraint" : "K-means Assignment";
+        const stepNames = {
+            image: "输入图像",
+            feature: "特征空间",
+            assign: "分配到最近中心",
+            update: "更新聚类中心",
+            map: "生成分割 mask",
+            stats: "区域统计",
+        };
+        const currentStep = stepNames[state.kmeansPhase] || "区域统计";
+        const selected = Number.isInteger(state.selectedLabel) ? stats?.[state.selectedLabel] : null;
+        const legend = stats.map((item) => `
+            <span>
+                <i style="background:rgb(${item.color.r},${item.color.g},${item.color.b})"></i>
+                C${item.label + 1}
+            </span>
+        `).join("");
+        els.notesSubtitle.textContent = currentStep;
         els.formulaLabel.textContent = "K-means";
         els.formula.textContent = "cluster(x) = argmin_k ||f(x) - c_k||²";
         els.formulaNote.textContent = result.useXY
             ? "f(x) = [R,G,B, xyWeight·X, xyWeight·Y]，坐标项会惩罚空间上相距较远的同色像素。"
             : "f(x) = [R,G,B]，只根据颜色距离聚类，空间上不连续的同色区域可能被分到同一类。";
         els.notes.innerHTML = `
+            <div class="seg-basic-note-current">
+                <span>当前步骤</span>
+                <strong>${currentStep}</strong>
+                <p>${state.kmeansPhase === "feature" ? "像素被映射到特征空间，中心点会向同类均值移动。" : state.kmeansPhase === "map" ? "label map 转成半透明 mask，并叠加边界线。" : state.kmeansPhase === "stats" ? "从 label map 统计每个区域的面积、bbox 和中心点。" : "根据当前中心计算距离，再更新中心或输出区域。"}</p>
+            </div>
             <dl>
-                <div><dt>公式</dt><dd>cluster(x)=argmin_k ||f(x)-c_k||²</dd></div>
-                <div><dt>当前输入</dt><dd>${escapeHtml(state.sourceName)} · ${result.width}×${result.height}</dd></div>
-                <div><dt>Feature Vector</dt><dd>${result.useXY ? `f(x)=[R,G,B,λx,λy], xyWeight=${state.xyWeight.toFixed(2)}` : "f(x)=[R,G,B]"}</dd></div>
-                <div><dt>当前步骤</dt><dd>${state.playing ? (state.currentSnapshot % 2 ? "Update" : "Assignment") : "Assignment / Update complete"}</dd></div>
-                <div><dt>当前迭代次数</dt><dd>${snapshot.iter} / ${result.snapshots.length}</dd></div>
-                <div><dt>聚类中心变化</dt><dd>movement = ${snapshot.movement.toFixed(2)}, mean distance = ${snapshot.distance.toFixed(1)}</dd></div>
-                <div><dt>最大区域</dt><dd>Cluster ${mainIndex + 1} · ${ratioText}</dd></div>
-                <div><dt>每类像素比例</dt><dd>${ratios}</dd></div>
-                <div><dt>${result.useXY ? "空间连续性" : "局限性"}</dt><dd>${result.useXY ? "坐标项让空间相邻像素更容易保持同类，减少零散噪点。" : "颜色相近但空间不相邻的像素可能被分到同一类。"}</dd></div>
+                <div><dt>当前公式</dt><dd>cluster(x)=argmin_k ||f(x)-c_k||²</dd></div>
+                <div><dt>当前参数</dt><dd>K=${result.k} · feature=${feature} · iteration=${snapshot.iter}/${result.snapshots.length} · output=overlay mask</dd></div>
+                <div><dt>当前统计</dt><dd>region count=${result.k} · largest=C${mainIndex + 1} ${ratioText} · cluster ratio=${ratios}</dd></div>
+                <div><dt>中心移动</dt><dd>movement=${snapshot.movement.toFixed(2)} · mean distance=${snapshot.distance.toFixed(1)}</dd></div>
+                ${selected ? `<div><dt>点击区域</dt><dd>C${selected.label + 1} · area=${selected.count}px · bbox=${selected.width}×${selected.height} · centroid=(${Math.round(selected.centroidX)},${Math.round(selected.centroidY)})</dd></div>` : ""}
             </dl>
+            <div class="seg-basic-cluster-legend" aria-label="聚类颜色图例">${legend}</div>
         `;
     }
 
-    function renderKMeansResult(snapshotIndex = -1) {
+    function renderKMeansResult(snapshotIndex = -1, phaseOverride = "") {
         if (!state.result?.snapshots?.length) return;
         const result = state.result;
         const index = snapshotIndex < 0 ? result.snapshots.length - 1 : Math.min(snapshotIndex, result.snapshots.length - 1);
         const snapshot = result.snapshots[index];
         state.currentSnapshot = index;
-        renderSnapshot(result, snapshot, els.resultCanvas);
-        updateKMeansReadout(result, snapshot);
-        if (state.compareResult?.snapshots?.length) {
-            const compareSnapshot = state.compareResult.snapshots[state.compareResult.snapshots.length - 1];
-            renderSnapshot(state.compareResult, compareSnapshot, els.compareCanvas);
-        }
-        if (state.method === "kmeans-rgbxy") renderContinuityMap(result, snapshot);
+        state.kmeansPhase = phaseOverride || (snapshotIndex < 0
+            ? "stats"
+            : index === 0
+                ? "assign"
+                : index >= result.snapshots.length - 1
+                    ? "map"
+                    : index % 2
+                        ? "update"
+                        : "assign");
+        setPhase(state.kmeansPhase);
+        syncKMeansFrameStrip(state.kmeansPhase);
+        const stats = updateKMeansReadout(result, snapshot);
+        drawLabelMap(result, snapshot, els.compareCanvas);
+        drawKMeansOverlay(result, snapshot, els.resultCanvas, stats);
+        return { result, snapshot, stats };
     }
 
     function clamp(value, min, max) {
@@ -1253,6 +1648,37 @@
                 updateCompareSliderPosition((current + 5) / 100);
                 event.preventDefault();
             }
+        });
+    }
+
+    function currentKMeansSnapshot() {
+        if (!state.result?.snapshots?.length) return null;
+        return state.result.snapshots[Math.min(state.currentSnapshot, state.result.snapshots.length - 1)];
+    }
+
+    function selectKMeansRegion(label) {
+        if (!state.result) return;
+        state.selectedLabel = state.selectedLabel === label ? null : label;
+        if (state.concept?.frames?.length && !state.playing) {
+            renderKMeansStep(state.kmeansFrameIndex);
+        } else {
+            renderKMeansResult(state.currentSnapshot, state.kmeansPhase);
+        }
+    }
+
+    function setupKMeansRegionInteraction() {
+        els.regionList?.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-segb-region-label]");
+            if (!button) return;
+            selectKMeansRegion(Number(button.dataset.segbRegionLabel));
+        });
+        els.resultCanvas?.addEventListener("click", (event) => {
+            const snapshot = currentKMeansSnapshot();
+            if (!state.result || !snapshot) return;
+            const rect = els.resultCanvas.getBoundingClientRect();
+            const x = clamp(Math.floor(((event.clientX - rect.left) / Math.max(1, rect.width)) * state.result.width), 0, state.result.width - 1);
+            const y = clamp(Math.floor(((event.clientY - rect.top) / Math.max(1, rect.height)) * state.result.height), 0, state.result.height - 1);
+            selectKMeansRegion(snapshot.labels[y * state.result.width + x]);
         });
     }
 
@@ -3236,9 +3662,27 @@
             drawFramePreview(canvas, frames[index]);
             button.addEventListener("click", () => {
                 stopAnimation();
-                renderConceptFrame(index);
+                if (state.result?.snapshots?.length && config.stepperKind === "kmeans") {
+                    renderKMeansStep(index);
+                } else {
+                    renderConceptFrame(index);
+                }
             });
         });
+        updateConceptFrameStrip();
+    }
+
+    function renderKMeansStep(index) {
+        if (!state.result?.snapshots?.length || !state.concept?.frames?.length) return;
+        const frames = state.concept.frames;
+        const frame = frames[clamp(index, 0, frames.length - 1)];
+        state.kmeansFrameIndex = frames.indexOf(frame);
+        state.conceptFrameIndex = state.kmeansFrameIndex;
+        const phase = frame.phase || "stats";
+        const snapshotIndex = snapshotIndexForKMeansPhase(phase, state.result);
+        const payload = renderKMeansResult(snapshotIndex, phase);
+        if (!payload) return;
+        renderKMeansStepFocus(frame, payload.result, payload.snapshot, payload.stats);
         updateConceptFrameStrip();
     }
 
@@ -3258,6 +3702,13 @@
         els.notes.innerHTML = renderProcessNotes(state.concept, frame);
         drawConceptShowcase(frame.showcase || state.concept.showcase);
         setPhase(frame.phase || "map");
+        updateConceptFrameStrip();
+    }
+
+    function syncKMeansFrameStrip(phase) {
+        if (!state.concept?.frames?.length) return;
+        const index = state.concept.frames.findIndex((frame) => frame.phase === phase);
+        state.conceptFrameIndex = index >= 0 ? index : state.concept.frames.length - 1;
         updateConceptFrameStrip();
     }
 
@@ -3462,7 +3913,7 @@
     }
 
     function playSnapshots() {
-        if (state.concept?.frames?.length > 1) {
+        if (!state.result?.snapshots?.length && state.concept?.frames?.length > 1) {
             playConceptFrames();
             return;
         }
@@ -3472,6 +3923,7 @@
             return;
         }
         state.playing = true;
+        els.frameStrip?.classList.add("is-playing");
         els.play.textContent = "停止播放";
         let index = 0;
         renderKMeansResult(index);
@@ -3494,11 +3946,47 @@
         setPhase("feature");
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
         const started = performance.now();
+        const useXY = state.method === "kmeans-rgbxy";
         const config = buildKMeansConcept();
+        if (state.method === "kmeans-compare") {
+            const elapsed = performance.now() - started;
+            els.time.textContent = `${elapsed.toFixed(1)} ms`;
+            els.statusText.textContent = "分割完成";
+            renderAlgorithmConcept(config);
+            return;
+        }
+        const result = runKMeans(useXY);
         const elapsed = performance.now() - started;
+        state.result = result;
+        state.compareResult = null;
+        state.concept = config;
+        state.conceptFrameIndex = 0;
+        state.selectedLabel = null;
         els.time.textContent = `${elapsed.toFixed(1)} ms`;
         els.statusText.textContent = "分割完成";
-        renderAlgorithmConcept(config);
+        els.kmeansView.hidden = false;
+        els.graphView.hidden = false;
+        els.kmeansControls.hidden = false;
+        if (els.conceptResult) els.conceptResult.hidden = true;
+        if (els.compareView) els.compareView.hidden = true;
+        els.frameStrip.hidden = false;
+        els.graphStage.hidden = true;
+        els.matrixStage.hidden = true;
+        els.conceptDetail.hidden = true;
+        els.status.textContent = config.status;
+        els.activeMethod.textContent = config.activeMethod;
+        els.stripMethod.textContent = config.activeMethod;
+        els.stripFeature.textContent = config.stripFeature;
+        els.stripK.textContent = config.stripK;
+        els.stageTitle.textContent = "从像素到区域：K-means 分割流程";
+        els.stripOutput.textContent = "overlay mask";
+        els.resultTitle.textContent = "原图 + 半透明分割 mask + 区域边界";
+        els.thirdTitle.textContent = useXY ? "RGB + XY 特征空间 / 聚类中心" : "RGB 特征空间 / 聚类中心";
+        els.flowFeature.textContent = useXY ? "RGB + XY Feature" : "RGB Feature Space";
+        renderStepper(config.stepperKind);
+        renderConceptFrameStrip(config);
+        renderKMeansStep(0);
+        setBusy(false);
     }
 
     function tinyPixelSvg(mode) {
@@ -4140,6 +4628,7 @@
     els.play.addEventListener("click", playSnapshots);
     setupGrabCutInteraction();
     setupCompareSlider();
+    setupKMeansRegionInteraction();
 
     init();
 })();

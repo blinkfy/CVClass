@@ -226,6 +226,50 @@
             </article>
         </div>
 
+        <section class="overview-parallel-compare" aria-labelledby="overviewParallelCompareTitle">
+            <div class="overview-section-heading">
+                <div><span>OUTPUT STRUCTURE COMPARISON</span><h4 id="overviewParallelCompareTitle">任务输出结构对比</h4></div>
+                <p>四任务在预测单位、输出格式、评价指标与代表方法上的差异</p>
+            </div>
+            <div class="overview-compare-table">
+                <div class="overview-compare-row overview-compare-row--header">
+                    <span>任务</span>
+                    <span>预测单位</span>
+                    <span>输出结构</span>
+                    <span>典型指标</span>
+                    <span>代表方法</span>
+                </div>
+                <div class="overview-compare-row" data-task="classification">
+                    <span><b>图像级分类</b></span>
+                    <span>整图</span>
+                    <span><code>1 × C</code> class probability</span>
+                    <span>Top-1 / Top-5 Accuracy</span>
+                    <span>BoVW, CNN, ResNet</span>
+                </div>
+                <div class="overview-compare-row" data-task="detection">
+                    <span><b>目标检测</b></span>
+                    <span>目标</span>
+                    <span><code>N × [x1,y1,x2,y2,score,class]</code></span>
+                    <span>mAP / IoU</span>
+                    <span>YOLO, Faster R-CNN, DETR</span>
+                </div>
+                <div class="overview-compare-row" data-task="semantic">
+                    <span><b>语义分割</b></span>
+                    <span>像素</span>
+                    <span><code>H × W</code> class map</span>
+                    <span>mIoU / Pixel Acc</span>
+                    <span>FCN, U-Net, DeepLab</span>
+                </div>
+                <div class="overview-compare-row" data-task="instance">
+                    <span><b>实例分割</b></span>
+                    <span>实例</span>
+                    <span><code>N</code> masks + bbox + class + id</span>
+                    <span>Mask AP</span>
+                    <span>Mask R-CNN, YOLACT, SOLO</span>
+                </div>
+            </div>
+        </section>
+
         <section class="overview-lineage" aria-labelledby="overviewLineageTitle">
             <div class="overview-section-heading">
                 <div><span>TASK TAXONOMY</span><h4 id="overviewLineageTitle">任务谱系</h4></div>

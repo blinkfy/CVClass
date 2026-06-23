@@ -63,6 +63,7 @@
         principleFigure: $("[data-principle-figure]"),
         principleCaption: $("[data-principle-caption]"),
         outputSummary: $("[data-output-summary]"),
+        compareRows: $$(".overview-compare-row[data-task]"),
     };
 
     function esc(value) {
@@ -871,6 +872,7 @@
         els.taskCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.taskCard === state.task));
         els.lineageItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.lineageTask === state.task));
         els.schemaItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.schemaTask === state.task));
+        els.compareRows.forEach((row) => row.classList.toggle("is-selected", row.dataset.task === state.task));
         renderTaskKnowledgeCard();
     }
 
