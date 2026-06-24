@@ -4468,8 +4468,8 @@
     function buildWatershedCore(model = buildSampleGrid(30, 20)) {
         const gradient = gradientForModel(model);
         const markerDefs = [
-            { x: 0.20, y: 0.58, label: 1, text: "1", type: "fg" },
-            { x: 0.68, y: 0.52, label: 2, text: "2", type: "fg" },
+            { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
+            { x: 0.70, y: 0.44, label: 2, text: "2", type: "fg" },
             { x: 0.08, y: 0.12, label: 3, text: "B", type: "bg" },
             { x: 0.92, y: 0.88, label: 3, text: "B", type: "bg" },
         ];
