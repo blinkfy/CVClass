@@ -38,7 +38,7 @@ def register_page_routes(app, get_model_status):
         if module_key == "classification_lab":
             active_nav = active_nav or ("overview" if active_sub_page == "overview" else "classification")
             nav = [
-                {"key": "overview", "label": "任务谱系", "href": url_for("classification_lab_page")},
+                {"key": "overview", "label": "任务谱系", "href": url_for("vision_tasks_overview_page")},
                 {"key": "classification", "label": "图像分类实验", "href": url_for("classification_lab_detail_alias_page")},
             ]
         elif module_key == "segmentation_basic":
@@ -80,7 +80,9 @@ def register_page_routes(app, get_model_status):
             ]
         else:
             requested_view = request.args.get("view")
-            if active_sub_page == "instance":
+            if active_sub_page == "compare":
+                active_nav = active_nav or "compare"
+            elif active_sub_page == "instance":
                 active_nav = active_nav or (
                     "compare" if requested_view == "semantic"
                     else "instance"
@@ -100,10 +102,10 @@ def register_page_routes(app, get_model_status):
         # top hero changes with the active sub-page instead of duplicating it below.
         subpage_overrides = {
             ("classification_lab", "overview"): {
-                "eyebrow": "STATION 06 · TASK TAXONOMY",
-                "title": "视觉任务谱系：从整图分类到实例级理解",
-                "subtitle": "使用同一张预设图像，对比 Classification、Detection、Semantic Segmentation 与 Instance Segmentation 的预测单位、空间结构和评价协议。",
-                "badge": "TASK TAXONOMY · OUTPUT · METRIC",
+                "eyebrow": "TASK TAXONOMY CONSOLE",
+                "title": "视觉任务谱系：从图像级预测到实例级理解",
+                "subtitle": "使用同一张图像对比图像分类、目标检测、语义分割和实例分割的预测粒度、输出结构与评价指标，并引导进入独立任务模块。",
+                "badge": "SAME IMAGE · OUTPUT · METRIC",
             },
             ("classification_lab", "classification"): {
                 "eyebrow": "STATION 06 · IMAGE CLASSIFICATION",
@@ -114,20 +116,26 @@ def register_page_routes(app, get_model_status):
             ("segmentation_basic", "segmentation_basic"): {
                 "eyebrow": "STATION 07 · TRADITIONAL SEGMENTATION",
                 "title": "图像分割与区域提取",
-                "subtitle": "从聚类、图割到区域统计，理解传统图像分割如何把像素组织成可分析的区域。",
+                "subtitle": "从传统分割方法出发，展示 K-means、Graph Cut、Watershed、GrabCut、mask 与区域 label map，连接阈值、边缘、轮廓和后续语义分割任务。",
                 "badge": "CLUSTER · GRAPH CUT · REGION MAP",
             },
             ("object_detection", "detection"): {
                 "eyebrow": "STATION 08 · OBJECT DETECTION",
-                "title": "目标检测",
-                "subtitle": "在真实图片上使用 ONNX Runtime 运行 YOLOv8，逐步观察候选框解码、置信度过滤与 NMS 非极大值抑制的完整流程。",
+                "title": "目标检测：从候选框到最终检测",
+                "subtitle": "展示 bbox、confidence、IoU、NMS 与真实 YOLO 前端推理，并补充 R-CNN 系列检测机制。",
                 "badge": "YOLO · BBOX · NMS",
             },
             ("segmentation_lab", "semantic"): {
                 "eyebrow": "STATION 09 · SEMANTIC SEGMENTATION",
                 "title": "语义分割：Pixel-wise Mask",
-                "subtitle": "在真实图像上展示预设 Semantic Mask 与浏览器端 SegFormer-B0 推理结果，理解 H×W×C logits 到 H×W class map 的转换。",
+                "subtitle": "展示逐像素分类、logits、argmax、Semantic Mask、mIoU、FCN 与 SegFormer 推理过程。",
                 "badge": "SEMANTIC MASK · PIXEL CLASS",
+            },
+            ("segmentation_lab", "compare"): {
+                "eyebrow": "STATION 09 · REAL SEGMENTATION LAB",
+                "title": "语义分割 vs 实例分割：真实模型对比台",
+                "subtitle": "在同一张图像上同时运行 SegFormer-B0 与 YOLO11n-seg，比较 H×W class map 与 N × {bbox, class, score, mask, instance_id} 的输出结构、推理流程和适用场景。",
+                "badge": "SEGFORMER · YOLO-SEG · COMPARISON",
             },
         }
 
@@ -143,7 +151,7 @@ def register_page_routes(app, get_model_status):
                 subpage_overrides[(module_key, active_sub_page)] = {
                     "eyebrow": "STATION 09 · INSTANCE SEGMENTATION",
                     "title": "实例分割：Instance Mask",
-                    "subtitle": "在真实图像上绘制每个实例的 mask、bbox 与 instance id，并在浏览器端演示 YOLO11n-seg 的候选框、NMS、prototype mask 与实例统计流程。",
+                    "subtitle": "展示 bbox、class、score、mask、instance id 的联合输出，解释 Mask R-CNN、ROI Align、Mask Head 与 YOLO-seg 推理。",
                     "badge": "INSTANCE MASK · YOLO-SEG",
                 }
 
@@ -208,13 +216,18 @@ def register_page_routes(app, get_model_status):
             active_sub_page="conv_gradient_lab",
         )
 
-    @app.route("/classification-lab", methods=["GET"])
-    def classification_lab_page():
+    @app.route("/vision-tasks/overview", methods=["GET"])
+    def vision_tasks_overview_page():
         return render_template(
             "vision_tasks/vision_tasks_overview.html",
             **build_vision_module_context("classification_lab", "overview"),
         )
 
+    @app.route("/classification-lab", methods=["GET"])
+    def classification_lab_page():
+        return vision_tasks_overview_page()
+
+    @app.route("/vision-tasks/classification", methods=["GET"])
     @app.route("/classification-lab/classification", methods=["GET"])
     def classification_lab_detail_alias_page():
         return render_template(
@@ -222,6 +235,7 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("classification_lab", "classification"),
         )
 
+    @app.route("/vision-tasks/segmentation-basic", methods=["GET"])
     @app.route("/segmentation-basic", methods=["GET"])
     def segmentation_basic_alias_page():
         return render_template(
@@ -250,6 +264,7 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("segmentation_basic", "segmentation_basic", "region"),
         )
 
+    @app.route("/vision-tasks/detection", methods=["GET"])
     @app.route("/object-detection", methods=["GET"])
     def object_detection_alias_page():
         return render_template(
@@ -273,15 +288,22 @@ def register_page_routes(app, get_model_status):
 
     @app.route("/segmentation-lab", methods=["GET"])
     def segmentation_lab_page():
-        context = build_vision_module_context("segmentation_lab", "instance", "compare")
-        context["vision_instance_mode"] = "compare"
+        context = build_vision_module_context("segmentation_lab", "compare", "compare")
         return render_template(
-            "vision_tasks/instance_segmentation_lab.html",
+            "vision_tasks/segmentation_lab_compare.html",
             **context,
         )
 
     @app.route("/segmentation-lab/semantic", methods=["GET"])
     def segmentation_lab_semantic_page():
+        return render_template(
+            "vision_tasks/semantic_segmentation_lab.html",
+            **build_vision_module_context("segmentation_lab", "semantic", "semantic"),
+        )
+
+    @app.route("/vision-tasks/semantic", methods=["GET"])
+    @app.route("/semantic-segmentation", methods=["GET"])
+    def semantic_segmentation_alias_page():
         return render_template(
             "vision_tasks/semantic_segmentation_lab.html",
             **build_vision_module_context("segmentation_lab", "semantic", "semantic"),
@@ -295,6 +317,14 @@ def register_page_routes(app, get_model_status):
         return render_template(
             "vision_tasks/instance_segmentation_lab.html",
             **context,
+        )
+
+    @app.route("/vision-tasks/instance", methods=["GET"])
+    @app.route("/instance-segmentation", methods=["GET"])
+    def instance_segmentation_alias_page():
+        return render_template(
+            "vision_tasks/instance_segmentation_lab.html",
+            **build_vision_module_context("segmentation_lab", "instance", "instance"),
         )
 
     @app.route("/frontier", methods=["GET"])

@@ -103,7 +103,7 @@
                     <span class="module-mini-icon mini-icon--edge" aria-hidden="true"></span>
                 </div>
                 <h3>边缘、轮廓与形态学</h3>
-                <p>Sobel、Canny、Hough、轮廓提取与应用实践</p>
+                <p>Sobel、Canny、Hough、轮廓提取与形态学实践</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
                     <a class="module-action" data-learn-link="edge-contour" href="{{ url_for('edge_detection_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
@@ -128,34 +128,21 @@
                     <span class="module-number">05</span>
                     <span class="module-mini-icon mini-icon--cnn" aria-hidden="true"></span>
                 </div>
-                <h3>CNN 如何学习</h3>
-                <p>前向传播、反向传播、梯度更新与手写数字识别</p>
+                <h3>CNN 如何学习 / 图像分类</h3>
+                <p>前向传播、反向传播、梯度更新、手写数字识别，并作为图像分类任务的深度学习基础</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
                     <a class="module-action" data-learn-link="cnn-learning" href="{{ url_for('cnn_visualization_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
 
-            <article class="module-card" data-learn-module="classification-lab">
-                <div class="module-card-head">
-                    <span class="module-number">06</span>
-                    <span class="module-mini-icon mini-icon--tasks" aria-hidden="true"></span>
-                </div>
-                <h3>图像分类与任务谱系</h3>
-                <p>任务谱系对比，BoVW 与 CNN 图像分类及 Top-K 评价</p>
-                <div class="module-card-foot">
-                    <span class="module-status module-status--pending">待学习</span>
-                    <a class="module-action" data-learn-link="classification-lab" href="{{ url_for('classification_lab_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                </div>
-            </article>
-
             <article class="module-card" data-learn-module="segmentation-basic">
                 <div class="module-card-head">
-                    <span class="module-number">07</span>
+                    <span class="module-number">06</span>
                     <span class="module-mini-icon mini-icon--segment" aria-hidden="true"></span>
                 </div>
                 <h3>图像分割与区域提取</h3>
-                <p>像素聚类、图切割、交互式前景提取与区域分割流程</p>
+                <p>K-means、Graph Cut、Watershed、GrabCut、mask 与区域 label map，作为从传统图像处理到语义分割的过渡模块</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
                     <a class="module-action" data-learn-link="segmentation-basic" href="{{ url_for('segmentation_basic_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
@@ -164,27 +151,40 @@
 
             <article class="module-card" data-learn-module="object-detection">
                 <div class="module-card-head">
-                    <span class="module-number">08</span>
+                    <span class="module-number">07</span>
                     <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
                 </div>
                 <h3>目标检测</h3>
-                <p>目标检测候选框、置信度、IoU 与 NMS 后处理链路</p>
+                <p>候选框、置信度筛选、IoU、NMS、YOLO 推理，并补充 R-CNN、Fast R-CNN、Faster R-CNN、RPN、Anchor、ROI Pooling 等检测机制</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
                     <a class="module-action" data-learn-link="object-detection" href="{{ url_for('object_detection_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
 
-            <article class="module-card" data-learn-module="segmentation-lab">
+            <article class="module-card" data-learn-module="semantic-segmentation">
+                <div class="module-card-head">
+                    <span class="module-number">08</span>
+                    <span class="module-mini-icon mini-icon--tasks" aria-hidden="true"></span>
+                </div>
+                <h3>语义分割</h3>
+                <p>Pixel-wise Classification、H×W×C logits、argmax、Semantic Mask、mIoU，并补充 FCN、1×1 Conv、Upsampling、Skip Connection 与 SegFormer 推理</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="semantic-segmentation" href="{{ url_for('semantic_segmentation_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="instance-segmentation">
                 <div class="module-card-head">
                     <span class="module-number">09</span>
                     <span class="module-mini-icon mini-icon--instance" aria-hidden="true"></span>
                 </div>
-                <h3>语义分割与实例分割</h3>
-                <p>语义分割与实例分割的输出结构对比与 Mask AP 评价</p>
+                <h3>实例分割</h3>
+                <p>Detection + Mask + Instance ID，补充 Mask R-CNN、FPN、ROI Align、Mask Head、Mask IoU / Mask AP 与 YOLO-seg 推理</p>
                 <div class="module-card-foot">
                     <span class="module-status module-status--pending">待学习</span>
-                    <a class="module-action" data-learn-link="segmentation-lab" href="{{ url_for('segmentation_lab_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
+                    <a class="module-action" data-learn-link="instance-segmentation" href="{{ url_for('instance_segmentation_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
                 </div>
             </article>
 
@@ -218,7 +218,7 @@
                     </span>
                     <div class="path-selector-info">
                         <h3>经典图像处理与特征提取</h3>
-                        <p>覆盖 01, 02, 03, 04, 07 模块 · 侧重手工特征与传统分割</p>
+                        <p>覆盖 01, 02, 03, 04, 06 模块 · 侧重手工特征与传统分割</p>
                     </div>
                     <span class="path-selector-status">点击激活</span>
                 </button>
@@ -230,7 +230,7 @@
                     </span>
                     <div class="path-selector-info">
                         <h3>深度学习与现代分割检测</h3>
-                        <p>覆盖 05, 06, 08, 09, 10 模块 · 侧重神经网络与现代检测分割</p>
+                        <p>覆盖 05, 07, 08, 09, 10 模块 · 侧重神经网络与现代检测分割</p>
                     </div>
                     <span class="path-selector-status">点击激活</span>
                 </button>

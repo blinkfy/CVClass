@@ -110,11 +110,12 @@
                 <a class="{{ 'active' if request.path == url_for('object_detection_alias_page') or request.path == url_for('object_detection_yolo_page') else '' }}" href="{{ url_for('object_detection_yolo_page') }}">YOLO 推理与 NMS</a>
                 <a class="{{ 'active' if request.path == url_for('object_detection_rcnn_page') else '' }}" href="{{ url_for('object_detection_rcnn_page') }}">R-CNN 系列机制</a>
             </div>
-            <a class="{{ 'active' if active_page == 'segmentation_lab' else '' }}" href="{{ url_for('segmentation_lab_page') }}">语义分割与实例分割</a>
+            <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_alias_page') }}">语义分割</a>
+            <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_alias_page') }}">实例分割</a>
             <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
                 <a class="{{ 'active' if request.path == url_for('segmentation_lab_page') else '' }}" href="{{ url_for('segmentation_lab_page') }}">语义 vs 实例</a>
-                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('segmentation_lab_semantic_page') }}">语义分割</a>
-                <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' and not (request.path == url_for('segmentation_lab_page') or request.args.get('view') == 'semantic') else '' }}" href="{{ url_for('segmentation_lab_instance_page') }}">实例分割</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_lab_semantic_page') or request.path == url_for('semantic_segmentation_alias_page') else '' }}" href="{{ url_for('semantic_segmentation_alias_page') }}">SegFormer 推理</a>
+                <a class="{{ 'active' if request.path == url_for('segmentation_lab_instance_page') or request.path == url_for('instance_segmentation_alias_page') else '' }}" href="{{ url_for('instance_segmentation_alias_page') }}">YOLO-seg 推理</a>
             </div>
             <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
@@ -131,7 +132,7 @@
         </div>
     </main>
 
-    <script src="{{ url_for('static', filename='js/core/base.js') }}?v=20260621-home-learning-path1"></script>
+    <script src="{{ url_for('static', filename='js/core/base.js') }}?v=20260624-split-modules1"></script>
     <script src="{{ url_for('static', filename='js/core/ai_assistant.js') }}?v=20260624-aidiagnose1"></script>
     {% block extra_js %}{% endblock %}
 </body>

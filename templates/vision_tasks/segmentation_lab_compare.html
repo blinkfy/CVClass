@@ -1,0 +1,242 @@
+{% extends "vision_tasks_base.html" %}
+
+{% block vision_content %}
+<section class="seg-lab-workbench" data-segmentation-lab aria-label="语义分割与实例分割真实模型对比台">
+    <aside class="vision-panel seg-lab-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div>
+                <h3>MODEL CONTROL</h3>
+                <p>双模型推理控制</p>
+            </div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例图选择</span>
+            <select data-seg-sample></select>
+        </label>
+
+        <div class="vision-field">
+            <span>上传图片</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="segCompareUpload">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span data-seg-upload-name>选择图片运行双模型</span>
+                </label>
+                <input id="segCompareUpload" class="sr-only" type="file" accept="image/*" data-seg-upload>
+            </div>
+        </div>
+
+        <section class="seg-lab-control-card">
+            <div class="overview-control-title">
+                <strong>显示模式</strong>
+                <span>VIEW</span>
+            </div>
+            <div class="overview-segmented-control seg-lab-mode-toggle">
+                <button class="is-active" type="button" data-seg-mode="overlay">叠加图</button>
+                <button type="button" data-seg-mode="mask">纯 Mask</button>
+                <button type="button" data-seg-mode="split">结构对比</button>
+            </div>
+        </section>
+
+        <section class="seg-lab-control-card">
+            <div class="overview-control-title">
+                <strong>任务聚焦</strong>
+                <span>FOCUS</span>
+            </div>
+            <div class="overview-segmented-control seg-lab-focus-toggle">
+                <button class="is-active" type="button" data-seg-focus="semantic">语义分割</button>
+                <button type="button" data-seg-focus="instance">实例分割</button>
+                <button type="button" data-seg-focus="compare">差异对比</button>
+            </div>
+        </section>
+
+        <label class="vision-field">
+            <span>Mask Opacity <output data-seg-opacity-output>62%</output></span>
+            <input data-seg-opacity type="range" min="20" max="92" value="62">
+        </label>
+
+        <label class="vision-field">
+            <span>推理后端</span>
+            <select data-seg-backend>
+                <option value="webgpu" selected>WebGPU 自动回退</option>
+                <option value="wasm">WASM 稳定模式</option>
+            </select>
+        </label>
+
+        <button class="seg-lab-run-button" type="button" data-seg-run>
+            <span>运行双模型推理</span>
+            <small>SegFormer-B0 + YOLO11n-seg</small>
+        </button>
+
+        <div class="seg-lab-model-stack">
+            <article data-seg-model-card="semantic">
+                <span>Semantic</span>
+                <strong data-seg-sem-status>等待运行</strong>
+                <small data-seg-sem-meta>SegFormer-B0 · H×W class map</small>
+            </article>
+            <article data-seg-model-card="instance">
+                <span>Instance</span>
+                <strong data-seg-inst-status>等待运行</strong>
+                <small data-seg-inst-meta>YOLO11n-seg · instance masks</small>
+            </article>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel seg-lab-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>REAL MODEL COMPARISON</span>
+                <h3>同一图像下的语义 Mask 与实例 Mask</h3>
+            </div>
+            <span class="vision-status-chip" data-seg-status>READY</span>
+        </div>
+
+        <div class="seg-lab-stage-strip">
+            <span>Input <strong data-seg-input-name>--</strong></span>
+            <span>Semantic <strong data-seg-sem-time>--</strong></span>
+            <span>Instance <strong data-seg-inst-time>--</strong></span>
+            <span>Classes <strong data-seg-class-count>--</strong></span>
+            <span>Instances <strong data-seg-inst-count>--</strong></span>
+        </div>
+
+        <div class="seg-lab-comparison-grid" data-seg-comparison-grid>
+            <article class="seg-lab-result-card seg-lab-result-card--input" data-seg-card="input">
+                <header>
+                    <span>01</span>
+                    <div><h4>输入图像</h4><p>Same image</p></div>
+                </header>
+                <div class="seg-lab-visual">
+                    <img data-seg-input-image alt="分割对比输入图像">
+                    <div class="vision-image-placeholder"><strong>图片未找到</strong><small data-seg-missing></small></div>
+                </div>
+                <footer>
+                    <strong data-seg-image-size>-- × --</strong>
+                    <span>两个模型共享这张图像作为输入，差异只来自输出头与后处理。</span>
+                </footer>
+            </article>
+
+            <article class="seg-lab-result-card seg-lab-result-card--semantic is-focused" data-seg-card="semantic">
+                <header>
+                    <span>02</span>
+                    <div><h4>语义分割</h4><p>Pixel-wise Classification</p></div>
+                    <b data-seg-sem-badge>MODEL</b>
+                </header>
+                <div class="seg-lab-visual seg-lab-visual--mask" data-seg-sem-stage>
+                    <img data-seg-sem-image alt="语义分割输入图">
+                    <canvas data-seg-sem-canvas></canvas>
+                    <div class="seg-lab-scanline" aria-hidden="true"></div>
+                </div>
+                <div class="seg-lab-mini-legend" data-seg-sem-legend></div>
+                <footer>
+                    <strong>H×W class map</strong>
+                    <span>每个像素只有类别，不区分同类不同个体。</span>
+                </footer>
+            </article>
+
+            <article class="seg-lab-result-card seg-lab-result-card--instance" data-seg-card="instance">
+                <header>
+                    <span>03</span>
+                    <div><h4>实例分割</h4><p>Detection + Mask</p></div>
+                    <b data-seg-inst-badge>MODEL</b>
+                </header>
+                <div class="seg-lab-visual seg-lab-visual--mask" data-seg-inst-stage>
+                    <img data-seg-inst-image alt="实例分割输入图">
+                    <canvas data-seg-inst-canvas></canvas>
+                    <svg data-seg-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割边界框"></svg>
+                    <div class="seg-lab-scanline" aria-hidden="true"></div>
+                </div>
+                <div class="seg-lab-mini-legend" data-seg-inst-legend></div>
+                <footer>
+                    <strong>N × {bbox,class,score,mask,id}</strong>
+                    <span>同类目标被拆成独立实例，可计数、可选择、可统计。</span>
+                </footer>
+            </article>
+        </div>
+
+        <div class="seg-lab-pipeline" data-seg-pipeline aria-label="双模型推理流程">
+            <button class="is-active" type="button" data-seg-step="input"><span>1</span><strong>Image</strong><small>shared input</small></button>
+            <button type="button" data-seg-step="preprocess"><span>2</span><strong>Preprocess</strong><small>resize / normalize</small></button>
+            <button type="button" data-seg-step="semantic"><span>3</span><strong>SegFormer</strong><small>logits → argmax</small></button>
+            <button type="button" data-seg-step="instance"><span>4</span><strong>YOLO-seg</strong><small>boxes + prototypes</small></button>
+            <button type="button" data-seg-step="compare"><span>5</span><strong>Compare</strong><small>map vs set</small></button>
+        </div>
+    </div>
+
+    <aside class="vision-panel seg-lab-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div>
+                <h3>OUTPUT STRUCTURE</h3>
+                <p>结构、指标与选择依据</p>
+            </div>
+        </div>
+
+        <section class="seg-lab-explain-card" data-seg-explain-card>
+            <span data-seg-explain-kicker>Semantic Segmentation</span>
+            <h4 data-seg-explain-title>语义分割关注“每个像素是什么类别”</h4>
+            <p data-seg-explain-copy>适合道路、天空、墙面、地面等 stuff 类别和整体场景理解，但不会把同类多个目标拆成独立对象。</p>
+            <dl>
+                <div><dt>Output</dt><dd data-seg-explain-output>H×W class map / H×W×C logits</dd></div>
+                <div><dt>Metric</dt><dd data-seg-explain-metric>Pixel Accuracy / mIoU</dd></div>
+                <div><dt>Best for</dt><dd data-seg-explain-best>场景理解、区域占比、可通行区域</dd></div>
+            </dl>
+        </section>
+
+        <section class="seg-lab-inspector">
+            <div class="overview-control-title">
+                <strong>当前输出摘要</strong>
+                <span>LIVE</span>
+            </div>
+            <div class="seg-lab-inspector-list" data-seg-inspector></div>
+        </section>
+    </aside>
+</section>
+
+<section class="seg-lab-proscons" aria-labelledby="segProsConsTitle">
+    <div class="overview-section-heading">
+        <div>
+            <span>CHOOSING THE RIGHT TASK</span>
+            <h4 id="segProsConsTitle">具体优缺点对比</h4>
+        </div>
+        <p>从输出粒度、交互能力、标注成本和常见失败模式来选择任务类型。</p>
+    </div>
+
+    <div class="seg-lab-proscons-grid">
+        <article data-seg-pros-card="semantic" class="is-focused">
+            <header><span>Semantic</span><strong>语义分割</strong></header>
+            <div>
+                <h5>优点</h5>
+                <p>全图 dense prediction，擅长道路、天空、墙面、地面等连续区域；可以直接计算类别面积占比和 mIoU。</p>
+            </div>
+            <div>
+                <h5>局限</h5>
+                <p>同类对象会被合并，无法知道“第几个行人”；边界质量依赖上采样和 skip/fusion 设计。</p>
+            </div>
+            <footer>典型应用：自动驾驶可行驶区域、遥感地物分类、医学组织区域。</footer>
+        </article>
+
+        <article data-seg-pros-card="instance">
+            <header><span>Instance</span><strong>实例分割</strong></header>
+            <div>
+                <h5>优点</h5>
+                <p>每个对象有独立 mask、bbox、score 与 id，适合计数、选择、跟踪和对象级属性分析。</p>
+            </div>
+            <div>
+                <h5>局限</h5>
+                <p>依赖检测候选框与 NMS，拥挤遮挡时容易漏检；对 sky、road 这类无固定边界的 stuff 不如语义分割自然。</p>
+            </div>
+            <footer>典型应用：行人车辆计数、机器人抓取、视频实例跟踪、质检分拣。</footer>
+        </article>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare1"></script>
+{% endblock %}

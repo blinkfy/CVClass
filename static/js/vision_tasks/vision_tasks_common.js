@@ -37,7 +37,7 @@
         sampleCount: $("[data-sample-count]"),
         sampleName: $("[data-sample-name]"),
         sampleResolution: $("[data-sample-resolution]"),
-        displayModes: $$("[data-display-mode]"),
+        displayModes: $$("[data-display-modes] [data-display-mode]"),
         taskButtons: $$("[data-task-select]"),
         taskCards: $$("[data-task-card]"),
         lineageItems: $$("[data-lineage-task]"),
@@ -275,6 +275,16 @@
                 renderAll();
             });
         });
+    }
+
+    function orderSamples(data) {
+        const order = ["crosswalk_people", "bangkok_traffic", "classroom_equipment", "classroom_students"];
+        data.samples = [...(data.samples || [])].sort((a, b) => {
+            const ai = order.indexOf(a.id);
+            const bi = order.indexOf(b.id);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+        return data;
     }
 
     function renderImages(sample) {
@@ -605,10 +615,10 @@
             `,
             unit: "整张图像",
             structure: "p(y | image) ∈ R<sup>C</sup>",
-            models: ["BoVW", "CNN", "ResNet"],
-            postprocess: "Top-k ranking",
-            metrics: ["Top-1 Accuracy", "Top-5 Accuracy"],
-            courses: ["特征表达", "分类器", "Softmax"],
+            predictionLevel: "Image-level",
+            output: "p(y | image) ∈ R<sup>C</sup>",
+            metric: "Top-1 / Top-5 Accuracy",
+            courses: ["BoVW", "Spatial Pyramid", "CNN / ResNet"],
         },
         detection: {
             title: "目标检测",
@@ -661,10 +671,10 @@
             `,
             unit: "目标实例",
             structure: "N × [x<sub>1</sub>, y<sub>1</sub>, x<sub>2</sub>, y<sub>2</sub>, score, class]",
-            models: ["R-CNN", "Faster R-CNN", "YOLO"],
-            postprocess: "Confidence Filter + NMS",
-            metrics: ["IoU", "AP", "mAP"],
-            courses: ["候选框", "IoU", "NMS", "Anchor"],
+            predictionLevel: "Object-level",
+            output: "N × [x1,y1,x2,y2,score,class]",
+            metric: "IoU / AP / mAP",
+            courses: ["Sliding Window", "R-CNN", "YOLO", "NMS"],
         },
         semantic: {
             title: "语义分割",
@@ -716,10 +726,10 @@
             `,
             unit: "像素",
             structure: "mask ∈ {0…C-1}<sup>H×W</sup>",
-            models: ["FCN", "U-Net", "DeepLab", "SegFormer"],
-            postprocess: "argmax + color mapping",
-            metrics: ["Pixel Accuracy", "mIoU"],
-            courses: ["上采样", "跳跃连接", "逐像素分类"],
+            predictionLevel: "Pixel-level",
+            output: "H×W class map",
+            metric: "Pixel Accuracy / mIoU",
+            courses: ["FCN", "1×1 Conv", "Upsampling", "Skip Connection", "SegFormer"],
         },
         instance: {
             title: "实例分割",
@@ -772,11 +782,11 @@
                 </svg>
             `,
             unit: "对象实例",
-            structure: "N × {bbox, class, score, mask, id}",
-            models: ["Mask R-CNN", "YOLACT", "YOLO-seg"],
-            postprocess: "Mask threshold + NMS",
-            metrics: ["Mask AP"],
-            courses: ["检测头", "mask head", "instance id"],
+            structure: "N × {bbox, class, score, mask, instance_id}",
+            predictionLevel: "Instance-level",
+            output: "N × {bbox,class,score,mask,instance_id}",
+            metric: "Mask IoU / Mask AP",
+            courses: ["Mask R-CNN", "FPN", "ROI Align", "Mask Head", "YOLO-seg"],
         },
     };
 
@@ -821,29 +831,21 @@
         }
         if (els.outputSummary) {
             els.outputSummary.innerHTML = `
-                <div class="tk-summary-heading">输出摘要</div>
+                <div class="tk-summary-heading">${esc(card.title)}</div>
                 <div class="oc-row">
-                    <span class="oc-label">预测单位</span>
-                    <strong class="oc-value">${esc(card.unit)}</strong>
+                    <span class="oc-label">Prediction Level</span>
+                    <strong class="oc-value">${esc(card.predictionLevel)}</strong>
                 </div>
                 <div class="oc-formula-box">
-                    <span class="oc-label">输出结构</span>
-                    <code class="oc-formula">${card.structure}</code>
+                    <span class="oc-label">Output</span>
+                    <code class="oc-formula">${card.output || card.structure}</code>
                 </div>
                 <div class="oc-row">
-                    <span class="oc-label">典型模型</span>
-                    <div class="oc-tags">${tags(card.models)}</div>
+                    <span class="oc-label">Metric</span>
+                    <strong class="oc-value">${esc(card.metric)}</strong>
                 </div>
                 <div class="oc-row">
-                    <span class="oc-label">关键后处理</span>
-                    <strong class="oc-value">${esc(card.postprocess)}</strong>
-                </div>
-                <div class="oc-row">
-                    <span class="oc-label">评价指标</span>
-                    <div class="oc-tags oc-metric-tags">${tags(card.metrics)}</div>
-                </div>
-                <div class="oc-row">
-                    <span class="oc-label">课程关联</span>
+                    <span class="oc-label">Course Methods</span>
                     <div class="oc-tags oc-course-tags">${tags(card.courses)}</div>
                 </div>
             `;
@@ -869,7 +871,11 @@
             button.classList.toggle("is-active", active);
             button.setAttribute("aria-checked", String(active));
         });
-        els.taskCards.forEach((card) => card.classList.toggle("is-selected", card.dataset.taskCard === state.task));
+        els.taskCards.forEach((card) => {
+            const selected = card.dataset.taskCard === state.task;
+            card.classList.toggle("is-selected", selected);
+            card.style.order = selected ? "-1" : "0";
+        });
         els.lineageItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.lineageTask === state.task));
         els.schemaItems.forEach((item) => item.classList.toggle("is-selected", item.dataset.schemaTask === state.task));
         els.compareRows.forEach((row) => row.classList.toggle("is-selected", row.dataset.task === state.task));
@@ -885,7 +891,7 @@
         els.sampleName.textContent = sample.name;
         els.sampleResolution.textContent = `分辨率：${sample.width} × ${sample.height}`;
         els.status.textContent = `${sample.id.toUpperCase()} · PRESET FALLBACK READY`;
-        els.thresholdOutput.textContent = state.confidence.toFixed(2);
+        if (els.thresholdOutput) els.thresholdOutput.textContent = state.confidence.toFixed(2);
         renderSamples();
         renderImages(sample);
         renderClassification(sample);
@@ -911,9 +917,13 @@
         state.task = card.dataset.taskCard;
         renderState();
     }));
+    els.lineageItems.forEach((item) => item.addEventListener("click", () => {
+        state.task = item.dataset.lineageTask;
+        renderState();
+    }));
     els.threshold?.addEventListener("input", () => {
         state.confidence = Number(els.threshold.value);
-        els.thresholdOutput.textContent = state.confidence.toFixed(2);
+        if (els.thresholdOutput) els.thresholdOutput.textContent = state.confidence.toFixed(2);
         const sample = currentSample();
         if (sample) {
             renderDetection(sample);
@@ -928,7 +938,7 @@
             return response.json();
         })
         .then((data) => {
-            state.data = data;
+            state.data = orderSamples(data);
             state.sampleId = data.default_sample || data.samples?.[0]?.id || "";
             renderAll();
         })

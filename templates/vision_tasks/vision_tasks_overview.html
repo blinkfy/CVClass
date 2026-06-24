@@ -6,8 +6,8 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
             <div>
-                <h3>任务粒度与显示</h3>
-                <p>Input &amp; Display</p>
+                <h3>TASK CONTROL</h3>
+                <p>任务谱系控制</p>
             </div>
         </div>
 
@@ -30,7 +30,7 @@
             <div class="overview-segmented-control" data-display-modes>
                 <button class="is-active" type="button" data-display-mode="parallel" aria-pressed="true">
                     <span class="overview-mode-icon overview-mode-icon--grid" aria-hidden="true"></span>
-                    四结果并排
+                    四象限对比
                 </button>
                 <button type="button" data-display-mode="focus" aria-pressed="false">
                     <span class="overview-mode-icon overview-mode-icon--focus" aria-hidden="true"></span>
@@ -38,19 +38,19 @@
                 </button>
                 <button type="button" data-display-mode="explain" aria-pressed="false">
                     <span class="overview-mode-icon overview-mode-icon--compare" aria-hidden="true"></span>
-                    对比说明
+                    输出结构对比
                 </button>
             </div>
         </section>
 
         <section class="overview-control-section" aria-labelledby="overviewTaskTitle">
             <div class="overview-control-title">
-                <strong id="overviewTaskTitle">当前任务高亮</strong>
+                <strong id="overviewTaskTitle">任务聚焦</strong>
                 <span>CLICK TO FOCUS</span>
             </div>
             <div class="overview-task-switcher" data-task-switcher role="radiogroup" aria-label="选择视觉任务">
                 <button class="is-active" type="button" data-task-select="classification" role="radio" aria-checked="true">
-                    <span>01</span><div><strong>图像级分类</strong><small>Image-level</small></div>
+                    <span>01</span><div><strong>图像分类</strong><small>Image-level</small></div>
                 </button>
                 <button type="button" data-task-select="detection" role="radio" aria-checked="false">
                     <span>02</span><div><strong>目标检测</strong><small>Object-level</small></div>
@@ -63,20 +63,13 @@
                 </button>
             </div>
         </section>
-
-        <label class="vision-field overview-threshold-field">
-            <span>Confidence Threshold <output data-confidence-output>0.50</output></span>
-            <input data-confidence-threshold type="range" min="0.20" max="0.95" step="0.05" value="0.50">
-            <small>低于阈值的检测框将灰显，不计入保留数量。</small>
-        </label>
-
     </aside>
 
     <div class="vision-stage-panel overview-stage-panel">
         <div class="vision-stage-header">
             <div>
-                <span>TASK RESULT OVERVIEW</span>
-                <h3>任务结果总览（同一图像在不同任务粒度下的输出）</h3>
+                <span>TASK OUTPUT COMPARISON</span>
+                <h3>同一图像下的四类任务输出</h3>
             </div>
             <span class="vision-status-chip" data-overview-status>PRESET SAMPLE</span>
         </div>
@@ -85,7 +78,7 @@
             <article class="overview-result-card is-selected" data-task-card="classification">
                 <header class="overview-result-header">
                     <span class="overview-result-number">01</span>
-                    <div><h4>图像级分类</h4><p>Image-level Classification</p></div>
+                    <div><h4>图像分类</h4><p>Classification</p></div>
                     <span class="overview-infer-status" data-overview-infer-status>BoVW/CNN demo</span>
                 </header>
                 <div class="overview-result-visual">
@@ -112,8 +105,9 @@
                     <div class="overview-probability-list" data-classification-bars></div>
                 </div>
                 <footer class="overview-result-footer">
-                    <span><b>输出结构</b><code>1 × C</code></span>
-                    <span><b>指标</b><strong>Top-1 Accuracy</strong></span>
+                    <span><b>输出单位</b><strong>整张图像</strong></span>
+                    <span><b>输出结构</b><code>p(y | image) ∈ R^C</code></span>
+                    <span><b>指标</b><strong>Top-1 / Top-5 Accuracy</strong></span>
                 </footer>
             </article>
 
@@ -148,8 +142,9 @@
                     <div class="overview-legend" data-detection-legend></div>
                 </div>
                 <footer class="overview-result-footer">
+                    <span><b>输出单位</b><strong>目标实例</strong></span>
                     <span><b>输出结构</b><code>N × [x1,y1,x2,y2,score,class]</code></span>
-                    <span><b>后处理</b><strong>Confidence + NMS</strong></span>
+                    <span><b>指标</b><strong>IoU / AP / mAP</strong></span>
                 </footer>
             </article>
 
@@ -184,8 +179,9 @@
                     <div class="overview-legend" data-semantic-legend></div>
                 </div>
                 <footer class="overview-result-footer">
+                    <span><b>输出单位</b><strong>像素</strong></span>
                     <span><b>输出结构</b><code>H × W class map</code></span>
-                    <span><b>中间张量</b><strong>H × W × C logits</strong></span>
+                    <span><b>指标</b><strong>Pixel Accuracy / mIoU</strong></span>
                 </footer>
             </article>
 
@@ -220,8 +216,9 @@
                     <div class="overview-legend" data-instance-legend></div>
                 </div>
                 <footer class="overview-result-footer">
-                    <span><b>输出结构</b><code>N masks + bbox + class + id</code></span>
-                    <span><b>指标</b><strong>Mask AP</strong></span>
+                    <span><b>输出单位</b><strong>独立目标实例</strong></span>
+                    <span><b>输出结构</b><code>N × {bbox,class,score,mask,instance_id}</code></span>
+                    <span><b>指标</b><strong>Mask IoU / Mask AP</strong></span>
                 </footer>
             </article>
         </div>
@@ -272,25 +269,25 @@
 
         <section class="overview-lineage" aria-labelledby="overviewLineageTitle">
             <div class="overview-section-heading">
-                <div><span>TASK TAXONOMY</span><h4 id="overviewLineageTitle">任务谱系</h4></div>
-                <p>从整体判断逐步细化到实例级空间理解</p>
+                <div><span>TASK GRANULARITY</span><h4 id="overviewLineageTitle">任务粒度递进</h4></div>
+                <p>从图像级预测逐步走向实例级理解</p>
             </div>
             <ol class="overview-lineage-list">
                 <li data-lineage-task="classification">
                     <span class="overview-lineage-icon overview-lineage-icon--classification" aria-hidden="true"></span>
-                    <div><small>Image-level</small><strong>图像级分类</strong><p>输出：class probability</p><code>p(y|image) ∈ R<sup>C</sup></code></div>
+                    <div><small>Image-level</small><strong>Classification</strong><p>整张图像一个类别分布</p><code>p(y | image) ∈ R<sup>C</sup></code></div>
                 </li>
                 <li data-lineage-task="detection">
                     <span class="overview-lineage-icon overview-lineage-icon--detection" aria-hidden="true"></span>
-                    <div><small>Object-level</small><strong>目标检测</strong><p>输出：bbox + class + score</p><code>boxes ∈ R<sup>N×6</sup></code></div>
+                    <div><small>Object-level</small><strong>Detection</strong><p>每个目标一个边界框</p><code>N × [x1,y1,x2,y2,score,class]</code></div>
                 </li>
                 <li data-lineage-task="semantic">
                     <span class="overview-lineage-icon overview-lineage-icon--semantic" aria-hidden="true"></span>
-                    <div><small>Pixel-level</small><strong>语义分割</strong><p>输出：class per pixel</p><code>mask ∈ {0…C-1}<sup>H×W</sup></code></div>
+                    <div><small>Pixel-level</small><strong>Semantic Segmentation</strong><p>每个像素一个语义类别</p><code>H × W class map</code></div>
                 </li>
                 <li data-lineage-task="instance">
                     <span class="overview-lineage-icon overview-lineage-icon--instance" aria-hidden="true"></span>
-                    <div><small>Instance-level</small><strong>实例分割</strong><p>输出：mask + bbox + instance id</p><code>{bbox,class,mask,id}<sup>N</sup></code></div>
+                    <div><small>Instance-level</small><strong>Instance Segmentation</strong><p>每个实例一张 mask 和 ID</p><code>N × {bbox,class,score,mask,instance_id}</code></div>
                 </li>
             </ol>
         </section>
@@ -300,8 +297,8 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3>任务知识卡</h3>
-                <p>Task Knowledge Card</p>
+                <h3>OUTPUT STRUCTURE</h3>
+                <p>输出结构与指标</p>
             </div>
         </div>
 
@@ -348,161 +345,38 @@
     </aside>
 </section>
 
-<section class="vision-module-map vision-method-roadmap" aria-labelledby="visionMethodMapTitle">
+<section class="vision-module-map overview-deep-dive" aria-labelledby="overviewDeepDiveTitle">
     <div class="overview-section-heading">
         <div>
-            <span>COURSE METHOD ROADMAP</span>
-            <h4 id="visionMethodMapTitle">视觉识别与分割方法路线图</h4>
+            <span>DEEP DIVE MODULES</span>
+            <h4 id="overviewDeepDiveTitle">继续深入独立模块</h4>
         </div>
-        <p>沿任务演化主线，查看图像分类、传统分割、语义分割、目标检测与实例分割的代表方法。</p>
+        <p>四任务对比用于建立谱系；下方入口进入拆分后的独立实验模块。</p>
     </div>
-    <div class="method-roadmap-track" role="list">
-        <!-- SVG 动态波浪主路与流光 -->
-        <svg class="roadmap-svg-path" viewBox="0 0 1200 200" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-                <linearGradient id="roadmap-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#3b82f6" />
-                    <stop offset="25%" stop-color="#14b8a6" />
-                    <stop offset="50%" stop-color="#8b5cf6" />
-                    <stop offset="75%" stop-color="#f97316" />
-                    <stop offset="100%" stop-color="#ec4899" />
-                </linearGradient>
-                <linearGradient id="roadmap-flow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="rgba(255,255,255,0)" />
-                    <stop offset="50%" stop-color="rgba(255,255,255,0.9)" />
-                    <stop offset="100%" stop-color="rgba(255,255,255,0)" />
-                </linearGradient>
-                <filter id="roadmap-glow" x="-10%" y="-10%" width="120%" height="120%">
-                    <feGaussianBlur stdDeviation="6" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-            </defs>
-            <!-- 底部发光轨道 -->
-            <path class="roadmap-path-glow" d="M 50,100 Q 175,30 300,100 T 550,100 T 800,100 T 1050,100 T 1150,100" fill="none" stroke="url(#roadmap-grad)" stroke-width="8" opacity="0.15" filter="url(#roadmap-glow)" />
-            <!-- 主轨道 -->
-            <path class="roadmap-path-main" d="M 50,100 Q 175,30 300,100 T 550,100 T 800,100 T 1050,100 T 1150,100" fill="none" stroke="url(#roadmap-grad)" stroke-width="4" stroke-linecap="round" />
-            <!-- 动态流光 -->
-            <path class="roadmap-path-flow" d="M 50,100 Q 175,30 300,100 T 550,100 T 800,100 T 1050,100 T 1150,100" fill="none" stroke="url(#roadmap-flow-grad)" stroke-width="4" stroke-dasharray="120 800" stroke-dashoffset="0" stroke-linecap="round" />
-        </svg>
-
-        <article class="roadmap-node roadmap-node--up" data-roadmap-color="blue" role="listitem">
-            <div class="roadmap-branch roadmap-branch--up" aria-hidden="true">
-                <span class="roadmap-chip">BoVW</span>
-                <span class="roadmap-chip">Spatial Pyramid</span>
-                <span class="roadmap-chip">CNN</span>
-                <span class="roadmap-chip">ResNet</span>
-            </div>
-            <div class="roadmap-connector-line" aria-hidden="true"></div>
-            <div class="roadmap-node-card">
-                <div class="roadmap-card-glow"></div>
-                <span class="roadmap-node-index">01</span>
-                <span class="roadmap-node-icon" aria-hidden="true">🖼️</span>
-                <div class="roadmap-node-text">
-                    <strong>图像分类</strong>
-                    <em>Image-level prediction</em>
-                </div>
-                <a class="roadmap-entry" href="{{ url_for('classification_lab_detail_alias_page', method='bovw') }}">
-                    <span>进入图像分类</span>
-                    <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
+    <div class="overview-entry-grid" role="list">
+        <article class="overview-entry-card" role="listitem">
+            <span>06</span>
+            <h5>图像分割与区域提取</h5>
+            <p>K-means、Graph Cut、Watershed、GrabCut、Label Map</p>
+            <a href="{{ url_for('segmentation_basic_alias_page') }}">进入图像分割与区域提取</a>
         </article>
-
-        <article class="roadmap-node roadmap-node--down" data-roadmap-color="teal" role="listitem">
-            <div class="roadmap-node-card">
-                <div class="roadmap-card-glow"></div>
-                <span class="roadmap-node-index">02</span>
-                <span class="roadmap-node-icon" aria-hidden="true">🧩</span>
-                <div class="roadmap-node-text">
-                    <strong>传统分割</strong>
-                    <em>Unsupervised regions</em>
-                </div>
-                <a class="roadmap-entry" href="{{ url_for('segmentation_basic_alias_page') }}">
-                    <span>进入传统分割</span>
-                    <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
-            <div class="roadmap-connector-line" aria-hidden="true"></div>
-            <div class="roadmap-branch roadmap-branch--down" aria-hidden="true">
-                <span class="roadmap-chip">Threshold</span>
-                <span class="roadmap-chip">Otsu</span>
-                <span class="roadmap-chip">Watershed</span>
-                <span class="roadmap-chip">GrabCut</span>
-                <span class="roadmap-chip">Graph Cut</span>
-                <span class="roadmap-chip">K-means</span>
-            </div>
+        <article class="overview-entry-card" role="listitem">
+            <span>07</span>
+            <h5>目标检测</h5>
+            <p>IoU、NMS、YOLO、R-CNN、RPN / Anchor</p>
+            <a href="{{ url_for('object_detection_alias_page') }}">进入目标检测</a>
         </article>
-
-        <article class="roadmap-node roadmap-node--up" data-roadmap-color="purple" role="listitem">
-            <div class="roadmap-branch roadmap-branch--up" aria-hidden="true">
-                <span class="roadmap-chip">FCN</span>
-                <span class="roadmap-chip">U-Net</span>
-                <span class="roadmap-chip">DeepLab</span>
-                <span class="roadmap-chip">SegFormer</span>
-            </div>
-            <div class="roadmap-connector-line" aria-hidden="true"></div>
-            <div class="roadmap-node-card">
-                <div class="roadmap-card-glow"></div>
-                <span class="roadmap-node-index">03</span>
-                <span class="roadmap-node-icon" aria-hidden="true">🎯</span>
-                <div class="roadmap-node-text">
-                    <strong>语义分割</strong>
-                    <em>Pixel-wise class map</em>
-                </div>
-                <a class="roadmap-entry" href="{{ url_for('segmentation_lab_semantic_page') }}">
-                    <span>进入语义分割</span>
-                    <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
+        <article class="overview-entry-card" role="listitem">
+            <span>08</span>
+            <h5>语义分割</h5>
+            <p>FCN、1×1 Conv、Upsampling、Skip Connection、mIoU、SegFormer</p>
+            <a href="{{ url_for('semantic_segmentation_alias_page') }}">进入语义分割</a>
         </article>
-
-        <article class="roadmap-node roadmap-node--down" data-roadmap-color="orange" role="listitem">
-            <div class="roadmap-node-card">
-                <div class="roadmap-card-glow"></div>
-                <span class="roadmap-node-index">04</span>
-                <span class="roadmap-node-icon" aria-hidden="true">📦</span>
-                <div class="roadmap-node-text">
-                    <strong>目标检测</strong>
-                    <em>Box + class + score</em>
-                </div>
-                <a class="roadmap-entry" href="{{ url_for('object_detection_alias_page') }}">
-                    <span>进入目标检测</span>
-                    <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
-            <div class="roadmap-connector-line" aria-hidden="true"></div>
-            <div class="roadmap-branch roadmap-branch--down" aria-hidden="true">
-                <span class="roadmap-chip">Sliding Window</span>
-                <span class="roadmap-chip">R-CNN</span>
-                <span class="roadmap-chip">Faster R-CNN</span>
-                <span class="roadmap-chip">YOLO</span>
-                <span class="roadmap-chip">DETR</span>
-                <span class="roadmap-chip">IoU</span>
-                <span class="roadmap-chip">NMS</span>
-            </div>
-        </article>
-
-        <article class="roadmap-node roadmap-node--up" data-roadmap-color="pink" role="listitem">
-            <div class="roadmap-branch roadmap-branch--up" aria-hidden="true">
-                <span class="roadmap-chip">Mask R-CNN</span>
-                <span class="roadmap-chip">YOLACT</span>
-                <span class="roadmap-chip">SOLO</span>
-                <span class="roadmap-chip">YOLO-seg</span>
-            </div>
-            <div class="roadmap-connector-line" aria-hidden="true"></div>
-            <div class="roadmap-node-card">
-                <div class="roadmap-card-glow"></div>
-                <span class="roadmap-node-index">05</span>
-                <span class="roadmap-node-icon" aria-hidden="true">🎭</span>
-                <div class="roadmap-node-text">
-                    <strong>实例分割</strong>
-                    <em>Object mask + identity</em>
-                </div>
-                <a class="roadmap-entry" href="{{ url_for('segmentation_lab_instance_page') }}">
-                    <span>进入实例分割</span>
-                    <svg class="entry-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </a>
-            </div>
+        <article class="overview-entry-card" role="listitem">
+            <span>09</span>
+            <h5>实例分割</h5>
+            <p>Mask R-CNN、FPN、ROI Align、Mask Head、YOLO-seg</p>
+            <a href="{{ url_for('instance_segmentation_alias_page') }}">进入实例分割</a>
         </article>
     </div>
 </section>

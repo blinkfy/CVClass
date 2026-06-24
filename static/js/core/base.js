@@ -29,7 +29,9 @@
         classification_lab: "classification-lab",
         segmentation_basic: "segmentation-basic",
         object_detection: "object-detection",
-        segmentation_lab: "segmentation-lab",
+        "segmentation_lab:semantic": "semantic-segmentation",
+        "segmentation_lab:instance": "instance-segmentation",
+        segmentation_lab: "semantic-segmentation",
         frontier: "frontier",
     };
 
@@ -60,10 +62,8 @@
         const asp = window.CVCLASS_ACTIVE_SUB_PAGE;
         if (!ap) return;
 
-        let moduleId = activePageModuleMap[ap];
-        if (!moduleId && asp) {
-            moduleId = activePageModuleMap[`${ap}:${asp}`];
-        }
+        const scopedPage = asp ? `${ap}:${asp}` : "";
+        let moduleId = activePageModuleMap[scopedPage] || activePageModuleMap[ap];
 
         if (moduleId) {
             setModuleLearned(moduleId);
@@ -114,7 +114,11 @@
         });
     });
 
-    setModuleLearned(activePageModuleMap[window.CVCLASS_ACTIVE_PAGE]);
+    {
+        const ap = window.CVCLASS_ACTIVE_PAGE;
+        const asp = window.CVCLASS_ACTIVE_SUB_PAGE;
+        setModuleLearned(activePageModuleMap[asp ? `${ap}:${asp}` : ""] || activePageModuleMap[ap]);
+    }
     renderLearnedModules();
 
     // 推荐学习路径联动高亮逻辑
@@ -127,7 +131,7 @@
 
         const pathModules = {
             classic: ["image-basic", "convolution-filter", "edge-contour", "feature-panorama", "segmentation-basic"],
-            deep: ["cnn-learning", "classification-lab", "object-detection", "segmentation-lab", "frontier"]
+            deep: ["cnn-learning", "object-detection", "semantic-segmentation", "instance-segmentation", "frontier"]
         };
 
         pathCards.forEach((card) => {

@@ -5,7 +5,7 @@
     {
       "id": "crosswalk_people",
       "name": "Crosswalk People",
-      "short_name": "人行横道",
+      "short_name": "Crosswalk People",
       "image": "/static/assets/img/crosswalk_people.jpg",
       "width": 640,
       "height": 427,
@@ -78,7 +78,7 @@
     {
       "id": "bangkok_traffic",
       "name": "Bangkok Traffic",
-      "short_name": "曼谷交通",
+      "short_name": "Bangkok Traffic",
       "image": "/static/assets/img/bangkok_traffic.jpg",
       "width": 355,
       "height": 355,
@@ -112,8 +112,8 @@
     },
     {
       "id": "classroom_students",
-      "name": "Classroom Students",
-      "short_name": "课堂学生",
+      "name": "Street Scene",
+      "short_name": "Street Scene",
       "image": "/static/assets/img/classroom_students.jpg",
       "width": 1200,
       "height": 800,
@@ -157,8 +157,8 @@
     },
     {
       "id": "classroom_equipment",
-      "name": "Classroom Equipment",
-      "short_name": "教室设备",
+      "name": "Indoor Objects",
+      "short_name": "Indoor Objects",
       "image": "/static/assets/img/classroom_equipment.jpg",
       "width": 3840,
       "height": 2880,
