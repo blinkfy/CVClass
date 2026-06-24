@@ -635,6 +635,39 @@
         const centers = options.centers || [];
         const labels = options.labels || [];
         const activeSet = new Set(options.activeCells || []);
+        const spatialRings = grid.useXY && centers.length ? Array.from({ length: state.k }, (_, k) => {
+            const c = k * grid.dims;
+            const cx = (centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * (cols - 1);
+            const cy = (centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * (rows - 1);
+            const x = padX + (clamp(cx, 0, cols - 1) + 0.5) * cellW;
+            const y = padY + (clamp(cy, 0, rows - 1) + 0.5) * cellH;
+            const radius = Math.max(28, Math.min(68, cellW * (2.7 + state.xyWeight * 1.8)));
+            return `<circle class="seg-spatial-ring" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" style="--c:${labelFill(k + 1)};animation-delay:${k * 90}ms"/>`;
+        }).join("") : "";
+        const colorLinks = !grid.useXY && labels.length ? (() => {
+            const links = [];
+            for (let k = 0; k < state.k; k += 1) {
+                const indexes = [];
+                labels.forEach((label, index) => {
+                    if (label === k && indexes.length < 2) {
+                        const x = index % cols;
+                        const y = Math.floor(index / cols);
+                        if (indexes.length === 0 || Math.abs(x - (indexes[0] % cols)) + Math.abs(y - Math.floor(indexes[0] / cols)) > 6) indexes.push(index);
+                    }
+                });
+                if (indexes.length === 2) {
+                    const [a, b] = indexes;
+                    links.push({ a, b, color: labelFill(k + 1) });
+                }
+            }
+            return links.map((link, index) => {
+                const ax = padX + (link.a % cols + 0.5) * cellW;
+                const ay = padY + (Math.floor(link.a / cols) + 0.5) * cellH;
+                const bx = padX + (link.b % cols + 0.5) * cellW;
+                const by = padY + (Math.floor(link.b / cols) + 0.5) * cellH;
+                return `<path class="seg-rgb-long-link" d="M${ax.toFixed(1)} ${ay.toFixed(1)} C${(ax + 42).toFixed(1)} ${(ay - 38).toFixed(1)}, ${(bx - 42).toFixed(1)} ${(by + 38).toFixed(1)}, ${bx.toFixed(1)} ${by.toFixed(1)}" style="--c:${link.color};animation-delay:${index * 110}ms"/>`;
+            }).join("");
+        })() : "";
         const centerPositions = Array.from({ length: state.k }, (_, k) => {
             const c = k * grid.dims;
             const cx = grid.useXY
@@ -667,10 +700,20 @@
             return `<line class="seg-kmeans-line" x1="${fromX.toFixed(1)}" y1="${fromY.toFixed(1)}" x2="${centerPositions[line.to].x.toFixed(1)}" y2="${centerPositions[line.to].y.toFixed(1)}" stroke="#f97316" stroke-width="3" stroke-dasharray="6,4" opacity="0.78"/>`;
         }).join("") : "";
         const caption = options.caption ? `<text x="260" y="304" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
+        const modeBadge = grid.useXY
+            ? `<g class="seg-mode-badge is-rgbxy"><rect x="332" y="28" width="152" height="28" rx="14"/><text x="408" y="47" text-anchor="middle">RGB + λXY 空间约束</text></g>`
+            : `<g class="seg-mode-badge is-rgb"><rect x="332" y="28" width="152" height="28" rx="14"/><text x="408" y="47" text-anchor="middle">RGB 颜色距离</text></g>`;
+        const modeGuide = grid.useXY
+            ? `<path class="seg-xy-axis-flow" d="M54 266 H176 M54 266 V196"/><text x="184" y="270" class="seg-svg-note">x</text><text x="45" y="194" class="seg-svg-note">y</text>`
+            : `<text x="64" y="52" class="seg-svg-note">同色像素即使相距较远，也会被颜色距离吸引</text>`;
         return `
-            <svg class="seg-concept-svg seg-algo-grid" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="kmeans algorithm grid">
+            <svg class="seg-concept-svg seg-algo-grid ${grid.useXY ? "is-rgbxy" : "is-rgb"}" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="kmeans algorithm grid">
                 <rect x="16" y="18" width="488" height="276" rx="22" fill="#f8fafc" stroke="#dbeafe"/>
+                ${modeBadge}
+                ${modeGuide}
+                ${spatialRings}
                 ${cellsHtml}
+                ${colorLinks}
                 ${lineHtml}
                 ${centerHtml}
                 ${caption}
@@ -727,6 +770,19 @@
 
         function buildFrames(useXY, prefix) {
             const featureName = useXY ? "RGB + XY" : "RGB";
+            const modeDifference = useXY
+                ? {
+                    distance: "距离 = 颜色差 + λ·空间距离",
+                    behavior: "相似颜色还必须靠得近，区域会更连续。",
+                    caption: "坐标项让中心带有空间吸引范围",
+                    sample: "颜色与坐标一起进入特征向量",
+                }
+                : {
+                    distance: "距离 = 颜色差",
+                    behavior: "相距很远但颜色相近的像素仍可能合并。",
+                    caption: "颜色相似的远距离格子会被同一中心吸引",
+                    sample: "只抽取 RGB 颜色值，不关心像素位置",
+                };
             const grid = buildKMeansGridModel(useXY, 14, 10);
             const result = runKMeansOnGrid(grid);
             const props = kmeansProps(grid, result.labels);
@@ -759,21 +815,21 @@
                 {
                     phase: "image",
                     title: `${prefix}1. 输入图像与采样网格`,
-                    graph: kmeansComputeSvg(grid, { mode: "image", caption: "每个格子是该区域像素的平均颜色" }),
+                    graph: kmeansComputeSvg(grid, { mode: "image", caption: modeDifference.sample }),
                     matrix: metricCards([
                         ["image", `${state.work?.width || "--"}×${state.work?.height || "--"}`],
                         ["grid", `${grid.cols}×${grid.rows}=${grid.count} cells`],
                         ["K", String(state.k)],
-                        ["max iter", String(state.maxIter)],
+                        [useXY ? "xy weight" : "spatial", useXY ? state.xyWeight.toFixed(2) : "ignored"],
                     ]),
-                    detail: noteRows([["采样", "把图像划分成规则网格，每个格子用一个颜色向量代表下方像素。"]]),
-                    stageNote: "K-means 先把图像采样成规则网格，减小计算量并保持空间结构。",
+                    detail: noteRows([["采样", useXY ? "格子不仅有颜色均值，还保留归一化 x/y 坐标。" : "格子只保留颜色均值，空间位置不会进入距离计算。"]]),
+                    stageNote: `${modeDifference.distance}；${modeDifference.behavior}`,
                     showcase: { ...commonShowcase, labels: [], alpha: 0 },
                 },
                 {
                     phase: "feature",
                     title: `${prefix}2. 特征向量提取`,
-                    graph: kmeansComputeSvg(grid, { mode: "image", activeCells: sampleCells, caption: "高亮格子的颜色被提取为特征向量" }),
+                    graph: kmeansComputeSvg(grid, { mode: "image", activeCells: sampleCells, caption: modeDifference.sample }),
                     matrix: barsHtml(sampleCells.map((i) => {
                         const c = grid.model.cells[i];
                         const xy = grid.useXY
@@ -781,8 +837,8 @@
                             : "";
                         return { label: `cell ${i + 1}`, value: 1, color: `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`, note: `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})${xy}` };
                     })),
-                    detail: noteRows([["特征", `${featureName} 向量决定像素在聚类空间中的位置。`]]),
-                    stageNote: `每个格子的特征向量是 ${featureName}，它把颜色（和位置）映射到聚类空间。`,
+                    detail: noteRows([["特征", useXY ? `f=[R,G,B,${state.xyWeight.toFixed(2)}x,${state.xyWeight.toFixed(2)}y]` : "f=[R,G,B]"]]),
+                    stageNote: useXY ? "RGB+XY 会把图像坐标作为额外维度，约束同色区域必须更接近。" : "RGB 只看颜色，天空、衣服、路面等远处同色块可能落入同一类。",
                     showcase: { ...commonShowcase, labels: [], activeCells: sampleCells, alpha: 0 },
                 },
                 {
@@ -794,7 +850,7 @@
                         centers: firstCenters,
                         activeCells: distanceTable.map((d) => d.index),
                         lines: distanceTable.map((d) => ({ from: d.index, to: d.best })),
-                        caption: "每个格子连到最近的聚类中心",
+                        caption: useXY ? "最近中心同时受颜色和空间坐标影响" : "最近中心只由 RGB 颜色距离决定",
                     }),
                     matrix: barsHtml(distanceTable.map((d) => ({
                         label: `cell ${d.index + 1}`,
@@ -802,8 +858,8 @@
                         color: labelFill(d.best + 1),
                         note: `C${d.best + 1}·${d.distances.join(" / ")}`,
                     }))),
-                    detail: noteRows([["分配规则", "计算每个格子到所有中心的距离，取 argmin 作为新标签。"]]),
-                    stageNote: "初始化中心后，每个格子被分配给距离最近的中心，颜色相近的格子倾向同一类。",
+                    detail: noteRows([["分配规则", useXY ? "argmin ||RGB-C||² + ||λXY-Cxy||²" : "argmin ||RGB-C||²"]]),
+                    stageNote: useXY ? "坐标项会阻止远距离相似颜色被轻易拉到同一中心。" : "只用颜色距离时，空间上断裂的同色区域仍会被分到同一类。",
                     showcase: { ...commonShowcase, labels: Array.from(firstSnapshot.labels).map((l) => l + 1), seeds: firstSeeds },
                 },
                 {
@@ -814,7 +870,7 @@
                         labels: finalSnapshot.labels,
                         centers: finalCenters,
                         activeCells: sampleCells,
-                        caption: "中心移动到同类格子的平均特征位置",
+                        caption: useXY ? "中心同时移动到颜色均值和空间均值" : "中心移动到同类像素的颜色均值",
                     }),
                     matrix: barsHtml(updateTable.map((row) => ({
                         label: `C${row.label}`,
@@ -822,8 +878,8 @@
                         color: row.newRgb,
                         note: `${row.oldRgb} → ${row.newRgb}`,
                     }))),
-                    detail: noteRows([["更新规则", "c_k = mean(f(x))，中心移动到当前类所有格子的平均特征。"]]),
-                    stageNote: "根据上一步的分配结果，每个中心更新为同类格子的平均特征，然后再次分配。",
+                    detail: noteRows([["更新规则", useXY ? "c_k = mean([RGB, λXY])" : "c_k = mean([RGB])"]]),
+                    stageNote: useXY ? "RGB+XY 的中心轨迹会靠向局部邻域，使区域边界更连续。" : "RGB 中心只追随颜色均值，可能跨越图像不同位置吸收相似颜色。",
                     showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1), seeds: finalSeeds },
                 },
                 {
@@ -836,8 +892,8 @@
                         ["mean distance", finalSnapshot.distance.toFixed(1)],
                         ["stop rule", "movement < 0.35"],
                     ]),
-                    detail: noteRows([["收敛", "重复 分配→更新，直到中心移动足够小或达到最大迭代次数。"]]),
-                    stageNote: "最终每个格子拥有稳定的 cluster 标签，相同标签的格子构成一个分割区域。",
+                    detail: noteRows([["收敛", useXY ? "颜色相似 + 空间接近的格子更容易形成连续区域。" : "颜色相似的格子更容易共享标签，空间连续性较弱。"]]),
+                    stageNote: useXY ? "最终标签图会更倾向局部连续，噪点和远距离串联会减少。" : "最终标签图更像颜色分组，容易把远处相似颜色连到一起。",
                     showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1) },
                 },
                 {
@@ -848,10 +904,10 @@
                     detail: metricCards([
                         ["regions", String(state.k)],
                         ["largest", `C${largestProp?.label || 1} · ${Math.round((largestProp?.ratio || 0) * 100)}%`],
-                        ["grid cells", String(grid.count)],
-                        ["output", "label map"],
+                        [useXY ? "continuity" : "color only", useXY ? "stronger" : "weaker"],
+                        ["output", useXY ? "spatial label map" : "color label map"],
                     ]),
-                    stageNote: "最终输出 label map，可用于统计每个区域的面积、占比和边界属性。",
+                    stageNote: useXY ? "区域统计会体现空间约束后的连续区域比例。" : "区域统计体现颜色聚类结果，局部碎片可能更多。",
                     showcase: { ...commonShowcase, labels: Array.from(finalSnapshot.labels).map((l) => l + 1) },
                 },
             ];
@@ -1158,8 +1214,29 @@
                 <b class="seg-feature-center-3d" style="--x:${current.x.toFixed(1)}px;--y:${current.y.toFixed(1)}px;--z:${current.z.toFixed(1)}px;--s:${Math.max(14, size * 0.62).toFixed(1)}px;--c:rgb(${r},${g},${b})"><span>C${index + 1}</span></b>
             `;
         }).join("");
+        const xyPlane = result.useXY ? `
+            <div class="seg-feature-xy-plane" aria-hidden="true">
+                <span style="--x:18%;--y:28%"></span>
+                <span style="--x:42%;--y:62%"></span>
+                <span style="--x:70%;--y:38%"></span>
+                <b>XY locality</b>
+            </div>
+        ` : "";
+        const rgbBeams = !result.useXY ? `
+            <div class="seg-feature-rgb-beams" aria-hidden="true">
+                <span style="--r:16deg;--d:0ms"></span>
+                <span style="--r:-22deg;--d:160ms"></span>
+                <span style="--r:34deg;--d:320ms"></span>
+                <b>color-only links</b>
+            </div>
+        ` : "";
+        const modeFacts = result.useXY
+            ? `<strong>RGB + XY</strong><span>distance includes λx, λy · nearby pixels stay together</span>`
+            : `<strong>RGB only</strong><span>distance ignores x,y · remote same-color pixels can merge</span>`;
         return `
             <div class="seg-basic-feature-cloud seg-feature-cube-scene" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                ${xyPlane}
+                ${rgbBeams}
                 <div class="seg-feature-cube" role="img" aria-label="Rotating RGB feature cube">
                     <span class="seg-cube-face is-front"></span>
                     <span class="seg-cube-face is-back"></span>
@@ -1171,7 +1248,8 @@
                     ${centers}
                 </div>
                 <div class="seg-feature-cube-labels"><span>R</span><span>G</span><span>B</span></div>
-                <em><strong>iteration ${snapshot.iter}/${result.snapshots.length}</strong>${result.useXY ? "RGB cube + XY weight guides center drift" : "RGB cube: pixels orbit C1-C4 mean centers"}</em>
+                <em><strong>iteration ${snapshot.iter}/${result.snapshots.length}</strong>${result.useXY ? "RGB cube + XY plane guides local center drift" : "RGB cube: color-similar pixels orbit mean centers"}</em>
+                <div class="seg-feature-mode-facts">${modeFacts}</div>
             </div>
         `;
     }
@@ -1197,7 +1275,9 @@
             image: {
                 label: "输入采样",
                 formula: "I(x,y) = [R,G,B],  x ∈ Ω",
-                principle: "把输入图像视为像素集合 Ω。每个像素保留原始颜色，后续所有聚类、mask 与区域统计都从这些像素出发。",
+                principle: result.useXY
+                    ? "RGB+XY 会在采样时保留像素位置，为后续距离计算加入空间约束。"
+                    : "RGB 模式只保留像素颜色，后续聚类不会感知像素在图像中的位置。",
                 flow: ["image canvas", "pixel grid Ω", "RGB value", "feature sample"],
                 theory: [
                     ["计算对象", "不是整张图一次性分类，而是把每个像素看作一个待分配的数据点。"],
@@ -1218,8 +1298,10 @@
             },
             assign: {
                 label: "分配最近中心",
-                formula: "z_i = arg min_k || f_i - c_k ||²",
-                principle: "对每个像素分别计算到 C1-C4 的平方距离，距离最小的中心获得该像素的当前标签。",
+                formula: result.useXY ? "z_i = arg min_k (||RGB_i-C^rgb_k||² + ||λXY_i-C^xy_k||²)" : "z_i = arg min_k || RGB_i - C^rgb_k ||²",
+                principle: result.useXY
+                    ? "对每个像素同时比较颜色距离和空间距离，远处同色点会被空间项拉开。"
+                    : "对每个像素只比较颜色距离，远处同色点仍可能被同一个中心吸收。",
                 flow: ["feature f_i", "distance to Ck", "argmin", "label z_i"],
                 theory: [
                     ["距离度量", "平方欧氏距离会放大较大的颜色/位置差异。"],
@@ -1229,8 +1311,10 @@
             },
             update: {
                 label: "更新聚类中心",
-                formula: "c_k = (1 / N_k) Σ_{i:z_i=k} f_i",
-                principle: "每个中心移动到当前所属像素的平均特征位置；这一步让下一轮分配更稳定。",
+                formula: result.useXY ? "c_k = mean([R,G,B,λx,λy] | z_i=k)" : "c_k = mean([R,G,B] | z_i=k)",
+                principle: result.useXY
+                    ? "中心同时更新颜色均值和空间均值，因此轨迹会向局部邻域收缩。"
+                    : "中心只更新颜色均值，因此轨迹主要反映颜色分布变化。",
                 flow: ["cluster pixels", "mean feature", "new center", "next iteration"],
                 theory: [
                     ["均值更新", "中心颜色等于该类像素颜色均值；RGB+XY 下还会更新空间均值。"],
@@ -1241,7 +1325,9 @@
             map: {
                 label: "生成分割 mask",
                 formula: "M(x,y)=z_i,  B=∂M",
-                principle: "最终 label map 被映射成半透明 mask 叠加到原图；相邻像素标签不同的位置绘制为区域边界。",
+                principle: result.useXY
+                    ? "RGB+XY 的 label map 更强调空间连续性，再映射成半透明 mask 和边界。"
+                    : "RGB 的 label map 更像颜色分组，再映射成半透明 mask 和边界。",
                 flow: ["label map", "color mask", "boundary", "overlay"],
                 theory: [
                     ["mask", "彩色 mask 来自整数标签，不再用中心颜色直接替代原图。"],
@@ -1252,7 +1338,9 @@
             stats: {
                 label: "区域统计",
                 formula: "count_k = Σ 1[M_i=k],  ratio_k=count_k/|Ω|",
-                principle: "从 label map 扫描每个 cluster 的像素数量、占比、bbox 与 centroid，把分割结果变成可分析数据。",
+                principle: result.useXY
+                    ? "统计 RGB+XY 输出时，应重点观察区域是否更连续、bbox 是否更局部。"
+                    : "统计 RGB 输出时，应重点观察颜色类占比和可能的跨区域合并。",
                 flow: ["label map", "count", "bbox", "centroid"],
                 theory: [
                     ["区域数量", `region count=${result.k}，这里的区域是 cluster label，不等价于连通域数量。`],
@@ -1385,6 +1473,7 @@
         }
         if (els.kmeansView) {
             els.kmeansView.dataset.phase = state.kmeansPhase;
+            els.kmeansView.dataset.featureMode = result.useXY ? "rgbxy" : "rgb";
         }
         if (els.processIteration) els.processIteration.textContent = `${snapshot.iter} / ${result.snapshots.length}`;
         if (els.processDistance) els.processDistance.textContent = snapshot.distance.toFixed(1);
@@ -1400,8 +1489,8 @@
         if (els.processRegions) els.processRegions.textContent = String(stats.length);
         if (els.processOutputNote) {
             els.processOutputNote.textContent = state.kmeansPhase === "stats"
-                ? "统计阶段从 label map 扫描每个 cluster 的 area、ratio、bbox 与 centroid。"
-                : "Label map 被解码为半透明颜色 mask，并在相邻标签变化处绘制区域边界。";
+                ? (result.useXY ? "统计阶段会看到更强调局部连续性的 cluster 占比与区域边界。" : "统计阶段会看到颜色聚类带来的跨区域合并和局部碎片。")
+                : (result.useXY ? "RGB+XY label map 先压制远距离同色合并，再转成半透明 mask + 边界。" : "RGB label map 主要按颜色分组，再转成半透明 mask + 边界。");
         }
         if (els.processOutputCard) {
             els.processOutputCard.classList.toggle("is-overlay-active", state.kmeansPhase === "map");
@@ -2166,10 +2255,10 @@
     }
 
     function elevationColor(val) {
-        // 梯度低 -> 灰白带淡蓝；梯度高 -> 深沉的岩石色
-        const r = Math.round(226 - val * 130);
-        const g = Math.round(232 - val * 135);
-        const b = Math.round(240 - val * 120);
+        // 低处：浅青绿山谷；高处：深褐橙岩石山峰，形成强烈高低对比
+        const r = Math.round(224 - val * 170);
+        const g = Math.round(242 - val * 150);
+        const b = Math.round(254 - val * 130);
         return `rgb(${r},${g},${b})`;
     }
 
@@ -2229,14 +2318,54 @@
         const viewW = 520;
         const viewH = 318;
         const padX = 260; // 水平投影对称中心
-        const padY = 56;  // 顶部地平线原点
-        const cellHalfW = 20;
-        const cellHalfH = 10;
+
+        // 放大地形网格大小，使其填满 520x318 视口
+        const maxSpan = cols + rows;
+        const cellHalfW = Math.min(24, (viewW / 2 - 20) / maxSpan);
+        const cellHalfH = cellHalfW * 0.46;
+
+        // 加大高度拉伸范围以展示深邃的连续峡谷
+        const gridSpan = Math.max(0, cols + rows - 2) * cellHalfH;
+        const elevationScale = Math.min(150, Math.max(76, (viewH - 16 - gridSpan) / 2));
+        const padY = elevationScale + 6;
 
         const gradientSource = options.scores || (state.result ? state.result.gradient : []);
         const activeSet = new Set(options.activeCells || []);
         const seedList = options.seeds || [];
         const seedCells = new Map(seedList.map((seed) => [seed.index, seed]));
+
+        // 查找邻接点的高程数据，进行无缝连接
+        const getZ = (x, y) => {
+            if (x < 0 || x >= cols || y < 0 || y >= rows) return 0;
+            const idx = y * cols + x;
+            return (gradientSource?.[idx] ?? 0) * elevationScale;
+        };
+
+        // 获取单元格上方的真实颜色 (若是输入图像梯度模式，可选用原图色彩混合，这里做精细拟合)
+        const getCellBaseColor = (index, cell, gradVal, label, isActive, isBoundary) => {
+            if (isBoundary) return "#ef4444"; // 红色山脊
+            if (isActive) return "#10b981"; // 绿色水流
+
+            if (options.scores) {
+                return scoreGradientColor(options.scores[index] ?? 0);
+            }
+            if (label > 0) {
+                return labelFill3D(label);
+            }
+            
+            // 真实感色彩渲染：将真实的像素 r,g,b 与地形高程图（高山、郁郁葱葱的山坡、河谷）进行物理光照融合，
+            // 确保能与真实图像完全对应上！
+            const pxR = cell.r;
+            const pxG = cell.g;
+            const pxB = cell.b;
+
+            // 图像光泽分量
+            const blendRatio = 0.52; // 像素色彩占比
+            const r = Math.round(pxR * blendRatio + (224 - gradVal * 170) * (1 - blendRatio));
+            const g = Math.round(pxG * blendRatio + (242 - gradVal * 150) * (1 - blendRatio));
+            const b = Math.round(pxB * blendRatio + (254 - gradVal * 130) * (1 - blendRatio));
+            return `rgb(${Math.max(0, Math.min(255, r))},${Math.max(0, Math.min(255, g))},${Math.max(0, Math.min(255, b))})`;
+        };
 
         // 画家算法深度排序 (x + y 从小到大从远到近绘制以实现正确遮挡)
         const cellItems = cells.map((cell, index) => ({ cell, index }))
@@ -2244,50 +2373,47 @@
 
         const columnsHtml = cellItems.map(({ cell, index }) => {
             const gradVal = gradientSource?.[index] ?? 0;
-            // 梯度就是海拔 Z
-            const elevation = gradVal * 0.95;
             const label = options.labels ? options.labels[index] : null;
             const isActive = activeSet.has(index);
             const isBoundary = label === -1;
 
-            // 柱体顶部中心的 3D 绝对投影点
+            // 获取四个顶点以及邻接点的 Z 高程，实现共享顶点的平滑网格渲染 (消除积木的方格梯级感)
             const cx = padX + (cell.x - cell.y) * cellHalfW;
-            const cy = padY + (cell.x + cell.y) * cellHalfH - elevation * 56;
+            const cy = padY + (cell.x + cell.y) * cellHalfH;
 
-            // 柱子顶端等轴测菱形面片顶点
-            const pTop = `${cx},${cy - cellHalfH}`;
-            const pRight = `${cx + cellHalfW},${cy}`;
-            const pBottom = `${cx},${cy + cellHalfH}`;
-            const pLeft = `${cx - cellHalfW},${cy}`;
-            const topPoints = `${pTop} ${pRight} ${pBottom} ${pLeft}`;
+            // 计算该网格四个顶点的平滑高程 (双线性平滑插值/环绕点平均)
+            const { x, y } = cell;
+            const zTop = getZ(x, y);
+            const zRight = getZ(x + 1, y);
+            const zBottom = getZ(x + 1, y + 1);
+            const zLeft = getZ(x, y + 1);
 
-            // 基平面的垂直投影基点 (Z=0 时的高度)
-            const baseCy = padY + (cell.x + cell.y) * cellHalfH;
+            // 四点投影坐标 (以连续曲面拼接取代纯立方积木)
+            const ptTopX = cx;
+            const ptTopY = cy - cellHalfH - zTop;
 
-            // 左右两个侧面的闭合多边形坐标点
-            const leftFace = `${cx - cellHalfW},${cy} ${cx - cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH} ${cx},${cy + cellHalfH}`;
-            const rightFace = `${cx},${cy + cellHalfH} ${cx},${baseCy + cellHalfH} ${cx + cellHalfW},${baseCy} ${cx + cellHalfW},${cy}`;
+            const ptRightX = cx + cellHalfW;
+            const ptRightY = cy - zRight;
 
-            let surfaceColor = "#cbd5e1";
-            if (options.scores) {
-                const gradCoeff = options.scores[index] ?? 0;
-                surfaceColor = scoreGradientColor(gradCoeff);
-            } else if (label > 0) {
-                surfaceColor = labelFill3D(label);
-            } else {
-                surfaceColor = elevationColor(gradVal);
-            }
+            const ptBottomX = cx;
+            const ptBottomY = cy + cellHalfH - zBottom;
 
-            if (isBoundary) {
-                // 红色山脊/分水岭
-                surfaceColor = "#ef4444";
-            } else if (isActive) {
-                // 扩张水流边际 (绿色)
-                surfaceColor = "#10b981";
-            }
+            const ptLeftX = cx - cellHalfW;
+            const ptLeftY = cy - zLeft;
 
-            const sideLeftColor = adjustLight(surfaceColor, -18);
-            const sideRightColor = adjustLight(surfaceColor, -32);
+            const topPoints = `${ptTopX.toFixed(1)},${ptTopY.toFixed(1)} ${ptRightX.toFixed(1)},${ptRightY.toFixed(1)} ${ptBottomX.toFixed(1)},${ptBottomY.toFixed(1)} ${ptLeftX.toFixed(1)},${ptLeftY.toFixed(1)}`;
+
+            // 基平面的垂直投影基点 (Z=0)
+            const baseCy = padY + (x + y) * cellHalfH;
+            const baseBottomY = baseCy + cellHalfH;
+
+            // 侧边折角阴影拉伸
+            const leftFace = `${ptLeftX.toFixed(1)},${ptLeftY.toFixed(1)} ${ptLeftX.toFixed(1)},${baseCy.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${cx.toFixed(1)},${ptBottomY.toFixed(1)}`;
+            const rightFace = `${cx.toFixed(1)},${ptBottomY.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${ptRightX.toFixed(1)},${baseCy.toFixed(1)} ${ptRightX.toFixed(1)},${ptRightY.toFixed(1)}`;
+
+            const surfaceColor = getCellBaseColor(index, cell, gradVal, label, isActive, isBoundary);
+            const sideLeftColor = adjustLight(surfaceColor, -24);
+            const sideRightColor = adjustLight(surfaceColor, -42);
 
             let seedMarkerHtml = "";
             if (seedCells.has(index)) {
@@ -2295,10 +2421,12 @@
                 const isFg = seed.type === "fg" || seed.label === 1 || seed.label === 2;
                 const text = seed.text || (seed.type === "bg" ? "B" : "F");
                 const seedColor = isFg ? "#2563eb" : "#475569";
+                const seedR = Math.min(8.5, cellHalfW * 0.95);
+                const seedFont = Math.min(9, cellHalfW * 0.95);
                 seedMarkerHtml = `
-                    <g transform="translate(${cx.toFixed(1)}, ${(cy - 8).toFixed(1)})" class="seg-3d-seed">
-                        <circle cx="0" cy="0" r="7.5" fill="${seedColor}" stroke="#fff" stroke-width="1.2" />
-                        <text x="0" y="3" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle" fill="#fff">${text}</text>
+                    <g transform="translate(${cx.toFixed(1)}, ${(ptTopY + cellHalfH - seedR - 2).toFixed(1)})" class="seg-3d-seed">
+                        <circle cx="0" cy="0" r="${seedR.toFixed(1)}" fill="${seedColor}" stroke="#fff" stroke-width="1.2" />
+                        <text x="0" y="${(seedFont * 0.35).toFixed(1)}" font-size="${seedFont.toFixed(1)}" font-family="monospace" font-weight="900" text-anchor="middle" fill="#fff">${text}</text>
                     </g>
                 `;
             }
@@ -2306,13 +2434,13 @@
             return `
                 <g class="seg-3d-column">
                     <!-- 基海平面投影黑气泡 -->
-                    <polygon points="${cx - cellHalfW},${baseCy} ${cx},${baseCy - cellHalfH} ${cx + cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH}" fill="rgba(15, 23, 42, 0.05)" />
+                    <polygon points="${cx - cellHalfW},${baseCy} ${cx},${baseCy - cellHalfH} ${cx + cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH}" fill="rgba(15, 23, 42, 0.03)" />
                     <!-- 3D 柱体左下侧面（偏暗防光阴影） -->
                     <polygon points="${leftFace}" fill="${sideLeftColor}" />
                     <!-- 3D 柱体右下侧面（深暗背光阴影） -->
                     <polygon points="${rightFace}" fill="${sideRightColor}" />
                     <!-- 顶端高低起伏的高程面 -->
-                    <polygon points="${topPoints}" fill="${surfaceColor}" stroke="${adjustLight(surfaceColor, 6)}" stroke-width="0.3" />
+                    <polygon points="${topPoints}" fill="${surfaceColor}" stroke="${surfaceColor}" stroke-width="0.45" stroke-linejoin="round" />
                     ${seedMarkerHtml}
                 </g>
             `;
@@ -3651,13 +3779,40 @@
     }
 
     function gradientForModel(model) {
-        return model.cells.map((cell, index) => {
+        // 先生成原始高程梯度
+        const rawGrad = model.cells.map((cell, index) => {
             const diffs = neighborIndexes(index, model.cols, model.rows).map((next) => Math.abs(cell.gray - model.cells[next].gray) / 255);
             return diffs.reduce((sum, value) => sum + value, 0) / Math.max(1, diffs.length);
         });
+
+        // 迭代跑 3 次均值滤波让梯度地形平滑无尖锐刺突，显现出圆滑绵延的高山峡谷
+        let smoothed = [...rawGrad];
+        for (let k = 0; k < 3; k++) {
+            const temp = new Float32Array(smoothed.length);
+            for (let i = 0; i < smoothed.length; i++) {
+                const neighbors = neighborIndexes(i, model.cols, model.rows);
+                let sum = smoothed[i] * 1.5; // 当前元素加权
+                let count = 1.5;
+                neighbors.forEach((next) => {
+                    sum += smoothed[next];
+                    count++;
+                });
+                temp[i] = sum / count;
+            }
+            smoothed = Array.from(temp);
+        }
+
+        // 归一化并小幅提升拉伸对比度
+        const max = Math.max(...smoothed) || 1;
+        const min = Math.min(...smoothed) || 0;
+        return smoothed.map((v) => {
+            const norm = (v - min) / (max - min || 1);
+            // 压低谷底、拔高山顶
+            return Math.pow(norm, 1.25);
+        });
     }
 
-    function buildWatershedCore(model = buildSampleGrid(16, 10)) {
+    function buildWatershedCore(model = buildSampleGrid(30, 20)) {
         const gradient = gradientForModel(model);
         const markerDefs = [
             { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
@@ -3763,7 +3918,7 @@
 
     function buildWatershedDemo() {
         const core = buildWatershedCore();
-        const denseCore = buildWatershedCore(buildPixelModel(112, 48, 32));
+        const denseCore = buildWatershedCore(buildPixelModel(140, 60, 40));
         const gradientScores = core.gradient.map((value) => value * 2 - 1);
         const denseGradientScores = denseCore.gradient.map((value) => value * 2 - 1);
         const props = propsFromLabelMap(core.model, core.labels);
@@ -3925,7 +4080,7 @@
 
     function buildRegionsDemo() {
         const core = buildWatershedCore();
-        const denseCore = buildWatershedCore(buildPixelModel(112, 48, 32));
+        const denseCore = buildWatershedCore(buildPixelModel(140, 60, 40));
         const components = connectedComponents(core.model, core.labels);
         const denseComponents = connectedComponents(denseCore.model, denseCore.labels);
         const props = components.props;
