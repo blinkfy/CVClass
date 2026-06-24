@@ -29,7 +29,7 @@
         </label>
 
         <!-- Upload -->
-        <div class="vision-field">
+        <div class="vision-field" data-yolo-only>
             <span>上传图片（覆盖样例）</span>
             <div class="det-upload-box">
                 <label class="det-upload-label" for="detUploadInput">
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Backend selector -->
-        <label class="vision-field">
+        <label class="vision-field" data-yolo-only>
             <span>推理后端</span>
             <select data-det-backend>
                 <option value="webgpu" selected>WebGPU</option>
@@ -53,15 +53,13 @@
         <div class="vision-field">
             <span>检测视图</span>
             <div class="overview-segmented-control detection-mode-toggle" aria-label="检测视图">
-                <button class="is-active" type="button" data-det-mode="yolo">YOLO 推理与 NMS</button>
-                <button type="button" data-det-mode="rcnn">R-CNN 流程</button>
-                <button type="button" data-det-mode="roi">ROI Pooling</button>
-                <button type="button" data-det-mode="rpn">RPN Anchor</button>
+                <button class="is-active" type="button" data-det-mode="yolo">真实推理：YOLO 检测</button>
+                <button type="button" data-det-mode="rcnn">机制拆解：R-CNN 流程</button>
             </div>
         </div>
 
         <!-- Runtime metrics -->
-        <div class="vision-kv-grid">
+        <div class="vision-kv-grid" data-yolo-only>
             <div><span>模型状态</span><strong data-det-model-status>未加载</strong></div>
             <div><span>输入尺寸</span><strong data-det-input-size>640 × 640</strong></div>
             <div><span>推理耗时</span><strong data-det-inference-time>--</strong></div>
@@ -85,7 +83,7 @@
             <span>显示高置信度过滤框</span>
             <input type="checkbox" data-det-show-low checked>
         </label>
-        <p class="vision-hint">当前模型检测框数…</p>
+        <p class="vision-hint">YOLO 显示真实推理候选；R-CNN 显示 proposal 生命周期。</p>
 
         <!-- Counts -->
         <div class="vision-metric-grid">
@@ -119,7 +117,8 @@
         </div>
 
         <!-- Step label -->
-        <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 6</div>
+        <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 7</div>
+        <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
 
         <!-- Canvas area -->
         <div class="detection-real-stage">
@@ -154,8 +153,8 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3 id="detNotesTitle">Process Notes</h3>
-                <p id="detNotesSubtitle">IoU / NMS DECISION</p>
+                <h3 id="detNotesTitle">后处理步骤说明</h3>
+                <p id="detNotesSubtitle">POST-PROCESS NOTES</p>
             </div>
         </div>
         <!-- Tutorial narrative -->
@@ -170,10 +169,11 @@
 <ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
     <li data-det-phase="image"><span>1</span><div><strong>Image</strong><small>Image Loaded</small></div></li>
     <li data-det-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Letterbox Resize</small></div></li>
-    <li data-det-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>ONNX Forward</small></div></li>
-    <li data-det-phase="candidate"><span>4</span><div><strong>Candidate Boxes</strong><small>Decoded Anchors</small></div></li>
-    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence Filter</strong><small>Score Threshold</small></div></li>
-    <li data-det-phase="nms"><span>6</span><div><strong>IoU / NMS</strong><small>Final Detections</small></div></li>
+    <li data-det-phase="inference"><span>3</span><div><strong>Inference</strong><small>ONNX Forward</small></div></li>
+    <li data-det-phase="decode"><span>4</span><div><strong>Decode</strong><small>rawOutput to boxes</small></div></li>
+    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence</strong><small>Score Threshold</small></div></li>
+    <li data-det-phase="nms"><span>6</span><div><strong>NMS</strong><small>IoU Matrix</small></div></li>
+    <li data-det-phase="final"><span>7</span><div><strong>Final</strong><small>Detections</small></div></li>
 </ol>
 
 </div><!-- /data-detection-lab -->

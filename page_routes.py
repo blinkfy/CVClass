@@ -75,8 +75,8 @@ def register_page_routes(app, get_model_status):
                 return "rcnn"
             active_nav = active_nav or detection_family()
             nav = [
-                {"key": "yolo", "label": "YOLO 推理与 NMS", "href": url_for("object_detection_yolo_page")},
-                {"key": "rcnn", "label": "R-CNN 系列机制", "href": url_for("object_detection_rcnn_page")},
+                {"key": "yolo", "label": "真实推理：YOLO 检测", "href": url_for("object_detection_yolo_page")},
+                {"key": "rcnn", "label": "机制拆解：R-CNN 流程", "href": url_for("object_detection_rcnn_page")},
             ]
         else:
             requested_view = request.args.get("view")

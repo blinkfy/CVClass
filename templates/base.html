@@ -107,8 +107,8 @@
             </div>
             <a class="{{ 'active' if active_page == 'object_detection' else '' }}" href="{{ url_for('object_detection_alias_page') }}">目标检测</a>
             <div class="sidebar-subnav" aria-label="目标检测子页面">
-                <a class="{{ 'active' if request.path == url_for('object_detection_alias_page') or request.path == url_for('object_detection_yolo_page') else '' }}" href="{{ url_for('object_detection_yolo_page') }}">YOLO 推理与 NMS</a>
-                <a class="{{ 'active' if request.path == url_for('object_detection_rcnn_page') else '' }}" href="{{ url_for('object_detection_rcnn_page') }}">R-CNN 系列机制</a>
+                <a class="{{ 'active' if request.path == url_for('object_detection_alias_page') or request.path == url_for('object_detection_yolo_page') else '' }}" href="{{ url_for('object_detection_yolo_page') }}">真实推理：YOLO 检测</a>
+                <a class="{{ 'active' if request.path == url_for('object_detection_rcnn_page') else '' }}" href="{{ url_for('object_detection_rcnn_page') }}">机制拆解：R-CNN 流程</a>
             </div>
             <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('semantic_segmentation_alias_page') }}">语义分割</a>
             <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('instance_segmentation_alias_page') }}">实例分割</a>

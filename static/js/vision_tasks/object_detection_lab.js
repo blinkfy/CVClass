@@ -79,6 +79,7 @@
         candidateTable: $("[data-det-candidate-table]"),
         runtimeStats: $("[data-det-runtime-stats]"),
         classStats: $("[data-det-class-stats]"),
+        pipeline: $("[data-det-pipeline]"),
         stepper: document.querySelector("[data-det-stepper]"),
         stepperItems: [...document.querySelectorAll("[data-det-stepper] [data-det-phase]")]
     };
@@ -86,20 +87,31 @@
     const yoloStepper = [
         {id: "image", title: "Image", detail: "Image Loaded"},
         {id: "preprocess", title: "Preprocess", detail: "Letterbox Resize"},
-        {id: "inference", title: "Model Inference", detail: "ONNX Forward"},
-        {id: "candidate", title: "Candidate Boxes", detail: "Decoded Anchors"},
-        {id: "confidence", title: "Confidence Filter", detail: "Score Threshold"},
-        {id: "nms", title: "IoU / NMS", detail: "Final Detections"}
+        {id: "inference", title: "Inference", detail: "ONNX Forward"},
+        {id: "decode", title: "Decode", detail: "rawOutput to boxes"},
+        {id: "confidence", title: "Confidence", detail: "Score Threshold"},
+        {id: "nms", title: "NMS", detail: "IoU Matrix"},
+        {id: "final", title: "Final", detail: "Detections"}
+    ];
+
+    const yoloDecodePipeline = [
+        {id: "raw", title: "rawOutput [1,84,8400]", detail: "84 = xywh + 80 scores"},
+        {id: "points", title: "candidate points", detail: "8400 dense locations"},
+        {id: "xywh", title: "xywh + class scores", detail: "best class per point"},
+        {id: "threshold", title: "threshold", detail: "drop low scores"},
+        {id: "nms", title: "NMS", detail: "IoU suppress"},
+        {id: "final", title: "final boxes", detail: "N x detection"}
     ];
 
     const modeSteppers = {
         rcnn: [
             {id: "image", title: "Image", detail: "input"},
             {id: "proposals", title: "Proposals", detail: "selective search"},
-            {id: "features", title: "CNN Features", detail: "per proposal"},
-            {id: "classifier", title: "Classifier", detail: "SVM scores"},
-            {id: "regression", title: "BBox Regression", detail: "dx dy dw dh"},
-            {id: "nms", title: "NMS", detail: "final boxes"}
+            {id: "crop", title: "Crop / ROI", detail: "crop + warp"},
+            {id: "features", title: "CNN Feature", detail: "per proposal"},
+            {id: "classifier", title: "Classifier", detail: "class score"},
+            {id: "regression", title: "BBox Regression", detail: "refine box"},
+            {id: "nms", title: "NMS", detail: "deduplicate"}
         ],
         roi: [
             {id: "image", title: "Image", detail: "candidate box"},
@@ -139,6 +151,53 @@
             </li>
         `).join("");
         els.stepperItems = [...els.stepper.querySelectorAll("[data-det-phase]")];
+    }
+
+    function setModeTheme(mode) {
+        root.dataset.detModeView = mode === "yolo" ? "yolo" : "rcnn";
+    }
+
+    function rawOutputShapeText() {
+        const shape = state.inferenceResult?.rawOutputShape;
+        return shape?.length ? `[${shape.join(", ")}]` : "[1, 84, 8400]";
+    }
+
+    function rawOutputShapeNote() {
+        return state.inferenceResult?.rawOutputShape?.length ? rawOutputShapeText() : `${rawOutputShapeText()} expected`;
+    }
+
+    function findBoxById(boxes, id) {
+        return boxes.find((box) => box.id === id) || null;
+    }
+
+    function renderYoloDecodePipeline(step, result) {
+        if (!els.pipeline) return;
+        const activeIndexByPhase = {
+            image: -1,
+            preprocess: -1,
+            inference: 0,
+            decode: 2,
+            confidence: 3,
+            nms: 4,
+            final: 5
+        };
+        const activeIndex = activeIndexByPhase[step.phase] ?? 0;
+        els.pipeline.hidden = false;
+        els.pipeline.innerHTML = `
+            <div class="det-output-pipeline-head">
+                <span>MODEL OUTPUT DECODE</span>
+                <strong>${esc(rawOutputShapeText())} → final detections</strong>
+                <em>${result.candidates.length + result.low.length} decoded / ${result.kept.length} final</em>
+            </div>
+            <div class="det-output-pipeline-track">
+                ${yoloDecodePipeline.map((item, index) => `
+                    <article class="${index < activeIndex ? "is-done" : ""} ${index === activeIndex ? "is-current" : ""}">
+                        <span>${index + 1}</span>
+                        <strong>${esc(item.title)}</strong>
+                        <small>${esc(item.detail)}</small>
+                    </article>
+                `).join("")}
+            </div>`;
     }
 
     function boxStyle(box, width, height) {
@@ -254,7 +313,7 @@
             makeStep("image", "image", "输入图像已加载，等待进入 letterbox 与 tensor 构造。", {}, keptIds, suppressedIds, lowIds, candidates),
             makeStep("preprocess", "preprocess", "执行 letterbox resize、normalize 与 HWC → CHW。", {}, keptIds, suppressedIds, lowIds, candidates),
             makeStep("inference", "inference", "ONNX Runtime Web 已输出 raw tensor。", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("candidate", "candidate", "展示 decode 后的 raw candidate boxes。", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("decode", "decode", "将 rawOutput 的 8400 个位置解码为 xywh 与类别得分候选框。", {}, keptIds, suppressedIds, lowIds, candidates),
             makeStep("confidence", "confidence", "按 confidence threshold 分离候选框与低置信度框。", {}, keptIds, suppressedIds, lowIds, candidates)
         ];
 
@@ -315,13 +374,13 @@
             }
         }
 
-        steps.push(makeStep("final", "nms", "NMS 后处理完成，输出最终检测结果。", {}, keptIds, suppressedIds, lowIds, candidates));
+        steps.push(makeStep("final", "final", "NMS 后处理完成，输出最终检测结果。", {}, keptIds, suppressedIds, lowIds, candidates));
         return {sample: s, boxes: visibleBoxes, low, candidates, candidateIds, kept, keptIds, suppressed, suppressedIds, comparisons, steps};
     }
 
     function statusForBox(box, step, result) {
         if (step.lowIds.has(box.id)) return "low";
-        if (step.type === "candidate") return "raw";
+        if (step.type === "decode") return "raw";
         if (step.type === "confidence" || ["image", "preprocess", "inference"].includes(step.type)) {
             return result.candidateIds.has(box.id) ? "candidate" : "low";
         }
@@ -374,7 +433,7 @@
 
     function renderRuntimeMetrics(result) {
         const inference = state.inferenceResult;
-        const shape = inference?.rawOutputShape?.length ? `[${inference.rawOutputShape.join(", ")}]` : "--";
+        const shape = rawOutputShapeNote();
         const source = state.source === "preset" ? "Preset JSON" : "ONNX Runtime Web";
         const decoded = result.candidates.length + result.low.length;
         els.inputSize.textContent = inference?.inputSize ? `${inference.inputSize} × ${inference.inputSize}` : "640 × 640";
@@ -388,6 +447,8 @@
         els.stageFinal.textContent = `Final: ${result.kept.length}`;
         els.runtimeStats.innerHTML = `
             <div><dt>rawOutputShape</dt><dd>${esc(shape)}</dd></div>
+            <div><dt>vector layout</dt><dd>4 xywh + 80 class scores</dd></div>
+            <div><dt>candidate points</dt><dd>8400 dense locations</dd></div>
             <div><dt>decoded candidate count</dt><dd>${decoded}</dd></div>
             <div><dt>confidence filtered count</dt><dd>${result.candidates.length}</dd></div>
             <div><dt>NMS kept count</dt><dd>${result.kept.length}</dd></div>
@@ -435,61 +496,114 @@
     function renderNotes(step, result) {
         const s = result.sample;
         const inference = state.inferenceResult;
-        const shape = inference?.rawOutputShape?.length ? `[${inference.rawOutputShape.join(", ")}]` : "--";
+        const shape = rawOutputShapeText();
+        const decodedCount = result.candidates.length + result.low.length;
+        const sampleCandidate = result.candidates[0] || result.low[0] || null;
+        const currentBox = findBoxById(result.boxes, step.currentBoxId);
+        const compareBox = findBoxById(result.boxes, step.compareBoxId);
+        const finalPreview = result.kept.slice(0, 2).map((box) => ({
+            bbox: box.bbox,
+            score: Number(box.score.toFixed(3)),
+            class: box.class
+        }));
 
         if (els.notesTitle) {
-            els.notesTitle.textContent = step.phase === "image" ? "输入与预处理" :
-                                         step.phase === "preprocess" ? "预处理 (Letterbox)" :
-                                         step.phase === "inference" ? "模型推理" :
-                                         step.phase === "candidate" ? "获取候选框" :
-                                         step.phase === "confidence" ? "置信度过滤" :
-                                         "IoU 与 NMS";
+            els.notesTitle.textContent = "后处理步骤说明";
         }
-        
+
         if (els.notesSubtitle) {
-            els.notesSubtitle.textContent = step.message || step.phase;
+            els.notesSubtitle.textContent = "POST-PROCESS NOTES";
         }
 
         let tutorialContent = "";
+        let notesContent = "";
 
         if (step.phase === "image") {
-            tutorialContent = `<p>载入原始图像。计算机此时看到的只是一大片 RGB 像素矩阵。接下来我们要把它送入神经网络，让它找出图中的所有目标物体。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>输入图像尺寸</dt><dd>${s.width} × ${s.height}</dd></div></dl>`;
+            tutorialContent = `<p><span class="det-note-stage">Image</span><strong>输入图像</strong>仍是原始 RGB 像素，后续会被 letterbox 到模型固定输入尺寸，再送入 ONNX Runtime。</p>`;
+            notesContent = `<dl>
+                <div><dt>input image</dt><dd>${s.width} × ${s.height}</dd></div>
+                <div><dt>next tensor</dt><dd>[1, 3, 640, 640]</dd></div>
+                <div><dt>target path</dt><dd>image → preprocess → inference → decode</dd></div>
+            </dl>`;
         } else if (step.phase === "preprocess") {
-            tutorialContent = `<p><strong>预处理（Letterbox）</strong>：因为神经网络通常需要固定尺寸的输入（如 640×640）。算法会对原图进行等比缩放并填充灰边，防止变形，同时完成 HWC 到 CHW 维度的转置。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>输入图像尺寸</dt><dd>${s.width} × ${s.height}</dd></div><div><dt>letterbox 后尺寸</dt><dd>640 × 640</dd></div><div><dt>normalization</dt><dd>RGB / 255</dd></div><div><dt>layout</dt><dd>HWC → CHW</dd></div><div><dt>tensor shape</dt><dd>[1, 3, 640, 640]</dd></div></dl>`;
+            tutorialContent = `<p><span class="det-note-stage">Preprocess</span><strong>Letterbox + Normalize</strong>保留原图比例，补边到 640×640，并把 HWC 像素布局转成模型需要的 CHW tensor。</p>`;
+            notesContent = `<dl>
+                <div><dt>letterbox</dt><dd>${s.width} × ${s.height} → 640 × 640</dd></div>
+                <div><dt>normalization</dt><dd>RGB / 255</dd></div>
+                <div><dt>layout</dt><dd>HWC → CHW</dd></div>
+                <div><dt>model input</dt><dd>[1, 3, 640, 640]</dd></div>
+            </dl>`;
         } else if (step.phase === "inference") {
-            tutorialContent = `<p><strong>卷积网络推理中...</strong> ONNX Runtime 正在运算。模型最后输出一个庞大的预测矩阵。图上已生成成千上万个预测节点，每个节点包含位置、宽高和置信度。</p>`;
-            els.notes.innerHTML = `<p>YOLO 输出说明：[1,84,8400] 表示 8400 个候选位置，每个位置包含 4 个框参数和 80 个类别得分。</p><dl><div><dt>推理后端</dt><dd>${esc(state.activeBackend || "--")}</dd></div><div><dt>rawOutputShape</dt><dd>${esc(shape)}</dd></div><div><dt>inference time</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div></dl>`;
-        } else if (step.phase === "candidate") {
-            tutorialContent = `<p><strong>解码出候选框</strong>。看看这团乱麻！这就是深度网络最原始的输出。对于每一个物体，网络可能在不同尺度上重复预测了几十次。我们需要把它清理干净。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>解码候选框数量</dt><dd>${result.candidates.length + result.low.length}</dd></div></dl>`;
+            tutorialContent = `<p><span class="det-note-stage">Inference</span><strong>ONNX inference</strong>输出 dense tensor。${esc(shape)} 表示 8400 个候选点，每个点有 4 个 xywh 参数和 80 个类别分数。</p>`;
+            notesContent = `<dl>
+                <div><dt>backend</dt><dd>${esc(state.activeBackend || "--")}</dd></div>
+                <div><dt>rawOutputShape</dt><dd>${esc(rawOutputShapeNote())}</dd></div>
+                <div><dt>layout meaning</dt><dd>84 = 4 bbox + 80 class scores</dd></div>
+                <div><dt>inference time</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
+            </dl>`;
+        } else if (step.phase === "decode") {
+            tutorialContent = `<p><span class="det-note-stage">Decode</span><strong>rawOutput → candidates</strong>遍历 8400 个点，取每个点的 xywh 与最大类别分数，再把中心点宽高换算成图像坐标 bbox。</p>`;
+            notesContent = `<dl>
+                <div><dt>raw tensor</dt><dd>${esc(shape)}</dd></div>
+                <div><dt>candidate points</dt><dd>8400</dd></div>
+                <div><dt>decoded boxes</dt><dd>${decodedCount}</dd></div>
+                <div><dt>sample candidate</dt><dd>${sampleCandidate ? `#${sampleCandidate.id} ${esc(sampleCandidate.class)} ${sampleCandidate.score.toFixed(3)}` : "--"}</dd></div>
+                <div><dt>box transform</dt><dd>cx, cy, w, h → x1, y1, x2, y2</dd></div>
+            </dl>`;
         } else if (step.phase === "confidence") {
-            tutorialContent = `<p><strong>置信度过滤</strong>：第一道筛子。抛弃连模型自己都觉得“这里大概率什么都没有”的底分预测框（得分不足置信度阈值），瞬间清理掉 99% 的垃圾背景。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>解码候选框数量</dt><dd>${result.candidates.length + result.low.length}</dd></div><div><dt>当前 confidence threshold</dt><dd>${state.conf.toFixed(2)}</dd></div><div><dt>高于阈值</dt><dd>${result.candidates.length}</dd></div><div><dt>低置信度过滤</dt><dd>${result.low.length}</dd></div></dl>`;
+            tutorialContent = `<p><span class="det-note-stage">Confidence</span><strong>阈值过滤</strong>先删除低置信度框。低于 ${state.conf.toFixed(2)} 的候选框会变灰并淡出，只把高分候选送入 NMS。</p>`;
+            notesContent = `<dl>
+                <div><dt>decoded candidates</dt><dd>${decodedCount}</dd></div>
+                <div><dt>threshold</dt><dd>${state.conf.toFixed(2)}</dd></div>
+                <div><dt>pass filter</dt><dd>${result.candidates.length}</dd></div>
+                <div><dt>filtered low score</dt><dd>${result.low.length}</dd></div>
+                <div><dt>next stage</dt><dd>sort by score → class-wise NMS</dd></div>
+            </dl>`;
         } else if (step.type === "final") {
-            tutorialContent = `<p><strong>推断完成</strong>：通过 NMS 找到了各个物体真正的目标边框，最终输出了结果！</p>`;
+            tutorialContent = `<p><span class="det-note-stage">Final</span><strong>最终检测输出</strong>只保留 NMS 后的稳定框。页面输出结构对应前端可消费的 detection 数组。</p>`;
             const avg = result.kept.length ? result.kept.reduce((sum, box) => sum + box.score, 0) / result.kept.length : 0;
             const classText = [...new Set(result.kept.map((box) => box.class))].map((name) => `${name}: ${result.kept.filter((box) => box.class === name).length}`).join(" / ") || "--";
-            els.notes.innerHTML = `<dl><div><dt>最终检测数量</dt><dd>${result.kept.length}</dd></div><div><dt>各类别数量</dt><dd>${esc(classText)}</dd></div><div><dt>平均置信度</dt><dd>${avg.toFixed(3)}</dd></div><div><dt>当前输出结构</dt><dd>N × [x1, y1, x2, y2, score, class]</dd></div></dl>`;
+            notesContent = `<dl>
+                <div><dt>final detections</dt><dd>${result.kept.length}</dd></div>
+                <div><dt>class counts</dt><dd>${esc(classText)}</dd></div>
+                <div><dt>avg confidence</dt><dd>${avg.toFixed(3)}</dd></div>
+                <div><dt>output schema</dt><dd>{bbox, score, class}</dd></div>
+            </dl>
+            <div class="det-final-output"><strong>final detections preview</strong><code>${esc(JSON.stringify(finalPreview))}</code></div>`;
         } else {
             const c = step.comparison;
             if (c) {
-                tutorialContent = `<p><strong>非极大值抑制 (NMS)</strong>：计算当前最高分“霸主”与其他候选框的交并比 (IoU)。如果 IoU 过大，说明代表同一个物体，直接删掉。</p>`;
-                els.notes.innerHTML = `<p><strong>IoU 公式：</strong>Area(A ∩ B) / Area(A ∪ B)</p><div class="detection-pair"><strong>框 A（当前霸主）</strong><span>${esc(c.a.class)} ${c.a.score.toFixed(2)}</span><code>[${c.a.bbox.join(", ")}]</code></div><div class="detection-pair"><strong>框 B（当前比较）</strong><span>${esc(c.b.class)} ${c.b.score.toFixed(2)}</span><code>[${c.b.bbox.join(", ")}]</code></div><dl><div><dt>交集面积</dt><dd>${Math.round(c.inter.area)} px²</dd></div><div><dt>判定</dt><dd>${c.suppress ? "同类框重叠过高，删除框 B" : "保留候选项"}</dd></div></dl>`;
+                tutorialContent = `<p><span class="det-note-stage">IoU / NMS</span><strong>当前比较 A/B</strong>计算 IoU = Area(A ∩ B) / Area(A ∪ B)。当 IoU ≥ ${state.iou.toFixed(2)} 时，低分框 B 会被 NMS 删除。</p>`;
+                notesContent = `<div class="det-iou-equation">
+                    <span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${Math.round(c.inter.area)} / ${Math.round(c.union)}</small>
+                </div>
+                <div class="detection-pair"><strong>框 A</strong><span>${esc(c.a.class)} ${c.a.score.toFixed(2)}</span><code>[${c.a.bbox.join(", ")}]</code></div>
+                <div class="detection-pair"><strong>框 B</strong><span>${esc(c.b.class)} ${c.b.score.toFixed(2)}</span><code>[${c.b.bbox.join(", ")}]</code></div>
+                <dl>
+                    <div><dt>matrix cell</dt><dd>A#${c.a.id} × B#${c.b.id}</dd></div>
+                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
+                    <div><dt>NMS decision</dt><dd>${c.suppress ? "删除框 B，红色虚线标记" : "暂时保留框 B"}</dd></div>
+                </dl>`;
             } else {
-                tutorialContent = `<p><strong>${esc(step.message)}</strong></p>`;
-                els.notes.innerHTML = "";
+                tutorialContent = `<p><span class="det-note-stage">NMS</span><strong>${esc(step.message)}</strong>当前候选没有同类高分框需要比较，先进入 kept set。</p>`;
+                notesContent = `<dl>
+                    <div><dt>current box</dt><dd>${currentBox ? `#${currentBox.id} ${esc(currentBox.class)} ${currentBox.score.toFixed(3)}` : "--"}</dd></div>
+                    <div><dt>kept set size</dt><dd>${step.keptIds.size}</dd></div>
+                    <div><dt>suppressed count</dt><dd>${step.suppressedIds.size}</dd></div>
+                    <div><dt>compare target</dt><dd>${compareBox ? `#${compareBox.id}` : "none"}</dd></div>
+                </dl>`;
             }
         }
 
         if (els.notesTutorial) {
             els.notesTutorial.innerHTML = tutorialContent;
         }
+        els.notes.innerHTML = notesContent;
     }
 
-    function demoBox(box, sample, kind, label) {
-        return `<div class="vision-bbox detection-demo-box detection-demo-box--${esc(kind)}" style="${boxStyle(box, sample.width, sample.height)}"><span>${esc(label)}</span></div>`;
+    function demoBox(box, sample, kind, label, extraClass = "", extraStyle = "") {
+        return `<div class="vision-bbox detection-demo-box detection-demo-box--${esc(kind)} ${esc(extraClass)}" style="${boxStyle(box, sample.width, sample.height)}${extraStyle}"><span>${esc(label)}</span></div>`;
     }
 
     function renderFeatureGrid(values = [], active = []) {
@@ -500,32 +614,94 @@
         }).join("")).join("")}</div>`;
     }
 
+    function renderClassifierBars(proposal = {}, active = false) {
+        const primaryClass = proposal.class && proposal.class !== "background" ? proposal.class : "person";
+        const bars = [
+            {label: primaryClass, value: Number(proposal.score) || 0.91},
+            {label: "background", value: primaryClass === "background" ? 0.62 : 0.12},
+            {label: "bus", value: primaryClass === "bus" ? 0.87 : 0.18}
+        ];
+        return `<div class="detection-classifier-bars ${active ? "is-active" : ""}">
+            ${bars.map((bar) => `<div><span>${esc(bar.label)}</span><b style="--score:${Math.max(0.04, Math.min(1, bar.value))}"></b><strong>${bar.value.toFixed(2)}</strong></div>`).join("")}
+        </div>`;
+    }
+
     function renderRcnnFlow(demo, step) {
         const proposals = demo.proposals || [];
         const activeProposal = proposals[0] || {};
         const offset = activeProposal.offset || {};
+        const refined = activeProposal.refined || activeProposal.bbox || [];
+        const phaseOrder = ["image", "proposals", "crop", "features", "classifier", "regression", "nms"];
+        const activeIndex = Math.max(0, phaseOrder.indexOf(step.id));
+        const isActive = (id) => phaseOrder.indexOf(id) <= activeIndex;
+        const isCurrent = (id) => step.id === id;
+        const feature = demo.roiPooling?.featureMap || [];
         const cards = [
-            ["Selective Search", "2k 类别无关候选区域", `${proposals.length} demo proposals`],
-            ["Crop / Warp", "每个 proposal 单独裁剪成 CNN 输入", "重复计算"],
-            ["CNN + SVM", "区域特征送入分类器", "class scores"],
-            ["BBox Regression", "用 dx,dy,dw,dh 修正框位置", `dx ${offset.dx ?? "--"} · dy ${offset.dy ?? "--"}`],
-            ["NMS", "对修正后的同类框做最终去重", "final detections"]
+            ["proposals", "Selective Search", "类别无关候选区域", `${proposals.length} demo proposals`],
+            ["crop", "Crop / Warp", "裁剪每个 proposal", "fixed CNN input"],
+            ["features", "CNN Feature", "区域图像进入 CNN", "feature vector"],
+            ["classifier", "Classifier", "判断类别或背景", `${activeProposal.class || "--"} ${Number(activeProposal.score || 0).toFixed(2)}`],
+            ["regression", "BBox Regression", "平移缩放原始框", `dx ${offset.dx ?? "--"} · dy ${offset.dy ?? "--"}`],
+            ["nms", "NMS", "删除重复 refined boxes", "final result"]
         ];
         return `
-            <div class="detection-demo-flow">
-                ${cards.map((card, index) => `<article class="${index <= state.rcnnStep ? "is-active" : ""}"><strong>${esc(card[0])}</strong><span>${esc(card[1])}</span><em>${esc(card[2])}</em></article>`).join("")}
+            <div class="detection-rcnn-evolution" aria-label="R-CNN 系列演化轴">
+                <article class="is-active"><span>R-CNN</span><strong>Selective Search</strong><small>proposal 后逐框 CNN</small></article>
+                <article class="${isActive("features") ? "is-active" : ""}"><span>Fast R-CNN</span><strong>ROI Pooling</strong><small>共享整图 feature map</small></article>
+                <article class="${isActive("proposals") ? "is-active" : ""}"><span>Faster R-CNN</span><strong>RPN Anchor</strong><small>学习式 proposal 生成</small></article>
             </div>
-            <div class="detection-regression-card">
-                <div><b>proposal</b><code>[${(activeProposal.bbox || []).join(", ")}]</code></div>
-                <div><b>ground truth</b><code>[${(demo.groundTruth?.[0]?.bbox || []).join(", ")}]</code></div>
-                <div><b>refined box</b><code>[${(activeProposal.refined || []).join(", ")}]</code></div>
-                <dl>
+            <div class="detection-demo-flow">
+                ${cards.map((card) => `<article class="${isActive(card[0]) ? "is-active" : ""} ${isCurrent(card[0]) ? "is-current" : ""}"><strong>${esc(card[1])}</strong><span>${esc(card[2])}</span><em>${esc(card[3])}</em></article>`).join("")}
+            </div>
+            <section class="detection-proposal-lifecycle">
+                <header>
+                    <span>当前 Proposal 生命周期</span>
+                    <strong>Proposal ${esc(activeProposal.id || "p1")}</strong>
+                    <em>原始框 → crop / warp → CNN feature → classifier → refined box → NMS</em>
+                </header>
+                <div class="detection-lifecycle-grid">
+                    <article class="${isActive("proposals") ? "is-active" : ""}">
+                        <span>原始框</span>
+                        <strong>[${(activeProposal.bbox || []).join(", ")}]</strong>
+                        <small>Selective Search 给出类别无关 proposal。</small>
+                    </article>
+                    <article class="${isActive("crop") ? "is-active" : ""}">
+                        <span>Crop / Warp</span>
+                        <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><i>crop</i><b>warp</b></div>
+                        <small>把 proposal 裁剪并缩放为 CNN 固定输入。</small>
+                    </article>
+                    <article class="${isActive("features") ? "is-active" : ""}">
+                        <span>CNN feature</span>
+                        ${renderFeatureGrid(feature, isActive("features") ? ["2-4", "3-4", "4-4"] : [])}
+                    </article>
+                    <article class="${isActive("classifier") ? "is-active" : ""}">
+                        <span>Classifier score</span>
+                        ${renderClassifierBars(activeProposal, isActive("classifier"))}
+                    </article>
+                    <article class="${isActive("regression") ? "is-active" : ""}">
+                        <span>BBox regression</span>
+                        <div class="detection-regression-track ${isActive("regression") ? "is-active" : ""}">
+                            <i class="is-before"></i><i class="is-after"></i>
+                            <b>original</b><b>refined</b>
+                        </div>
+                        <code>[${(activeProposal.bbox || []).join(", ")}] → [${refined.join(", ")}]</code>
+                    </article>
+                    <article class="${isActive("nms") ? "is-active" : ""}">
+                        <span>NMS result</span>
+                        <div class="detection-nms-result ${isActive("nms") ? "is-active" : ""}">
+                            <b>keep ${esc(activeProposal.id || "p1")}</b>
+                            <b class="is-suppressed">delete duplicate</b>
+                        </div>
+                        <small>同类 refined boxes 按 IoU 去重。</small>
+                    </article>
+                </div>
+                <dl class="detection-regression-offsets">
                     <div><dt>dx</dt><dd>${offset.dx ?? "--"}</dd></div>
                     <div><dt>dy</dt><dd>${offset.dy ?? "--"}</dd></div>
                     <div><dt>dw</dt><dd>${offset.dw ?? "--"}</dd></div>
                     <div><dt>dh</dt><dd>${offset.dh ?? "--"}</dd></div>
                 </dl>
-            </div>`;
+            </section>`;
     }
 
     function renderRoiFlow(demo, step) {
@@ -611,9 +787,24 @@
             ].join("");
         }
         if (step.id === "nms") {
-            return proposals.slice(0, 4).map((p) => demoBox({bbox: p.refined || p.bbox}, sample, "refined", `${p.class} ${p.score.toFixed(2)}`)).join("");
+            const p = proposals[0];
+            const duplicate = p?.bbox ? {bbox: [p.bbox[0] + 4, p.bbox[1] + 4, p.bbox[2] - 2, p.bbox[3] - 4]} : null;
+            return [
+                ...proposals.slice(0, 4).map((item) => demoBox({bbox: item.refined || item.bbox}, sample, "refined", `${item.class} ${item.score.toFixed(2)}`)),
+                duplicate ? demoBox(duplicate, sample, "nms-delete", "duplicate deleted") : ""
+            ].join("");
         }
-        return proposals.map((box) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`)).join("");
+        if (["crop", "features", "classifier"].includes(step.id)) {
+            const p = proposals[0];
+            return [
+                p ? demoBox(p, sample, "proposal-active", `${p.id} crop target`) : "",
+                ...proposals.slice(1).map((box, index) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`, "", `--proposal-delay:${(index + 1) * 90}ms;`))
+            ].join("");
+        }
+        if (step.id === "image") {
+            return gts.slice(0, 2).map((box) => demoBox(box, sample, "gt", `scene object ${box.class}`)).join("");
+        }
+        return proposals.map((box, index) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`, "", `--proposal-delay:${index * 90}ms;`)).join("");
     }
 
     function renderRcnnTable(demo) {
@@ -636,11 +827,91 @@
         const anchors = demo.anchors || [];
         const p = proposals[0] || {};
         const roi = demo.roiPooling || {};
+        if (state.detMode === "rcnn") {
+            const stageCopy = {
+                image: {
+                    stage: "Selective Search",
+                    text: "两阶段检测先看整张图像，但第一阶段不是 dense output decode，而是生成少量类别无关 proposals，降低后续分类搜索空间。",
+                    data: [
+                        ["input image", `${demoImageSample().width} × ${demoImageSample().height}`],
+                        ["stage 1", "proposal generation"],
+                        ["stage 2", "classify + refine each proposal"],
+                        ["active proposal", p.id || "--"]
+                    ]
+                },
+                proposals: {
+                    stage: "Selective Search",
+                    text: "Selective Search 根据颜色、纹理、区域相似性合并候选区域，产生 proposal p1、p2 等粗框；这些框还没有类别含义。",
+                    data: [
+                        ["proposal count", proposals.length],
+                        ["proposal p1 bbox", `[${(p.bbox || []).join(", ")}]`],
+                        ["proposal type", "class-agnostic region"],
+                        ["next", "crop / warp every proposal"]
+                    ]
+                },
+                crop: {
+                    stage: "Crop-Warp",
+                    text: "R-CNN 会把当前 proposal 从原图裁剪出来，并缩放到 CNN 固定输入尺寸。这个阶段解释 proposal 生命周期中的区域图像如何变成网络输入。",
+                    data: [
+                        ["proposal", p.id || "--"],
+                        ["raw bbox", `[${(p.bbox || []).join(", ")}]`],
+                        ["operation", "crop image patch + warp"],
+                        ["CNN input", "fixed-size region image"]
+                    ]
+                },
+                features: {
+                    stage: "CNN Feature",
+                    text: "裁剪后的 proposal 单独进入 CNN，得到区域 feature vector。早期 R-CNN 的核心成本就来自每个 proposal 都要重复跑 CNN。",
+                    data: [
+                        ["proposal", p.id || "--"],
+                        ["feature source", "cropped region"],
+                        ["feature role", "region descriptor"],
+                        ["compute cost", "per-proposal CNN"]
+                    ]
+                },
+                classifier: {
+                    stage: "Classifier",
+                    text: "区域 feature 进入分类器，输出 person、bus、background 等分数。分数高的 proposal 才继续参与 bbox regression 和后续 NMS。",
+                    data: [
+                        ["proposal", p.id || "--"],
+                        ["predicted class", p.class || "--"],
+                        ["classifier score", Number.isFinite(p.score) ? p.score.toFixed(2) : "--"],
+                        ["background handling", "low score or background proposal removed"]
+                    ]
+                },
+                regression: {
+                    stage: "BBox Regression",
+                    text: "BBox regressor 预测 dx、dy、dw、dh，把 Selective Search 的粗 proposal 平滑移动到更贴近目标的 refined box。",
+                    data: [
+                        ["original box", `[${(p.bbox || []).join(", ")}]`],
+                        ["offset", `dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}`],
+                        ["refined box", `[${(p.refined || []).join(", ")}]`],
+                        ["lifecycle", "proposal → refined detection"]
+                    ]
+                },
+                nms: {
+                    stage: "NMS",
+                    text: "第二阶段产生的 refined boxes 仍可能重复覆盖同一目标。NMS 在同类 refined boxes 上保留高分框，并删除重叠候选。",
+                    data: [
+                        ["NMS input", "classified refined boxes"],
+                        ["keep", `${p.id || "p1"} ${p.class || "--"} ${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}`],
+                        ["delete", "overlapped lower-score duplicate"],
+                        ["output", "final two-stage detections"]
+                    ]
+                }
+            };
+            const copy = stageCopy[step.id] || stageCopy.image;
+            els.notesTitle.textContent = "两阶段检测机制";
+            els.notesSubtitle.textContent = "TWO-STAGE NOTES";
+            els.notesTutorial.innerHTML = `<p><span class="det-note-stage">${esc(copy.stage)}</span><strong>${esc(step.title)}</strong>${esc(copy.text)}</p>`;
+            els.notes.innerHTML = `<dl>${copy.data.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>`;
+            return;
+        }
         const positiveCount = anchors.filter((anchor) => anchor.label === "positive").length;
         const negativeCount = anchors.filter((anchor) => anchor.label === "negative").length;
         const copy = {
             rcnn: {
-                title: "R-CNN 系列机制",
+                title: "两阶段检测机制",
                 tutorial: `<p><strong>当前机制解决的问题：</strong>滑动窗口位置、尺度和长宽比组合爆炸。R-CNN 用 proposal 先筛掉大量背景区域，再执行 crop / warp、CNN feature、classifier、bbox regression 与 NMS。</p>`,
                 subtitle: step.title,
                 data: `<dl>
@@ -686,11 +957,13 @@
     }
 
     function renderRcnnMode() {
+        setModeTheme("rcnn");
         updateModeButtons();
         const demo = demoData();
         const sample = demoImageSample();
         const step = activeRcnnStep();
         const steps = activeRcnnSteps();
+        if (els.pipeline) els.pipeline.hidden = true;
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
         const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
@@ -701,14 +974,18 @@
         els.overlay.innerHTML = demo.version ? renderRcnnOverlay(demo, sample, step) : "";
         els.total.textContent = String(state.detMode === "rpn" ? (demo.anchors || []).length : (demo.proposals || []).length);
         els.kept.textContent = String(state.detMode === "rpn" ? (demo.anchors || []).filter((a) => a.label === "positive").length : (demo.proposals || []).filter((p) => p.class !== "background").length);
-        els.stageSource.textContent = state.detMode === "rcnn" ? "R-CNN mechanism" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN RPN";
-        els.stageBackend.textContent = "Backend: preset demo data";
-        els.stageInference.textContent = "Inference: concept";
-        els.stageCandidates.textContent = `Candidates: ${els.total.textContent}`;
-        els.stageFinal.textContent = `Final: ${els.kept.textContent}`;
+        els.stageSource.textContent = state.detMode === "rcnn" ? "Two-stage proposal lifecycle" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN RPN";
+        els.stageBackend.textContent = state.detMode === "rcnn" ? "Proposal: Selective Search" : "Backend: preset demo data";
+        els.stageInference.textContent = state.detMode === "rcnn" ? "CNN head: conceptual" : "Inference: concept";
+        els.stageCandidates.textContent = state.detMode === "rcnn" ? `Proposals: ${els.total.textContent}` : `Candidates: ${els.total.textContent}`;
+        els.stageFinal.textContent = state.detMode === "rcnn" ? `Refined: ${els.kept.textContent}` : `Final: ${els.kept.textContent}`;
         els.stepLabel.textContent = `${step.title.toUpperCase()} · STEP ${state.rcnnStep + 1} / ${steps.length}`;
-        els.runtimeStats.innerHTML = `<div><dt>method</dt><dd>${esc(state.detMode)}</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>ground truth boxes</dt><dd>${(demo.groundTruth || []).length}</dd></div><div><dt>NMS</dt><dd>final duplicate removal</dd></div>`;
-        els.classStats.innerHTML = `<span><i style="background:#2563eb"></i>proposal<strong>${(demo.proposals || []).length}</strong></span><span><i style="background:#22c55e"></i>positive anchor<strong>${(demo.anchors || []).filter((a) => a.label === "positive").length}</strong></span><span><i style="background:#ef4444"></i>negative anchor<strong>${(demo.anchors || []).filter((a) => a.label === "negative").length}</strong></span>`;
+        els.runtimeStats.innerHTML = state.detMode === "rcnn"
+            ? `<div><dt>stage 1</dt><dd>Selective Search proposals</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>active proposal</dt><dd>${esc((demo.proposals || [])[0]?.id || "p1")}</dd></div><div><dt>stage 2</dt><dd>CNN feature + classifier + bbox reg</dd></div>`
+            : `<div><dt>method</dt><dd>${esc(state.detMode)}</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>ground truth boxes</dt><dd>${(demo.groundTruth || []).length}</dd></div><div><dt>NMS</dt><dd>final duplicate removal</dd></div>`;
+        els.classStats.innerHTML = state.detMode === "rcnn"
+            ? `<span><i style="background:#7c3aed"></i>proposal<strong>${(demo.proposals || []).length}</strong></span><span><i style="background:#4f46e5"></i>refined<strong>${(demo.proposals || []).filter((p) => p.class !== "background").length}</strong></span><span><i style="background:#ef4444"></i>background<strong>${(demo.proposals || []).filter((p) => p.class === "background").length}</strong></span>`
+            : `<span><i style="background:#2563eb"></i>proposal<strong>${(demo.proposals || []).length}</strong></span><span><i style="background:#22c55e"></i>positive anchor<strong>${(demo.anchors || []).filter((a) => a.label === "positive").length}</strong></span><span><i style="background:#ef4444"></i>negative anchor<strong>${(demo.anchors || []).filter((a) => a.label === "negative").length}</strong></span>`;
         renderRcnnTable(demo);
         setStepper(steps, step.id);
         renderRcnnNotes(demo, step);
@@ -724,6 +1001,7 @@
             renderRcnnMode();
             return;
         }
+        setModeTheme("yolo");
         updateModeButtons();
         if (els.rcnnStage) els.rcnnStage.hidden = true;
         const result = compute();
@@ -750,13 +1028,15 @@
         }).join("");
         const c = step.comparison;
         const interMarkup = c?.inter.area > 0 ? `<div class="vision-iou-intersection" style="left:${(c.inter.x1 / s.width) * 100}%;top:${(c.inter.y1 / s.height) * 100}%;width:${(c.inter.width / s.width) * 100}%;height:${(c.inter.height / s.height) * 100}%;"></div>` : "";
-        els.overlay.innerHTML = boxMarkupAll + interMarkup;
+        const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "suppress B" : "keep B"}</small></div>` : "";
+        els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge;
 
         renderSourceControls();
         renderRuntimeMetrics(result);
         renderCandidateTable(result, step);
         renderClassStats(result);
         renderStepper(step);
+        renderYoloDecodePipeline(step, result);
         renderNotes(step, result);
     }
 

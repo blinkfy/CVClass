@@ -519,7 +519,7 @@
         return { width, height, dims, useXY, k: state.k, snapshots, elapsed: 0 };
     }
 
-    function buildKMeansGridModel(useXY, cols = 14, rows = 10) {
+    function buildKMeansGridModel(useXY, cols = 24, rows = 17) {
         const model = buildSampleGrid(cols, rows);
         const cells = model.cells;
         const count = cells.length;
@@ -1033,7 +1033,7 @@
                     caption: "颜色相似的远距离格子会被同一中心吸引",
                     sample: "只抽取 RGB 颜色值，不关心像素位置",
                 };
-            const grid = buildKMeansGridModel(useXY, 14, 10);
+            const grid = buildKMeansGridModel(useXY, 24, 17);
             const result = runKMeansOnGrid(grid);
             const props = kmeansProps(grid, result.labels);
             const largestProp = [...props].sort((a, b) => b.count - a.count)[0];
@@ -1153,7 +1153,7 @@
         const rgbFrames = buildFrames(false, "RGB ");
         const rgbxyFrames = buildFrames(true, "RGB + XY ");
         const frames = isCompare ? [...rgbFrames, ...rgbxyFrames] : (state.method === "kmeans-rgbxy" ? rgbxyFrames : rgbFrames);
-        const mainGrid = state.method === "kmeans-rgbxy" ? buildKMeansGridModel(true, 14, 10) : buildKMeansGridModel(false, 14, 10);
+        const mainGrid = state.method === "kmeans-rgbxy" ? buildKMeansGridModel(true, 24, 17) : buildKMeansGridModel(false, 24, 17);
         const mainResult = runKMeansOnGrid(mainGrid);
         const mainFeatureName = activeFeatureName;
         const displayFeatureName = isCompare ? "RGB / RGB+XY" : mainFeatureName;
@@ -2457,9 +2457,9 @@
 
     function renderKMeansCompareSlider(ratio = 0.5) {
         if (!els.compareSlider || !els.compareSliderLeft || !els.compareSliderRight) return;
-        const rgbGrid = buildKMeansGridModel(false, 14, 10);
+        const rgbGrid = buildKMeansGridModel(false, 24, 17);
         const rgbResult = runKMeansOnGrid(rgbGrid);
-        const rgbxyGrid = buildKMeansGridModel(true, 14, 10);
+        const rgbxyGrid = buildKMeansGridModel(true, 24, 17);
         const rgbxyResult = runKMeansOnGrid(rgbxyGrid);
 
         const rgbShowcase = {
@@ -3261,6 +3261,39 @@
 
     function noteRows(rows) {
         return `<dl>${rows.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}</dl>`;
+    }
+
+    function graphCutOutputExplainHtml({ fgRatio, bgRatio, cutEdges, maxFlow }) {
+        return `
+            <div class="seg-graph-output-explain" aria-label="Graph Cut 输出解释">
+                <div class="seg-graph-ratio-bar" aria-hidden="true">
+                    <span class="is-fg" style="--w:${fgRatio}%"></span>
+                    <span class="is-bg" style="--w:${bgRatio}%"></span>
+                </div>
+                <div class="seg-graph-output-grid">
+                    <div>
+                        <span>foreground</span>
+                        <strong>${fgRatio}%</strong>
+                    </div>
+                    <div>
+                        <span>cut edges</span>
+                        <strong>${cutEdges}</strong>
+                    </div>
+                    <div>
+                        <span>max-flow</span>
+                        <strong>${escapeHtml(maxFlow)}</strong>
+                    </div>
+                </div>
+                <div class="seg-graph-energy-flow" aria-hidden="true">
+                    <i>Unary</i>
+                    <b></b>
+                    <i>Pairwise</i>
+                    <b></b>
+                    <i>Min Cut</i>
+                </div>
+                <p>label map 不是说明文字本身，而是每个节点的 FG/BG 标签；红色割边就是能量最小的位置。</p>
+            </div>
+        `;
     }
 
     function renderLatexFormula(latex) {
@@ -4093,10 +4126,12 @@
                     title: "5. 输出二值 label map 与统计",
                     graph: conceptGridSvg(model, { labels: solution.labels, cutEdges: solution.cutEdges, caption: "foreground/background label map" }),
                     matrix: metricCards(metrics),
-                    detail: noteRows([
-                        ["可解释输出", `前景占 ${Math.round((fgCount / model.cells.length) * 100)}%，割边 ${solution.cutEdges.length} 条。`],
-                        ["算法意义", "Graph Cut 把分割转化成能量最小化，适合有种子约束的前景/背景任务。"],
-                    ]),
+                    detail: graphCutOutputExplainHtml({
+                        fgRatio: Math.round((fgCount / model.cells.length) * 100),
+                        bgRatio: Math.round(((model.cells.length - fgCount) / model.cells.length) * 100),
+                        cutEdges: solution.cutEdges.length,
+                        maxFlow: solution.maxFlow.toFixed(2),
+                    }),
                     stageNote: "最终得到的是每个节点的前景/背景标签，红线就是算法认为最自然的边界。",
                     showcase: {
                         model: denseModel,
@@ -4438,7 +4473,7 @@
         });
 
         // 依据分辨率网格宽度自适应计算平滑次数，对齐尺度空间
-        const passes = Math.max(3, Math.round(model.cols * 0.08));
+        const passes = Math.max(3, Math.round(model.cols * 0.04));
         let smoothed = [...rawGrad];
         for (let k = 0; k < passes; k++) {
             const temp = new Float32Array(smoothed.length);
@@ -4470,8 +4505,8 @@
         const markerDefs = [
             { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
             { x: 0.70, y: 0.44, label: 2, text: "2", type: "fg" },
-            { x: 0.08, y: 0.12, label: 3, text: "B", type: "bg" },
-            { x: 0.92, y: 0.88, label: 3, text: "B", type: "bg" },
+            { x: 0.08, y: 0.12, label: 3, text: "B1", type: "bg" },
+            { x: 0.92, y: 0.88, label: 4, text: "B2", type: "bg" },
         ];
         const markers = markerDefs.map((marker) => ({
             ...marker,
@@ -4569,9 +4604,125 @@
         }));
     }
 
+    function downsampleDenseToCore(denseCore, coreModel) {
+        const dModel = denseCore.model;
+        const cModel = coreModel;
+        const dCols = dModel.cols;
+        const dRows = dModel.rows;
+        const cCols = cModel.cols;
+        const cRows = cModel.rows;
+
+        const cGradient = new Float32Array(cCols * cRows);
+        const cLabels = new Int16Array(cCols * cRows);
+
+        for (let gy = 0; gy < cRows; gy++) {
+            const dy0 = Math.floor((gy / cRows) * dRows);
+            const dy1 = Math.max(dy0 + 1, Math.floor(((gy + 1) / cRows) * dRows));
+            for (let gx = 0; gx < cCols; gx++) {
+                const dx0 = Math.floor((gx / cCols) * dCols);
+                const dx1 = Math.max(dx0 + 1, Math.floor(((gx + 1) / cCols) * dCols));
+
+                let gradMax = 0;
+                const labelCounts = {};
+
+                for (let dy = dy0; dy < dy1; dy++) {
+                    for (let dx = dx0; dx < dx1; dx++) {
+                        const dIndex = dy * dCols + dx;
+                        const gVal = denseCore.gradient[dIndex] ?? 0;
+                        if (gVal > gradMax) {
+                            gradMax = gVal;
+                        }
+
+                        const dLabel = denseCore.labels[dIndex];
+                        if (dLabel !== undefined) {
+                            labelCounts[dLabel] = (labelCounts[dLabel] || 0) + 1;
+                        }
+                    }
+                }
+
+                cGradient[gy * cCols + gx] = gradMax;
+
+                let maxLabel = 0;
+                let maxCount = -1;
+                Object.entries(labelCounts).forEach(([lbl, count]) => {
+                    const lVal = parseInt(lbl);
+                    let score = count;
+                    if (lVal > 0) score += 1000;
+                    if (lVal === -1) score += 100;
+                    if (score > maxCount) {
+                        maxCount = score;
+                        maxLabel = lVal;
+                    }
+                });
+                cLabels[gy * cCols + gx] = maxLabel;
+            }
+        }
+
+        const cMarkers = denseCore.markers.map(m => {
+            const index = nearestCellIndex(cModel.cells, cCols, cRows, m.x, m.y);
+            return { ...m, index };
+        });
+
+        const cSnapshots = denseCore.snapshots.map(denseSnap => {
+            const snapLabels = new Int16Array(cCols * cRows);
+            for (let gy = 0; gy < cRows; gy++) {
+                const dy0 = Math.floor((gy / cRows) * dRows);
+                const dy1 = Math.max(dy0 + 1, Math.floor(((gy + 1) / cRows) * dRows));
+                for (let gx = 0; gx < cCols; gx++) {
+                    const dx0 = Math.floor((gx / cCols) * dCols);
+                    const dx1 = Math.max(dx0 + 1, Math.floor(((gx + 1) / cCols) * dCols));
+
+                    const counts = {};
+                    for (let dy = dy0; dy < dy1; dy++) {
+                        for (let dx = dx0; dx < dx1; dx++) {
+                            const dIndex = dy * dCols + dx;
+                            const dLabel = denseSnap.labels[dIndex];
+                            if (dLabel !== undefined) {
+                                counts[dLabel] = (counts[dLabel] || 0) + 1;
+                            }
+                        }
+                    }
+
+                    let maxLabel = 0;
+                    let maxCount = -1;
+                    Object.entries(counts).forEach(([lbl, count]) => {
+                        const lVal = parseInt(lbl);
+                        let score = count;
+                        if (lVal > 0) score += 1000;
+                        if (lVal === -1) score += 100;
+                        if (score > maxCount) {
+                            maxCount = score;
+                            maxLabel = lVal;
+                        }
+                    });
+                    snapLabels[gy * cCols + gx] = maxLabel;
+                }
+            }
+            return {
+                processed: Math.round(denseSnap.processed * (cCols * cRows) / (dCols * dRows)),
+                labels: snapLabels,
+                frontier: denseSnap.frontier.map(dIdx => {
+                    const dx = dIdx % dCols;
+                    const dy = Math.floor(dIdx / dCols);
+                    const cx = clamp(Math.round((dx / dCols) * (cCols - 1)), 0, cCols - 1);
+                    const cy = clamp(Math.round((dy / dRows) * (cRows - 1)), 0, cRows - 1);
+                    return cy * cCols + cx;
+                })
+            };
+        });
+
+        return {
+            model: cModel,
+            gradient: Array.from(cGradient),
+            markers: cMarkers,
+            labels: Array.from(cLabels),
+            snapshots: cSnapshots
+        };
+    }
+
     function buildWatershedDemo() {
-        const core = buildWatershedCore();
         const denseCore = buildWatershedCore(buildPixelModel(120, 48, 32));
+        const core = downsampleDenseToCore(denseCore, buildSampleGrid(30, 20));
         const gradientScores = core.gradient.map((value) => value * 2 - 1);
         const denseGradientScores = denseCore.gradient.map((value) => value * 2 - 1);
         const props = propsFromLabelMap(core.model, core.labels);
@@ -4732,8 +4883,8 @@
     }
 
     function buildRegionsDemo() {
-        const core = buildWatershedCore();
         const denseCore = buildWatershedCore(buildPixelModel(120, 48, 32));
+        const core = downsampleDenseToCore(denseCore, buildSampleGrid(30, 20));
         const components = connectedComponents(core.model, core.labels);
         const denseComponents = connectedComponents(denseCore.model, denseCore.labels);
         const props = components.props;
@@ -5900,6 +6051,37 @@
     setupGrabCutInteraction();
     setupCompareSlider();
     setupKMeansRegionInteraction();
+
+    // 监听特征度量毛玻璃弹窗
+    document.addEventListener("click", (e) => {
+        const trigger = e.target.closest("[data-seg-lens-trigger]");
+        if (trigger) {
+            const kind = trigger.getAttribute("data-seg-lens-trigger");
+            const sourceCard = document.querySelector(`.seg-mode-lens-card.is-${kind}`);
+            if (sourceCard) {
+                const clone = sourceCard.cloneNode(true);
+                const body = document.getElementById("segModalBody");
+                body.innerHTML = "";
+                body.appendChild(clone);
+                document.getElementById("segLensModal").removeAttribute("hidden");
+            }
+        }
+    });
+
+    const lensModal = document.getElementById("segLensModal");
+    const lensCloseBtn = document.getElementById("segLensCloseBtn");
+    if (lensModal && lensCloseBtn) {
+        lensCloseBtn.addEventListener("click", () => {
+            lensModal.setAttribute("hidden", "");
+            document.getElementById("segModalBody").innerHTML = "";
+        });
+        lensModal.addEventListener("click", (e) => {
+            if (e.target === lensModal) {
+                lensModal.setAttribute("hidden", "");
+                document.getElementById("segModalBody").innerHTML = "";
+            }
+        });
+    }
 
     init();
 })();
