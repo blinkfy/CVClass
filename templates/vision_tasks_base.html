@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260624-det-opacity3">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260625-det-anim1">
 {% endblock %}
 
 {% block content %}
@@ -39,7 +39,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
 <script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260624-segb-grabcut-gmm2"></script>
 {% elif active_sub_page == 'detection' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/object_detection_lab.js') }}?v=20260624-det-zindex1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/object_detection_lab.js') }}?v=20260625-det-anim1"></script>
 {% elif active_sub_page == 'semantic' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260624-sem-flow2"></script>
 {% elif active_sub_page == 'instance' %}

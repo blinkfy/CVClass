@@ -14806,6 +14806,457 @@ body:has(.vision-lab) {
     font-weight: 950;
 }
 
+/* ============================================================
+   UNIFIED ANIMATION LANGUAGE — Detection Module
+   分解 / 线条伸展 / 碰撞 / 合并 / 脉冲
+   ============================================================ */
+
+/* --- 脉冲：呼吸光晕 --- */
+@keyframes detBreathGlow {
+    0%, 100% { box-shadow: 0 0 0 0 var(--det-glow, rgba(14,165,233,0.35)); }
+    50% { box-shadow: 0 0 0 6px var(--det-glow, rgba(14,165,233,0.08)); }
+}
+
+@keyframes detBreathGlowPurple {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.35); }
+    50% { box-shadow: 0 0 0 6px rgba(124,58,237,0.08); }
+}
+
+@keyframes detRingPulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+.det-pulse-ring {
+    position: absolute;
+    inset: -2px;
+    border: 2px solid var(--det-accent, #0ea5e9);
+    border-radius: inherit;
+    pointer-events: none;
+    animation: detRingPulse 1.2s ease-out infinite;
+}
+
+/* --- 线条伸展：发光连接线 + 流动粒子 --- */
+@keyframes detFlowDash {
+    to { stroke-dashoffset: -20; }
+}
+
+@keyframes detParticleFlow {
+    0% { offset-distance: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
+}
+
+.det-flow-line {
+    stroke: var(--det-accent, #0ea5e9);
+    stroke-width: 2;
+    fill: none;
+    stroke-dasharray: 6 4;
+    animation: detFlowDash 0.8s linear infinite;
+    filter: drop-shadow(0 0 3px var(--det-accent, #0ea5e9));
+    opacity: 0.7;
+}
+
+.det-flow-particle {
+    fill: var(--det-accent, #0ea5e9);
+    filter: drop-shadow(0 0 4px var(--det-accent, #0ea5e9));
+}
+
+/* --- 碰撞：抖动 + 压制 --- */
+@keyframes detShake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-2px, 1px); }
+    40% { transform: translate(2px, -1px); }
+    60% { transform: translate(-1px, -2px); }
+    80% { transform: translate(1px, 2px); }
+}
+
+@keyframes detCrack {
+    0% { opacity: 1; transform: scale(1); filter: brightness(1); }
+    30% { opacity: 1; transform: scale(1.03); filter: brightness(1.3); }
+    100% { opacity: 0; transform: scale(0.7) rotate(2deg); filter: brightness(0.5); }
+}
+
+/* --- 合并：汇聚 --- */
+@keyframes detConverge {
+    0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+    60% { opacity: 1; transform: scale(1.08) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* --- 分解：拆裂 --- */
+@keyframes detSplit {
+    0% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* --- 数字滚动 --- */
+@keyframes detCountRoll {
+    0% { opacity: 0; transform: translateY(8px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- 轨道点亮 --- */
+@keyframes detTrackLight {
+    0% { opacity: 0.2; box-shadow: none; }
+    100% { opacity: 1; box-shadow: 0 0 8px var(--det-accent, #0ea5e9); }
+}
+
+/* ============================================================
+   YOLO PAGE — Enhanced Animations
+   ============================================================ */
+
+/* Decode 动画升级 */
+.det-decode-animation {
+    position: relative;
+}
+
+.det-decode-rail {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(15,23,42,0.04);
+    border: 1px solid rgba(14,165,233,0.12);
+}
+
+.det-decode-rail-item {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 800;
+    color: #94a3b8;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+    position: relative;
+}
+
+.det-decode-rail-item.is-lit {
+    color: #0369a1;
+    background: rgba(14,165,233,0.12);
+    box-shadow: 0 0 8px rgba(14,165,233,0.3);
+}
+
+.det-decode-rail-arrow {
+    color: #cbd5e1;
+    font-size: 10px;
+    padding: 0 2px;
+    transition: color 0.3s;
+}
+
+.det-decode-rail-arrow.is-active {
+    color: #0ea5e9;
+}
+
+/* Candidate 粒子释放 */
+.det-particle-burst {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    box-shadow: 0 0 8px #0ea5e9, 0 0 16px rgba(14,165,233,0.4);
+    pointer-events: none;
+    animation: detParticleBurst 0.6s ease-out forwards;
+}
+
+@keyframes detParticleBurst {
+    0% { opacity: 0; transform: scale(0); }
+    30% { opacity: 1; transform: scale(1.5); }
+    100% { opacity: 0; transform: scale(0.5) translateY(-20px); }
+}
+
+/* Confidence filter — 低分框抖动消失 */
+@keyframes detLowShake {
+    0% { opacity: 0.65; transform: translate(0,0) scale(1); filter: grayscale(0); }
+    30% { opacity: 0.5; transform: translate(-1px,1px) scale(0.99); filter: grayscale(0.5); }
+    60% { opacity: 0.3; transform: translate(1px,-1px) scale(0.97); filter: grayscale(1); }
+    100% { opacity: 0.12; transform: translate(0,2px) scale(0.92); filter: grayscale(1); }
+}
+
+.vision-bbox--low {
+    animation: detLowShake 0.7s cubic-bezier(0.4,0,0.2,1) both !important;
+}
+
+/* NMS — 碰撞抖动 */
+@keyframes detSuppressShake {
+    0% { opacity: 0.7; transform: translate(0,0) scale(1); }
+    15% { opacity: 0.8; transform: translate(-2px,1px) scale(1.01); filter: brightness(1.2); }
+    30% { opacity: 0.7; transform: translate(2px,-1px) scale(1); }
+    50% { opacity: 0.5; transform: translate(-1px,-2px) scale(0.99); filter: brightness(0.9); }
+    100% { opacity: 0.12; transform: translate(0,0) scale(0.95); filter: brightness(0.6); }
+}
+
+.vision-bbox--suppressed {
+    animation: detSuppressShake 0.6s cubic-bezier(0.4,0,0.2,1) both !important;
+}
+
+/* NMS — 保留框脉冲环 */
+.vision-bbox--kept::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border: 2px solid #22c55e;
+    border-radius: 2px;
+    pointer-events: none;
+    animation: detRingPulse 1.4s ease-out infinite;
+    opacity: 0;
+}
+
+/* Final — 收束动画 */
+@keyframes detFinalConverge {
+    0% { opacity: 0.5; transform: scale(1.08); }
+    60% { opacity: 1; transform: scale(0.97); }
+    100% { opacity: 0.7; transform: scale(1); }
+}
+
+.vision-bbox--kept {
+    animation: detFinalConverge 0.5s cubic-bezier(0.16,1,0.3,1) both !important;
+}
+
+/* 数字滚动 */
+.det-count-roll {
+    animation: detCountRoll 0.4s ease both;
+}
+
+/* ============================================================
+   R-CNN PAGE — Enhanced Animations
+   ============================================================ */
+
+/* Proposal 抽离 — 飞行动画 */
+@keyframes detProposalFly {
+    0% { opacity: 0; transform: scale(0.3) translate(var(--fly-from-x,0), var(--fly-from-y,0)); }
+    40% { opacity: 1; transform: scale(0.6) translate(calc(var(--fly-from-x,0) * 0.5), calc(var(--fly-from-y,0) * 0.5)); }
+    100% { opacity: 1; transform: scale(1) translate(0,0); }
+}
+
+.detection-proposal-patch {
+    border-radius: 8px;
+    overflow: hidden;
+    animation: detProposalFly 0.7s cubic-bezier(0.16,1,0.3,1) both;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.2);
+}
+
+/* Crop/Warp — morph 动画 */
+@keyframes detWarpMorph {
+    0% { border-radius: 30% 10% 40% 15%; transform: scale(1.2) rotate(-3deg); opacity: 0.5; }
+    50% { border-radius: 12% 8% 15% 10%; transform: scale(1.05) rotate(1deg); opacity: 0.8; }
+    100% { border-radius: 8px; transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.detection-crop-warp-demo .detection-warp-target {
+    animation: detWarpMorph 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* CNN Feature — 层片堆叠 */
+@keyframes detFeatureStack {
+    0% { opacity: 0; transform: translateY(12px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.detection-feature-grid {
+    animation: detFeatureStack 0.5s ease both;
+}
+
+.detection-feature-grid:nth-child(1) { animation-delay: 0ms; }
+.detection-feature-grid:nth-child(2) { animation-delay: 80ms; }
+.detection-feature-grid:nth-child(3) { animation-delay: 160ms; }
+.detection-feature-grid:nth-child(4) { animation-delay: 240ms; }
+
+/* 双支路分叉 — 流动线 */
+@keyframes detBranchFlow {
+    0% { stroke-dashoffset: 30; opacity: 0; }
+    20% { opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 0.6; }
+}
+
+.det-branch-line {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-dasharray: 5 3;
+    animation: detBranchFlow 0.8s ease both, detFlowDash 1s linear infinite 0.8s;
+}
+
+.det-branch-line--cls { stroke: #7c3aed; filter: drop-shadow(0 0 3px rgba(124,58,237,0.4)); }
+.det-branch-line--reg { stroke: #f59e0b; filter: drop-shadow(0 0 3px rgba(245,158,11,0.4)); }
+
+/* Refined box — 形变动画 */
+@keyframes detBoxMorph {
+    0% { border-color: #a78bfa; transform: scale(1.02); }
+    50% { border-color: #7c3aed; transform: scale(0.98); box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+    100% { border-color: #6d28d9; transform: scale(1); box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+}
+
+.detection-demo-box--refined {
+    animation: detBoxMorph 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* 生命周期条 — 流动粒子 */
+@keyframes detLifecycleParticle {
+    0% { left: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+
+.detection-lifecycle-particle {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #7c3aed;
+    box-shadow: 0 0 6px #7c3aed, 0 0 12px rgba(124,58,237,0.3);
+    transform: translateY(-50%);
+    animation: detLifecycleParticle 2.5s linear infinite;
+    pointer-events: none;
+}
+
+/* 演化轴 — 渐进高亮 */
+@keyframes detEvolutionGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+    50% { box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
+}
+
+.detection-rcnn-evolution-item.is-active {
+    animation: detEvolutionGlow 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   VISUAL POLISH
+   ============================================================ */
+
+/* 主舞台突出 */
+.detection-stage-panel {
+    position: relative;
+    box-shadow: 0 8px 32px rgba(15,23,42,0.08), 0 2px 8px rgba(15,23,42,0.04);
+    border-radius: 16px;
+}
+
+.detection-stage-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(14,165,233,0.03), transparent 50%);
+    pointer-events: none;
+}
+
+[data-det-mode-view="rcnn"] .detection-stage-panel::before {
+    background: linear-gradient(135deg, rgba(124,58,237,0.03), transparent 50%);
+}
+
+/* 卡片柔和描边 + 阴影 + 内发光 */
+.det-pair-card,
+.det-runtime-stats,
+.det-class-stats,
+.detection-compare-card,
+.detection-info-card {
+    border: 1px solid rgba(148,163,184,0.18) !important;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+
+/* Stepper 流动线 */
+.vision-stepper {
+    position: relative;
+}
+
+.vision-stepper::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 8%;
+    right: 8%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(14,165,233,0.15), rgba(14,165,233,0.3), rgba(14,165,233,0.15), transparent);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+[data-det-mode-view="rcnn"] .vision-stepper::before {
+    background: linear-gradient(90deg, transparent, rgba(124,58,237,0.15), rgba(124,58,237,0.3), rgba(124,58,237,0.15), transparent);
+}
+
+.vision-stepper li {
+    position: relative;
+    z-index: 1;
+    transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+
+.vision-stepper li.is-active {
+    transform: translateY(-2px);
+}
+
+.vision-stepper li.is-active::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    border: 2px solid var(--det-accent, #0ea5e9);
+    opacity: 0;
+    animation: detRingPulse 1.5s ease-out infinite;
+    pointer-events: none;
+}
+
+[data-det-mode-view="rcnn"] .vision-stepper li.is-active::after {
+    border-color: #7c3aed;
+}
+
+/* 表格弱化 — 只高亮 active rows */
+.det-candidate-table tbody tr {
+    opacity: 0.5;
+    transition: opacity 0.3s, background 0.3s;
+}
+
+.det-candidate-table tbody tr.is-active,
+.det-candidate-table tbody tr.is-kept {
+    opacity: 1;
+}
+
+.det-candidate-table tbody tr.is-suppressed {
+    opacity: 0.3;
+}
+
+/* 右侧说明卡联动高亮 */
+.det-notes-tutorial {
+    transition: border-color 0.4s, box-shadow 0.4s;
+}
+
+.det-notes-tutorial.is-active {
+    border-color: var(--det-accent, #0ea5e9) !important;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.08), 0 4px 16px rgba(14,165,233,0.06) !important;
+}
+
+[data-det-mode-view="rcnn"] .det-notes-tutorial.is-active {
+    border-color: #7c3aed !important;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.08), 0 4px 16px rgba(124,58,237,0.06) !important;
+}
+
+/* R-CNN lifecycle grid 卡片脉冲 */
+.detection-lifecycle-grid > * {
+    transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+
+.detection-lifecycle-grid > .is-current {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.15);
+}
+
+/* R-CNN demo flow 卡片脉冲 */
+.detection-demo-flow > * {
+    transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+
+.detection-demo-flow > .is-current {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.15);
+}
+
 .semantic-real-stage canvas {
     pointer-events: none;
 }

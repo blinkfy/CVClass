@@ -436,14 +436,30 @@
     }
 
     function renderDecodeAnimation(step, result) {
-        if (step.phase !== "decode") return "";
         const sample = result.candidates[0] || result.low[0];
         const bbox = sample?.bbox || [];
+        const litCountByType = {
+            image: 0,
+            preprocess: 0,
+            inference: 1,
+            decode: 4,
+            confidence: 5,
+            nms: 5,
+            final: 5
+        };
+        const litCount = litCountByType[step.type] ?? 0;
+        const items = ["rawOutput", "candidate", "xywh", "xyxy", "bbox+label"];
+        const railParts = [];
+        items.forEach((label, index) => {
+            const isLit = index < litCount;
+            railParts.push(`<span class="det-decode-rail-item ${isLit ? "is-lit" : ""}">${esc(label)}</span>`);
+            if (index < items.length - 1) {
+                const arrowActive = index < litCount;
+                railParts.push(`<span class="det-decode-rail-arrow ${arrowActive ? "is-active" : ""}">→</span>`);
+            }
+        });
         return `<div class="det-decode-animation" aria-hidden="true">
-            <span>rawOutput [1,84,8400]</span>
-            <b>candidate point</b>
-            <b>xywh + class scores</b>
-            <b>xywh → x1,y1,x2,y2</b>
+            <div class="det-decode-rail">${railParts.join("")}</div>
             <strong>bbox pop #${sample ? esc(sample.id) : "--"}</strong>
             <code>${bbox.length ? `[${bbox.join(", ")}]` : "--"}</code>
         </div>`;
@@ -525,7 +541,16 @@
             .map((box) => {
                 const status = tableStatusFor(statusForBox(box, step, result), step, box);
                 const active = relatedIds.has(box.id);
-                return `<tr class="is-${status} ${active ? "is-active-row" : ""}">
+                const isKept = step.keptIds.has(box.id);
+                const isSuppressed = step.suppressedIds.has(box.id);
+                const rowClasses = [
+                    `is-${status}`,
+                    active ? "is-active-row" : "",
+                    active ? "is-active" : "",
+                    isKept ? "is-kept" : "",
+                    isSuppressed ? "is-suppressed" : ""
+                ].filter(Boolean).join(" ");
+                return `<tr class="${rowClasses}">
                     <td>${box.id}</td>
                     <td>${esc(box.class)}</td>
                     <td>${box.score.toFixed(3)}</td>
@@ -736,6 +761,7 @@
                     <strong>Proposal ${esc(activeProposal.id || "p1")}</strong>
                     <em>原始框 → crop / warp → CNN feature → classifier → refined box → NMS</em>
                 </header>
+                <div class="detection-lifecycle-particle"></div>
                 <div class="detection-lifecycle-grid">
                     <article class="${isActive("proposals") ? "is-active" : ""} ${isCurrent("proposals") || isCurrent("image") ? "is-current" : ""}">
                         <span>原始框</span>
@@ -744,13 +770,17 @@
                     </article>
                     <article class="${isActive("crop") ? "is-active" : ""} ${isCurrent("crop") ? "is-current" : ""}">
                         <span>Crop / Warp</span>
-                        <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><i>crop</i><b>warp</b></div>
+                        <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><div class="detection-proposal-patch"><i>crop</i><b>warp</b></div></div>
                         <small>把 proposal 裁剪并缩放为 CNN 固定输入。</small>
                     </article>
                     <article class="${isActive("features") ? "is-active" : ""} ${isCurrent("features") ? "is-current" : ""}">
                         <span>CNN feature</span>
                         ${renderFeatureGrid(feature, isActive("features") ? ["2-4", "3-4", "4-4"] : [])}
                     </article>
+                    <svg class="det-branch-svg" width="100%" height="40" viewBox="0 0 200 40" preserveAspectRatio="none">
+                        <path class="det-branch-line det-branch-line--cls" d="M100,0 Q100,20 60,40" />
+                        <path class="det-branch-line det-branch-line--reg" d="M100,0 Q100,20 140,40" />
+                    </svg>
                     <article class="${isActive("classifier") ? "is-active" : ""} ${isCurrent("classifier") ? "is-current" : ""}">
                         <span>Classifier score</span>
                         ${renderClassifierBars(activeProposal, isActive("classifier"))}
@@ -1091,6 +1121,12 @@
         renderRcnnTable(demo);
         setStepper(steps, step.id);
         renderRcnnNotes(demo, step);
+        const notesEl = document.querySelector(".det-notes-tutorial");
+        if (notesEl) {
+            notesEl.classList.add("is-active");
+            clearTimeout(notesEl._activeTimer);
+            notesEl._activeTimer = setTimeout(() => notesEl.classList.remove("is-active"), 800);
+        }
         if (!demo.version) {
             els.rcnnStage.innerHTML = `<div class="vision-empty-result">R-CNN demo data loading...</div>`;
             return;
@@ -1119,7 +1155,13 @@
         els.confOut.textContent = state.conf.toFixed(2);
         els.iouOut.textContent = state.iou.toFixed(2);
         els.total.textContent = String(result.candidates.length + result.low.length);
+        els.total.classList.remove("det-count-roll");
+        void els.total.offsetWidth;
+        els.total.classList.add("det-count-roll");
         els.kept.textContent = String(result.kept.length);
+        els.kept.classList.remove("det-count-roll");
+        void els.kept.offsetWidth;
+        els.kept.classList.add("det-count-roll");
         els.stepLabel.textContent = `${step.phase.toUpperCase()} · STEP ${state.step + 1} / ${result.steps.length}`;
 
         const shouldDrawLow = state.showLow || step.type === "final" || step.type === "confidence";
@@ -1143,6 +1185,15 @@
         const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "suppress B" : "keep B"}</small></div>` : "";
         els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge + renderDecodeAnimation(step, result);
 
+        if (step.type === "decode" && result.candidates.length > 0) {
+            const burst = document.createElement("div");
+            burst.className = "det-particle-burst";
+            burst.style.left = "50%";
+            burst.style.top = "50%";
+            els.overlay.appendChild(burst);
+            setTimeout(() => burst.remove(), 600);
+        }
+
         renderSourceControls();
         renderRuntimeMetrics(result);
         renderCandidateTable(result, step);
@@ -1151,6 +1202,12 @@
         renderStepper(step);
         renderYoloDecodePipeline(step, result);
         renderNotes(step, result);
+        const notesEl = document.querySelector(".det-notes-tutorial");
+        if (notesEl) {
+            notesEl.classList.add("is-active");
+            clearTimeout(notesEl._activeTimer);
+            notesEl._activeTimer = setTimeout(() => notesEl.classList.remove("is-active"), 800);
+        }
     }
 
     function renderClassControls(reset = true) {
