@@ -208,10 +208,6 @@ def register_page_routes(app, get_model_status):
             active_sub_page="conv_gradient_lab",
         )
 
-    @app.route("/vision-tasks", methods=["GET"])
-    def vision_tasks_page():
-        return redirect(url_for("classification_lab_page"))
-
     @app.route("/classification-lab", methods=["GET"])
     def classification_lab_page():
         return render_template(
@@ -221,20 +217,6 @@ def register_page_routes(app, get_model_status):
 
     @app.route("/classification-lab/classification", methods=["GET"])
     def classification_lab_detail_alias_page():
-        return render_template(
-            "vision_tasks/classification_lab.html",
-            **build_vision_module_context("classification_lab", "classification"),
-        )
-
-    @app.route("/vision-tasks/overview", methods=["GET"])
-    def vision_tasks_overview_page():
-        return render_template(
-            "vision_tasks/vision_tasks_overview.html",
-            **build_vision_module_context("classification_lab", "overview"),
-        )
-
-    @app.route("/vision-tasks/classification", methods=["GET"])
-    def vision_tasks_classification_page():
         return render_template(
             "vision_tasks/classification_lab.html",
             **build_vision_module_context("classification_lab", "classification"),
@@ -268,52 +250,29 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("segmentation_basic", "segmentation_basic", "region"),
         )
 
-    @app.route("/vision-tasks/segmentation-basic", methods=["GET"])
-    def segmentation_basic_lab_page():
-        return render_template(
-            "vision_tasks/segmentation_basic_lab.html",
-            **build_vision_module_context("segmentation_basic", "segmentation_basic"),
-        )
-
     @app.route("/object-detection", methods=["GET"])
     def object_detection_alias_page():
         return render_template(
-            "vision_tasks/detection_lab.html",
+            "vision_tasks/object_detection_lab.html",
             **build_vision_module_context("object_detection", "detection"),
         )
 
     @app.route("/object-detection/yolo", methods=["GET"])
     def object_detection_yolo_page():
         return render_template(
-            "vision_tasks/detection_lab.html",
+            "vision_tasks/object_detection_lab.html",
             **build_vision_module_context("object_detection", "detection", "yolo"),
         )
 
     @app.route("/object-detection/rcnn", methods=["GET"])
     def object_detection_rcnn_page():
         return render_template(
-            "vision_tasks/detection_lab.html",
+            "vision_tasks/object_detection_lab.html",
             **build_vision_module_context("object_detection", "detection", "rcnn"),
-        )
-
-    @app.route("/vision-tasks/detection", methods=["GET"])
-    def detection_lab_page():
-        return render_template(
-            "vision_tasks/detection_lab.html",
-            **build_vision_module_context("object_detection", "detection"),
         )
 
     @app.route("/segmentation-lab", methods=["GET"])
     def segmentation_lab_page():
-        context = build_vision_module_context("segmentation_lab", "instance", "compare")
-        context["vision_instance_mode"] = "compare"
-        return render_template(
-            "vision_tasks/instance_segmentation_lab.html",
-            **context,
-        )
-
-    @app.route("/segmentation-lab/compare", methods=["GET"])
-    def segmentation_lab_compare_page():
         context = build_vision_module_context("segmentation_lab", "instance", "compare")
         context["vision_instance_mode"] = "compare"
         return render_template(
@@ -328,25 +287,8 @@ def register_page_routes(app, get_model_status):
             **build_vision_module_context("segmentation_lab", "semantic", "semantic"),
         )
 
-    @app.route("/vision-tasks/semantic", methods=["GET"])
-    def semantic_segmentation_lab_page():
-        return render_template(
-            "vision_tasks/semantic_segmentation_lab.html",
-            **build_vision_module_context("segmentation_lab", "semantic"),
-        )
-
     @app.route("/segmentation-lab/instance", methods=["GET"])
     def segmentation_lab_instance_page():
-        context = build_vision_module_context("segmentation_lab", "instance")
-        if request.args.get("view") == "semantic":
-            context["vision_instance_mode"] = "compare"
-        return render_template(
-            "vision_tasks/instance_segmentation_lab.html",
-            **context,
-        )
-
-    @app.route("/vision-tasks/instance", methods=["GET"])
-    def instance_segmentation_lab_page():
         context = build_vision_module_context("segmentation_lab", "instance")
         if request.args.get("view") == "semantic":
             context["vision_instance_mode"] = "compare"
