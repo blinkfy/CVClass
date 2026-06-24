@@ -72,7 +72,9 @@
     };
 
     const els = {
-        sample: $("[data-segb-sample]"),
+        sampleTrigger: $("[data-segb-selector-trigger]"),
+        selectedLabel: $("[data-segb-selected-label]"),
+        selectorWrapper: $("[data-segb-selector-wrapper]"),
         sampleGrid: $("[data-segb-sample-grid]"),
         upload: $("[data-segb-upload]"),
         uploadName: $("[data-segb-upload-name]"),
@@ -112,6 +114,18 @@
         thirdTitle: $("[data-segb-third-title]"),
         featureSpace: $("[data-segb-feature-space]"),
         featureIteration: $("[data-segb-feature-iteration]"),
+        processIteration: $("[data-segb-process-iteration]"),
+        processDistance: $("[data-segb-process-distance]"),
+        processMovement: $("[data-segb-process-movement]"),
+        processStop: $("[data-segb-process-stop]"),
+        processConvergence: $("[data-segb-process-convergence]"),
+        processOutputCard: $("[data-segb-process-output-card]"),
+        processOutput: $("[data-segb-process-output]"),
+        processOutputType: $("[data-segb-process-output-type]"),
+        processDecode: $("[data-segb-process-decode]"),
+        processRegions: $("[data-segb-process-regions]"),
+        processOutputNote: $("[data-segb-process-output-note]"),
+        processIterationCard: $(".seg-process-iteration-card"),
         labelSubtitle: $("[data-segb-label-subtitle]"),
         flowFeature: $("[data-segb-flow-feature]"),
         centerList: $("[data-segb-center-list]"),
@@ -241,14 +255,17 @@
     function updateSampleCards() {
         if (!els.sampleGrid) return;
         els.sampleGrid.querySelectorAll("[data-segb-sample-card]").forEach((button) => {
-            button.classList.toggle("is-active", button.dataset.segbSampleCard === state.sampleId);
+            const isActive = button.dataset.segbSampleCard === state.sampleId;
+            button.classList.toggle("is-active", isActive);
         });
+        const currentSample = selectedSample();
+        if (currentSample && els.selectedLabel) {
+            els.selectedLabel.textContent = currentSample.name;
+        }
     }
 
     function renderSamplePicker() {
         const samples = state.data?.samples || [];
-        els.sample.innerHTML = samples.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
-        els.sample.value = state.sampleId;
         if (!els.sampleGrid) return;
         els.sampleGrid.innerHTML = samples.map((item) => `
             <button type="button" data-segb-sample-card="${escapeHtml(item.id)}">
@@ -260,11 +277,30 @@
             button.addEventListener("click", async () => {
                 if (button.dataset.segbSampleCard === state.sampleId) return;
                 state.sampleId = button.dataset.segbSampleCard;
-                els.sample.value = state.sampleId;
                 updateSampleCards();
+                // 选择后自动收起下拉
+                if (els.selectorWrapper) {
+                    els.selectorWrapper.classList.remove("is-open");
+                }
                 await loadSelectedSample(true);
             });
         });
+
+        // 初始化下拉触发器事件
+        if (els.sampleTrigger && els.selectorWrapper) {
+            els.sampleTrigger.addEventListener("click", (e) => {
+                e.stopPropagation();
+                els.selectorWrapper.classList.toggle("is-open");
+            });
+        }
+
+        // 点击空白处收起下拉
+        document.addEventListener("click", () => {
+            if (els.selectorWrapper) {
+                els.selectorWrapper.classList.remove("is-open");
+            }
+        });
+
         updateSampleCards();
     }
 
@@ -974,7 +1010,7 @@
                 const color = clusterRgb(label);
                 const reveal = x / Math.max(1, result.width - 1) <= progress;
                 const selectedBoost = selected === null || selected === label ? 1 : 0.34;
-                const mix = reveal ? 0.48 * selectedBoost : 0;
+                const mix = reveal ? 0.30 * selectedBoost : 0;
                 dst[p] = Math.round(src[p] * (1 - mix) + color.r * mix);
                 dst[p + 1] = Math.round(src[p + 1] * (1 - mix) + color.g * mix);
                 dst[p + 2] = Math.round(src[p + 2] * (1 - mix) + color.b * mix);
@@ -989,7 +1025,7 @@
                 const i = y * result.width + x;
                 const label = snapshot.labels[i];
                 if (snapshot.labels[i - 1] !== label || snapshot.labels[i + 1] !== label || snapshot.labels[i - result.width] !== label || snapshot.labels[i + result.width] !== label) {
-                    ctx.fillStyle = selected === null || selected === label ? "rgba(15, 23, 42, 0.72)" : "rgba(255, 255, 255, 0.32)";
+                    ctx.fillStyle = selected === null || selected === label ? "rgba(15, 23, 42, 0.56)" : "rgba(255, 255, 255, 0.42)";
                     ctx.fillRect(x, y, 1, 1);
                 }
             }
@@ -1069,50 +1105,71 @@
     }
 
     function renderFeatureSpace(result, snapshot) {
+        const work = ensureWorkData();
+        const source = work.imageData.data;
         const maxCount = Math.max(1, ...snapshot.counts);
         const currentIndex = Math.max(0, state.currentSnapshot);
-        const visibleSnapshots = result.snapshots.slice(0, currentIndex + 1);
-        function pointFor(centerSnapshot, index) {
+        const trailEnd = Math.max(currentIndex + 1, Math.min(result.snapshots.length, state.showIterations ? 3 : currentIndex + 1));
+        const visibleSnapshots = result.snapshots.slice(0, trailEnd);
+        const cubeSize = 94;
+        const axisPos = (value) => ((value / 255) - 0.5) * cubeSize;
+        function pixelPoint3d(index) {
+            const p = index * 4;
+            const r = source[p];
+            const g = source[p + 1];
+            const b = source[p + 2];
+            return {
+                x: axisPos(r),
+                y: -axisPos(g),
+                z: axisPos(b),
+                rgb: `rgb(${r},${g},${b})`,
+                label: snapshot.labels[index],
+            };
+        }
+        const stride = Math.max(1, Math.floor((result.width * result.height) / 88));
+        const samples = [];
+        for (let i = 0; i < snapshot.labels.length && samples.length < 88; i += stride) {
+            samples.push(pixelPoint3d(i));
+        }
+        const sampleDots = samples.map((point, index) => {
+            const color = clusterRgb(point.label);
+            return `<i class="seg-feature-particle" style="--x:${point.x.toFixed(1)}px;--y:${point.y.toFixed(1)}px;--z:${point.z.toFixed(1)}px;--c:rgb(${color.r},${color.g},${color.b});animation-delay:${(index % 18) * 18}ms" title="${point.rgb} → C${point.label + 1}"></i>`;
+        }).join("");
+        function pointFor3d(centerSnapshot, index) {
             const c = index * result.dims;
-            if (result.useXY) {
-                return {
-                    x: Math.max(7, Math.min(93, (centerSnapshot.centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * 100)),
-                    y: Math.max(9, Math.min(88, (centerSnapshot.centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * 100)),
-                };
-            }
             const r = centerSnapshot.centers[c];
             const g = centerSnapshot.centers[c + 1];
             const b = centerSnapshot.centers[c + 2];
             return {
-                x: Math.max(8, Math.min(92, 10 + (r / 255) * 74)),
-                y: Math.max(10, Math.min(86, 88 - (g / 255) * 68 + (b / 255) * 8)),
+                x: axisPos(r),
+                y: -axisPos(g),
+                z: axisPos(b),
             };
         }
-        const trails = Array.from({ length: result.k }, (_, index) => {
-            const points = visibleSnapshots.map((item) => pointFor(item, index));
+        const centers = Array.from({ length: result.k }, (_, index) => {
+            const points = visibleSnapshots.map((item) => pointFor3d(item, index));
             const [r, g, b] = colorFromCenter(snapshot.centers, result.dims, index);
             const size = 18 + (snapshot.counts[index] / maxCount) * 20;
-            const line = points.length > 1
-                ? `<polyline points="${points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" style="--c:rgb(${r},${g},${b})"></polyline>`
-                : "";
             const current = points[points.length - 1] || { x: 50, y: 50 };
             return `
-                ${line}
-                ${points.slice(0, -1).map((p, step) => `<circle class="seg-feature-trail-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" style="--c:rgb(${r},${g},${b});animation-delay:${step * 60}ms"></circle>`).join("")}
-                <g class="seg-feature-center" style="--c:rgb(${r},${g},${b})">
-                    <circle cx="${current.x.toFixed(1)}" cy="${current.y.toFixed(1)}" r="${(size / 2).toFixed(1)}"></circle>
-                    <text x="${current.x.toFixed(1)}" y="${(current.y + 3.5).toFixed(1)}">C${index + 1}</text>
-                </g>
+                ${points.slice(0, -1).map((p, step) => `<i class="seg-feature-trail-3d" style="--x:${p.x.toFixed(1)}px;--y:${p.y.toFixed(1)}px;--z:${p.z.toFixed(1)}px;--c:rgb(${r},${g},${b});animation-delay:${step * 70}ms"></i>`).join("")}
+                <b class="seg-feature-center-3d" style="--x:${current.x.toFixed(1)}px;--y:${current.y.toFixed(1)}px;--z:${current.z.toFixed(1)}px;--s:${Math.max(14, size * 0.62).toFixed(1)}px;--c:rgb(${r},${g},${b})"><span>C${index + 1}</span></b>
             `;
         }).join("");
         return `
-            <div class="seg-basic-feature-cloud" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
-                <div class="seg-feature-axis"><span>R / X</span><span>${result.useXY ? "Y" : "G with B offset"}</span></div>
-                <svg viewBox="0 0 100 100" role="img" aria-label="${result.useXY ? "RGB XY feature space" : "RGB feature space"}">
-                    <rect x="4" y="6" width="92" height="82" rx="8"></rect>
-                    ${trails}
-                </svg>
-                <em>${result.useXY ? "RGB+XY: centers move through color and position space" : "RGB feature space: C1-C4 move toward mean color centers"}</em>
+            <div class="seg-basic-feature-cloud seg-feature-cube-scene" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                <div class="seg-feature-cube" role="img" aria-label="Rotating RGB feature cube">
+                    <span class="seg-cube-face is-front"></span>
+                    <span class="seg-cube-face is-back"></span>
+                    <span class="seg-cube-face is-left"></span>
+                    <span class="seg-cube-face is-right"></span>
+                    <span class="seg-cube-face is-top"></span>
+                    <span class="seg-cube-face is-bottom"></span>
+                    ${sampleDots}
+                    ${centers}
+                </div>
+                <div class="seg-feature-cube-labels"><span>R</span><span>G</span><span>B</span></div>
+                <em><strong>iteration ${snapshot.iter}/${result.snapshots.length}</strong>${result.useXY ? "RGB cube + XY weight guides center drift" : "RGB cube: pixels orbit C1-C4 mean centers"}</em>
             </div>
         `;
     }
@@ -1214,6 +1271,10 @@
     function renderKMeansStepFocus(frame, result, snapshot, stats) {
         if (!els.stepFocus || !frame) return;
         const theory = kmeansTheoryForPhase(result, snapshot, stats, frame);
+        const largest = [...stats].sort((a, b) => b.count - a.count)[0];
+        const ratios = stats.map((item) => `C${item.label + 1} ${Math.round(item.ratio * 100)}%`).join(" · ");
+        const selected = Number.isInteger(state.selectedLabel) ? stats?.[state.selectedLabel] : null;
+        const activeLegendLabel = selected?.label ?? largest?.label;
         els.stepFocus.dataset.phase = state.kmeansPhase;
         els.stepVisual.innerHTML = conceptCard(theory.title, frame.graph, theory.stageNote);
         els.stepMatrix.innerHTML = conceptCard("当前中间量", frame.matrix);
@@ -1228,15 +1289,46 @@
                 <strong>${escapeHtml(theory.label)}</strong>
                 <p>${escapeHtml(theory.stageNote)}</p>
             </div>
-            <div class="seg-notes-flowline">
-                ${theory.flow.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
-            </div>
-            <dl>
-                ${theory.facts.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}
-                ${theory.theory.map((row) => `<div><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}
+            ${notesFlowChips(theory.flow)}
+            ${notesClusterBars(stats, activeLegendLabel)}
+            <dl class="seg-notes-focus-list">
+                <div><dt>当前参数</dt><dd>K=${result.k} · Feature=${result.useXY ? "RGB+XY" : "RGB"} · Iteration=${snapshot.iter}/${result.snapshots.length} · Output=${state.kmeansPhase === "stats" ? "region stats" : "overlay mask"}</dd></div>
+                <div><dt>区域统计</dt><dd>region count=${result.k} · largest=C${(largest?.label ?? 0) + 1} ${Math.round((largest?.ratio || 0) * 100)}% · ${ratios}</dd></div>
+                <div><dt>计算状态</dt><dd>movement=${snapshot.movement.toFixed(2)} · mean distance=${snapshot.distance.toFixed(1)}</dd></div>
+                ${selected ? `<div><dt>点击区域</dt><dd>C${selected.label + 1} · area=${selected.count}px · bbox=${selected.width}×${selected.height} · centroid=(${Math.round(selected.centroidX)},${Math.round(selected.centroidY)})</dd></div>` : ""}
             </dl>
             <div class="seg-basic-cluster-legend" aria-label="聚类颜色图例">
-                ${stats.map((item) => `<span><i style="background:rgb(${item.color.r},${item.color.g},${item.color.b})"></i>C${item.label + 1}</span>`).join("")}
+                ${stats.map((item) => `<span class="${activeLegendLabel === item.label ? "is-active" : ""}"><i style="background:rgb(${item.color.r},${item.color.g},${item.color.b})"></i>C${item.label + 1}</span>`).join("")}
+            </div>
+        `;
+    }
+
+    function notesFlowChips(flow = []) {
+        if (!flow.length) return "";
+        return `
+            <div class="seg-notes-mini-flow" aria-label="当前计算流程">
+                ${flow.map((item, index) => `
+                    <span>${escapeHtml(item)}</span>
+                    ${index < flow.length - 1 ? "<i></i>" : ""}
+                `).join("")}
+            </div>
+        `;
+    }
+
+    function notesClusterBars(stats, activeLabel) {
+        return `
+            <div class="seg-notes-cluster-bars" aria-label="Cluster ratio">
+                ${stats.map((item) => {
+                    const percent = Math.round(item.ratio * 100);
+                    const color = `rgb(${item.color.r},${item.color.g},${item.color.b})`;
+                    return `
+                        <div class="${activeLabel === item.label ? "is-active" : ""}" style="--w:${percent}%;--c:${color}">
+                            <span>C${item.label + 1}</span>
+                            <b></b>
+                            <em>${percent}%</em>
+                        </div>
+                    `;
+                }).join("")}
             </div>
         `;
     }
@@ -1276,6 +1368,41 @@
         `;
     }
 
+    function updateProcessCards(result, snapshot, stats) {
+        const lastSnapshot = result.snapshots[result.snapshots.length - 1] || snapshot;
+        const isFinal = snapshot.iter >= lastSnapshot.iter;
+        const isConverged = isFinal && lastSnapshot.movement < 0.35;
+        const outputLabel = state.kmeansPhase === "stats"
+            ? "region stats"
+            : state.kmeansPhase === "map"
+                ? "overlay mask"
+                : "label map";
+        if (els.processIterationCard) {
+            els.processIterationCard.style.setProperty("--iter-progress", `${Math.round((snapshot.iter / Math.max(1, result.snapshots.length)) * 100)}%`);
+            els.processIterationCard.style.setProperty("--move-progress", `${Math.round(clamp(snapshot.movement / 180, 0, 1) * 100)}%`);
+        }
+        if (els.processIteration) els.processIteration.textContent = `${snapshot.iter} / ${result.snapshots.length}`;
+        if (els.processDistance) els.processDistance.textContent = snapshot.distance.toFixed(1);
+        if (els.processMovement) els.processMovement.textContent = snapshot.movement.toFixed(2);
+        if (els.processStop) els.processStop.textContent = isConverged ? "movement < 0.35" : `max iter ${state.maxIter}`;
+        if (els.processConvergence) {
+            els.processConvergence.textContent = isConverged ? "converged" : (isFinal ? "max iteration" : "iterating");
+            els.processConvergence.classList.toggle("is-converged", isConverged);
+        }
+        if (els.processOutput) els.processOutput.textContent = outputLabel;
+        if (els.processOutputType) els.processOutputType.textContent = outputLabel;
+        if (els.processDecode) els.processDecode.textContent = "color mask + boundary";
+        if (els.processRegions) els.processRegions.textContent = String(stats.length);
+        if (els.processOutputNote) {
+            els.processOutputNote.textContent = state.kmeansPhase === "stats"
+                ? "统计阶段从 label map 扫描每个 cluster 的 area、ratio、bbox 与 centroid。"
+                : "Label map 被解码为半透明颜色 mask，并在相邻标签变化处绘制区域边界。";
+        }
+        if (els.processOutputCard) {
+            els.processOutputCard.classList.toggle("is-overlay-active", state.kmeansPhase === "map");
+        }
+    }
+
     function updateKMeansReadout(result, snapshot) {
         if (state.selectedLabel !== null && state.selectedLabel >= result.k) state.selectedLabel = null;
         const counts = snapshot.counts;
@@ -1293,6 +1420,7 @@
         els.centerList.innerHTML = centerRows(result, snapshot);
         els.featureSpace.innerHTML = renderFeatureSpace(result, snapshot);
         renderIterationMonitor(result);
+        updateProcessCards(result, snapshot, stats);
         showRegionPopover(stats);
         renderNotesForKMeans(result, snapshot, stats, mainIndex, ratioText);
         return stats;
@@ -1311,8 +1439,17 @@
         };
         const currentStep = stepNames[state.kmeansPhase] || "区域统计";
         const selected = Number.isInteger(state.selectedLabel) ? stats?.[state.selectedLabel] : null;
+        const phaseFlows = {
+            image: ["image", "pixels", "RGB", "feature"],
+            feature: ["pixels", "f(x)", "space", "centers"],
+            assign: ["f(x)", "distance", "argmin", "label"],
+            update: ["cluster", "mean", "center", "iterate"],
+            map: ["label", "mask", "boundary", "overlay"],
+            stats: ["label", "count", "ratio", "region"],
+        };
+        const activeLegendLabel = selected?.label ?? mainIndex;
         const legend = stats.map((item) => `
-            <span>
+            <span class="${item.label === activeLegendLabel ? "is-active" : ""}">
                 <i style="background:rgb(${item.color.r},${item.color.g},${item.color.b})"></i>
                 C${item.label + 1}
             </span>
@@ -1329,8 +1466,9 @@
                 <strong>${currentStep}</strong>
                 <p>${state.kmeansPhase === "feature" ? "像素被映射到特征空间，中心点会向同类均值移动。" : state.kmeansPhase === "map" ? "label map 转成半透明 mask，并叠加边界线。" : state.kmeansPhase === "stats" ? "从 label map 统计每个区域的面积、bbox 和中心点。" : "根据当前中心计算距离，再更新中心或输出区域。"}</p>
             </div>
-            <dl>
-                <div><dt>当前公式</dt><dd>cluster(x)=argmin_k ||f(x)-c_k||²</dd></div>
+            ${notesFlowChips(phaseFlows[state.kmeansPhase] || phaseFlows.stats)}
+            ${notesClusterBars(stats, activeLegendLabel)}
+            <dl class="seg-notes-focus-list">
                 <div><dt>当前参数</dt><dd>K=${result.k} · feature=${feature} · iteration=${snapshot.iter}/${result.snapshots.length} · output=overlay mask</dd></div>
                 <div><dt>当前统计</dt><dd>region count=${result.k} · largest=C${mainIndex + 1} ${ratioText} · cluster ratio=${ratios}</dd></div>
                 <div><dt>中心移动</dt><dd>movement=${snapshot.movement.toFixed(2)} · mean distance=${snapshot.distance.toFixed(1)}</dd></div>
@@ -2095,9 +2233,63 @@
     }
 
     function metricCards(metrics) {
+        const icons = {
+            "max-flow": "flow",
+            "cut edges": "cut",
+            foreground: "target",
+            seeds: "seed",
+            iterations: "loop",
+            "mask ratio": "percent",
+            bbox: "box",
+            image: "image",
+            grid: "grid",
+            k: "hash",
+            "fg color": "drop",
+            "bg color": "drop",
+            "unary range": "ruler",
+            meaning: "help",
+            "augment paths": "route",
+            "first bottle": "flag",
+            "edge model": "link",
+            next: "arrow",
+            "fg model": "target",
+            "bg model": "target",
+            boundary: "border",
+            sample: "doc",
+            source: "photo",
+            "seed rule": "rule",
+            nodes: "nodes",
+            "edge model": "link",
+            degree: "signal",
+            goal: "target",
+            "cut(a,b)": "cut",
+            "assoc(a,v)": "group",
+            "assoc(b,v)": "group",
+            ncut: "chart",
+            box: "box",
+            "fg seeds": "target",
+            "bg seeds": "target",
+            "fg markers": "target",
+            "bg markers": "target",
+            unknown: "question",
+            processed: "check",
+            frontier: "location",
+            "boundary rule": "border",
+            queue: "layers",
+            regions: "grid",
+            largest: "star",
+            "grid cells": "grid",
+            "final movement": "move",
+            "mean distance": "ruler",
+            "stop rule": "stop",
+        };
         return `
             <div class="seg-analysis-metrics">
-                ${metrics.map((metric) => `<div><span>${escapeHtml(metric[0])}</span><strong>${escapeHtml(metric[1])}</strong></div>`).join("")}
+                ${metrics.map((metric) => {
+                    const key = String(metric[0]).toLowerCase();
+                    const icon = icons[key] || "metric";
+                    return `<div class="is-${icon}"><span>${escapeHtml(metric[0])}</span><strong>${escapeHtml(metric[1])}</strong></div>`;
+                }).join("")}
             </div>
         `;
     }
@@ -2387,6 +2579,60 @@
         const meta = teachingMeta(concept, frame);
         const flow = meta.flow || [];
         const compactNotes = (concept?.notes || []).slice(0, 4);
+
+        // 针对不同算法的不同步骤引入通俗的“人话比喻”（拟物化类比）
+        const analogies = {
+            "K-means RGB": {
+                image: "【比喻】先划分好“片区”：把一整张大城市地图划分为几百个规则的居委会格子，每个格子的平均肤色代表这片居民。",
+                feature: "【比喻】收集“爱好”特征：把所有人的穿衣风格（颜色）提取出来作为一个坐标，颜色越接近的居民，在喜好空间里就挨得越近。",
+                assign: "【比喻】“认领小组”：在全国设立 K 个突击队长（初始中心），每个人（像素格子）根据爱好距离，主动向最聊得来的那个队长靠拢。",
+                update: "【比喻】“寻找核心”：各小组成员选出新的“意见领袖”。聚类中心会移动到当前组内全体成员的最平均偏好上，让群体更稳定。",
+                map: "【比喻】“画出圈子”：重复组队和移动，直到大家都找到了固定归属。相同小组的人手拉手，从而把相连的同色圈子割出来。",
+                stats: "【比喻】“清点门派”：分家结束，盘点每个门派分别抢占了多大地盘、总部坐标在哪里，将图像视觉块转化为了报表数据。"
+            },
+            "K-means RGB + XY": {
+                image: "【比喻】划分“网格片区”：将像素整理为局部格，每个格子除了长相（RGB）外，还背负着它的出生地坐标（XY）。",
+                feature: "【比喻】“同乡会筹备”：像素现在的爱好不仅看穿衣习惯，还要看位置。距离本就遥远的人即使穿得一样，也很难硬凑进同一个同乡会。",
+                assign: "【比喻】“就近结盟”：考虑颜值（RGB）和距离（XY）的双重吸引，每个格子各自寻找综合吸引力最强的那位盟主结盟。",
+                update: "【比喻】“团队搬迁”：盟主为了照顾所有的盟友，会把总部搬迁到盟友聚集的“地理中心”与“平均肤色”的平衡点上。",
+                map: "【比喻】“连片建区”：因为地理距离有惩罚，所以最终分出来的团队都是“一块块”连在起的，基本上不会出现散落 of 孤岛小像素点。",
+                stats: "【比喻】“大盘点”：输出包含空间平滑约束的分割标签。不仅数一数各团体的面积，还测量并圈出了它们各团体的外接矩形范围。"
+            },
+            "Graph Cut": {
+                image: "【比喻】“划定两极势力”：视像素点为战场上的士兵，并建立前景 Source（水源）和背景 Sink（下水道）两极势力端点。",
+                feature: "【比喻】“站队投诚”：判断每个士兵（像素）更像哪方阵营。类似前景的士兵，连到 Source 的管道就粗；反之，则连到 Sink 的管道粗。",
+                assign: "【比喻】“肩并肩拉手”：相邻士兵如果肤色/亮度相近，就会手拉手连结，且连结很结实（管道极粗）；颜色不一致的拉得松（管子极细）。",
+                update: "【比喻】“筑坝拦截”：从 Source 源源不断灌水，流经所有连结的管道。水会卡在最窄的位置（瓶颈）。在这些由于颜色不对称而被限流的管子处下刀切开（最小割）。",
+                stats: "【比喻】“尘埃落定”：两极彻底被大坝一分为二，水源一侧即为高亮的前景，下水端一侧代表背景，切断的边便是前背景分界线。"
+            },
+            "Normalized Cut": {
+                image: "【比喻】“大家都是普通人”：不设立绝对的敌我两极，而是让所有像素节点均匀在特征图中形成互相关联的网络。",
+                feature: "【比喻】“关系网络建立”：算每两个像素的长相与距离。相似但离得近的像素牵上线，线越粗代表它们越玩得来，结成密集的网。",
+                assign: "【比喻】“两步摇摆”：利用光谱分解算一个“倾向值（特征向量）”。这会让网络里的像素自动分成两大摇摆派系，并在倾向图上极化分化成两半。",
+                update: "【比喻】“一刀切中庸”：以倾斜倾向线的中位数一分为二。它会寻找一个切口，既让切断的连接线最少（防止切错），又保证两边的人数规模相当（防止极端的孤立小杂点）。",
+                stats: "【比喻】“均衡分配”：最终把图像切成了势力最平均的两个半区，输出无监督下根据结构特质归属的平滑聚类。"
+            },
+            "GrabCut": {
+                image: "【比喻】“划定特区范围”：用方框框定一个特区。框框外面的像素被死刑宣判为“必是背景”，框框内的像素处于待定审查区。",
+                feature: "【比喻】“学习正反面教材”：通过框外的背景像素和框内的临时前景像素，学习前景/背景各自的特征，作为新的指引工具。",
+                update: "【比喻】“反复洗洗切切”：利用最新的好坏特征重新搭起 Graph 切割大坝；切割出新 mask 后，反过来修正 GMM 颜色模型，往复精细迭代多轮。",
+                map: "【比喻】“导出清晰轮廓”：输出透明度二值蒙版。在图像合成或扣图中可直接用作前景轮廓通道。",
+                stats: "【比喻】“收网复盘”：完成精确的前景抠图，并拉出最终的矩形物像边界，计算扣出来的目标面积多大、位置分布在哪。"
+            },
+            "Watershed": {
+                image: "【比喻】“生成盆地山脉”：提取图像边缘强度（梯度），边界越硬的地方变山峰（梯度大），区域内部等色平缓区变成积水盆地。",
+                feature: "【比喻】“雨水起点”：在各个确定的盆地底部（种子点）注入不同颜色的墨水。每个盆地是以后割裂开的种子政权。",
+                assign: "【比喻】“大水慢灌”：水位均匀上升。有标签的彩色墨水自下而上沿着地势蔓延（利用优先队列，梯度低、容易蔓延的地方先流过去）。",
+                map: "【比喻】“筑起水坝”：不同颜色的墨水在山脊（高梯度处）相遇，在相遇的交界点上筑起无法逾越的大坝（分水岭）。",
+                stats: "【比喻】“流域版图分配”：当所有地方都被灌满并且山脊大坝合围后，不同的流域便对应了最终的各个分割区块标签图。"
+            }
+        };
+
+        const methodAnalogy = analogies[concept?.activeMethod] || {};
+        const currentAnalogyHtml = methodAnalogy[meta.phase] 
+            ? `<div class="seg-concept-analogy">💡 <strong>原理解释类比：</strong><p>${escapeHtml(methodAnalogy[meta.phase])}</p></div>`
+            : "";
+
         return `
             <section class="seg-notes-current">
                 <div class="seg-notes-flowline" aria-label="当前步骤数据流">
@@ -2400,6 +2646,7 @@
                     ${meta.facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}
                 </div>
             </section>
+            ${currentAnalogyHtml}
             <dl class="seg-notes-compact">
                 ${compactNotes.map(([label, text]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(text)}</dd></div>`).join("")}
             </dl>
@@ -3692,8 +3939,23 @@
         const frame = frames[clamp(index, 0, frames.length - 1)];
         state.conceptFrameIndex = frames.indexOf(frame);
         els.graphStage.innerHTML = conceptCard(frame.title, frame.graph, frame.stageNote);
-        els.matrixStage.innerHTML = conceptCard("算法中间量", frame.matrix);
-        els.conceptDetail.innerHTML = conceptCard("输出解释", frame.detail);
+        let matrixTitle = "算法中间量";
+        let detailTitle = "输出解释";
+        if (state.concept?.stepperKind === "watershed") {
+            matrixTitle = "分割度量结果";
+            detailTitle = "区域属性统计";
+        } else if (state.concept?.stepperKind === "regions") {
+            matrixTitle = "区域特征列表";
+            detailTitle = "区域指标总览";
+        } else if (state.concept?.stepperKind === "graph") {
+            matrixTitle = "图结构与边权";
+            detailTitle = "割集结果与能耗";
+        } else if (state.concept?.stepperKind === "grabcut") {
+            matrixTitle = "高斯混合模型 (GMM)";
+            detailTitle = "掩膜优化与指标";
+        }
+        els.matrixStage.innerHTML = conceptCard(matrixTitle, frame.matrix);
+        els.conceptDetail.innerHTML = conceptCard(detailTitle, frame.detail);
         els.currentIter.textContent = `${state.conceptFrameIndex + 1} / ${frames.length}`;
         els.stripIter.textContent = `${state.conceptFrameIndex + 1}`;
         const meta = teachingMeta(state.concept, frame);
@@ -4587,11 +4849,7 @@
         }
     }
 
-    els.sample.addEventListener("change", async () => {
-        state.sampleId = els.sample.value;
-        updateSampleCards();
-        await loadSelectedSample(true);
-    });
+    // 移除废弃的 els.sample.addEventListener 监听，其选择反馈由触发器和 grid 卡片直接处理
     els.upload.addEventListener("change", async () => {
         const file = els.upload.files?.[0];
         if (!file) return;

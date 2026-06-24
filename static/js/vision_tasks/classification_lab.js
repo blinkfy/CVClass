@@ -121,10 +121,42 @@
         },
     ];
     const compareStages = [
-        { key: "input", label: "Input", bovw: "image + feature points", cnn: "image tensor + sliding window" },
-        { key: "representation", label: "Representation", bovw: "visual words + histogram", cnn: "feature maps + pooled vector" },
-        { key: "classifier", label: "Classifier", bovw: "logistic regression", cnn: "classifier head logits" },
-        { key: "topk", label: "Top-K", bovw: "flower class scores", cnn: "softmax Top-5" },
+        {
+            key: "input",
+            label: "Input",
+            title: "输入图像",
+            bovw: "图像 + 局部特征点",
+            cnn: "图像张量 + 滑动窗口",
+            summary: "两者从同一张图像出发。BoVW 先检测稀疏的局部特征点；CNN 则将整图转为张量，用滑动窗口扫描每个局部区域。",
+            keyDiff: "局部稀疏特征点 vs 密集滑动窗口",
+        },
+        {
+            key: "representation",
+            label: "Representation",
+            title: "特征表示",
+            bovw: "视觉单词 + 直方图",
+            cnn: "特征图 + 池化向量",
+            summary: "BoVW 把局部描述子量化成视觉单词，形成稀疏高维直方图；CNN 通过多层卷积得到密集特征图，再全局池化为低维向量。",
+            keyDiff: "稀疏高维直方图 vs 密集低维向量",
+        },
+        {
+            key: "classifier",
+            label: "Classifier",
+            title: "分类器映射",
+            bovw: "逻辑回归",
+            cnn: "全连接分类头",
+            summary: "BoVW 用逻辑回归把直方图映射为类别分数，可解释性强；CNN 用全连接分类头把池化向量映射为 logits，与前面卷积端到端联合训练。",
+            keyDiff: "手工设计特征 + 线性分类 vs 数据驱动端到端",
+        },
+        {
+            key: "topk",
+            label: "Top-K",
+            title: "概率输出",
+            bovw: "Top-5 类别分数",
+            cnn: "Softmax Top-5",
+            summary: "最终都经 softmax 得到概率并取 Top-K。差异在于表示学习：BoVW 依赖手工特征和固定词袋，CNN 的卷积核则从数据中自动学习。",
+            keyDiff: "相同输出形式，不同学习机制",
+        },
     ];
     const bovwPrototypeLabels = ["原型 A", "原型 B", "原型 C", "原型 D", "原型 E", "原型 F"];
     const state = {
@@ -242,15 +274,20 @@
         compareFlow: $("[data-cls-compare-flow]"),
         compareBovwRoute: $("[data-cls-compare-bovw-route]"),
         compareCnnRoute: $("[data-cls-compare-cnn-route]"),
+        compareBovwStage: $("[data-cls-compare-bovw-stage]"),
+        compareCnnStage: $("[data-cls-compare-cnn-stage]"),
+        compareBovwStageLabel: $("[data-cls-compare-bovw-stage-label]"),
+        compareCnnStageLabel: $("[data-cls-compare-cnn-stage-label]"),
         compareBovwOverlay: $("[data-cls-compare-bovw-overlay]"),
         compareBovwHist: $("[data-cls-compare-bovw-hist]"),
+        compareBovwClassifier: $("[data-cls-compare-bovw-classifier]"),
         compareBovwScores: $("[data-cls-compare-bovw-scores]"),
         compareCnnImage: $("[data-cls-compare-cnn-image]"),
         compareCnnOverlay: $("[data-cls-compare-cnn-overlay]"),
         compareCnnMaps: $("[data-cls-compare-cnn-maps]"),
         compareCnnGlobal: $("[data-cls-compare-cnn-global]"),
         compareCnnScores: $("[data-cls-compare-cnn-scores]"),
-        compareDiff: $("[data-cls-compare-diff]"),
+        compareSummary: $("[data-cls-compare-summary]"),
 
         notesMethod: $("[data-cls-notes-method]"),
         notesMethodDesc: $("[data-cls-notes-method-desc]"),
@@ -2393,24 +2430,36 @@
 
     function renderCompareFlow() {
         if (!els.compareFlow) return;
-        els.compareFlow.innerHTML = compareStages.map((stage, index) => `
-            <button type="button" class="${stage.key === state.compareStage ? "is-active" : ""}" data-compare-stage="${stage.key}">
-                <span>${index + 1}</span>
-                <strong>${stage.label}</strong>
-            </button>
-        `).join("");
+        const currentIndex = compareStages.findIndex((s) => s.key === state.compareStage);
+        els.compareFlow.innerHTML = compareStages.map((stage, index) => {
+            let stepState = "is-pending";
+            if (index === currentIndex) stepState = "is-active";
+            else if (index < currentIndex) stepState = "is-completed";
+            const num = String(index + 1).padStart(2, "0");
+            const arrow = index < compareStages.length - 1 ? `<span class="cls-compare-stepper-arrow" aria-hidden="true">→</span>` : "";
+            return `
+                <button type="button" class="${stepState}" data-compare-stage="${stage.key}">
+                    <span class="cls-compare-stepper-num">${num}</span>
+                    <span class="cls-compare-stepper-text">
+                        <strong>${stage.title}</strong>
+                        <small>${stage.label}</small>
+                    </span>
+                </button>
+                ${arrow}
+            `;
+        }).join("");
     }
 
     function renderCompareCnnOverlay() {
         if (!els.compareCnnOverlay) return;
         const active = state.compareStage;
-        const windowClass = active === "input" || active === "representation" ? " is-active" : "";
+        const windowClass = active === "input" ? " is-active" : "";
         els.compareCnnOverlay.innerHTML = `
             <rect class="cls-compare-cnn-window${windowClass}" x="16" y="18" width="22" height="22" rx="2"></rect>
             <path class="cls-compare-cnn-flowline ${active === "input" ? "is-active" : ""}" d="M38 29 C52 28 58 36 69 36"></path>
             <path class="cls-compare-cnn-flowline ${active === "representation" ? "is-active" : ""}" d="M68 36 C76 45 78 58 82 69"></path>
             <path class="cls-compare-cnn-flowline ${active === "classifier" || active === "topk" ? "is-active" : ""}" d="M82 69 C88 72 92 76 96 82"></path>
-            <circle class="cls-compare-cnn-token" cx="16" cy="29" r="1.8"></circle>
+            <circle class="cls-compare-cnn-token ${active === "input" ? "is-active" : ""}" cx="16" cy="29" r="1.8"></circle>
         `;
     }
 
@@ -2444,23 +2493,34 @@
     function renderCompareCnnVector(target, scores) {
         if (!target) return;
         const topScores = scores.length ? scores.slice(0, 5) : [{ label: "waiting", score: 0.2 }];
-        const vector = Array.from({ length: 18 }, (_, index) => `<i class="${index % 5 === 0 ? "is-hot" : ""}" style="--h:${24 + ((index * 13) % 62)}%"></i>`).join("");
-        const nodes = topScores.map((score, index) => `<span class="${index === 0 ? "is-top" : ""}">${escapeHtml(score.label)}</span>`).join("");
+        const vector = Array.from({ length: 20 }, (_, index) => `<i class="${index % 4 === 0 ? "is-hot" : ""}" style="--h:${30 + ((index * 11) % 55)}%"></i>`).join("");
+        const weightRows = Array.from({ length: 5 }, (_, r) => {
+            const cells = Array.from({ length: 6 }, (_, c) => {
+                const hot = r === 0 && c < 3;
+                return `<i class="${hot ? "is-hot" : ""}" style="--a:${0.25 + Math.random() * 0.55}"></i>`;
+            }).join("");
+            return `<div>${cells}</div>`;
+        }).join("");
         target.innerHTML = `
-            <div class="cls-compare-pooling-flow ${state.compareStage === "representation" ? "is-active" : ""}">
-                <div class="cls-compare-pool-source">
-                    ${Array.from({ length: 4 }, () => `<article>${Array.from({ length: 9 }, (_, i) => `<i style="--d:${(i * 0.025).toFixed(3)}s"></i>`).join("")}</article>`).join("")}
+            <span class="cls-compare-classifier-title">分类器映射：全连接分类头</span>
+            <div class="cls-compare-cnn-classifier-flow">
+                <div class="cls-compare-cnn-pooled">
+                    <small>全局池化向量</small>
+                    <div class="cls-compare-vector">${vector}</div>
                 </div>
-                <strong>global pooling</strong>
+                <b aria-hidden="true">→</b>
+                <div class="cls-compare-cnn-classifier-core">
+                    <small>全连接权重 W</small>
+                    <div class="cls-compare-cnn-layers cls-compare-cnn-layers--grid">${weightRows}</div>
+                </div>
+                <b aria-hidden="true">→</b>
+                <div class="cls-compare-cnn-logits">
+                    <small>Top-1 预测</small>
+                    <strong>${escapeHtml(topScores[0]?.label || "—")}</strong>
+                    <em>${topScores[0] ? `${Math.round(topScores[0].score * 100)}%` : ""}</em>
+                </div>
             </div>
-            <div class="cls-compare-vector-classifier ${state.compareStage === "classifier" || state.compareStage === "topk" ? "is-active" : ""}">
-                <strong class="cls-compare-vector-title">pooled vector → classifier → Top-K nodes</strong>
-                <div class="cls-compare-vector">${vector}</div>
-                <svg viewBox="0 0 100 64" preserveAspectRatio="none">
-                    ${[10, 22, 34, 46, 58].map((y, i) => `<path class="${i < 2 ? "is-hot" : ""}" d="M18 32 C39 ${y} 58 ${y} 82 ${y}"></path>`).join("")}
-                </svg>
-                <div class="cls-compare-class-nodes">${nodes}</div>
-            </div>
+            <p class="cls-compare-classifier-note">CNN 将全局池化后的紧致向量 v，经全连接层 W^T v + b 映射为各类别 Logits。</p>
         `;
     }
 
@@ -2468,8 +2528,8 @@
         if (!target) return;
         const topScores = scores.slice(0, 5);
         target.innerHTML = `
-            <div class="cls-compare-softmax ${state.compareStage === "topk" ? "is-active" : ""}">
-                <div class="cls-compare-softmax-title">ONNX logits → softmax probability bars → Top-5 ranking</div>
+            <div class="cls-compare-softmax cls-compare-softmax--cnn ${state.compareStage === "topk" ? "is-active" : ""}">
+                <div class="cls-compare-softmax-title">CNN logits → softmax 概率条 → Top-5 排序</div>
                 ${topScores.map((item, index) => `
                     <div class="classification-score-row ${index === 0 ? "is-top" : ""}" style="--p:${Math.max(5, Math.round((item.score || 0) * 100))}%">
                         <span>${index + 1}</span>
@@ -2482,20 +2542,137 @@
         `;
     }
 
+    function renderCompareBovwScores(target, scores) {
+        if (!target) return;
+        const topScores = scores.slice(0, 5);
+        target.innerHTML = `
+            <div class="cls-compare-softmax cls-compare-softmax--bovw ${state.compareStage === "topk" ? "is-active" : ""}">
+                <div class="cls-compare-softmax-title">BoVW 直方图 → softmax 概率条 → Top-5 排序</div>
+                ${topScores.map((item, index) => `
+                    <div class="classification-score-row ${index === 0 ? "is-top" : ""}" style="--p:${Math.max(5, Math.round((item.score || 0) * 100))}%">
+                        <span>${index + 1}</span>
+                        <strong>${escapeHtml(item.label)}${item.source === "prototype-demo" ? "<small>教学原型</small>" : ""}</strong>
+                        <div><i style="width:${Math.round((item.score || 0) * 100)}%"></i></div>
+                        <em>${Math.round((item.score || 0) * 100)}%</em>
+                    </div>
+                `).join("")}
+            </div>
+        `;
+    }
+
+    function renderCompareStageVisibility() {
+        const stage = state.compareStage;
+        const stageInfo = compareStages.find((s) => s.key === stage) || compareStages[0];
+
+        if (els.compareBovwRoute) els.compareBovwRoute.dataset.compareStage = stage;
+        if (els.compareCnnRoute) els.compareCnnRoute.dataset.compareStage = stage;
+        if (els.compareBovwStageLabel) els.compareBovwStageLabel.textContent = stageInfo.bovw;
+        if (els.compareCnnStageLabel) els.compareCnnStageLabel.textContent = stageInfo.cnn;
+
+        const bovwChildren = els.compareBovwStage?.children || [];
+        Array.from(bovwChildren).forEach((el) => {
+            const show = el.dataset.stageShow?.split(" ").includes(stage);
+            el.classList.toggle("is-active", !!show);
+        });
+
+        const cnnChildren = els.compareCnnStage?.children || [];
+        Array.from(cnnChildren).forEach((el) => {
+            const show = el.dataset.stageShow?.split(" ").includes(stage);
+            el.classList.toggle("is-active", !!show);
+        });
+    }
+
+    function renderCompareBovwClassifier() {
+        if (!els.compareBovwClassifier) return;
+        const scores = bovwScores();
+        const top = scores[0];
+        const isPrototype = top?.source === "prototype-demo";
+        const isTrained = top?.source === "trained-flowers17";
+        const classifierText = isTrained
+            ? "已训练的 Logistic Regression"
+            : isPrototype
+                ? "未训练原型权重"
+                : "演示分类器";
+        const hist = state.normalizedHistogram?.length
+            ? state.normalizedHistogram
+            : state.histogram?.length
+                ? state.histogram
+                : [];
+        const shownBins = hist.length ? hist.slice(0, 30) : Array.from({ length: 30 }, () => Math.random() * 0.6 + 0.1);
+        const maxBin = Math.max(...shownBins, 0.01);
+        const miniHist = shownBins.map((h, i) => {
+            const height = Math.round((h / maxBin) * 100);
+            const isHot = i < 3;
+            return `<i style="--h:${height}%" class="${isHot ? "is-hot" : ""}"></i>`;
+        }).join("");
+        const weightRows = Array.from({ length: 5 }, (_, r) => {
+            const cells = Array.from({ length: 6 }, (_, c) => {
+                const hot = r === 0 && c < 2;
+                return `<i class="${hot ? "is-hot" : ""}" style="--a:${0.2 + Math.random() * 0.6}"></i>`;
+            }).join("");
+            return `<div>${cells}</div>`;
+        }).join("");
+        els.compareBovwClassifier.innerHTML = `
+            <span class="cls-compare-classifier-title">分类器映射：${classifierText}</span>
+            <div class="cls-compare-bovw-classifier-flow">
+                <div class="cls-compare-bovw-hist-mini">
+                    <small>词袋直方图</small>
+                    <div>${miniHist}</div>
+                </div>
+                <b aria-hidden="true">→</b>
+                <div class="cls-compare-bovw-weights">
+                    <small>分类器权重</small>
+                    <div>${weightRows}</div>
+                </div>
+                <b aria-hidden="true">→</b>
+                <div class="cls-compare-bovw-top1">
+                    <small>Top-1 预测</small>
+                    <strong>${top ? escapeHtml(top.label) : "—"}</strong>
+                    <em>${top ? `${Math.round(top.score * 100)}%` : ""}</em>
+                </div>
+            </div>
+            <p class="cls-compare-classifier-note">${state.features.length ? `当前 ${state.features.length} 个局部特征投票到 ${state.words.length} 个视觉单词，再由线性分类器映射为类别得分。` : "先从图像采样局部描述子，再由直方图进入分类器。"}</p>
+        `;
+    }
+
+    function renderCompareSummary() {
+        if (!els.compareSummary) return;
+        const stage = compareStages.find((s) => s.key === state.compareStage) || compareStages[0];
+        const hasVs = stage.keyDiff.includes(" vs ");
+        const [bovwDiff, cnnDiff] = hasVs ? stage.keyDiff.split(" vs ") : [stage.keyDiff, ""];
+        const keyHtml = hasVs
+            ? `<div class="cls-compare-summary-key">
+                <span class="cls-compare-summary-key-bovw">${bovwDiff}</span>
+                <b>vs</b>
+                <span class="cls-compare-summary-key-cnn">${cnnDiff}</span>
+            </div>`
+            : `<div class="cls-compare-summary-key">
+                <span class="cls-compare-summary-key-bovw">${bovwDiff}</span>
+            </div>`;
+        els.compareSummary.innerHTML = `
+            <header>
+                <span class="cls-compare-summary-badge">${stage.label}</span>
+                <h4>阶段对比：${stage.title}</h4>
+            </header>
+            <p>${stage.summary}</p>
+            ${keyHtml}
+        `;
+    }
+
     function renderCompare(item) {
         setImage(els.compareBovwImage, null, item);
         setImage(els.compareCnnImage, null, item);
         renderCompareFlow();
-        if (els.compareBovwRoute) els.compareBovwRoute.dataset.compareStage = state.compareStage;
-        if (els.compareCnnRoute) els.compareCnnRoute.dataset.compareStage = state.compareStage;
         renderBovwOverlay(els.compareBovwOverlay);
         renderMiniHistogram(els.compareBovwHist);
-        renderScores(els.compareBovwScores, bovwScores());
+        renderCompareBovwClassifier();
         renderCompareCnnOverlay();
         renderCompareCnnMaps(els.compareCnnMaps);
         renderCompareCnnVector(els.compareCnnGlobal, cnnScores(item));
         renderCompareCnnScores(els.compareCnnScores, cnnScores(item));
-        renderDiffTable();
+        renderCompareBovwScores(els.compareBovwScores, bovwScores());
+        renderCompareStageVisibility();
+        renderCompareSummary();
     }
 
     function render() {
@@ -2753,6 +2930,18 @@
             render();
         });
     }
+    document.addEventListener("keydown", (event) => {
+        if (state.method !== "compare") return;
+        const keys = compareStages.map((s) => s.key);
+        const index = keys.indexOf(state.compareStage);
+        if (event.key === "ArrowRight" && index < keys.length - 1) {
+            state.compareStage = keys[index + 1];
+            render();
+        } else if (event.key === "ArrowLeft" && index > 0) {
+            state.compareStage = keys[index - 1];
+            render();
+        }
+    });
     els.vocabSize.addEventListener("change", () => {
         state.vocabSize = Number(els.vocabSize.value);
         render();

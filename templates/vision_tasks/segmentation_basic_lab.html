@@ -8,11 +8,18 @@
             <div><h3>输入与参数</h3><p>Traditional Segmentation</p></div>
         </div>
 
-        <label class="vision-field seg-basic-sample-field">
+        <div class="vision-field seg-basic-sample-field">
             <span>示例图选择</span>
-            <select data-segb-sample></select>
-            <div class="seg-basic-sample-grid" data-segb-sample-grid aria-label="示例图预览选择"></div>
-        </label>
+            <div class="seg-basic-selector-wrapper" data-segb-selector-wrapper>
+                <button type="button" class="seg-basic-selector-trigger" data-segb-selector-trigger>
+                    <span data-segb-selected-label>选择示例图</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="seg-basic-dropdown-panel" data-segb-dropdown-panel>
+                    <div class="seg-basic-sample-grid" data-segb-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
 
         <div class="vision-field">
             <span>上传图片</span>
@@ -121,8 +128,39 @@
                     <canvas data-segb-original width="256" height="180"></canvas>
                 </figure>
                 <figure class="seg-basic-process-card" data-segb-compare-card>
-                    <figcaption><strong data-segb-third-title>RGB 特征空间 / 聚类中心</strong><small data-segb-feature-iteration>iteration --</small></figcaption>
-                    <div class="seg-basic-feature-space" data-segb-feature-space></div>
+                    <div class="seg-basic-process-grid">
+                        <section class="seg-process-mini-card seg-process-feature-card">
+                            <div class="seg-process-card-head">
+                                <strong data-segb-third-title>RGB 特征空间</strong>
+                                <small data-segb-feature-iteration>iteration --</small>
+                            </div>
+                            <div class="seg-basic-feature-space" data-segb-feature-space></div>
+                        </section>
+                        <section class="seg-process-mini-card seg-process-iteration-card">
+                            <div class="seg-process-card-head">
+                                <strong>聚类迭代状态</strong>
+                                <small data-segb-process-convergence>waiting</small>
+                            </div>
+                            <div class="seg-process-metrics">
+                                <div><span>Iteration</span><strong data-segb-process-iteration>-- / --</strong></div>
+                                <div><span>Mean distance</span><strong data-segb-process-distance>--</strong></div>
+                                <div><span>Final movement</span><strong data-segb-process-movement>--</strong></div>
+                                <div><span>Stop rule</span><strong data-segb-process-stop>movement &lt; 0.35</strong></div>
+                            </div>
+                        </section>
+                        <section class="seg-process-mini-card seg-process-output-card" data-segb-process-output-card>
+                            <div class="seg-process-card-head">
+                                <strong>当前输出解释</strong>
+                                <small data-segb-process-output>overlay mask</small>
+                            </div>
+                            <div class="seg-process-output-list">
+                                <div><span>Output</span><strong data-segb-process-output-type>overlay mask</strong></div>
+                                <div><span>Decode</span><strong data-segb-process-decode>color mask + boundary</strong></div>
+                                <div><span>Regions</span><strong data-segb-process-regions>4</strong></div>
+                            </div>
+                            <p data-segb-process-output-note>Label map 被解码为半透明颜色 mask，并在标签变化处绘制区域边界。</p>
+                        </section>
+                    </div>
                 </figure>
                 <figure class="seg-basic-output-card">
                     <figcaption><strong data-segb-result-title>分割结果 overlay + 边界</strong><small>mask overlay</small></figcaption>
