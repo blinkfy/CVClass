@@ -3280,7 +3280,7 @@ body:has(.vision-lab) {
     border-radius: 3px;
     background: var(--seg-label-color, #93c5fd);
     animation: segLabelCellDecode 1.9s ease-in-out infinite;
-    animation-delay: calc((var(--i, 0) % 8) * 55ms);
+    animation-delay: calc(var(--i, 0) * 20ms);
 }
 
 .seg-output-labelmap i:nth-child(4n + 1) {
@@ -5124,6 +5124,9 @@ body:has(.vision-lab) {
 }
 
 .seg-compare-slider {
+    justify-self: center;
+    width: 100%;
+    max-width: calc(380px * 16 / 9);
     position: relative;
     overflow: hidden;
     border: 1px solid #e2e8f0;

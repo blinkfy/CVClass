@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260624-segb-distinctsteps1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260624-segb-modediff2">
 {% endblock %}
 
 {% block content %}
@@ -37,7 +37,7 @@
 <script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260623-compare-style6"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
-<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260624-segb-latex1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260624-segb-unify1"></script>
 {% elif active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/object_detection_lab.js') }}?v=20260624-renamed1"></script>
 {% elif active_sub_page == 'semantic' %}

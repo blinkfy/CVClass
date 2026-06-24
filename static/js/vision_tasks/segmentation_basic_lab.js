@@ -143,6 +143,7 @@
         processMovement: $("[data-segb-process-movement]"),
         processStop: $("[data-segb-process-stop]"),
         processConvergence: $("[data-segb-process-convergence]"),
+        processIterationVisual: $("[data-segb-iteration-visual]"),
         processOutputCard: $("[data-segb-process-output-card]"),
         processOutput: $("[data-segb-process-output]"),
         processOutputType: $("[data-segb-process-output-type]"),
@@ -1961,6 +1962,125 @@
         `;
     }
 
+    function processAssignmentVisual(result, snapshot) {
+        const work = ensureWorkData();
+        const built = buildFeatures(work, result.useXY);
+        const sampleIndex = clamp(Math.floor(result.height * 0.52) * result.width + Math.floor(result.width * 0.48), 0, result.width * result.height - 1);
+        const f = sampleIndex * result.dims;
+        const distances = Array.from({ length: result.k }, (_, k) => {
+            const c = k * result.dims;
+            let distance = 0;
+            for (let d = 0; d < result.dims; d += 1) {
+                const diff = built.features[f + d] - snapshot.centers[c + d];
+                distance += diff * diff;
+            }
+            return Math.sqrt(distance);
+        });
+        const maxDistance = Math.max(1, ...distances);
+        const best = distances.indexOf(Math.min(...distances));
+        const sampleX = 84;
+        const sampleY = 76;
+        const centers = distances.map((distance, index) => {
+            const angle = -0.9 + (index / Math.max(1, result.k - 1)) * 1.8;
+            const radius = 58 + (distance / maxDistance) * 22;
+            const x = sampleX + Math.cos(angle) * radius;
+            const y = sampleY + Math.sin(angle) * radius;
+            const color = labelFill(index + 1);
+            return { index, distance, x, y, color, best: index === best };
+        });
+        return `
+            <div class="seg-iteration-visual is-assign" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                <svg viewBox="0 0 220 138" role="img" aria-label="assignment distance argmin">
+                    <text x="12" y="18" class="seg-mini-title">${result.useXY ? "argmin RGB distance + λXY penalty" : "argmin RGB color distance"}</text>
+                    <circle class="seg-mini-sample" cx="${sampleX}" cy="${sampleY}" r="15"/>
+                    <text x="${sampleX}" y="${sampleY + 4}" text-anchor="middle" class="seg-mini-sample-text">xᵢ</text>
+                    ${result.useXY ? `<circle class="seg-mini-xy-radius" cx="${sampleX}" cy="${sampleY}" r="38"/>` : ""}
+                    ${centers.map((item) => `
+                        <path class="seg-mini-distance-ray ${item.best ? "is-best" : ""}" d="M${sampleX} ${sampleY} L${item.x.toFixed(1)} ${item.y.toFixed(1)}" style="--c:${item.color}"/>
+                        <circle class="seg-mini-center ${item.best ? "is-best" : ""}" cx="${item.x.toFixed(1)}" cy="${item.y.toFixed(1)}" r="${item.best ? 12 : 9}" style="--c:${item.color}"/>
+                        <text x="${item.x.toFixed(1)}" y="${(item.y + 4).toFixed(1)}" text-anchor="middle" class="seg-mini-center-text">C${item.index + 1}</text>
+                    `).join("")}
+                </svg>
+                <div class="seg-mini-distance-bars">
+                    ${centers.map((item) => `
+                        <span class="${item.best ? "is-best" : ""}" style="--w:${Math.max(8, 100 - (item.distance / maxDistance) * 82).toFixed(1)}%;--c:${item.color}">
+                            <b>C${item.index + 1}</b><i></i><em>${result.useXY ? `d+xy ${item.distance.toFixed(1)}` : item.distance.toFixed(1)}</em>
+                        </span>
+                    `).join("")}
+                </div>
+            </div>
+        `;
+    }
+
+    function processUpdateVisual(result, snapshot) {
+        const previous = result.snapshots[Math.max(0, state.currentSnapshot - 1)] || snapshot;
+        const movementMax = Math.max(1, ...Array.from({ length: result.k }, (_, k) => {
+            const c = k * result.dims;
+            let distance = 0;
+            for (let d = 0; d < result.dims; d += 1) distance += (snapshot.centers[c + d] - previous.centers[c + d]) ** 2;
+            return Math.sqrt(distance);
+        }));
+        const rows = Array.from({ length: result.k }, (_, k) => {
+            const c = k * result.dims;
+            const oldRgb = colorFromCenter(previous.centers, result.dims, k);
+            const newRgb = colorFromCenter(snapshot.centers, result.dims, k);
+            let distance = 0;
+            for (let d = 0; d < result.dims; d += 1) distance += (snapshot.centers[c + d] - previous.centers[c + d]) ** 2;
+            const move = Math.sqrt(distance);
+            return { k, oldRgb, newRgb, move, width: Math.max(7, (move / movementMax) * 100) };
+        });
+        return `
+            <div class="seg-iteration-visual is-update" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                <svg viewBox="0 0 220 118" role="img" aria-label="centroid update mean movement">
+                    <text x="12" y="18" class="seg-mini-title">${result.useXY ? "cₖ ← mean([RGB, λx, λy])" : "cₖ ← mean([R,G,B])"}</text>
+                    ${rows.slice(0, 4).map((item, index) => {
+                        const y = 42 + index * 18;
+                        const oldColor = `rgb(${item.oldRgb.join(",")})`;
+                        const newColor = `rgb(${item.newRgb.join(",")})`;
+                        const x2 = 78 + item.width;
+                        return `
+                            <g class="seg-mini-center-move" style="--c:${newColor};animation-delay:${index * 70}ms">
+                                <text x="14" y="${y + 4}" class="seg-mini-label">C${item.k + 1}</text>
+                                <circle cx="50" cy="${y}" r="6" fill="${oldColor}"/>
+                                <path d="M60 ${y} C76 ${y - 10}, ${Math.max(84, x2 - 16).toFixed(1)} ${y + 10}, ${x2.toFixed(1)} ${y}" class="seg-mini-move-path"/>
+                                <circle cx="${x2.toFixed(1)}" cy="${y}" r="8" fill="${newColor}" stroke="#fff" stroke-width="2"/>
+                                <text x="176" y="${y + 4}" class="seg-mini-note">${item.move.toFixed(1)}</text>
+                            </g>
+                        `;
+                    }).join("")}
+                </svg>
+                <div class="seg-mini-update-caption">
+                    <span>movement</span>
+                    <b><i style="width:${Math.round(clamp(snapshot.movement / 180, 0, 1) * 100)}%"></i></b>
+                    <em>${snapshot.movement.toFixed(2)}</em>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderProcessIterationVisual(result, snapshot) {
+        if (state.kmeansPhase === "assign") return processAssignmentVisual(result, snapshot);
+        if (state.kmeansPhase === "update") return processUpdateVisual(result, snapshot);
+        return `
+            <div class="seg-iteration-visual is-summary" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                <svg viewBox="0 0 220 118" role="img" aria-label="iteration summary">
+                    <text x="12" y="18" class="seg-mini-title">assignment ↔ update loop</text>
+                    <circle cx="62" cy="68" r="27" fill="#eff6ff" stroke="#bfdbfe"/>
+                    <circle cx="158" cy="68" r="27" fill="#f8fbff" stroke="#bfdbfe"/>
+                    <path class="seg-mini-loop" d="M90 58 C108 36, 134 36, 152 58"/>
+                    <path class="seg-mini-loop" d="M132 80 C112 100, 86 98, 70 78"/>
+                    <text x="62" y="72" text-anchor="middle" class="seg-svg-title">assign</text>
+                    <text x="158" y="72" text-anchor="middle" class="seg-svg-title">mean</text>
+                </svg>
+                <div class="seg-mini-update-caption">
+                    <span>iteration</span>
+                    <b><i style="width:${Math.round((snapshot.iter / Math.max(1, result.snapshots.length)) * 100)}%"></i></b>
+                    <em>${snapshot.iter}/${result.snapshots.length}</em>
+                </div>
+            </div>
+        `;
+    }
+
     function updateProcessCards(result, snapshot, stats) {
         const lastSnapshot = result.snapshots[result.snapshots.length - 1] || snapshot;
         const isFinal = snapshot.iter >= lastSnapshot.iter;
@@ -1985,6 +2105,11 @@
         if (els.processConvergence) {
             els.processConvergence.textContent = isConverged ? "converged" : (isFinal ? "max iteration" : "iterating");
             els.processConvergence.classList.toggle("is-converged", isConverged);
+        }
+        if (els.processIterationVisual) {
+            els.processIterationVisual.innerHTML = renderProcessIterationVisual(result, snapshot);
+            els.processIterationVisual.dataset.phase = state.kmeansPhase;
+            els.processIterationVisual.dataset.mode = result.useXY ? "rgbxy" : "rgb";
         }
         if (els.processOutput) els.processOutput.textContent = outputLabel;
         if (els.processOutputType) els.processOutputType.textContent = outputLabel;
@@ -4312,9 +4437,10 @@
             return diffs.reduce((sum, value) => sum + value, 0) / Math.max(1, diffs.length);
         });
 
-        // 迭代跑 3 次均值滤波让梯度地形平滑无尖锐刺突，显现出圆滑绵延的高山峡谷
+        // 依据分辨率网格宽度自适应计算平滑次数，对齐尺度空间
+        const passes = Math.max(3, Math.round(model.cols * 0.08));
         let smoothed = [...rawGrad];
-        for (let k = 0; k < 3; k++) {
+        for (let k = 0; k < passes; k++) {
             const temp = new Float32Array(smoothed.length);
             for (let i = 0; i < smoothed.length; i++) {
                 const neighbors = neighborIndexes(i, model.cols, model.rows);
@@ -4342,8 +4468,8 @@
     function buildWatershedCore(model = buildSampleGrid(30, 20)) {
         const gradient = gradientForModel(model);
         const markerDefs = [
-            { x: 0.25, y: 0.64, label: 1, text: "1", type: "fg" },
-            { x: 0.70, y: 0.44, label: 2, text: "2", type: "fg" },
+            { x: 0.20, y: 0.58, label: 1, text: "1", type: "fg" },
+            { x: 0.68, y: 0.52, label: 2, text: "2", type: "fg" },
             { x: 0.08, y: 0.12, label: 3, text: "B", type: "bg" },
             { x: 0.92, y: 0.88, label: 3, text: "B", type: "bg" },
         ];
@@ -4445,7 +4571,7 @@
 
     function buildWatershedDemo() {
         const core = buildWatershedCore();
-        const denseCore = buildWatershedCore(buildPixelModel(140, 60, 40));
+        const denseCore = buildWatershedCore(buildPixelModel(120, 48, 32));
         const gradientScores = core.gradient.map((value) => value * 2 - 1);
         const denseGradientScores = denseCore.gradient.map((value) => value * 2 - 1);
         const props = propsFromLabelMap(core.model, core.labels);
@@ -4607,7 +4733,7 @@
 
     function buildRegionsDemo() {
         const core = buildWatershedCore();
-        const denseCore = buildWatershedCore(buildPixelModel(140, 60, 40));
+        const denseCore = buildWatershedCore(buildPixelModel(120, 48, 32));
         const components = connectedComponents(core.model, core.labels);
         const denseComponents = connectedComponents(denseCore.model, denseCore.labels);
         const props = components.props;
@@ -5092,6 +5218,7 @@
         await new Promise((resolve) => window.requestAnimationFrame(resolve));
         const started = performance.now();
         const useXY = state.method === "kmeans-rgbxy";
+        if (els.kmeansView) els.kmeansView.dataset.featureMode = useXY ? "rgbxy" : "rgb";
         const config = buildKMeansConcept();
         if (state.method === "kmeans-compare") {
             const elapsed = performance.now() - started;

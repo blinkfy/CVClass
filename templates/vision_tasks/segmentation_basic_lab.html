@@ -145,6 +145,31 @@
                 <div class="flow-node is-score">Overlay Mask</div>
             </div>
 
+            <div class="seg-mode-lens" data-segb-mode-lens aria-label="RGB 与 RGB+XY K-means 的距离度量差异" hidden>
+                <section class="seg-mode-lens-card is-rgb">
+                    <div>
+                        <strong>RGB color metric</strong>
+                        <span>f(x) = [R,G,B]</span>
+                    </div>
+                    <div class="seg-mode-lens-visual">
+                        <i class="is-a"></i><i class="is-b"></i><i class="is-c"></i>
+                        <b class="is-link-one"></b><b class="is-link-two"></b>
+                    </div>
+                    <p>颜色相近就容易合并，位置相隔很远也会互相吸引。</p>
+                </section>
+                <section class="seg-mode-lens-card is-rgbxy">
+                    <div>
+                        <strong>RGB + XY spatial metric</strong>
+                        <span>f(x) = [R,G,B,λx,λy]</span>
+                    </div>
+                    <div class="seg-mode-lens-visual">
+                        <i class="is-a"></i><i class="is-b"></i><i class="is-c"></i>
+                        <b class="is-ring-one"></b><b class="is-ring-two"></b>
+                    </div>
+                    <p>颜色相近还要空间接近，远距离同色区域会被分开。</p>
+                </section>
+            </div>
+
             <div class="seg-basic-process-row">
                 <figure class="seg-basic-process-card" data-segb-compare-card>
                     <div class="seg-basic-process-grid">
@@ -159,6 +184,26 @@
                             <div class="seg-process-card-head">
                                 <strong>聚类迭代状态</strong>
                                 <small data-segb-process-convergence>waiting</small>
+                            </div>
+                            <div class="seg-iteration-story" data-segb-iteration-visual aria-label="K-means assignment and centroid update process">
+                                <div class="seg-iteration-orbit" aria-hidden="true">
+                                    <span class="seg-iter-sample">x</span>
+                                    <span class="seg-iter-center is-c1">C1</span>
+                                    <span class="seg-iter-center is-c2">C2</span>
+                                    <span class="seg-iter-center is-c3">C3</span>
+                                    <i class="seg-iter-ray is-r1"></i>
+                                    <i class="seg-iter-ray is-r2"></i>
+                                    <i class="seg-iter-ray is-r3"></i>
+                                </div>
+                                <div class="seg-iteration-move" aria-hidden="true">
+                                    <i class="seg-move-dot is-old"></i>
+                                    <b></b>
+                                    <i class="seg-move-dot is-new"></i>
+                                </div>
+                                <div class="seg-iteration-progress" aria-hidden="true">
+                                    <span>iteration</span>
+                                    <b><i></i></b>
+                                </div>
                             </div>
                             <div class="seg-process-metrics">
                                 <div><span>Iteration</span><strong data-segb-process-iteration>-- / --</strong></div>
@@ -283,7 +328,7 @@
                 </figure>
                 <div class="seg-compare-cards">
                     <div class="seg-compare-card is-rgb">
-                        <h4>RGB K-means</h4>
+                        <h4>RGB K-means <button type="button" class="seg-lens-btn" data-seg-lens-trigger="rgb" title="查看特征度量差异">🔍 度量原理</button></h4>
                         <ul>
                             <li><strong>优点</strong>仅使用颜色信息，计算简单，对颜色均匀、边界清晰的区域分割效果好。</li>
                             <li><strong>缺点</strong>缺少空间约束，空间上不相邻的相似颜色像素容易被分到同一类，容易产生噪声和碎片化区域。</li>
@@ -291,7 +336,7 @@
                         </ul>
                     </div>
                     <div class="seg-compare-card is-rgbxy">
-                        <h4>RGB + XY K-means</h4>
+                        <h4>RGB + XY K-means <button type="button" class="seg-lens-btn" data-seg-lens-trigger="rgbxy" title="查看空间度量差异">🔍 空间原理</button></h4>
                         <ul>
                             <li><strong>优点</strong>加入像素坐标约束，使空间相邻像素更容易聚为一类，结果更连贯、边界更规整，能有效抑制离散噪点。</li>
                             <li><strong>缺点</strong>特征维度增加，计算量略大；空间权重过大时会过度惩罚颜色差异，导致颜色相近但位置分离的对象被错误分开。</li>
@@ -319,5 +364,13 @@
         </div>
         <div class="method-notes-data seg-basic-notes-data" data-segb-notes></div>
     </aside>
+
+    <!-- 弹出式特征度量毛玻璃 Dialog -->
+    <div class="seg-lens-modal-backdrop" id="segLensModal" hidden>
+        <div class="seg-lens-modal-content">
+            <button class="seg-modal-close" type="button" id="segLensCloseBtn" aria-label="关闭弹窗">×</button>
+            <div id="segModalBody"></div>
+        </div>
+    </div>
 </section>
 {% endblock %}
