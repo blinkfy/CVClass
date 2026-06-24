@@ -131,6 +131,67 @@ body:has(.vision-lab) {
     min-width: 0;
 }
 
+/* ---- 压缩左侧输入与参数高度 ---- */
+.vision-control-panel {
+    gap: 8px !important;
+}
+.vision-control-panel .vision-field {
+    gap: 3px !important;
+}
+.vision-control-panel select,
+.vision-control-panel .seg-basic-selector-trigger {
+    min-height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 11.5px !important;
+}
+.vision-control-panel .det-upload-label {
+    min-height: 32px !important;
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+}
+.vision-control-panel .det-upload-label svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+.vision-control-panel .seg-basic-kmeans-controls {
+    gap: 6px !important;
+    padding: 8px !important;
+    border-radius: 10px !important;
+}
+.vision-control-panel .vision-toggle-row {
+    margin: 2px 0 !important;
+    font-size: 11px !important;
+}
+.vision-control-panel .seg-basic-method-groups {
+    gap: 6px !important;
+}
+.vision-control-panel .seg-basic-method-groups section {
+    gap: 4px !important;
+    padding: 6px !important;
+    border-radius: 10px !important;
+}
+.vision-control-panel .overview-segmented-control button {
+    padding: 4px 6px !important;
+    font-size: 10.5px !important;
+}
+.vision-control-panel .seg-basic-action-row {
+    gap: 6px !important;
+    margin-top: 2px !important;
+}
+.vision-control-panel .det-play-btn,
+.vision-control-panel .seg-basic-action-row button {
+    height: 32px !important;
+    font-size: 11.5px !important;
+}
+.vision-control-panel .vision-kv-grid {
+    gap: 4px !important;
+    padding: 8px !important;
+    border-radius: 10px !important;
+}
+.vision-control-panel .vision-kv-grid div {
+    font-size: 10.5px !important;
+}
+
 .vision-panel-heading {
     display: flex;
     align-items: center;
@@ -2952,10 +3013,6 @@ body:has(.vision-lab) {
     grid-template-columns: 1fr;
 }
 
-.seg-basic-playground .seg-basic-step-focus {
-    grid-template-columns: 1fr;
-}
-
 .seg-basic-playground .seg-basic-step-matrix,
 .seg-basic-playground .seg-basic-step-detail {
     display: none;
@@ -3012,14 +3069,13 @@ body:has(.vision-lab) {
 }
 
 .seg-basic-process-card {
-    grid-column: 1 / -1;
-    grid-row: 2;
     display: block !important;
     min-height: 0 !important;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+    margin: 0;
 }
 
 .seg-basic-process-grid {
@@ -3041,6 +3097,50 @@ body:has(.vision-lab) {
     background: rgba(255, 255, 255, 0.66);
     box-shadow: 0 16px 30px rgba(37, 99, 235, 0.08);
     backdrop-filter: blur(14px);
+}
+
+.seg-basic-process-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.42fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.seg-basic-process-row .seg-basic-process-card {
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.seg-basic-process-row .seg-basic-process-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.seg-basic-process-row .seg-basic-step-focus {
+    min-width: 0;
+    grid-template-columns: 1fr;
+    padding: 10px;
+    height: 100%;
+}
+
+.seg-basic-process-row .seg-process-mini-card {
+    display: none;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.seg-basic-process-row .seg-process-output-card {
+    display: grid;
+    height: 100%;
+}
+
+.seg-basic-process-row .seg-process-output-card {
+    animation: segOutputPulse 2.8s ease-in-out infinite;
 }
 
 .seg-process-iteration-card {
@@ -3228,7 +3328,7 @@ body:has(.vision-lab) {
 }
 
 .seg-basic-output-card::after {
-    content: "real-time overlay";
+    content: "RGB color grouping";
     position: absolute;
     right: 22px;
     bottom: 20px;
@@ -3243,6 +3343,24 @@ body:has(.vision-lab) {
     backdrop-filter: blur(10px);
     animation: segOverlayBadge 1.8s ease-in-out infinite;
     pointer-events: none;
+}
+
+.seg-basic-playground[data-feature-mode="rgbxy"] .seg-basic-output-card::after {
+    content: "RGB + XY locality";
+}
+
+.seg-basic-playground[data-feature-mode="rgb"] .seg-basic-output-card {
+    background:
+        radial-gradient(circle at 22% 26%, rgba(96, 165, 250, 0.14), transparent 32%),
+        rgba(255, 255, 255, 0.72);
+}
+
+.seg-basic-playground[data-feature-mode="rgbxy"] .seg-basic-output-card {
+    background:
+        linear-gradient(90deg, rgba(34, 197, 94, 0.07) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(34, 197, 94, 0.07) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.72);
+    background-size: 36px 36px;
 }
 
 .seg-basic-output-card canvas.is-mask-fade {
@@ -3300,6 +3418,7 @@ body:has(.vision-lab) {
 
 .seg-feature-cube {
     position: relative;
+    z-index: 2;
     width: 106px;
     height: 106px;
     transform-style: preserve-3d;
@@ -3308,6 +3427,75 @@ body:has(.vision-lab) {
 
 .seg-feature-cube-scene:hover .seg-feature-cube {
     animation-play-state: paused;
+}
+
+.seg-feature-xy-plane,
+.seg-feature-rgb-beams {
+    position: absolute;
+    inset: 12px;
+    z-index: 0;
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+.seg-feature-xy-plane {
+    background:
+        linear-gradient(90deg, rgba(34, 197, 94, 0.2) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(34, 197, 94, 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    transform: perspective(260px) rotateX(58deg) translateY(42px) scale(0.86);
+    transform-origin: center bottom;
+    opacity: 0.78;
+    animation: segXYPlaneDrift 4.2s ease-in-out infinite;
+}
+
+.seg-feature-xy-plane span {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(34, 197, 94, 0.55);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: segXYLocalPulse 1.7s ease-in-out infinite;
+}
+
+.seg-feature-xy-plane b,
+.seg-feature-rgb-beams b {
+    position: absolute;
+    right: 8px;
+    bottom: 7px;
+    border-radius: 999px;
+    padding: 3px 7px;
+    color: #14532d;
+    font-size: 8px;
+    font-weight: 950;
+    background: rgba(240, 253, 244, 0.86);
+}
+
+.seg-feature-rgb-beams {
+    overflow: hidden;
+}
+
+.seg-feature-rgb-beams span {
+    position: absolute;
+    left: 9%;
+    top: 50%;
+    width: 86%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.78), rgba(168, 85, 247, 0.7), transparent);
+    transform: rotate(var(--r));
+    transform-origin: center;
+    opacity: 0.72;
+    animation: segRgbBeamFlow 2.1s ease-in-out infinite;
+    animation-delay: var(--d);
+}
+
+.seg-feature-rgb-beams b {
+    color: #1e3a8a;
+    background: rgba(239, 246, 255, 0.88);
 }
 
 .seg-cube-face {
@@ -3523,6 +3711,38 @@ body:has(.vision-lab) {
     background: rgba(255, 255, 255, 0.86);
 }
 
+.seg-feature-mode-facts {
+    position: absolute;
+    right: 10px;
+    bottom: 34px;
+    left: 10px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px;
+    align-items: center;
+    border: 1px solid rgba(191, 219, 254, 0.8);
+    border-radius: 9px;
+    padding: 5px 7px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(8px);
+}
+
+.seg-feature-mode-facts strong {
+    color: #1d4ed8;
+    font-size: 9px;
+    font-weight: 950;
+}
+
+.seg-feature-mode-facts span {
+    min-width: 0;
+    overflow: hidden;
+    color: #475569;
+    font-size: 8px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .seg-basic-feature-cloud em strong {
     margin-right: 7px;
     color: #1d4ed8;
@@ -3537,8 +3757,9 @@ body:has(.vision-lab) {
     gap: 8px;
     border: 1px solid #dbeafe;
     border-radius: 14px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.92);
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.05);
 }
 
 .seg-basic-step-focus {
@@ -3578,7 +3799,7 @@ body:has(.vision-lab) {
 }
 
 .seg-basic-step-focus .seg-basic-step-visual .seg-concept-card {
-    min-height: 310px; /* 统一拉高一些，腾出充沛展示空间 */
+    min-height: 252px;
 }
 
 .seg-basic-step-focus .seg-concept-card h4 {
@@ -3601,6 +3822,10 @@ body:has(.vision-lab) {
     height: 180px; /* 固定高度防止拉伸 */
     min-height: 0;
     max-height: 180px;
+}
+.seg-basic-step-focus .seg-concept-svg.is-3d-terrain {
+    height: 230px;
+    max-height: 230px;
 }
 
 .seg-basic-step-focus .seg-analysis-metrics {
@@ -5168,6 +5393,56 @@ body:has(.vision-lab) {
     stroke-width: 2;
 }
 
+.seg-algo-grid .seg-mode-badge rect {
+    fill: rgba(239, 246, 255, 0.92);
+    stroke: #bfdbfe;
+}
+
+.seg-algo-grid .seg-mode-badge text {
+    fill: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.seg-algo-grid.is-rgbxy .seg-mode-badge rect {
+    fill: rgba(240, 253, 244, 0.92);
+    stroke: #86efac;
+}
+
+.seg-algo-grid.is-rgbxy .seg-mode-badge text {
+    fill: #166534;
+}
+
+.seg-spatial-ring {
+    fill: none;
+    stroke: var(--c);
+    stroke-width: 3;
+    stroke-dasharray: 10 7;
+    opacity: 0.38;
+    animation: segSpatialRingPulse 1.8s ease-in-out infinite;
+}
+
+.seg-rgb-long-link {
+    fill: none;
+    stroke: var(--c);
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-dasharray: 9 7;
+    opacity: 0.74;
+    filter: drop-shadow(0 0 7px rgba(37, 99, 235, 0.24));
+    animation: segRgbLongLinkFlow 1.65s linear infinite;
+}
+
+.seg-xy-axis-flow {
+    fill: none;
+    stroke: #22c55e;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 8 7;
+    opacity: 0.7;
+    animation: segXYAxisFlow 1.35s linear infinite;
+}
+
 .seg-grid-edge {
     stroke: #64748b;
     stroke-linecap: round;
@@ -5498,6 +5773,78 @@ body:has(.vision-lab) {
     }
 }
 
+@keyframes segRgbBeamFlow {
+    0% {
+        opacity: 0;
+        transform: translateX(-18%) rotate(var(--r));
+    }
+    45% {
+        opacity: 0.78;
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(18%) rotate(var(--r));
+    }
+}
+
+@keyframes segXYPlaneDrift {
+    0%, 100% {
+        filter: saturate(1);
+        opacity: 0.62;
+    }
+    50% {
+        filter: saturate(1.25);
+        opacity: 0.9;
+    }
+}
+
+@keyframes segSpatialRingPulse {
+    0%, 100% {
+        opacity: 0.25;
+        transform-box: fill-box;
+        transform-origin: center;
+        transform: scale(0.88);
+    }
+    50% {
+        opacity: 0.72;
+        transform: scale(1.04);
+    }
+}
+
+@keyframes segXYLocalPulse {
+    0%, 100% {
+        opacity: 0.25;
+        transform: translate(-50%, -50%) scale(0.88);
+    }
+    50% {
+        opacity: 0.72;
+        transform: translate(-50%, -50%) scale(1.04);
+    }
+}
+
+@keyframes segRgbLongLinkFlow {
+    to {
+        stroke-dashoffset: -32;
+    }
+}
+
+@keyframes segXYAxisFlow {
+    to {
+        stroke-dashoffset: -30;
+    }
+}
+
+@keyframes segOutputPulse {
+    0%, 100% {
+        box-shadow: 0 16px 30px rgba(37, 99, 235, 0.08);
+        border-color: #dbeafe;
+    }
+    50% {
+        box-shadow: 0 18px 36px rgba(37, 99, 235, 0.16);
+        border-color: #93c5fd;
+    }
+}
+
 @keyframes segCenterTrail {
     from {
         stroke-dashoffset: 18;
@@ -5656,6 +6003,7 @@ body:has(.vision-lab) {
 
 @media (max-width: 1180px) {
     .seg-basic-canvas-grid,
+    .seg-basic-process-row,
     .seg-basic-kmeans-summary,
     .seg-basic-concept-view,
     .seg-basic-step-focus,

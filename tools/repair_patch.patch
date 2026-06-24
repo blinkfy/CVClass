@@ -156,7 +156,7 @@ index 90028ac..51f010f 100644
      <aside class="vision-panel vision-notes-panel">
 -        <div class="vision-panel-heading">
 -            <span class="vision-panel-index">02</span>
--            <div><h3>Process Notes</h3><p>Detection Pipeline</p></div>
+-            <div><h3>算法原理</h3><p>Detection Pipeline</p></div>
 -        </div>
 -        <div class="vision-formula-card">
 -            <span>Intersection over Union</span>
