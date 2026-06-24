@@ -1958,20 +1958,23 @@ body.home-page-shell .content-shell {
     background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
 }
 
-.ai-header-title {
+div#aiAssistantDrawer > div.ai-assistant-header > div.ai-header-title {
     display: flex;
     align-items: center;
     gap: 10px;
+    height: 36px;
 }
 
-.ai-header-icon {
+div#aiAssistantDrawer > div.ai-assistant-header > div.ai-header-title > span.ai-header-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    height: 48px;
+    width: 48px;
 }
-.ai-header-icon img {
-    width: 32px;
-    height: 32px;
+div#aiAssistantDrawer > div.ai-assistant-header > div.ai-header-title > span.ai-header-icon > img {
+    width: 48px;
+    height: 48px;
     display: block;
     object-fit: contain;
 }

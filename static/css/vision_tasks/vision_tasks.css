@@ -1,3 +1,22 @@
+/* ---- 3D 地势高程图形辅助效果 ---- */
+.is-3d-terrain polygon {
+    transition: fill 0.28s ease, points 0.3s ease;
+}
+.seg-3d-column {
+    transform-origin: center bottom;
+    transition: transform 0.25s ease;
+}
+.seg-3d-column:hover {
+    filter: brightness(1.08);
+}
+.seg-3d-seed {
+    animation: seg3DSeedBounce 2.2s ease-in-out infinite;
+}
+@keyframes seg3DSeedBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
 .vision-lab {
     --vision-blue: #2563eb;
     --vision-blue-dark: #1d4ed8;
@@ -13,19 +32,6 @@
 
 body:has(.vision-lab) {
     overflow-x: clip;
-}
-
-body:has(.vision-lab) .ai-assistant-fab {
-    right: 18px;
-    bottom: 86px;
-    padding: 4px 10px;
-    font-size: 12px;
-    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
-}
-
-body:has(.vision-lab) .ai-fab-icon img {
-    width: 28px;
-    height: 28px;
 }
 
 .vision-hero {
@@ -2865,6 +2871,11 @@ body:has(.vision-lab) .ai-fab-icon img {
     opacity: 0.58;
 }
 
+.seg-basic-playground[hidden],
+.seg-basic-concept-view[hidden] {
+    display: none !important;
+}
+
 .seg-basic-playground {
     position: relative;
     display: grid;
@@ -2908,6 +2919,52 @@ body:has(.vision-lab) .ai-fab-icon img {
     z-index: 1;
 }
 
+.seg-basic-playground[data-phase] .seg-basic-input-card,
+.seg-basic-playground[data-phase] .seg-basic-output-card,
+.seg-basic-playground[data-phase] .seg-basic-process-card {
+    animation: segPhaseReveal 0.38s ease both;
+}
+
+.seg-basic-playground[data-phase="image"] .seg-basic-step-focus,
+.seg-basic-playground[data-phase="feature"] .seg-basic-step-focus,
+.seg-basic-playground[data-phase="assign"] .seg-basic-step-focus,
+.seg-basic-playground[data-phase="update"] .seg-basic-step-focus,
+.seg-basic-playground[data-phase="map"] .seg-basic-step-focus,
+.seg-basic-playground[data-phase="stats"] .seg-basic-step-focus {
+    margin-top: -2px;
+}
+
+.seg-basic-playground[data-phase] .seg-process-mini-card {
+    display: none;
+}
+
+.seg-basic-playground[data-phase="image"] .seg-process-output-card,
+.seg-basic-playground[data-phase="feature"] .seg-process-feature-card,
+.seg-basic-playground[data-phase="assign"] .seg-process-iteration-card,
+.seg-basic-playground[data-phase="update"] .seg-process-iteration-card,
+.seg-basic-playground[data-phase="map"] .seg-process-output-card,
+.seg-basic-playground[data-phase="stats"] .seg-process-output-card {
+    display: grid;
+    animation: segProcessCardIn 0.42s ease both;
+}
+
+.seg-basic-playground[data-phase] .seg-basic-process-grid {
+    grid-template-columns: 1fr;
+}
+
+.seg-basic-playground .seg-basic-step-focus {
+    grid-template-columns: 1fr;
+}
+
+.seg-basic-playground .seg-basic-step-matrix,
+.seg-basic-playground .seg-basic-step-detail {
+    display: none;
+}
+
+.seg-basic-playground .seg-basic-step-visual {
+    animation: segStepCardLift 0.4s ease both;
+}
+
 .seg-basic-canvas-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2928,6 +2985,20 @@ body:has(.vision-lab) .ai-fab-icon img {
     background: rgba(255, 255, 255, 0.72);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
     backdrop-filter: blur(12px);
+}
+
+.seg-basic-input-card::after {
+    content: "";
+    position: absolute;
+    top: 44px;
+    bottom: 14px;
+    left: 12px;
+    width: 2px;
+    border-radius: 99px;
+    background: linear-gradient(180deg, transparent, rgba(96, 165, 250, 0.86), transparent);
+    box-shadow: 0 0 18px rgba(37, 99, 235, 0.34);
+    animation: segInputScan 2.8s ease-in-out infinite;
+    pointer-events: none;
 }
 
 .seg-basic-input-card {
@@ -3079,11 +3150,15 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .seg-process-output-card p {
+    display: -webkit-box;
+    overflow: hidden;
     margin: 0;
     color: #475569;
     font-size: 10px;
     font-weight: 780;
     line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .seg-process-output-card .seg-process-output-list strong {
@@ -3136,6 +3211,22 @@ body:has(.vision-lab) .ai-fab-icon img {
     cursor: crosshair;
 }
 
+.seg-basic-output-card::before {
+    content: "";
+    position: absolute;
+    top: 44px;
+    right: 14px;
+    bottom: 14px;
+    left: 14px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, transparent 0 42%, rgba(255, 255, 255, 0.32) 50%, transparent 58% 100%);
+    mix-blend-mode: screen;
+    opacity: 0.62;
+    transform: translateX(-70%);
+    animation: segOverlaySweep 3.1s ease-in-out infinite;
+    pointer-events: none;
+}
+
 .seg-basic-output-card::after {
     content: "real-time overlay";
     position: absolute;
@@ -3155,7 +3246,7 @@ body:has(.vision-lab) .ai-fab-icon img {
 }
 
 .seg-basic-output-card canvas.is-mask-fade {
-    animation: segMaskFade 0.42s ease both;
+    animation: segMaskFade 0.42s ease both, segMaskBreath 1.7s ease-in-out 0.42s;
 }
 
 .seg-basic-region-popover {
@@ -3493,6 +3584,16 @@ body:has(.vision-lab) .ai-fab-icon img {
 .seg-basic-step-focus .seg-concept-card h4 {
     font-size: 14px;
     flex-shrink: 0;
+}
+
+.seg-basic-step-focus .seg-concept-card p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-bottom: 0;
+    font-size: 10px;
+    line-height: 1.38;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .seg-basic-step-focus .seg-concept-svg {
@@ -5319,6 +5420,64 @@ body:has(.vision-lab) .ai-fab-icon img {
     }
 }
 
+@keyframes segPhaseReveal {
+    from {
+        transform: translateY(8px);
+        opacity: 0.72;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes segProcessCardIn {
+    from {
+        transform: translateY(10px) scale(0.985);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes segStepCardLift {
+    from {
+        transform: translateY(8px);
+        filter: saturate(0.88);
+    }
+    to {
+        transform: translateY(0);
+        filter: saturate(1);
+    }
+}
+
+@keyframes segInputScan {
+    0%, 100% {
+        left: 12px;
+        opacity: 0.36;
+    }
+    50% {
+        left: calc(100% - 16px);
+        opacity: 0.92;
+    }
+}
+
+@keyframes segOverlaySweep {
+    0%, 18% {
+        transform: translateX(-80%);
+        opacity: 0.18;
+    }
+    55% {
+        opacity: 0.68;
+    }
+    100% {
+        transform: translateX(80%);
+        opacity: 0.18;
+    }
+}
+
 @keyframes segMaskFade {
     from {
         opacity: 0.45;
@@ -5327,6 +5486,15 @@ body:has(.vision-lab) .ai-fab-icon img {
     to {
         opacity: 1;
         filter: saturate(1);
+    }
+}
+
+@keyframes segMaskBreath {
+    0%, 100% {
+        filter: saturate(1) contrast(1);
+    }
+    50% {
+        filter: saturate(1.08) contrast(1.04);
     }
 }
 

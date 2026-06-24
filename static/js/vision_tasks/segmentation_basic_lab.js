@@ -310,7 +310,9 @@
             state.animationTimer = 0;
         }
         state.playing = false;
-        els.frameStrip?.classList.remove("is-playing");
+        document.querySelectorAll("[data-segb-frame-strip]").forEach(strip => {
+            strip.classList.remove("is-playing");
+        });
         els.play.textContent = "播放流程";
     }
 
@@ -1381,6 +1383,9 @@
             els.processIterationCard.style.setProperty("--iter-progress", `${Math.round((snapshot.iter / Math.max(1, result.snapshots.length)) * 100)}%`);
             els.processIterationCard.style.setProperty("--move-progress", `${Math.round(clamp(snapshot.movement / 180, 0, 1) * 100)}%`);
         }
+        if (els.kmeansView) {
+            els.kmeansView.dataset.phase = state.kmeansPhase;
+        }
         if (els.processIteration) els.processIteration.textContent = `${snapshot.iter} / ${result.snapshots.length}`;
         if (els.processDistance) els.processDistance.textContent = snapshot.distance.toFixed(1);
         if (els.processMovement) els.processMovement.textContent = snapshot.movement.toFixed(2);
@@ -2152,7 +2157,187 @@
         return `<line class="${className}" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke-width="${width}"/>`;
     }
 
+    function scoreGradientColor(val) {
+        // 山脊橙红色渐变到平地灰蓝色
+        const r = Math.round(59 + val * 190);
+        const g = Math.round(130 - val * 70);
+        const b = Math.round(246 - val * 210);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function elevationColor(val) {
+        // 梯度低 -> 灰白带淡蓝；梯度高 -> 深沉的岩石色
+        const r = Math.round(226 - val * 130);
+        const g = Math.round(232 - val * 135);
+        const b = Math.round(240 - val * 120);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function labelFill3D(label) {
+        const colors = [
+            "#3b82f6", // 蓝色
+            "#10b981", // 绿色
+            "#f59e0b", // 橙色
+            "#8b5cf6", // 紫色
+            "#ec4899", // 粉色
+            "#64748b"  // 灰色
+        ];
+        return colors[(label - 1) % colors.length] || "#94a3b8";
+    }
+
+    function adjustLight(color, percent) {
+        // 解析 rgb(...) 或者 #hex
+        let r, g, b;
+        if (color.startsWith("rgb")) {
+            const matches = color.match(/\d+/g);
+            r = parseInt(matches[0]);
+            g = parseInt(matches[1]);
+            b = parseInt(matches[2]);
+        } else {
+            const hex = color.replace("#", "");
+            r = parseInt(hex.substring(0, 2), 16);
+            g = parseInt(hex.substring(2, 4), 16);
+            b = parseInt(hex.substring(4, 6), 16);
+        }
+        r = Math.max(0, Math.min(255, r + percent));
+        g = Math.max(0, Math.min(255, g + percent));
+        b = Math.max(0, Math.min(255, b + percent));
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function buildBasementGridPath(cols, rows, padX, padY, cellHalfW, cellHalfH) {
+        let draw = "";
+        for (let i = 0; i <= cols; i++) {
+            const x1 = padX + (i - 0) * cellHalfW;
+            const y1 = padY + (i + 0) * cellHalfH;
+            const x2 = padX + (i - rows) * cellHalfW;
+            const y2 = padY + (i + rows) * cellHalfH;
+            draw += `M ${x1} ${y1} L ${x2} ${y2} `;
+        }
+        for (let j = 0; j <= rows; j++) {
+            const x1 = padX + (0 - j) * cellHalfW;
+            const y1 = padY + (0 + j) * cellHalfH;
+            const x2 = padX + (cols - j) * cellHalfW;
+            const y2 = padY + (cols + j) * cellHalfH;
+            draw += `M ${x1} ${y1} L ${x2} ${y2} `;
+        }
+        return draw;
+    }
+
+    function conceptGridSvg3D(model, options = {}) {
+        const { cells, cols, rows } = model;
+        const viewW = 520;
+        const viewH = 318;
+        const padX = 260; // 水平投影对称中心
+        const padY = 56;  // 顶部地平线原点
+        const cellHalfW = 20;
+        const cellHalfH = 10;
+
+        const gradientSource = options.scores || (state.result ? state.result.gradient : []);
+        const activeSet = new Set(options.activeCells || []);
+        const seedList = options.seeds || [];
+        const seedCells = new Map(seedList.map((seed) => [seed.index, seed]));
+
+        // 画家算法深度排序 (x + y 从小到大从远到近绘制以实现正确遮挡)
+        const cellItems = cells.map((cell, index) => ({ cell, index }))
+            .sort((a, b) => (a.cell.x + a.cell.y) - (b.cell.x + b.cell.y));
+
+        const columnsHtml = cellItems.map(({ cell, index }) => {
+            const gradVal = gradientSource?.[index] ?? 0;
+            // 梯度就是海拔 Z
+            const elevation = gradVal * 0.95;
+            const label = options.labels ? options.labels[index] : null;
+            const isActive = activeSet.has(index);
+            const isBoundary = label === -1;
+
+            // 柱体顶部中心的 3D 绝对投影点
+            const cx = padX + (cell.x - cell.y) * cellHalfW;
+            const cy = padY + (cell.x + cell.y) * cellHalfH - elevation * 56;
+
+            // 柱子顶端等轴测菱形面片顶点
+            const pTop = `${cx},${cy - cellHalfH}`;
+            const pRight = `${cx + cellHalfW},${cy}`;
+            const pBottom = `${cx},${cy + cellHalfH}`;
+            const pLeft = `${cx - cellHalfW},${cy}`;
+            const topPoints = `${pTop} ${pRight} ${pBottom} ${pLeft}`;
+
+            // 基平面的垂直投影基点 (Z=0 时的高度)
+            const baseCy = padY + (cell.x + cell.y) * cellHalfH;
+
+            // 左右两个侧面的闭合多边形坐标点
+            const leftFace = `${cx - cellHalfW},${cy} ${cx - cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH} ${cx},${cy + cellHalfH}`;
+            const rightFace = `${cx},${cy + cellHalfH} ${cx},${baseCy + cellHalfH} ${cx + cellHalfW},${baseCy} ${cx + cellHalfW},${cy}`;
+
+            let surfaceColor = "#cbd5e1";
+            if (options.scores) {
+                const gradCoeff = options.scores[index] ?? 0;
+                surfaceColor = scoreGradientColor(gradCoeff);
+            } else if (label > 0) {
+                surfaceColor = labelFill3D(label);
+            } else {
+                surfaceColor = elevationColor(gradVal);
+            }
+
+            if (isBoundary) {
+                // 红色山脊/分水岭
+                surfaceColor = "#ef4444";
+            } else if (isActive) {
+                // 扩张水流边际 (绿色)
+                surfaceColor = "#10b981";
+            }
+
+            const sideLeftColor = adjustLight(surfaceColor, -18);
+            const sideRightColor = adjustLight(surfaceColor, -32);
+
+            let seedMarkerHtml = "";
+            if (seedCells.has(index)) {
+                const seed = seedCells.get(index);
+                const isFg = seed.type === "fg" || seed.label === 1 || seed.label === 2;
+                const text = seed.text || (seed.type === "bg" ? "B" : "F");
+                const seedColor = isFg ? "#2563eb" : "#475569";
+                seedMarkerHtml = `
+                    <g transform="translate(${cx.toFixed(1)}, ${(cy - 8).toFixed(1)})" class="seg-3d-seed">
+                        <circle cx="0" cy="0" r="7.5" fill="${seedColor}" stroke="#fff" stroke-width="1.2" />
+                        <text x="0" y="3" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle" fill="#fff">${text}</text>
+                    </g>
+                `;
+            }
+
+            return `
+                <g class="seg-3d-column">
+                    <!-- 基海平面投影黑气泡 -->
+                    <polygon points="${cx - cellHalfW},${baseCy} ${cx},${baseCy - cellHalfH} ${cx + cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH}" fill="rgba(15, 23, 42, 0.05)" />
+                    <!-- 3D 柱体左下侧面（偏暗防光阴影） -->
+                    <polygon points="${leftFace}" fill="${sideLeftColor}" />
+                    <!-- 3D 柱体右下侧面（深暗背光阴影） -->
+                    <polygon points="${rightFace}" fill="${sideRightColor}" />
+                    <!-- 顶端高低起伏的高程面 -->
+                    <polygon points="${topPoints}" fill="${surfaceColor}" stroke="${adjustLight(surfaceColor, 6)}" stroke-width="0.3" />
+                    ${seedMarkerHtml}
+                </g>
+            `;
+        }).join("");
+
+        const caption = options.caption ? `<text x="260" y="306" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
+
+        return `
+            <svg class="seg-concept-svg seg-algo-grid is-3d-terrain" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="3D Watershed Terrain">
+                <rect x="16" y="18" width="488" height="276" rx="22" fill="#f8fafc" stroke="#dbeafe"/>
+                <!-- 绘制海平面定位投影虚线 -->
+                <path d="${buildBasementGridPath(cols, rows, padX, padY, cellHalfW, cellHalfH)}" fill="none" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2 3" />
+                ${columnsHtml}
+                ${caption}
+            </svg>
+        `;
+    }
+
     function conceptGridSvg(model, options = {}) {
+        // 如果是 Region/Watershed 分水岭相关环节，改用精致的三维拟物地势渲染！
+        const isWatershed = state.method === "watershed" || window.location.pathname.endsWith("/region");
+        if (isWatershed) {
+            return conceptGridSvg3D(model, options);
+        }
+
         const { cells, cols, rows } = model;
         const viewW = 520;
         const viewH = 318;
@@ -2629,7 +2814,7 @@
         };
 
         const methodAnalogy = analogies[concept?.activeMethod] || {};
-        const currentAnalogyHtml = methodAnalogy[meta.phase] 
+        const currentAnalogyHtml = methodAnalogy[meta.phase]
             ? `<div class="seg-concept-analogy">💡 <strong>原理解释类比：</strong><p>${escapeHtml(methodAnalogy[meta.phase])}</p></div>`
             : "";
 
@@ -3887,33 +4072,39 @@
     }
 
     function updateConceptFrameStrip() {
-        if (!els.frameStrip) return;
-        els.frameStrip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
-            button.classList.toggle("is-active", Number(button.dataset.segbFrameIndex) === state.conceptFrameIndex);
+        document.querySelectorAll("[data-segb-frame-strip]").forEach(strip => {
+            strip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
+                button.classList.toggle("is-active", Number(button.dataset.segbFrameIndex) === state.conceptFrameIndex);
+            });
         });
     }
 
     function renderConceptFrameStrip(config) {
-        if (!els.frameStrip) return;
+        const strips = document.querySelectorAll("[data-segb-frame-strip]");
+        if (strips.length === 0) return;
         const frames = config.frames || [];
-        els.frameStrip.innerHTML = frames.map((frame, index) => `
-            <button type="button" data-segb-frame-index="${index}" title="${escapeHtml(frame.title || `Step ${index + 1}`)}">
-                <canvas width="132" height="82" aria-hidden="true"></canvas>
-                <span>${index + 1}</span>
-                <strong>${escapeHtml(shortFrameTitle(frame.title, index))}</strong>
-            </button>
-        `).join("");
-        els.frameStrip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
-            const index = Number(button.dataset.segbFrameIndex);
-            const canvas = button.querySelector("canvas");
-            drawFramePreview(canvas, frames[index]);
-            button.addEventListener("click", () => {
-                stopAnimation();
-                if (state.result?.snapshots?.length && config.stepperKind === "kmeans") {
-                    renderKMeansStep(index);
-                } else {
-                    renderConceptFrame(index);
-                }
+
+        strips.forEach(strip => {
+            strip.innerHTML = frames.map((frame, index) => `
+                <button type="button" data-segb-frame-index="${index}" title="${escapeHtml(frame.title || `Step ${index + 1}`)}">
+                    <canvas width="132" height="82" aria-hidden="true"></canvas>
+                    <span>${index + 1}</span>
+                    <strong>${escapeHtml(shortFrameTitle(frame.title, index))}</strong>
+                </button>
+            `).join("");
+
+            strip.querySelectorAll("[data-segb-frame-index]").forEach((button) => {
+                const index = Number(button.dataset.segbFrameIndex);
+                const canvas = button.querySelector("canvas");
+                drawFramePreview(canvas, frames[index]);
+                button.addEventListener("click", () => {
+                    stopAnimation();
+                    if (state.result?.snapshots?.length && config.stepperKind === "kmeans") {
+                        renderKMeansStep(index);
+                    } else {
+                        renderConceptFrame(index);
+                    }
+                });
             });
         });
         updateConceptFrameStrip();
@@ -3980,8 +4171,11 @@
         state.compareResult = null;
         state.concept = config;
         state.conceptFrameIndex = 0;
+
         els.kmeansView.hidden = true;
+        els.kmeansView.style.setProperty("display", "none", "important");
         els.graphView.hidden = false;
+        els.graphView.style.removeProperty("display");
         els.kmeansControls.hidden = true;
         els.status.textContent = config.status;
         els.activeMethod.textContent = config.activeMethod;
@@ -4226,8 +4420,11 @@
         state.selectedLabel = null;
         els.time.textContent = `${elapsed.toFixed(1)} ms`;
         els.statusText.textContent = "分割完成";
+
         els.kmeansView.hidden = false;
-        els.graphView.hidden = false;
+        els.kmeansView.style.removeProperty("display");
+        els.graphView.hidden = true;
+        els.graphView.style.setProperty("display", "none", "important");
         els.kmeansControls.hidden = false;
         if (els.conceptResult) els.conceptResult.hidden = true;
         if (els.compareView) els.compareView.hidden = true;

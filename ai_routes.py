@@ -61,6 +61,33 @@ def register_ai_routes(app, get_ai_config):
         "report_text": "请为当前页面生成一段实验报告中的功能说明或结果分析文字，要求正式、技术化。",
     }
 
+    def check_config_details():
+        import os
+        config_path = os.path.join(app.root_path, "compute_config.json")
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f).get("ai_assistant", {})
+        except Exception:
+            cfg = {}
+        
+        enabled = cfg.get("enabled", False)
+        api_key = cfg.get("api_key", "")
+        model = cfg.get("model", "")
+        api_base = cfg.get("api_base", "")
+        
+        if enabled:
+            missing = []
+            if not api_key or api_key.strip() == "" or api_key.startswith("在此填写"):
+                missing.append("api_key")
+            if not model or model.strip() == "" or model.startswith("在此填写"):
+                missing.append("model")
+            if not api_base or api_base.strip() == "" or api_base.startswith("在此填写"):
+                missing.append("api_base")
+            if missing:
+                return f"检测到 AI 助手配置不完整（未配置 {', '.join(missing)}）。请配置项目根目录下的 compute_config.json 文件并填入有效配置。"
+            return None
+        return "AI 助手未启用。请配置项目根目录下的 compute_config.json 文件，将 enabled 设为 true 并填入配置。"
+
     def build_navigation_candidates(question, context=None, limit=5):
         context = context or {}
         normalized_question = normalize_nav_text(question)
@@ -123,7 +150,8 @@ def register_ai_routes(app, get_ai_config):
     def call_bailian_model(question, context, action):
         ai_cfg = get_ai_config()
         if ai_cfg is None:
-            yield f"data: {json.dumps({'error': 'AI 助手未启用，请在 compute_config.json 中配置 ai_assistant。'})}\n\n"
+            diag = check_config_details()
+            yield f"data: {json.dumps({'error': diag})}\n\n"
             return
 
         action_hint = action_prompts.get(action, "")
@@ -189,21 +217,26 @@ def register_ai_routes(app, get_ai_config):
             yield "data: [DONE]\n\n"
         except urllib.error.HTTPError as exc:
             app.logger.warning("AI assistant HTTP error: %s", exc)
-            yield f"data: {json.dumps({'error': f'模型服务返回错误 ({exc.code})，请检查 api_key 和 model 配置。'})}\n\n"
+            diag = check_config_details()
+            detail = f"（配置诊断：{diag}）" if diag else "请检查您的 api_key 和 model 是否配置正确。"
+            yield f"data: {json.dumps({'error': f'模型服务返回错误 ({exc.code})。{detail}'})}\n\n"
         except urllib.error.URLError as exc:
             app.logger.warning("AI assistant URL error: %s", exc)
-            yield f"data: {json.dumps({'error': '无法连接模型服务，请检查 api_base 配置和网络。'})}\n\n"
+            diag = check_config_details()
+            detail = f"（配置诊断：{diag}）" if diag else "请检查您的 api_base 或网络代理。"
+            yield f"data: {json.dumps({'error': f'网络连接失败。{detail}'})}\n\n"
         except Exception:
             app.logger.exception("AI assistant unexpected error")
-            yield f"data: {json.dumps({'error': 'AI 助手内部错误，请稍后重试。'})}\n\n"
+            yield f"data: {json.dumps({'error': 'AI 助手内部发生未知异常，请重试。'})}\n\n"
 
     @app.route("/api/ai-assistant", methods=["POST"])
     def ai_assistant_api():
         ai_cfg = get_ai_config()
         if ai_cfg is None:
+            diag = check_config_details()
             return jsonify({
                 "success": False,
-                "message": "AI 助手未启用，请在 compute_config.json 中配置 ai_assistant。",
+                "message": diag,
             })
 
         data = request.get_json(silent=True) or {}

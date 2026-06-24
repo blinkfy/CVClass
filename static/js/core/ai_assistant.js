@@ -712,10 +712,11 @@
                 removeElement(loading);
             }
             if (!res.ok) {
+                const errText = `⚠️ **服务回复错误**\n\n${res.answer}`;
                 if (!aiBubble) {
-                    appendMessage('ai', 'Error: ' + res.answer);
+                    appendMessage('ai', errText);
                 } else {
-                    updateAiMessage(aiBubble, '\n\n[Error: ' + res.answer + ']');
+                    updateAiMessage(aiBubble, '\n\n' + errText);
                 }
             }
             busy = false;
@@ -811,10 +812,11 @@
                 removeElement(loading);
             }
             if (!res.ok) {
+                const errText = `⚠️ **指令执行错误**\n\n${res.answer}`;
                 if (!aiBubble) {
-                    appendMessage('ai', 'Error: ' + res.answer);
+                    appendMessage('ai', errText);
                 } else {
-                    updateAiMessage(aiBubble, '\n\n[Error: ' + res.answer + ']');
+                    updateAiMessage(aiBubble, '\n\n' + errText);
                 }
             }
             busy = false;
