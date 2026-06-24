@@ -69,6 +69,30 @@
         selectedLabel: null,
         kmeansPhase: "stats",
         kmeansFrameIndex: 0,
+        kmeansUi: {
+            currentStep: 0,
+            kValue: 4,
+            iterationCount: 0,
+            currentIteration: 0,
+        },
+    };
+    const feature3d = {
+        mount: null,
+        renderer: null,
+        scene: null,
+        camera: null,
+        root: null,
+        points: null,
+        centerMeshes: [],
+        trailLines: [],
+        xyPlane: null,
+        lastCenters: null,
+        fromCenters: null,
+        targetCenters: null,
+        tweenStart: 0,
+        frame: 0,
+        mode: "",
+        k: 0,
     };
 
     const els = {
@@ -125,6 +149,7 @@
         processDecode: $("[data-segb-process-decode]"),
         processRegions: $("[data-segb-process-regions]"),
         processOutputNote: $("[data-segb-process-output-note]"),
+        processOutputVisual: $("[data-segb-output-visual]"),
         processIterationCard: $(".seg-process-iteration-card"),
         labelSubtitle: $("[data-segb-label-subtitle]"),
         flowFeature: $("[data-segb-flow-feature]"),
@@ -164,6 +189,16 @@
 
     function activeFamily() {
         return methodFamilies[state.method] || "cluster";
+    }
+
+    function setKMeansState(patch = {}, reason = "update") {
+        Object.assign(state.kmeansUi, patch);
+        if (Number.isFinite(patch.kValue)) state.k = patch.kValue;
+        if (Number.isFinite(patch.iterationCount)) state.maxIter = patch.iterationCount;
+        if (els.kmeansView) {
+            els.kmeansView.dataset.currentStep = String(state.kmeansUi.currentStep || 0);
+            els.kmeansView.dataset.updateReason = reason;
+        }
     }
 
     function renderFamilyGroups() {
@@ -358,6 +393,10 @@
         state.showIterations = els.showIterations.checked;
         els.iterOutput.textContent = String(state.maxIter);
         els.xyOutput.textContent = state.xyWeight.toFixed(2);
+        setKMeansState({
+            kValue: state.k,
+            iterationCount: state.maxIter,
+        }, "controls");
     }
 
     function buildFeatures(work, useXY) {
@@ -721,6 +760,216 @@
         `;
     }
 
+    function kmeansSamplingFlowSvg(grid, useXY) {
+        const cells = grid.model.cells.slice(0, 60);
+        const pixelTiles = cells.map((cell, index) => {
+            const x = 36 + (index % 10) * 16;
+            const y = 56 + Math.floor(index / 10) * 16;
+            return `<rect class="seg-sampling-pixel" x="${x}" y="${y}" width="12" height="12" rx="3" fill="rgb(${Math.round(cell.r)},${Math.round(cell.g)},${Math.round(cell.b)})" style="animation-delay:${index * 12}ms"/>`;
+        }).join("");
+        const vectorRows = cells.slice(0, 6).map((cell, index) => {
+            const y = 62 + index * 25;
+            const color = `rgb(${Math.round(cell.r)},${Math.round(cell.g)},${Math.round(cell.b)})`;
+            return `
+                <g class="seg-sampling-vector" style="animation-delay:${index * 80}ms">
+                    <rect x="322" y="${y - 12}" width="146" height="19" rx="9.5" fill="#ffffff" stroke="#dbeafe"/>
+                    <circle cx="336" cy="${y - 2}" r="5" fill="${color}"/>
+                    <text x="350" y="${y + 2}" class="seg-svg-note">${useXY ? "[R,G,B,λx,λy]" : "[R,G,B]"}</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-sampling-svg" viewBox="0 0 520 318" role="img" aria-label="pixel sampling to feature vectors">
+                <rect x="22" y="28" width="190" height="150" rx="20" fill="#ffffff" stroke="#bfdbfe"/>
+                <text x="42" y="48" class="seg-svg-title">image pixels</text>
+                ${pixelTiles}
+                <path class="seg-sampling-scan" d="M34 50 V172"/>
+                <path class="seg-process-arrow" d="M226 102 C254 78, 282 78, 306 102"/>
+                <text x="266" y="72" text-anchor="middle" class="seg-svg-title">sample</text>
+                <rect x="304" y="28" width="184" height="184" rx="20" fill="#f8fbff" stroke="#bfdbfe"/>
+                <text x="324" y="48" class="seg-svg-title">${useXY ? "RGB + XY vectors" : "RGB vectors"}</text>
+                ${vectorRows}
+                <rect x="86" y="220" width="348" height="48" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
+                <text x="260" y="242" text-anchor="middle" class="seg-svg-title">${useXY ? "颜色值与像素坐标一起进入距离计算" : "只保留颜色值，不读取空间坐标"}</text>
+                <text x="260" y="260" text-anchor="middle" class="seg-svg-note">sampling grid keeps the algorithm small enough for live teaching</text>
+            </svg>
+        `;
+    }
+
+    function kmeansAssignmentFieldSvg(grid, snapshot, distanceTable) {
+        const { cols, rows } = grid;
+        const viewW = 520;
+        const viewH = 318;
+        const focus = distanceTable[0] || { index: 0, best: 0, distances: [] };
+        const sampleX = 145;
+        const sampleY = 150;
+        const maxDistance = Math.max(1, ...focus.distances.map((item) => Number(item) || 0));
+        const centerNodes = Array.from({ length: state.k }, (_, k) => {
+            const c = k * grid.dims;
+            const cx = grid.useXY && snapshot.centers.length
+                ? (snapshot.centers[c + 3] / Math.max(1, 255 * state.xyWeight)) * (cols - 1)
+                : (k % 3) * 0.36 * (cols - 1) + 0.18 * (cols - 1);
+            const cy = grid.useXY && snapshot.centers.length
+                ? (snapshot.centers[c + 4] / Math.max(1, 255 * state.xyWeight)) * (rows - 1)
+                : Math.floor(k / 3) * 0.34 * (rows - 1) + 0.2 * (rows - 1);
+            return {
+                x: 276 + clamp(cx / Math.max(1, cols - 1), 0, 1) * 178,
+                y: 66 + clamp(cy / Math.max(1, rows - 1), 0, 1) * 144,
+                color: labelFill(k + 1),
+                distance: Number(focus.distances[k]) || maxDistance,
+                best: focus.best === k,
+            };
+        });
+        const rays = centerNodes.map((node, index) => `
+            <path class="seg-assign-ray ${node.best ? "is-best" : ""}" d="M${sampleX} ${sampleY} C${sampleX + 54} ${sampleY - 48 + index * 18}, ${node.x - 46} ${node.y}, ${node.x} ${node.y}" style="--c:${node.color};animation-delay:${index * 90}ms"/>
+        `).join("");
+        const centers = centerNodes.map((node, index) => `
+            <g class="seg-assign-center ${node.best ? "is-best" : ""}" style="--c:${node.color}">
+                <circle cx="${node.x.toFixed(1)}" cy="${node.y.toFixed(1)}" r="${node.best ? 17 : 13}"/>
+                <text x="${node.x.toFixed(1)}" y="${(node.y + 4).toFixed(1)}" text-anchor="middle">C${index + 1}</text>
+            </g>
+        `).join("");
+        const bars = centerNodes.map((node, index) => {
+            const width = 88 * (1 - clamp(node.distance / Math.max(1, maxDistance), 0, 0.92));
+            const y = 234 + index * 16;
+            return `
+                <g class="seg-assign-distance ${node.best ? "is-best" : ""}">
+                    <text x="282" y="${y + 8}" class="seg-svg-note">C${index + 1}</text>
+                    <rect x="306" y="${y}" width="94" height="9" rx="4.5" fill="#e2e8f0"/>
+                    <rect x="306" y="${y}" width="${Math.max(8, width).toFixed(1)}" height="9" rx="4.5" fill="${node.color}"/>
+                    <text x="412" y="${y + 8}" class="seg-svg-note">${node.distance.toFixed(1)}</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-assign-svg" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="assignment distance field">
+                <rect x="22" y="26" width="476" height="268" rx="24" fill="#ffffff" stroke="#bfdbfe"/>
+                <text x="42" y="50" class="seg-svg-title">distance field</text>
+                <g class="seg-assign-sample">
+                    <circle cx="${sampleX}" cy="${sampleY}" r="24" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+                    <text x="${sampleX}" y="${sampleY + 4}" text-anchor="middle" class="seg-svg-title">xᵢ</text>
+                </g>
+                ${rays}
+                ${centers}
+                <rect x="266" y="224" width="202" height="74" rx="18" fill="#f8fbff" stroke="#dbeafe"/>
+                <text x="282" y="218" class="seg-svg-title">argmin distance</text>
+                ${bars}
+                <text x="150" y="258" text-anchor="middle" class="seg-svg-note">${grid.useXY ? "颜色距离 + 空间距离共同投票" : "只比较 RGB 颜色距离"}</text>
+            </svg>
+        `;
+    }
+
+    function kmeansCenterUpdateSvg(grid, firstSnapshot, finalSnapshot, updateTable) {
+        const columns = Array.from({ length: state.k }, (_, index) => {
+            const row = updateTable[index] || { move: "0", oldRgb: "#bfdbfe", newRgb: labelFill(index + 1) };
+            const x = 70 + index * (380 / Math.max(1, state.k - 1));
+            const oldY = 90 + (index % 2) * 22;
+            const newY = 205 - (index % 2) * 18;
+            const oldColor = row.oldRgb || labelFill(index + 1);
+            const newColor = row.newRgb || labelFill(index + 1);
+            const dots = Array.from({ length: 5 }, (_, dot) => {
+                const dx = (dot - 2) * 10;
+                const dy = 134 + ((dot + index) % 3) * 12;
+                return `<circle class="seg-update-member" cx="${(x + dx).toFixed(1)}" cy="${dy}" r="4" fill="${newColor}" style="animation-delay:${(dot + index) * 50}ms"/>`;
+            }).join("");
+            return `
+                <g class="seg-update-column" style="--c:${newColor};animation-delay:${index * 90}ms">
+                    ${dots}
+                    <circle class="seg-update-old" cx="${x.toFixed(1)}" cy="${oldY}" r="12" fill="${oldColor}"/>
+                    <path class="seg-update-path" d="M${x.toFixed(1)} ${oldY + 16} C${(x - 24).toFixed(1)} 136, ${(x + 28).toFixed(1)} 168, ${x.toFixed(1)} ${newY - 16}"/>
+                    <circle class="seg-update-new" cx="${x.toFixed(1)}" cy="${newY}" r="15" fill="${newColor}"/>
+                    <text x="${x.toFixed(1)}" y="${newY + 4}" text-anchor="middle">C${index + 1}</text>
+                    <text x="${x.toFixed(1)}" y="250" text-anchor="middle" class="seg-svg-note">move ${row.move}</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-update-svg" viewBox="0 0 520 318" role="img" aria-label="centroid update as mean migration">
+                <rect x="22" y="28" width="476" height="254" rx="24" fill="#ffffff" stroke="#bfdbfe"/>
+                <text x="42" y="52" class="seg-svg-title">center update: mean of assigned pixels</text>
+                <text x="42" y="74" class="seg-svg-note">${grid.useXY ? "中心同时更新 RGB 均值和 XY 均值" : "中心只更新 RGB 均值"}</text>
+                ${columns}
+                <path class="seg-update-baseline" d="M54 178 H466"/>
+                <text x="260" y="300" text-anchor="middle" class="seg-svg-note">members pull each Ck toward their average feature position</text>
+            </svg>
+        `;
+    }
+
+    function kmeansConvergenceSvg(result, finalSnapshot) {
+        const movements = result.snapshots.map((item) => item.movement);
+        const maxMovement = Math.max(1, ...movements);
+        const points = movements.map((movement, index) => {
+            const x = 58 + (index / Math.max(1, movements.length - 1)) * 306;
+            const y = 224 - (movement / maxMovement) * 142;
+            return [x, y, movement];
+        });
+        const line = points.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(1)} ${point[1].toFixed(1)}`).join(" ");
+        const dots = points.map((point, index) => `<circle class="seg-converge-dot ${index === points.length - 1 ? "is-final" : ""}" cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${index === points.length - 1 ? 6 : 4}" style="animation-delay:${index * 60}ms"/>`).join("");
+        const labels = [
+            ["iterations", String(result.snapshots.length)],
+            ["final move", finalSnapshot.movement.toFixed(2)],
+            ["mean dist", finalSnapshot.distance.toFixed(1)],
+        ].map(([label, value], index) => `
+            <g class="seg-converge-stat">
+                <rect x="388" y="${72 + index * 54}" width="98" height="38" rx="12" fill="#f8fbff" stroke="#dbeafe"/>
+                <text x="404" y="${89 + index * 54}" class="seg-svg-note">${label}</text>
+                <text x="404" y="${104 + index * 54}" class="seg-svg-title">${value}</text>
+            </g>
+        `).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-converge-svg" viewBox="0 0 520 318" role="img" aria-label="kmeans convergence curve">
+                <rect x="22" y="28" width="476" height="254" rx="24" fill="#ffffff" stroke="#bfdbfe"/>
+                <text x="42" y="52" class="seg-svg-title">iteration convergence</text>
+                <path d="M58 230 H366 M58 230 V66" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+                <path class="seg-converge-line" d="${line}" fill="none"/>
+                ${dots}
+                <path class="seg-converge-threshold" d="M58 214 H366"/>
+                <text x="60" y="258" class="seg-svg-note">center movement drops as labels stabilize</text>
+                ${labels}
+            </svg>
+        `;
+    }
+
+    function kmeansStatsDashboardSvg(props, totalCells) {
+        const sorted = [...props].sort((a, b) => b.count - a.count);
+        const maxCount = Math.max(1, ...sorted.map((item) => item.count));
+        const stack = sorted.reduce((acc, item) => {
+            const width = 352 * item.ratio;
+            const x = acc.x;
+            acc.x += width;
+            acc.items.push(`<rect class="seg-stats-stack-cell" x="${x.toFixed(1)}" y="86" width="${Math.max(5, width).toFixed(1)}" height="34" rx="8" fill="${item.color}" style="animation-delay:${acc.items.length * 80}ms"/>`);
+            return acc;
+        }, { x: 84, items: [] }).items.join("");
+        const bars = sorted.map((item, index) => {
+            const y = 154 + index * 28;
+            const width = 190 * (item.count / maxCount);
+            const percent = Math.round(item.ratio * 100);
+            return `
+                <g class="seg-stats-row" style="--c:${item.color};animation-delay:${index * 70}ms">
+                    <text x="88" y="${y + 10}" class="seg-svg-title">C${item.label}</text>
+                    <rect x="122" y="${y}" width="200" height="12" rx="6" fill="#e2e8f0"/>
+                    <rect x="122" y="${y}" width="${width.toFixed(1)}" height="12" rx="6" fill="${item.color}"/>
+                    <text x="340" y="${y + 10}" class="seg-svg-note">${item.count}/${totalCells} · ${percent}%</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <svg class="seg-concept-svg seg-kmeans-stats-dashboard-svg" viewBox="0 0 520 318" role="img" aria-label="region statistics dashboard">
+                <rect x="22" y="28" width="476" height="254" rx="24" fill="#ffffff" stroke="#bfdbfe"/>
+                <text x="42" y="52" class="seg-svg-title">label map → measurable regions</text>
+                <rect x="76" y="76" width="368" height="54" rx="18" fill="#f8fbff" stroke="#dbeafe"/>
+                ${stack}
+                <text x="260" y="146" text-anchor="middle" class="seg-svg-note">stacked cluster ratio</text>
+                ${bars}
+                <rect x="386" y="168" width="76" height="68" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
+                <text x="424" y="190" text-anchor="middle" class="seg-svg-title">bbox</text>
+                <path class="seg-stats-bbox" d="M404 202 H446 V224 H404 Z"/>
+                <circle cx="425" cy="213" r="4" fill="#2563eb"/>
+                <text x="424" y="256" text-anchor="middle" class="seg-svg-note">area · ratio · centroid</text>
+            </svg>
+        `;
+    }
+
     function kmeansStatsSvg(props, totalCells) {
         const sorted = [...props].sort((a, b) => b.count - a.count);
         const maxCount = Math.max(1, ...sorted.map((item) => item.count));
@@ -815,7 +1064,7 @@
                 {
                     phase: "image",
                     title: `${prefix}1. 输入图像与采样网格`,
-                    graph: kmeansComputeSvg(grid, { mode: "image", caption: modeDifference.sample }),
+                    graph: kmeansSamplingFlowSvg(grid, useXY),
                     matrix: metricCards([
                         ["image", `${state.work?.width || "--"}×${state.work?.height || "--"}`],
                         ["grid", `${grid.cols}×${grid.rows}=${grid.count} cells`],
@@ -844,14 +1093,7 @@
                 {
                     phase: "assign",
                     title: `${prefix}3. 初始化中心并分配最近类`,
-                    graph: kmeansComputeSvg(grid, {
-                        mode: "assign",
-                        labels: firstSnapshot.labels,
-                        centers: firstCenters,
-                        activeCells: distanceTable.map((d) => d.index),
-                        lines: distanceTable.map((d) => ({ from: d.index, to: d.best })),
-                        caption: useXY ? "最近中心同时受颜色和空间坐标影响" : "最近中心只由 RGB 颜色距离决定",
-                    }),
+                    graph: kmeansAssignmentFieldSvg(grid, firstSnapshot, distanceTable),
                     matrix: barsHtml(distanceTable.map((d) => ({
                         label: `cell ${d.index + 1}`,
                         value: d.bestDistance,
@@ -865,13 +1107,7 @@
                 {
                     phase: "update",
                     title: `${prefix}4. 更新聚类中心`,
-                    graph: kmeansComputeSvg(grid, {
-                        mode: "update",
-                        labels: finalSnapshot.labels,
-                        centers: finalCenters,
-                        activeCells: sampleCells,
-                        caption: useXY ? "中心同时移动到颜色均值和空间均值" : "中心移动到同类像素的颜色均值",
-                    }),
+                    graph: kmeansCenterUpdateSvg(grid, firstSnapshot, finalSnapshot, updateTable),
                     matrix: barsHtml(updateTable.map((row) => ({
                         label: `C${row.label}`,
                         value: row.move,
@@ -885,7 +1121,7 @@
                 {
                     phase: "map",
                     title: `${prefix}5. 迭代收敛 / 最终标签图`,
-                    graph: conceptGridSvg(grid.model, { labels: Array.from(finalSnapshot.labels).map((l) => l + 1), caption: "每个格子获得最终 cluster 标签" }),
+                    graph: kmeansConvergenceSvg(result, finalSnapshot),
                     matrix: metricCards([
                         ["iterations", String(result.snapshots.length)],
                         ["final movement", finalSnapshot.movement.toFixed(2)],
@@ -899,7 +1135,7 @@
                 {
                     phase: "stats",
                     title: `${prefix}6. 区域统计`,
-                    graph: kmeansStatsSvg(props, grid.count),
+                    graph: kmeansStatsDashboardSvg(props, grid.count),
                     matrix: barsHtml(props.map((p) => ({ label: p.name, value: p.count, color: p.color, note: `${Math.round(p.ratio * 100)}%` }))),
                     detail: metricCards([
                         ["regions", String(state.k)],
@@ -1162,7 +1398,7 @@
         }).join("");
     }
 
-    function renderFeatureSpace(result, snapshot) {
+    function renderFeatureSpaceFallback(result, snapshot) {
         const work = ensureWorkData();
         const source = work.imageData.data;
         const maxCount = Math.max(1, ...snapshot.counts);
@@ -1252,6 +1488,273 @@
                 <div class="seg-feature-mode-facts">${modeFacts}</div>
             </div>
         `;
+    }
+
+    function renderFeatureSpace(result, snapshot) {
+        if (!window.THREE) return renderFeatureSpaceFallback(result, snapshot);
+        return `
+            <div class="seg-feature-3d-shell" data-mode="${result.useXY ? "rgbxy" : "rgb"}">
+                <div class="seg-feature-3d-stage" data-segb-feature3d role="img" aria-label="3D RGB feature scatter plot"></div>
+                <div class="seg-feature-3d-labels" aria-hidden="true">
+                    <span>R</span><span>G</span><span>B</span>
+                </div>
+                <div class="seg-feature-3d-caption">
+                    <strong>iteration ${snapshot.iter}/${result.snapshots.length}</strong>
+                    <span>${result.useXY ? "RGB scatter + XY locality constraint" : "RGB scatter · color distance only"}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function feature3dPositionFromRgb(r, g, b) {
+        const scale = 3.2;
+        return [
+            (r / 255 - 0.5) * scale,
+            (g / 255 - 0.5) * scale,
+            (b / 255 - 0.5) * scale,
+        ];
+    }
+
+    function feature3dCenterPosition(snapshot, result, index) {
+        const c = index * result.dims;
+        return feature3dPositionFromRgb(snapshot.centers[c], snapshot.centers[c + 1], snapshot.centers[c + 2]);
+    }
+
+    function feature3dDisposeObject(object) {
+        if (!object) return;
+        object.geometry?.dispose?.();
+        if (Array.isArray(object.material)) {
+            object.material.forEach((material) => material.dispose?.());
+        } else {
+            object.material?.dispose?.();
+        }
+    }
+
+    function feature3dClearDynamic() {
+        if (!feature3d.root) return;
+        if (feature3d.points) {
+            feature3d.root.remove(feature3d.points);
+            feature3dDisposeObject(feature3d.points);
+            feature3d.points = null;
+        }
+        feature3d.trailLines.forEach((line) => {
+            feature3d.root.remove(line);
+            feature3dDisposeObject(line);
+        });
+        feature3d.trailLines = [];
+    }
+
+    function feature3dAddStaticScene() {
+        const THREE = window.THREE;
+        const cube = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(3.2, 3.2, 3.2)),
+            new THREE.LineBasicMaterial({ color: 0xbfdbfe, transparent: true, opacity: 0.72 }),
+        );
+        feature3d.root.add(cube);
+
+        const axes = [
+            [[-1.8, -1.8, -1.8], [1.9, -1.8, -1.8], 0x2563eb],
+            [[-1.8, -1.8, -1.8], [-1.8, 1.9, -1.8], 0x22c55e],
+            [[-1.8, -1.8, -1.8], [-1.8, -1.8, 1.9], 0xf97316],
+        ];
+        axes.forEach(([a, b, color]) => {
+            const line = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(...a),
+                    new THREE.Vector3(...b),
+                ]),
+                new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.62 }),
+            );
+            feature3d.root.add(line);
+        });
+
+        feature3d.xyPlane = new THREE.GridHelper(3.25, 8, 0x86efac, 0xdbeafe);
+        feature3d.xyPlane.position.y = -1.74;
+        feature3d.xyPlane.material.transparent = true;
+        feature3d.xyPlane.material.opacity = 0.0;
+        feature3d.root.add(feature3d.xyPlane);
+    }
+
+    function feature3dEnsure(mount, result) {
+        if (!window.THREE || !mount) return false;
+        const THREE = window.THREE;
+        if (feature3d.mount === mount && feature3d.renderer && feature3d.mode === (result.useXY ? "rgbxy" : "rgb") && feature3d.k === result.k) {
+            return true;
+        }
+        if (feature3d.frame) cancelAnimationFrame(feature3d.frame);
+        if (feature3d.renderer) {
+            feature3d.renderer.dispose?.();
+            feature3d.renderer.domElement?.remove?.();
+        }
+        feature3d.mount = mount;
+        feature3d.mode = result.useXY ? "rgbxy" : "rgb";
+        feature3d.k = result.k;
+        feature3d.scene = new THREE.Scene();
+        feature3d.camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+        feature3d.camera.position.set(4.2, 3.1, 5.4);
+        feature3d.camera.lookAt(0, 0, 0);
+        feature3d.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        feature3d.renderer.setClearColor(0xffffff, 0);
+        feature3d.renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
+        mount.innerHTML = "";
+        mount.appendChild(feature3d.renderer.domElement);
+
+        feature3d.scene.add(new THREE.AmbientLight(0xffffff, 0.94));
+        const light = new THREE.DirectionalLight(0xffffff, 1.12);
+        light.position.set(3, 4, 5);
+        feature3d.scene.add(light);
+        feature3d.root = new THREE.Group();
+        feature3d.scene.add(feature3d.root);
+        feature3d.centerMeshes = [];
+        feature3d.trailLines = [];
+        feature3d.points = null;
+        feature3dAddStaticScene();
+
+        let dragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        mount.addEventListener("pointerdown", (event) => {
+            dragging = true;
+            lastX = event.clientX;
+            lastY = event.clientY;
+            mount.setPointerCapture?.(event.pointerId);
+        });
+        mount.addEventListener("pointermove", (event) => {
+            if (!dragging || !feature3d.root) return;
+            const dx = event.clientX - lastX;
+            const dy = event.clientY - lastY;
+            lastX = event.clientX;
+            lastY = event.clientY;
+            feature3d.root.rotation.y += dx * 0.008;
+            feature3d.root.rotation.x = clamp(feature3d.root.rotation.x + dy * 0.006, -0.75, 0.75);
+        });
+        const stopDrag = (event) => {
+            dragging = false;
+            mount.releasePointerCapture?.(event.pointerId);
+        };
+        mount.addEventListener("pointerup", stopDrag);
+        mount.addEventListener("pointercancel", stopDrag);
+        mount.addEventListener("pointerleave", () => { dragging = false; });
+
+        const sphereGeometry = new THREE.SphereGeometry(0.105, 18, 14);
+        for (let k = 0; k < result.k; k += 1) {
+            const color = clusterRgb(k);
+            const mesh = new THREE.Mesh(
+                sphereGeometry.clone(),
+                new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(`rgb(${color.r},${color.g},${color.b})`),
+                    roughness: 0.48,
+                    metalness: 0.02,
+                    transparent: true,
+                    opacity: 0.96,
+                }),
+            );
+            mesh.scale.setScalar(1.25);
+            feature3d.root.add(mesh);
+            feature3d.centerMeshes.push(mesh);
+        }
+
+        const renderLoop = () => {
+            const width = Math.max(220, mount.clientWidth || 220);
+            const height = Math.max(146, mount.clientHeight || 146);
+            const canvas = feature3d.renderer.domElement;
+            if (canvas.width !== Math.round(width * feature3d.renderer.getPixelRatio()) || canvas.height !== Math.round(height * feature3d.renderer.getPixelRatio())) {
+                feature3d.renderer.setSize(width, height, false);
+                feature3d.camera.aspect = width / height;
+                feature3d.camera.updateProjectionMatrix();
+            }
+            const now = performance.now();
+            const t = feature3d.tweenStart ? clamp((now - feature3d.tweenStart) / 520, 0, 1) : 1;
+            const eased = 1 - (1 - t) ** 3;
+            if (feature3d.fromCenters && feature3d.targetCenters) {
+                feature3d.centerMeshes.forEach((mesh, index) => {
+                    const from = feature3d.fromCenters[index] || feature3d.targetCenters[index];
+                    const to = feature3d.targetCenters[index] || from;
+                    mesh.position.set(
+                        from[0] + (to[0] - from[0]) * eased,
+                        from[1] + (to[1] - from[1]) * eased,
+                        from[2] + (to[2] - from[2]) * eased,
+                    );
+                    const pulse = 1.18 + Math.sin(now / 180 + index) * 0.08;
+                    mesh.scale.setScalar(pulse);
+                });
+            }
+            feature3d.root.rotation.y += 0.0022;
+            feature3d.renderer.render(feature3d.scene, feature3d.camera);
+            feature3d.frame = requestAnimationFrame(renderLoop);
+        };
+        renderLoop();
+        return true;
+    }
+
+    function feature3dSamplePoints(result, snapshot) {
+        const work = ensureWorkData();
+        const source = work.imageData.data;
+        const total = result.width * result.height;
+        const stride = Math.max(1, Math.floor(total / 720));
+        const positions = [];
+        const colors = [];
+        for (let i = 0; i < total; i += stride) {
+            const p = i * 4;
+            const pos = feature3dPositionFromRgb(source[p], source[p + 1], source[p + 2]);
+            positions.push(pos[0], pos[1], pos[2]);
+            const color = clusterRgb(snapshot.labels[i]);
+            colors.push(color.r / 255, color.g / 255, color.b / 255);
+        }
+        return { positions: new Float32Array(positions), colors: new Float32Array(colors) };
+    }
+
+    function updateFeatureSpace3D(result, snapshot) {
+        const mount = els.featureSpace?.querySelector("[data-segb-feature3d]");
+        if (!feature3dEnsure(mount, result)) return;
+        const THREE = window.THREE;
+        feature3dClearDynamic();
+
+        const sampled = feature3dSamplePoints(result, snapshot);
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(sampled.positions, 3));
+        geometry.setAttribute("color", new THREE.BufferAttribute(sampled.colors, 3));
+        feature3d.points = new THREE.Points(
+            geometry,
+            new THREE.PointsMaterial({
+                size: 0.045,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.72,
+                sizeAttenuation: true,
+            }),
+        );
+        feature3d.root.add(feature3d.points);
+
+        const targetCenters = Array.from({ length: result.k }, (_, index) => feature3dCenterPosition(snapshot, result, index));
+        const fromCenters = feature3d.lastCenters?.length === result.k
+            ? feature3d.lastCenters
+            : targetCenters.map((item) => [...item]);
+        feature3d.fromCenters = fromCenters.map((item) => [...item]);
+        feature3d.targetCenters = targetCenters.map((item) => [...item]);
+        feature3d.lastCenters = targetCenters.map((item) => [...item]);
+        feature3d.tweenStart = performance.now();
+
+        const upto = Math.max(1, state.currentSnapshot + 1);
+        for (let k = 0; k < result.k; k += 1) {
+            const trail = result.snapshots.slice(0, upto).map((item) => new THREE.Vector3(...feature3dCenterPosition(item, result, k)));
+            if (trail.length < 2) continue;
+            const color = clusterRgb(k);
+            const line = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints(trail),
+                new THREE.LineBasicMaterial({
+                    color: new THREE.Color(`rgb(${color.r},${color.g},${color.b})`),
+                    transparent: true,
+                    opacity: 0.52,
+                }),
+            );
+            feature3d.root.add(line);
+            feature3d.trailLines.push(line);
+        }
+
+        if (feature3d.xyPlane) {
+            feature3d.xyPlane.material.opacity = result.useXY ? 0.42 : 0.08;
+        }
     }
 
     function snapshotIndexForKMeansPhase(phase, result) {
@@ -1492,6 +1995,13 @@
                 ? (result.useXY ? "统计阶段会看到更强调局部连续性的 cluster 占比与区域边界。" : "统计阶段会看到颜色聚类带来的跨区域合并和局部碎片。")
                 : (result.useXY ? "RGB+XY label map 先压制远距离同色合并，再转成半透明 mask + 边界。" : "RGB label map 主要按颜色分组，再转成半透明 mask + 边界。");
         }
+        if (els.processOutputVisual) {
+            els.processOutputVisual.dataset.phase = state.kmeansPhase;
+            els.processOutputVisual.dataset.mode = result.useXY ? "rgbxy" : "rgb";
+            const largest = Math.max(0, ...stats.map((item) => item.count));
+            const total = Math.max(1, result.width * result.height);
+            els.processOutputVisual.style.setProperty("--largest-ratio", `${Math.round((largest / total) * 100)}%`);
+        }
         if (els.processOutputCard) {
             els.processOutputCard.classList.toggle("is-overlay-active", state.kmeansPhase === "map");
         }
@@ -1512,7 +2022,17 @@
         if (els.labelSubtitle) els.labelSubtitle.textContent = `synced with iteration ${snapshot.iter}`;
         els.regionList.innerHTML = regionRows(result, snapshot, stats);
         els.centerList.innerHTML = centerRows(result, snapshot);
-        els.featureSpace.innerHTML = renderFeatureSpace(result, snapshot);
+        const featureMode = result.useXY ? "rgbxy" : "rgb";
+        const featureShell = els.featureSpace.querySelector(".seg-feature-3d-shell");
+        if (!window.THREE || !featureShell || featureShell.dataset.mode !== featureMode) {
+            els.featureSpace.innerHTML = renderFeatureSpace(result, snapshot);
+        } else {
+            const captionStrong = featureShell.querySelector(".seg-feature-3d-caption strong");
+            const captionText = featureShell.querySelector(".seg-feature-3d-caption span");
+            if (captionStrong) captionStrong.textContent = `iteration ${snapshot.iter}/${result.snapshots.length}`;
+            if (captionText) captionText.textContent = result.useXY ? "RGB scatter + XY locality constraint" : "RGB scatter · color distance only";
+        }
+        updateFeatureSpace3D(result, snapshot);
         renderIterationMonitor(result);
         updateProcessCards(result, snapshot, stats);
         showRegionPopover(stats);
@@ -1550,7 +2070,7 @@
         `).join("");
         els.notesSubtitle.textContent = currentStep;
         els.formulaLabel.textContent = "K-means";
-        els.formula.textContent = "cluster(x) = argmin_k ||f(x) - c_k||²";
+        els.formula.innerHTML = renderLatexFormula("\\text{cluster}(x) = \\arg\\min_k \\|f(x) - c_k\\|^2");
         els.formulaNote.textContent = result.useXY
             ? "f(x) = [R,G,B, xyWeight·X, xyWeight·Y]，坐标项会惩罚空间上相距较远的同色像素。"
             : "f(x) = [R,G,B]，只根据颜色距离聚类，空间上不连续的同色区域可能被分到同一类。";
@@ -1589,6 +2109,12 @@
                         : "assign");
         setPhase(state.kmeansPhase);
         syncKMeansFrameStrip(state.kmeansPhase);
+        setKMeansState({
+            currentStep: state.kmeansFrameIndex,
+            currentIteration: index,
+            kValue: result.k,
+            iterationCount: result.snapshots.length,
+        }, phaseOverride ? "step-render" : "snapshot-render");
         const stats = updateKMeansReadout(result, snapshot);
         drawLabelMap(result, snapshot, els.compareCanvas);
         drawKMeansOverlay(result, snapshot, els.resultCanvas, stats);
@@ -2319,14 +2845,15 @@
         const viewH = 318;
         const padX = 260; // 水平投影对称中心
 
-        // 放大地形网格大小，使其填满 520x318 视口
+        // cellHalfW 直接用视口宽度除以网格总跨度，让地形填满 SVG 视口
         const maxSpan = cols + rows;
-        const cellHalfW = Math.min(24, (viewW / 2 - 20) / maxSpan);
+        const margin = 32;
+        const cellHalfW = (viewW - margin * 2) / maxSpan;
         const cellHalfH = cellHalfW * 0.46;
 
-        // 加大高度拉伸范围以展示深邃的连续峡谷
-        const gridSpan = Math.max(0, cols + rows - 2) * cellHalfH;
-        const elevationScale = Math.min(150, Math.max(76, (viewH - 16 - gridSpan) / 2));
+        // 根据垂直于平面的高度范围适配高程拉伸
+        const gridSpan = Math.max(0, maxSpan - 2) * cellHalfH;
+        const elevationScale = Math.min(170, Math.max(80, (viewH - 32 - gridSpan) / 2));
         const padY = elevationScale + 6;
 
         const gradientSource = options.scores || (state.result ? state.result.gradient : []);
@@ -2612,41 +3139,15 @@
     }
 
     function renderLatexFormula(latex) {
-        let text = String(latex || "")
-            .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "($1)/($2)")
-            .replaceAll("\\mathcal{G}", "𝒢")
-            .replaceAll("\\mathbb{N}", "ℕ")
-            .replaceAll("\\cup", "∪")
-            .replaceAll("\\in", "∈")
-            .replaceAll("\\mid", "|")
-            .replaceAll("\\Rightarrow", "⇒")
-            .replaceAll("\\ne", "≠")
-            .replaceAll("\\lambda", "λ")
-            .replaceAll("\\sigma", "σ")
-            .replaceAll("\\theta", "θ")
-            .replaceAll("\\mu", "μ")
-            .replaceAll("\\alpha", "α")
-            .replaceAll("\\nabla", "∇")
-            .replaceAll("\\Omega", "Ω")
-            .replaceAll("\\ldots", "…")
-            .replaceAll("\\arg\\min", "arg min")
-            .replaceAll("\\sum", "Σ")
-            .replaceAll("\\min", "min")
-            .replaceAll("\\max", "max")
-            .replaceAll("\\lVert", "‖")
-            .replaceAll("\\rVert", "‖")
-            .replaceAll("\\{", "{")
-            .replaceAll("\\}", "}")
-            .replaceAll("\\quad", " ")
-            .replaceAll("\\;", " ")
-            .replaceAll("\\,", " ");
-        text = escapeHtml(text);
-        text = text
-            .replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>")
-            .replace(/_\{([^{}]+)\}/g, "<sub>$1</sub>")
-            .replace(/\^([A-Za-z0-9*+\-]+)/g, "<sup>$1</sup>")
-            .replace(/_([A-Za-z0-9*+\-]+)/g, "<sub>$1</sub>");
-        return `<span class="seg-latex-inline">${text}</span>`;
+        if (!latex) return "";
+        try {
+            return katex.renderToString(latex, {
+                throwOnError: false,
+                displayMode: false
+            });
+        } catch (e) {
+            return `<span class="seg-latex-inline">${escapeHtml(String(latex))}</span>`;
+        }
     }
 
     function phaseName(phase) {
@@ -2942,8 +3443,9 @@
         };
 
         const methodAnalogy = analogies[concept?.activeMethod] || {};
-        const currentAnalogyHtml = methodAnalogy[meta.phase]
-            ? `<div class="seg-concept-analogy">💡 <strong>原理解释类比：</strong><p>${escapeHtml(methodAnalogy[meta.phase])}</p></div>`
+        const currentPhase = frame?.phase || "image";
+        const currentAnalogyHtml = methodAnalogy[currentPhase]
+            ? `<div class="seg-concept-analogy">💡 <strong>原理解释类比：</strong><p>${escapeHtml(methodAnalogy[currentPhase])}</p></div>`
             : "";
 
         return `
@@ -3355,7 +3857,7 @@
             stripOutput: "min-cut labels",
             regionCount: "2",
             formulaLabel: "Graph Cut",
-            formula: "E(L)=Σ unary_i(L_i)+Σ pairwise_ij[L_i≠L_j]",
+            formula: "E(L)=\\sum_i \\text{unary}_i(L_i)+\\sum_{ij} \\text{pairwise}_{ij}[L_i \\neq L_j]",
             formulaNote: "页面使用小图解释 max-flow/min-cut，同时在大图上运行 dense 颜色项 + 邻域平滑的像素级近似图割。",
             notes: [
                 ["建图", "每个小格是节点，Source 表示前景，Sink 表示背景。"],
@@ -3400,7 +3902,12 @@
                         color: solution.sourceCaps[cell.index] > solution.sinkCaps[cell.index] ? "#f97316" : "#2563eb",
                         note: `S ${solution.sourceCaps[cell.index].toFixed(1)} / T ${solution.sinkCaps[cell.index].toFixed(1)}`,
                     }))),
-                    detail: metricCards([["FG color", rgbText(fgMean)], ["BG color", rgbText(bgMean)], ["unary range", "seed caps = 90"], ["meaning", "lower cut keeps label"]]),
+                    detail: metricCards([
+                        ["FG color", rgbText(fgMean)],
+                        ["BG color", rgbText(bgMean)],
+                        ["formula", "D_i(FG) ∝ d(p_i, FG_mean)"],
+                        ["rule", "closer to FG -> stronger Source link"]
+                    ]),
                     stageNote: "每个节点会得到一对端点权重：切断 Source 边会让它偏向背景，切断 Sink 边会让它偏向前景。",
                     showcase: {
                         model: denseModel,
@@ -3421,7 +3928,12 @@
                         color: pair.weight > 4 ? "#16a34a" : "#f97316",
                         note: `w=${pair.weight.toFixed(2)}`,
                     }))),
-                    detail: metricCards([["augment paths", String(solution.paths.length)], ["first bottle", (solution.paths[0]?.bottleneck || 0).toFixed(2)], ["edge model", "color contrast"], ["next", "min cut"]]),
+                    detail: metricCards([
+                        ["contrast σ", "38.0 px color"],
+                        ["formula", "V_ij = exp(-ΔI^2 / 2σ^2)"],
+                        ["meaning", "similar color -> stronger link"],
+                        ["paths", `${solution.paths.length} augment flows`]
+                    ]),
                     stageNote: "最大流会沿着还能承载流量的路径推进；粗边代表切开会更痛，红色切线通常绕开它们。",
                     showcase: {
                         model: denseModel,
@@ -3558,7 +4070,7 @@
             stripOutput: "balanced partition",
             regionCount: "2",
             formulaLabel: "Ncut",
-            formula: "Ncut(A,B)=cut(A,B)/assoc(A,V)+cut(A,B)/assoc(B,V)",
+            formula: "\\text{Ncut}(A,B)=\\frac{\\text{cut}(A,B)}{\\text{assoc}(A,V)}+\\frac{\\text{cut}(A,B)}{\\text{assoc}(B,V)}",
             formulaNote: "说明区展示小型 W/D/特征向量，右侧大图用 dense 平滑谱向量近似展示像素级二分。",
             notes: [
                 ["W 矩阵", "颜色相近、空间相邻的超像素权重大。"],
@@ -3578,7 +4090,12 @@
                     phase: "image",
                     title: "1. 从图像抽样为超像素图",
                     graph: conceptGridSvg(model, { pairs: pairEdges, showEdges: true, caption: "supernodes are connected by color-spatial similarity" }),
-                    matrix: metricCards([["nodes", String(n)], ["edge model", "color × spatial"], ["degree", "row sum of W"], ["goal", "balanced split"]]),
+                    matrix: metricCards([
+                        ["nodes V", `${n} nodes`],
+                        ["W weight", "similarity W_ij"],
+                        ["cut cost", "cut(A,B) = Σ W_ij"],
+                        ["degree D_ii", "Σ_j W_ij"]
+                    ]),
                     detail: barsHtml(model.cells.map((cell, index) => ({ label: `v${index + 1}`, value: degree[index], color: "#2563eb", note: `D=${degree[index].toFixed(2)}` }))),
                     stageNote: "Ncut 不是找 Source/Sink，而是先构造一个所有节点之间的相似度图。",
                     showcase: {
@@ -3597,7 +4114,12 @@
                     title: "2. 权重矩阵 W 与度矩阵 D",
                     graph: matrixHeatmap(Array.from(weights), n),
                     matrix: barsHtml(degree.map((value, index) => ({ label: `D${index + 1}`, value, color: "#0ea5e9", note: value.toFixed(2) }))),
-                    detail: metricCards([["W shape", `${n}×${n}`], ["max W", Math.max(...weights).toFixed(2)], ["min nonzero W", Math.min(...Array.from(weights).filter(Boolean)).toFixed(2)], ["normalizer", "D^-1/2 W D^-1/2"]]),
+                    detail: metricCards([
+                        ["W shape", `${n}×${n}`],
+                        ["normalizer", "D^-1/2 * W * D^-1/2"],
+                        ["formula W_ij", "exp(-d_c^2/σ_c^2) * exp(-d_s^2/σ_s^2)"],
+                        ["eigensystem", "(D - W) * y = λ * D * y"]
+                    ]),
                     stageNote: "矩阵越亮表示两个节点越相似；D 记录每个节点在图里的总连接强度。",
                     showcase: {
                         model: denseModel,
@@ -3612,7 +4134,12 @@
                     title: `3. 特征向量迭代 ${snapshot.iter}`,
                     graph: eigenBars(snapshot.vector),
                     matrix: conceptGridSvg(model, { scores: snapshot.vector, caption: "blue / orange signs foreshadow the partition" }),
-                    detail: metricCards([["iteration", String(snapshot.iter)], ["orthogonal", "removed first eigenvector"], ["threshold", "median sign split"], ["solver", "power iteration demo"]]),
+                    detail: metricCards([
+                        ["iteration", String(snapshot.iter)],
+                        ["orthogonal", "y ⊥ D1 (remove trivial)"],
+                        ["partition y_i", "signs show cluster grouping"],
+                        ["solve rule", "generalized eigensystem"]
+                    ]),
                     stageNote: "向量逐步稳定后，同号节点会被分到同一侧；这就是谱分割的可视化核心。",
                     showcase: {
                         model: denseModel,
@@ -3935,7 +4462,7 @@
             stripOutput: "boundary + label map",
             regionCount: String(denseProps.length),
             formulaLabel: "Watershed",
-            formula: "markers flood low-gradient basins until fronts meet",
+            formula: "\\text{markers flood low-gradient basins until fronts meet}",
             formulaNote: "页面把当前图像的梯度当作地形高度，marker 从低阻力区域扩张，相遇处形成分水岭边界。",
             notes: [
                 ["梯度地形", "颜色变化越大，梯度越高，越可能成为边界。"],
@@ -4097,7 +4624,7 @@
             stripOutput: "area / bbox / contour",
             regionCount: String(denseProps.length),
             formulaLabel: "Region Properties",
-            formula: "area=count(label), bbox=min/max(x,y), contour=count(boundary edges)",
+            formula: "\\text{area}=\\text{count}(\\text{label}),\\; \\text{bbox}=\\min/\\max(x,y),\\; \\text{contour}=\\text{count}(\\text{boundary edges})",
             formulaNote: "区域属性不是人工填写的说明，而是从 label map 中扫描、连通域编号和边界计数得到的数据。",
             notes: [
                 ["Label map", "每个像素或网格保存一个整数区域 id。"],
@@ -4275,6 +4802,12 @@
         const snapshotIndex = snapshotIndexForKMeansPhase(phase, state.result);
         const payload = renderKMeansResult(snapshotIndex, phase);
         if (!payload) return;
+        setKMeansState({
+            currentStep: state.kmeansFrameIndex,
+            currentIteration: state.currentSnapshot,
+            kValue: state.k,
+            iterationCount: state.maxIter,
+        }, "timeline-click");
         renderKMeansStepFocus(frame, payload.result, payload.snapshot, payload.stats);
         updateConceptFrameStrip();
     }
@@ -4317,6 +4850,7 @@
         if (!state.concept?.frames?.length) return;
         const index = state.concept.frames.findIndex((frame) => frame.phase === phase);
         state.conceptFrameIndex = index >= 0 ? index : state.concept.frames.length - 1;
+        state.kmeansFrameIndex = state.conceptFrameIndex;
         updateConceptFrameStrip();
     }
 
@@ -4344,7 +4878,7 @@
         els.stripOutput.textContent = config.stripOutput;
         els.notesSubtitle.textContent = config.activeMethod;
         els.formulaLabel.textContent = config.formulaLabel;
-        els.formula.textContent = config.formula;
+        els.formula.innerHTML = renderLatexFormula(config.formula);
         els.formulaNote.textContent = config.formulaNote;
         if (els.grabcutToolbar) {
             els.grabcutToolbar.hidden = config.activeMethod !== "GrabCut";
@@ -4831,7 +5365,7 @@
         `;
         els.notesSubtitle.textContent = "Graph Cut / Min Cut";
         els.formulaLabel.textContent = "Graph Cut";
-        els.formula.textContent = "min cut separates Source and Sink with minimum total edge cost";
+        els.formula.innerHTML = renderLatexFormula("\\text{min cut separates Source and Sink with minimum total edge cost}");
         els.formulaNote.textContent = "概念演示使用小型图结构，不对整张图求解大规模最小割。";
         els.notes.innerHTML = `
             <dl>
@@ -4905,7 +5439,7 @@
         `;
         els.notesSubtitle.textContent = "Normalized Cut";
         els.formulaLabel.textContent = "Ncut";
-        els.formula.textContent = "Ncut(A,B)=cut(A,B)/assoc(A,V)+cut(A,B)/assoc(B,V)";
+        els.formula.innerHTML = renderLatexFormula("\\text{Ncut}(A,B)=\\frac{\\text{cut}(A,B)}{\\text{assoc}(A,V)}+\\frac{\\text{cut}(A,B)}{\\text{assoc}(B,V)}");
         els.formulaNote.textContent = "归一化切割会考虑分区内部总连接强度，避免只切出很小的孤立区域。";
         els.notes.innerHTML = `
             <dl>
@@ -4976,7 +5510,7 @@
         `;
         els.notesSubtitle.textContent = "GrabCut Foreground Extraction";
         els.formulaLabel.textContent = "GrabCut";
-        els.formula.textContent = "labels = min_cut(unary_color_model + pairwise_boundary)";
+        els.formula.innerHTML = renderLatexFormula("\\text{labels} = \\min\\_\\text{cut}(\\text{unary\\_color\\_model} + \\text{pairwise\\_boundary})");
         els.formulaNote.textContent = "用户只给一个矩形框，算法把框外设为确定背景，框内前景概率由颜色模型和图切割共同决定。";
         els.notes.innerHTML = `
             <dl>
@@ -5038,7 +5572,7 @@
         `;
         els.notesSubtitle.textContent = "Watershed Marker Propagation";
         els.formulaLabel.textContent = "Watershed";
-        els.formula.textContent = "markers flood low-gradient basins until boundaries meet";
+        els.formula.innerHTML = renderLatexFormula("\\text{markers flood low-gradient basins until boundaries meet}");
         els.formulaNote.textContent = "分水岭把梯度图看作地形，marker 从盆地扩张，相遇处形成边界线。";
         els.notes.innerHTML = `
             <dl>
@@ -5107,7 +5641,7 @@
         `;
         els.notesSubtitle.textContent = "Connected Region Statistics";
         els.formulaLabel.textContent = "Region Properties";
-        els.formula.textContent = "area(label)=count(mask==label), bbox=min/max(x,y)";
+        els.formula.innerHTML = renderLatexFormula("\\text{area}=\\text{count}(\\text{mask}{=}\\text{label}),\\; \\text{bbox}=\\min/\\max(x,y)");
         els.formulaNote.textContent = "label map 不是最终说明文字，它是后续测量 bbox、轮廓、面积和 mask 占比的数据结构。";
         els.notes.innerHTML = `
             <dl>
