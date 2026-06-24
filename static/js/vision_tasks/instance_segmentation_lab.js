@@ -96,9 +96,147 @@
         blenderPlayBtn: $("[data-inst-blender-play-btn]"),
         blenderCanvas: $("[data-inst-blender-canvas]"),
         blenderOverlayText: $("[data-inst-blender-overlay-text]"),
-        blenderGrid: $("[data-inst-blender-grid]")
+        blenderGrid: $("[data-inst-blender-grid]"),
+        processSteps: $("[data-inst-process-steps]"),
+        processOverlay: $("[data-inst-process-overlay]"),
+        processPrinciple: $("[data-inst-process-principle]"),
+        processCard: $("[data-inst-process-card]")
     };
     const ctx = els.canvas.getContext("2d", {willReadFrequently: true});
+
+    const processSteps = [
+        {
+            id: "image",
+            title: "Image",
+            detail: "shared RGB input",
+            formula: "I ∈ R^{H×W×3}",
+            desc: "实例分割从同一张 RGB 图像开始，但目标是找出每个独立对象，而不是只预测像素类别。",
+            overlay: "input"
+        },
+        {
+            id: "preprocess",
+            title: "Letterbox",
+            detail: "resize + padding",
+            formula: "x = letterbox(I, 640)",
+            desc: "YOLO 系列通常先等比缩放并补边到固定尺寸。动画中的边框向内贴合，表示坐标会被记录以便还原到原图。",
+            overlay: "scan"
+        },
+        {
+            id: "inference",
+            title: "YOLO Head",
+            detail: "boxes + coeffs",
+            formula: "Y = f_θ(x)",
+            desc: "模型一次前向同时输出候选框、类别分数和 mask 系数。多束线从图像伸出，表示检测头和分割头共享特征。",
+            overlay: "rays"
+        },
+        {
+            id: "decode",
+            title: "Decode",
+            detail: "xywh / score / class",
+            formula: "box = decode(anchor, Δx, Δy, Δw, Δh)",
+            desc: "原始输出被解码成 bbox、class、score 和 mask coefficients。小标签从特征点弹出，表示候选实例集合形成。",
+            overlay: "boxes"
+        },
+        {
+            id: "nms",
+            title: "NMS",
+            detail: "remove overlaps",
+            formula: "keep_i if IoU(b_i,b_j) < τ",
+            desc: "重叠过高且置信度较低的候选框会被抑制。动画中的框发生碰撞和筛选，突出 NMS 的去重作用。",
+            overlay: "collision"
+        },
+        {
+            id: "prototype",
+            title: "Prototype",
+            detail: "linear mask blend",
+            formula: "M_i = σ(Σ_k c_{ik}P_k)",
+            desc: "YOLO-seg 使用共享 prototype masks 与每个实例自己的系数线性组合，得到该实例的粗 mask。",
+            overlay: "channels"
+        },
+        {
+            id: "masks",
+            title: "Instance Mask",
+            detail: "crop + id",
+            formula: "instance_i={bbox,class,score,mask_i,id_i}",
+            desc: "mask 会按 bbox 裁剪并映射回原图，每个对象保留独立颜色和 instance id，便于计数、选择和跟踪。",
+            overlay: "mask"
+        },
+        {
+            id: "maskIou",
+            title: "Mask AP",
+            detail: "mask quality",
+            formula: "MaskIoU = |M∩G| / |M∪G|",
+            desc: "实例分割评估关注每个实例 mask 与真实标注的像素级重叠，常以不同 IoU 阈值下的 AP 汇总质量。",
+            overlay: "metric"
+        }
+    ];
+
+    function processById(id) {
+        return processSteps.find((step) => step.id === id) || processSteps[0];
+    }
+
+    function renderProcessSteps(activeId = state.phase) {
+        if (!els.processSteps) return;
+        els.processSteps.innerHTML = processSteps.map((step, index) => `
+            <button type="button" class="${step.id === activeId ? "is-active" : ""}" data-inst-process-step="${esc(step.id)}">
+                <span class="process-step-num">${index + 1}</span>
+                <span class="process-step-thumb" data-visual="${esc(step.overlay)}"></span>
+                <strong>${esc(step.title)}</strong>
+                <small>${esc(step.detail)}</small>
+            </button>
+        `).join("");
+        els.processSteps.querySelectorAll("[data-inst-process-step]").forEach((button, index) => {
+            button.addEventListener("click", () => {
+                const mapped = button.dataset.instProcessStep === "masks" ? "instances" : button.dataset.instProcessStep;
+                state.maskRcnnStep = Math.max(0, maskRcnnSteps.findIndex((step) => step.id === mapped));
+                setPhase(button.dataset.instProcessStep);
+                render();
+            });
+        });
+    }
+
+    function processOverlayMarkup(step) {
+        const kind = step.overlay;
+        if (kind === "scan") return `<div class="process-scanline"></div><div class="process-letterbox"><i></i><b></b></div>`;
+        if (kind === "rays") return `<div class="process-rays">${Array.from({length: 9}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`;
+        if (kind === "boxes") return `<div class="process-candidate-boxes">${Array.from({length: 8}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`;
+        if (kind === "collision") return `<div class="process-nms-collision"><i></i><i></i><b></b><span>keep</span></div>`;
+        if (kind === "channels") return `<div class="process-channel-stack">${Array.from({length: 8}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div><div class="process-flow-line"></div>`;
+        if (kind === "mask") return `<div class="process-instance-masks"><i></i><i></i><i></i><b>#id</b></div>`;
+        if (kind === "metric") return `<div class="process-iou-demo"><i class="gt"></i><i class="pred"></i><b></b><span>Mask IoU</span></div>`;
+        return `<div class="process-input-frame"><i></i><i></i><i></i></div>`;
+    }
+
+    function renderProcessVisuals() {
+        const step = processById(state.phase);
+        if (els.processOverlay) {
+            els.processOverlay.dataset.processStep = step.id;
+            els.processOverlay.innerHTML = processOverlayMarkup(step);
+        }
+        if (els.processPrinciple) {
+            els.processPrinciple.innerHTML = `
+                <div class="process-principle-head">
+                    <span>${esc(step.title)}</span>
+                    <strong>${esc(step.detail)}</strong>
+                </div>
+                <div class="process-principle-motion" data-motion="${esc(step.overlay)}">
+                    ${processOverlayMarkup(step)}
+                </div>
+                <p>${esc(step.desc)}</p>
+            `;
+        }
+        if (els.processCard) {
+            els.processCard.querySelector("[data-process-kicker]").textContent = "INSTANCE STEP";
+            els.processCard.querySelector("[data-process-title]").textContent = step.title;
+            els.processCard.querySelector("[data-process-formula]").textContent = step.formula;
+            els.processCard.querySelector("[data-process-desc]").textContent = step.desc;
+        }
+    }
+
+    function syncProcessConsole() {
+        renderProcessSteps();
+        renderProcessVisuals();
+    }
 
     const yoloSteps = [
         {id: "image", title: "Image", detail: "Current / Uploaded"},
@@ -160,7 +298,6 @@
             els.stepperItems = [...els.stepper.querySelectorAll("[data-inst-phase]")];
             els.stepperItems.forEach((item, index) => {
                 item.addEventListener("click", () => {
-                    if (!isMaskRcnnMode()) return;
                     state.maskRcnnStep = index;
                     setPhase(item.dataset.instPhase);
                     render();
@@ -280,6 +417,7 @@
         setProcessSteps(phase);
         els.stepperItems.forEach((item) => item.classList.toggle("is-active", item.dataset.instPhase === phase));
         els.flowItems.forEach((item) => item.classList.toggle("is-active", item.dataset.instFlowPhase === phase));
+        syncProcessConsole();
         renderNotes();
     }
 

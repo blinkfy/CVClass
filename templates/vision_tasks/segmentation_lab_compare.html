@@ -33,18 +33,6 @@
 
         <section class="seg-lab-control-card">
             <div class="overview-control-title">
-                <strong>显示模式</strong>
-                <span>VIEW</span>
-            </div>
-            <div class="overview-segmented-control seg-lab-mode-toggle">
-                <button class="is-active" type="button" data-seg-mode="overlay">叠加图</button>
-                <button type="button" data-seg-mode="mask">纯 Mask</button>
-                <button type="button" data-seg-mode="split">结构对比</button>
-            </div>
-        </section>
-
-        <section class="seg-lab-control-card">
-            <div class="overview-control-title">
                 <strong>任务聚焦</strong>
                 <span>FOCUS</span>
             </div>
@@ -225,5 +213,5 @@
 
 {% block extra_js %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare2"></script>
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare3"></script>
 {% endblock %}
