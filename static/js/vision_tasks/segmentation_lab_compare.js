@@ -19,7 +19,6 @@
         width: 0,
         height: 0,
         opacity: 0.62,
-        mode: "overlay",
         focus: "semantic",
         backend: "webgpu",
         semantic: null,
@@ -39,7 +38,6 @@
         sample: $("[data-seg-sample]"),
         upload: $("[data-seg-upload]"),
         uploadName: $("[data-seg-upload-name]"),
-        modeButtons: $$("[data-seg-mode]"),
         focusButtons: $$("[data-seg-focus]"),
         opacity: $("[data-seg-opacity]"),
         opacityOut: $("[data-seg-opacity-output]"),
@@ -112,7 +110,7 @@
     }
 
     function currentImageElement() {
-        return els.inputImage;
+        return els.inputImage || els.semanticImage || els.instanceImage;
     }
 
     function setStep(step) {
@@ -133,8 +131,6 @@
 
     function updateFocus() {
         root.dataset.focus = state.focus;
-        root.dataset.mode = state.mode;
-        els.modeButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.segMode === state.mode));
         els.focusButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.segFocus === state.focus));
         els.cards.forEach((card) => card.classList.toggle("is-focused", card.dataset.segCard === state.focus || (state.focus === "compare" && card.dataset.segCard !== "input")));
         els.prosCards.forEach((card) => card.classList.toggle("is-focused", card.dataset.segProsCard === state.focus || (state.focus === "compare" && card.dataset.segProsCard === "semantic")));
@@ -175,6 +171,7 @@
     }
 
     function waitForImage(image) {
+        if (!image) return Promise.resolve();
         if (image.complete && image.naturalWidth > 0) return Promise.resolve();
         return new Promise((resolve, reject) => {
             const onLoad = () => { cleanup(); resolve(); };
@@ -194,10 +191,10 @@
         state.width = width;
         state.height = height;
         const resolved = url.startsWith("blob:") ? url : window.cvclassUrl(url);
-        [els.inputImage, els.semanticImage, els.instanceImage].forEach((img) => {
+        [els.inputImage, els.semanticImage, els.instanceImage].filter(Boolean).forEach((img) => {
             img.src = resolved;
         });
-        els.inputName.textContent = state.imageName;
+        if (els.inputName) els.inputName.textContent = state.imageName;
         if (els.missing) {
             els.missing.textContent = url.startsWith("blob:") ? "上传图片读取失败" : `请放入 ${url.split("/").pop()}`;
         }
@@ -206,8 +203,8 @@
 
     function updateImageMetrics() {
         const image = currentImageElement();
-        const width = image.naturalWidth || state.width || 0;
-        const height = image.naturalHeight || state.height || 0;
+        const width = image?.naturalWidth || state.width || 0;
+        const height = image?.naturalHeight || state.height || 0;
         if (width && height) {
             state.width = width;
             state.height = height;
@@ -330,7 +327,7 @@
         els.semanticCanvas.width = width;
         els.semanticCanvas.height = height;
         semanticCtx.clearRect(0, 0, width, height);
-        const alpha = state.mode === "mask" ? 230 : Math.round(state.opacity * 255);
+        const alpha = Math.round(state.opacity * 255);
 
         if (result.classMap) {
             const imageData = semanticCtx.createImageData(width, height);
@@ -358,7 +355,7 @@
                 else semanticCtx.lineTo(x, y);
             });
             semanticCtx.closePath();
-            semanticCtx.globalAlpha = state.mode === "mask" ? 0.92 : state.opacity;
+            semanticCtx.globalAlpha = state.opacity;
             semanticCtx.fillStyle = region.color || colorFor(index, index);
             semanticCtx.fill();
             semanticCtx.globalAlpha = 1;
@@ -375,7 +372,7 @@
 
         const imageData = instanceCtx.createImageData(width, height);
         const out = imageData.data;
-        const alpha = state.mode === "mask" ? 235 : Math.round(state.opacity * 255);
+        const alpha = Math.round(state.opacity * 255);
         (result.instances || []).forEach((item, index) => {
             const [r, g, b] = parseColor(item.color || colorFor(index, index));
             if (item.mask?.data) {
@@ -400,7 +397,7 @@
                 else instanceCtx.lineTo(x, y);
             });
             instanceCtx.closePath();
-            instanceCtx.globalAlpha = state.mode === "mask" ? 0.92 : state.opacity;
+            instanceCtx.globalAlpha = state.opacity;
             instanceCtx.fillStyle = item.color || colorFor(index, index);
             instanceCtx.fill();
             instanceCtx.globalAlpha = 1;
@@ -491,7 +488,6 @@
     }
 
     function renderAll() {
-        root.dataset.mode = state.mode;
         els.opacityOut.textContent = `${Math.round(state.opacity * 100)}%`;
         drawSemanticMask(state.semantic);
         drawInstanceMasks(state.instance);
@@ -659,10 +655,6 @@
     function initControls() {
         els.sample.addEventListener("change", () => switchSample(els.sample.value));
         els.upload.addEventListener("change", () => handleUpload(els.upload.files?.[0]));
-        els.modeButtons.forEach((button) => button.addEventListener("click", () => {
-            state.mode = button.dataset.segMode;
-            renderAll();
-        }));
         els.focusButtons.forEach((button) => button.addEventListener("click", () => {
             state.focus = button.dataset.segFocus;
             updateFocus();

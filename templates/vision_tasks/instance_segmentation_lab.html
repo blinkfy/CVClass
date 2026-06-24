@@ -88,12 +88,21 @@
             <span>Postprocess: <strong data-inst-strip-postprocess>--</strong></span>
             <span>Instances: <strong data-inst-strip-count>--</strong></span>
         </div>
+        <section class="process-step-console instance-process-console" aria-label="实例分割算法流程">
+            <div class="process-step-heading">
+                <span>ALGORITHM FLOW</span>
+                <strong>逐步运算流程</strong>
+            </div>
+            <div class="process-filmstrip" data-inst-process-steps></div>
+        </section>
         <div class="vision-image-stage instance-real-stage" data-inst-stage>
             <img data-inst-image alt="实例分割样例图">
             <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-inst-missing></span></div>
             <canvas data-inst-mask-canvas aria-label="实例 mask 覆盖层"></canvas>
             <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
+            <div class="process-visual-overlay instance-process-overlay" data-inst-process-overlay aria-hidden="true"></div>
         </div>
+        <section class="process-principle-stage" data-inst-process-principle aria-live="polite"></section>
         <div class="instance-compare-page" data-inst-compare-page hidden></div>
         <div class="instance-maskrcnn-demo" data-inst-maskrcnn-demo hidden></div>
         <div class="instance-seg-flow" data-inst-flow>
@@ -157,6 +166,12 @@
             <div><h3 data-inst-notes-title>算法原理</h3><p data-inst-notes-subtitle>Instance Statistics</p></div>
         </div>
         <div class="instance-notes-tutorial" data-inst-notes-tutorial></div>
+        <section class="process-formula-card" data-inst-process-card aria-live="polite">
+            <span data-process-kicker>ALGORITHM STEP</span>
+            <h4 data-process-title>逐步运算说明</h4>
+            <code data-process-formula>--</code>
+            <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
+        </section>
         <div class="instance-notes-data" data-inst-notes></div>
         <div class="vision-output-schema">
             <span>输出结构</span>

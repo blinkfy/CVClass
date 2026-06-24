@@ -78,22 +78,31 @@
             <span>Mask: <strong data-sem-strip-mask>--</strong></span>
             <span>Classes: <strong data-sem-strip-classes>--</strong></span>
         </div>
+        <section class="process-step-console semantic-process-console" aria-label="语义分割算法流程">
+            <div class="process-step-heading">
+                <span>ALGORITHM FLOW</span>
+                <strong>逐步运算流程</strong>
+            </div>
+            <div class="process-filmstrip" data-sem-process-steps></div>
+        </section>
         <div class="vision-image-stage semantic-real-stage" data-sem-stage>
             <img data-sem-image alt="语义分割样例图">
             <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-sem-missing></span></div>
             <canvas data-sem-canvas></canvas>
+            <div class="process-visual-overlay semantic-process-overlay" data-sem-process-overlay aria-hidden="true"></div>
             <div class="semantic-probe-card" data-sem-probe></div>
         </div>
+        <section class="process-principle-stage" data-sem-process-principle aria-live="polite"></section>
         <div class="semantic-fcn-demo" data-sem-fcn-demo hidden>
             <div class="semantic-fcn-pipeline">
                 <article data-fcn-stage="image"><strong>输入图像</strong><span>H×W×3 pixels</span><i></i></article>
-                <article data-fcn-stage="feature"><strong>Backbone feature map</strong><span>低分辨率语义特征</span><i></i></article>
-                <article data-fcn-stage="conv"><strong>1×1 Conv 分类热图</strong><span>C-channel logits</span><i></i></article>
-                <article data-fcn-stage="heatmap"><strong>低分辨率 heatmap</strong><span>coarse class score</span><i></i></article>
+                <article data-fcn-stage="preprocess"><strong>预处理</strong><span>resize / normalize</span><i></i></article>
+                <article data-fcn-stage="backbone"><strong>Backbone feature map</strong><span>低分辨率语义特征</span><i></i></article>
+                <article data-fcn-stage="logits"><strong>Pixel Logits</strong><span>C-channel logits</span><i></i></article>
                 <article data-fcn-stage="upsample"><strong>Upsampling / Deconv</strong><span>恢复空间尺寸</span><i></i></article>
-                <article data-fcn-stage="skip"><strong>Skip Connection</strong><span>浅层定位 + 深层语义</span><i></i></article>
                 <article data-fcn-stage="argmax"><strong>H×W class map</strong><span>argmax per pixel</span><i></i></article>
-                <article data-fcn-stage="miou"><strong>Semantic Mask Overlay</strong><span>mIoU metrics</span><i></i></article>
+                <article data-fcn-stage="mask"><strong>Semantic Mask Overlay</strong><span>color mask</span><i></i></article>
+                <article data-fcn-stage="miou"><strong>mIoU Metrics</strong><span>intersection / union</span><i></i></article>
             </div>
             <div class="semantic-fcn-visual-grid">
                 <section>
@@ -123,19 +132,19 @@
         <div class="semantic-tensor-flow" data-sem-flow>
             <div data-flow-phase="image"><strong>Image</strong><span>H×W×3 input</span></div>
             <b>→</b>
-            <div data-flow-phase="feature"><strong>Feature Map</strong><span>backbone output</span></div>
+            <div data-flow-phase="preprocess"><strong>Preprocess</strong><span>resize / normalize</span></div>
             <b>→</b>
-            <div data-flow-phase="conv"><strong>1×1 Conv</strong><span>C logits</span></div>
+            <div data-flow-phase="backbone"><strong>Backbone</strong><span>feature map</span></div>
             <b>→</b>
-            <div data-flow-phase="heatmap"><strong>Heatmap</strong><span>low-res scores</span></div>
+            <div data-flow-phase="logits"><strong>Pixel Logits</strong><span>C scores</span></div>
             <b>→</b>
-            <div data-flow-phase="upsample"><strong>Upsampling</strong><span>deconv / bilinear</span></div>
+            <div data-flow-phase="upsample"><strong>Upsample</strong><span>restore H×W</span></div>
             <b>→</b>
-            <div data-flow-phase="skip"><strong>Skip Fusion</strong><span>fine boundary</span></div>
+            <div data-flow-phase="argmax"><strong>Argmax</strong><span>winner class</span></div>
             <b>→</b>
-            <div data-flow-phase="argmax"><strong>Argmax Mask</strong><span>class id</span></div>
+            <div data-flow-phase="mask"><strong>Mask</strong><span>color map</span></div>
             <b>→</b>
-            <div data-flow-phase="miou"><strong>mIoU</strong><span>mean IoU</span></div>
+            <div data-flow-phase="miou"><strong>mIoU</strong><span>metric</span></div>
         </div>
     </div>
 
@@ -145,6 +154,12 @@
             <div><h3 data-sem-notes-title>算法原理</h3><p data-sem-notes-subtitle>Pixel Probe</p></div>
         </div>
         <div class="semantic-notes-tutorial" data-sem-notes-tutorial></div>
+        <section class="process-formula-card" data-sem-process-card aria-live="polite">
+            <span data-process-kicker>ALGORITHM STEP</span>
+            <h4 data-process-title>逐步运算说明</h4>
+            <code data-process-formula>--</code>
+            <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
+        </section>
         <div class="semantic-notes-data" data-sem-notes></div>
 
         <div class="semantic-fcn-notes-panel" data-fcn-notes-panel hidden>
@@ -218,16 +233,29 @@
     </aside>
 </section>
 
-<ol class="vision-stepper semantic-stepper" aria-label="FCN 语义分割流程" data-sem-stepper>
-    <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
-    <li data-sem-phase="feature"><span>2</span><div><strong>Feature Map</strong><small>backbone</small></div></li>
-    <li data-sem-phase="conv"><span>3</span><div><strong>1×1 Conv</strong><small>C logits</small></div></li>
-    <li data-sem-phase="heatmap"><span>4</span><div><strong>Heatmap</strong><small>low-res</small></div></li>
-    <li data-sem-phase="upsample"><span>5</span><div><strong>Upsampling</strong><small>deconv</small></div></li>
-    <li data-sem-phase="skip"><span>6</span><div><strong>Skip Fusion</strong><small>fine edges</small></div></li>
-    <li data-sem-phase="argmax"><span>7</span><div><strong>Argmax Mask</strong><small>class id</small></div></li>
-    <li data-sem-phase="miou"><span>8</span><div><strong>mIoU</strong><small>mean IoU</small></div></li>
-</ol>
+<section class="semantic-playback-panel" aria-label="语义分割步骤播放控制">
+    <div class="semantic-playback-head">
+        <div>
+            <span>STEP TIMELINE</span>
+            <strong data-sem-step-label>01 / 8 · Image</strong>
+        </div>
+        <div class="semantic-playback-actions">
+            <button type="button" data-sem-play>Play</button>
+            <button type="button" data-sem-reset>Reset</button>
+        </div>
+    </div>
+    <div class="semantic-progress-track" data-sem-progress aria-hidden="true"></div>
+    <ol class="vision-stepper semantic-stepper" aria-label="语义分割流程" data-sem-stepper>
+        <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
+        <li data-sem-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>resize / normalize</small></div></li>
+        <li data-sem-phase="backbone"><span>3</span><div><strong>Backbone</strong><small>feature map</small></div></li>
+        <li data-sem-phase="logits"><span>4</span><div><strong>Pixel Logits</strong><small>H′×W′×C</small></div></li>
+        <li data-sem-phase="upsample"><span>5</span><div><strong>Upsample</strong><small>restore H×W</small></div></li>
+        <li data-sem-phase="argmax"><span>6</span><div><strong>Argmax</strong><small>class id</small></div></li>
+        <li data-sem-phase="mask"><span>7</span><div><strong>Semantic Mask</strong><small>overlay</small></div></li>
+        <li data-sem-phase="miou"><span>8</span><div><strong>mIoU</strong><small>mean IoU</small></div></li>
+    </ol>
+</section>
 {% endblock %}
 
 {% block extra_js %}
