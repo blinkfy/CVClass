@@ -105,20 +105,7 @@
         </div>
 
         <div class="seg-lab-comparison-grid" data-seg-comparison-grid>
-            <article class="seg-lab-result-card seg-lab-result-card--input" data-seg-card="input">
-                <header>
-                    <span>01</span>
-                    <div><h4>输入图像</h4><p>Same image</p></div>
-                </header>
-                <div class="seg-lab-visual">
-                    <img data-seg-input-image alt="分割对比输入图像">
-                    <div class="vision-image-placeholder"><strong>图片未找到</strong><small data-seg-missing></small></div>
-                </div>
-                <footer>
-                    <strong data-seg-image-size>-- × --</strong>
-                    <span>两个模型共享这张图像作为输入，差异只来自输出头与后处理。</span>
-                </footer>
-            </article>
+            <img class="seg-lab-input-proxy" data-seg-input-image alt="" aria-hidden="true">
 
             <article class="seg-lab-result-card seg-lab-result-card--semantic is-focused" data-seg-card="semantic">
                 <header>
@@ -238,5 +225,5 @@
 
 {% block extra_js %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare1"></script>
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare2"></script>
 {% endblock %}

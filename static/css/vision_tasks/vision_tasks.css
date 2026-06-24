@@ -15464,6 +15464,15 @@ body:has(.vision-lab) {
     overflow: hidden;
 }
 
+.seg-lab-stage-panel .seg-lab-proscons {
+    border-width: 1px 0 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0 0 18px 18px;
+    box-shadow: none;
+}
+
 .seg-lab-stage-strip {
     display: flex;
     flex-wrap: wrap;
@@ -15493,7 +15502,7 @@ body:has(.vision-lab) {
 
 .seg-lab-comparison-grid {
     display: grid;
-    grid-template-columns: minmax(180px, 0.82fr) repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding: 12px;
     background:
@@ -15501,6 +15510,14 @@ body:has(.vision-lab) {
         linear-gradient(180deg, rgba(219, 234, 254, 0.52) 1px, transparent 1px),
         #f8fbff;
     background-size: 26px 26px;
+}
+
+.seg-lab-input-proxy {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .seg-lab-result-card {
@@ -15678,10 +15695,6 @@ body:has(.vision-lab) {
 
 [data-segmentation-lab][data-mode="mask"] .seg-lab-visual img {
     opacity: 0.08;
-}
-
-[data-segmentation-lab][data-mode="split"] .seg-lab-result-card--input {
-    opacity: 0.72;
 }
 
 .seg-lab-mini-legend {
@@ -15896,10 +15909,10 @@ body:has(.vision-lab) {
 
 .seg-lab-proscons {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     border: 1px solid #dbeafe;
     border-radius: 18px;
-    padding: 16px;
+    padding: 12px;
     background:
         linear-gradient(90deg, rgba(219, 234, 254, 0.48) 1px, transparent 1px),
         linear-gradient(180deg, rgba(219, 234, 254, 0.48) 1px, transparent 1px),
@@ -15911,16 +15924,16 @@ body:has(.vision-lab) {
 .seg-lab-proscons-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
 }
 
 .seg-lab-proscons-grid article {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     border: 1px solid #dbeafe;
-    border-radius: 15px;
-    padding: 14px;
+    border-radius: 13px;
+    padding: 11px;
     background: #ffffff;
     box-shadow: 0 10px 22px rgba(37, 99, 235, 0.055);
     transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
@@ -15938,7 +15951,7 @@ body:has(.vision-lab) {
     justify-content: space-between;
     gap: 10px;
     border-bottom: 1px solid #e8eef6;
-    padding-bottom: 8px;
+    padding-bottom: 7px;
 }
 
 .seg-lab-proscons-grid header span {
@@ -15955,17 +15968,17 @@ body:has(.vision-lab) {
 }
 
 .seg-lab-proscons-grid h5 {
-    margin: 0 0 4px;
+    margin: 0 0 3px;
     color: #1e3a8a;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .seg-lab-proscons-grid p,
 .seg-lab-proscons-grid footer {
     margin: 0;
     color: #475569;
-    font-size: 12px;
-    line-height: 1.65;
+    font-size: 11px;
+    line-height: 1.55;
 }
 
 .seg-lab-proscons-grid footer {

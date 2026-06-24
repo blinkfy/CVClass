@@ -198,7 +198,9 @@
             img.src = resolved;
         });
         els.inputName.textContent = state.imageName;
-        els.missing.textContent = url.startsWith("blob:") ? "上传图片读取失败" : `请放入 ${url.split("/").pop()}`;
+        if (els.missing) {
+            els.missing.textContent = url.startsWith("blob:") ? "上传图片读取失败" : `请放入 ${url.split("/").pop()}`;
+        }
         updateImageMetrics();
     }
 
@@ -209,10 +211,10 @@
         if (width && height) {
             state.width = width;
             state.height = height;
-            els.imageSize.textContent = `${width} × ${height}`;
+            if (els.imageSize) els.imageSize.textContent = `${width} × ${height}`;
             root.style.setProperty("--seg-lab-aspect", `${width} / ${height}`);
         } else {
-            els.imageSize.textContent = "-- × --";
+            if (els.imageSize) els.imageSize.textContent = "-- × --";
         }
     }
 
