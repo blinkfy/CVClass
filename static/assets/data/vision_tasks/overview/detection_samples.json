@@ -41,8 +41,8 @@
       "image": "/static/assets/img/bangkok_traffic.jpg",
       "width": 355,
       "height": 355,
-      "confidence_threshold": 0.25,
-      "nms_iou_threshold": 0.5,
+      "confidence_threshold": 0.5,
+      "nms_iou_threshold": 0.45,
       "boxes": [
         {"id": 1, "class": "car", "score": 0.94, "bbox": [132, 225, 212, 309]},
         {"id": 2, "class": "car", "score": 0.77, "bbox": [139, 230, 215, 306]},

@@ -6,6 +6,7 @@ const INPUT_SIZE = 640;
 const MODEL_SCORE_THRESHOLD = 0.25;
 const MODEL_NMS_IOU_THRESHOLD = 0.45;
 const MAX_DECODED_BOXES = 24;
+const MAX_RAW_CANDIDATE_BOXES = 160;
 const MODEL_COLORS = [
     "#2563EB", "#EF4444", "#22C55E", "#F97316", "#A855F7", "#06B6D4",
     "#EAB308", "#EC4899", "#14B8A6", "#64748B", "#84CC16", "#F43F5E"
@@ -264,11 +265,18 @@ async function runDetectionInference(image) {
     const output = await firstOutputAsync(results);
     const postStarted = performance.now();
     const decoded = decodeYoloOutput(output, {labels});
-    const boxes = prefilterModelBoxes(self.scaleBoxesToOriginal(decoded, meta));
+    const scaledDecoded = self.scaleBoxesToOriginal(decoded, meta)
+        .filter((box) => Number.isFinite(box.score) && box.score >= 0.01)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_RAW_CANDIDATE_BOXES)
+        .map((box, index) => ({...box, id: index + 1}));
+    // Worker 只做解码与坐标还原，不做 NMS；页面层负责完整的 confidence filter + NMS 教学演示
+    const boxes = scaledDecoded;
     const postprocessTime = performance.now() - postStarted;
 
     return {
         boxes,
+        rawCandidates: scaledDecoded,
         inferenceTime,
         preprocessTime,
         postprocessTime,

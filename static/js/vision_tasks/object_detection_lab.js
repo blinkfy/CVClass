@@ -3,7 +3,7 @@
     if (!root) return;
 
     const dataRoot = window.CVClassVisionTasks?.dataRoot || window.cvclassUrl("/static/assets/data/vision_tasks");
-    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/detection_inference.js");
+    const inferenceModuleUrl = window.cvclassUrl("/static/js/inference/detection_inference.js?v=20260624-det-polish2");
     const $ = (selector) => root.querySelector(selector);
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
@@ -80,6 +80,7 @@
         runtimeStats: $("[data-det-runtime-stats]"),
         classStats: $("[data-det-class-stats]"),
         pipeline: $("[data-det-pipeline]"),
+        pairCard: $("[data-det-pair-card]"),
         stepper: document.querySelector("[data-det-stepper]"),
         stepperItems: [...document.querySelectorAll("[data-det-stepper] [data-det-phase]")]
     };
@@ -247,6 +248,28 @@
         return state.inferenceScene;
     }
 
+    function candidatePoolFromInference(result) {
+        const raw = Array.isArray(result?.rawCandidates) && result.rawCandidates.length ? result.rawCandidates : result?.boxes;
+        const sorted = (Array.isArray(raw) ? raw : [])
+            .filter((box) => Array.isArray(box.bbox) && Number.isFinite(box.score))
+            .sort((a, b) => b.score - a.score);
+        const high = sorted.filter((box) => box.score >= state.conf);
+        const low = sorted.filter((box) => box.score < state.conf);
+        const selected = [
+            ...high.slice(0, 600),
+            ...low.slice(0, 120)
+        ];
+        if (selected.length < 72) {
+            sorted.forEach((box) => {
+                if (selected.length >= 72) return;
+                if (!selected.includes(box)) selected.push(box);
+            });
+        }
+        return selected
+            .slice(0, 150)
+            .map((box, index) => ({...box, id: index + 1}));
+    }
+
     function colorFor(box) {
         return box.color || state.data.classes[box.class] || "#2563eb";
     }
@@ -412,6 +435,20 @@
         return `<div class="vision-bbox vision-bbox--${status}" style="left:${(x1 / s.width) * 100}%;top:${(y1 / s.height) * 100}%;width:${((x2 - x1) / s.width) * 100}%;height:${((y2 - y1) / s.height) * 100}%;--box-color:${esc(colorFor(box))}"><span>${esc(label)}</span></div>`;
     }
 
+    function renderDecodeAnimation(step, result) {
+        if (step.phase !== "decode") return "";
+        const sample = result.candidates[0] || result.low[0];
+        const bbox = sample?.bbox || [];
+        return `<div class="det-decode-animation" aria-hidden="true">
+            <span>rawOutput [1,84,8400]</span>
+            <b>candidate point</b>
+            <b>xywh + class scores</b>
+            <b>xywh → x1,y1,x2,y2</b>
+            <strong>bbox pop #${sample ? esc(sample.id) : "--"}</strong>
+            <code>${bbox.length ? `[${bbox.join(", ")}]` : "--"}</code>
+        </div>`;
+    }
+
     function renderSourceControls() {
         const fallback = state.source === "preset" && state.fallbackReason;
         const sourceText = state.source === "preset" ? (fallback ? "预设结果模式" : "预设结果模式") : "ONNX Runtime Web";
@@ -472,13 +509,23 @@
     }
 
     function renderCandidateTable(result, step) {
-        const rows = result.boxes
+        const relatedIds = new Set([step.currentBoxId, step.compareBoxId].filter(Boolean));
+        const sorted = result.boxes
             .slice()
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 40)
+            .sort((a, b) => b.score - a.score);
+        const display = [];
+        sorted.forEach((box) => {
+            if (relatedIds.has(box.id)) display.push(box);
+        });
+        sorted.forEach((box) => {
+            if (display.length >= 8) return;
+            if (!display.some((item) => item.id === box.id)) display.push(box);
+        });
+        const rows = display
             .map((box) => {
                 const status = tableStatusFor(statusForBox(box, step, result), step, box);
-                return `<tr class="is-${status}">
+                const active = relatedIds.has(box.id);
+                return `<tr class="is-${status} ${active ? "is-active-row" : ""}">
                     <td>${box.id}</td>
                     <td>${esc(box.class)}</td>
                     <td>${box.score.toFixed(3)}</td>
@@ -487,6 +534,34 @@
                 </tr>`;
             }).join("");
         els.candidateTable.innerHTML = rows || `<tr><td colspan="5">暂无候选框。</td></tr>`;
+    }
+
+    function renderPairCard(step) {
+        if (!els.pairCard) return;
+        const c = step.comparison;
+        if (!c) {
+            els.pairCard.hidden = true;
+            els.pairCard.innerHTML = "";
+            return;
+        }
+        els.pairCard.hidden = false;
+        els.pairCard.innerHTML = `
+            <div class="det-pair-card-head">
+                <span>NMS PAIR COMPARE</span>
+                <strong>A#${esc(c.a.id)} × B#${esc(c.b.id)}</strong>
+                <em>${c.suppress ? "suppress" : "keep"}</em>
+            </div>
+            <div class="det-pair-card-grid">
+                <article class="is-a"><span>Box A</span><strong>${esc(c.a.class)} · ${c.a.score.toFixed(3)}</strong><code>[${c.a.bbox.join(", ")}]</code></article>
+                <article class="is-b"><span>Box B</span><strong>${esc(c.b.class)} · ${c.b.score.toFixed(3)}</strong><code>[${c.b.bbox.join(", ")}]</code></article>
+                <dl>
+                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
+                    <div><dt>IoU</dt><dd>${c.iou.toFixed(3)}</dd></div>
+                    <div><dt>threshold</dt><dd>${state.iou.toFixed(2)}</dd></div>
+                    <div><dt>decision</dt><dd>${c.suppress ? "suppress B" : "keep B"}</dd></div>
+                </dl>
+            </div>`;
     }
 
     function renderStepper(step) {
@@ -567,13 +642,15 @@
                 <div><dt>final detections</dt><dd>${result.kept.length}</dd></div>
                 <div><dt>class counts</dt><dd>${esc(classText)}</dd></div>
                 <div><dt>avg confidence</dt><dd>${avg.toFixed(3)}</dd></div>
-                <div><dt>output schema</dt><dd>{bbox, score, class}</dd></div>
+                <div><dt>output schema</dt><dd>N × [x1,y1,x2,y2,score,class]</dd></div>
             </dl>
             <div class="det-final-output"><strong>final detections preview</strong><code>${esc(JSON.stringify(finalPreview))}</code></div>`;
         } else {
             const c = step.comparison;
             if (c) {
-                tutorialContent = `<p><span class="det-note-stage">IoU / NMS</span><strong>当前比较 A/B</strong>计算 IoU = Area(A ∩ B) / Area(A ∪ B)。当 IoU ≥ ${state.iou.toFixed(2)} 时，低分框 B 会被 NMS 删除。</p>`;
+                const stageName = step.type === "suppress" ? "NMS" : step.type === "keep" ? "NMS" : "IoU";
+                const decisionText = c.suppress ? `IoU ≥ ${state.iou.toFixed(2)}，NMS 删除低分框 B。` : `IoU < ${state.iou.toFixed(2)}，框 B 继续留在候选队列。`;
+                tutorialContent = `<p><span class="det-note-stage">${stageName}</span><strong>当前比较 A/B</strong>IoU = Area(A ∩ B) / Area(A ∪ B)。${decisionText}</p>`;
                 notesContent = `<div class="det-iou-equation">
                     <span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${Math.round(c.inter.area)} / ${Math.round(c.union)}</small>
                 </div>
@@ -660,25 +737,25 @@
                     <em>原始框 → crop / warp → CNN feature → classifier → refined box → NMS</em>
                 </header>
                 <div class="detection-lifecycle-grid">
-                    <article class="${isActive("proposals") ? "is-active" : ""}">
+                    <article class="${isActive("proposals") ? "is-active" : ""} ${isCurrent("proposals") || isCurrent("image") ? "is-current" : ""}">
                         <span>原始框</span>
                         <strong>[${(activeProposal.bbox || []).join(", ")}]</strong>
                         <small>Selective Search 给出类别无关 proposal。</small>
                     </article>
-                    <article class="${isActive("crop") ? "is-active" : ""}">
+                    <article class="${isActive("crop") ? "is-active" : ""} ${isCurrent("crop") ? "is-current" : ""}">
                         <span>Crop / Warp</span>
                         <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><i>crop</i><b>warp</b></div>
                         <small>把 proposal 裁剪并缩放为 CNN 固定输入。</small>
                     </article>
-                    <article class="${isActive("features") ? "is-active" : ""}">
+                    <article class="${isActive("features") ? "is-active" : ""} ${isCurrent("features") ? "is-current" : ""}">
                         <span>CNN feature</span>
                         ${renderFeatureGrid(feature, isActive("features") ? ["2-4", "3-4", "4-4"] : [])}
                     </article>
-                    <article class="${isActive("classifier") ? "is-active" : ""}">
+                    <article class="${isActive("classifier") ? "is-active" : ""} ${isCurrent("classifier") ? "is-current" : ""}">
                         <span>Classifier score</span>
                         ${renderClassifierBars(activeProposal, isActive("classifier"))}
                     </article>
-                    <article class="${isActive("regression") ? "is-active" : ""}">
+                    <article class="${isActive("regression") ? "is-active" : ""} ${isCurrent("regression") ? "is-current" : ""}">
                         <span>BBox regression</span>
                         <div class="detection-regression-track ${isActive("regression") ? "is-active" : ""}">
                             <i class="is-before"></i><i class="is-after"></i>
@@ -686,7 +763,7 @@
                         </div>
                         <code>[${(activeProposal.bbox || []).join(", ")}] → [${refined.join(", ")}]</code>
                     </article>
-                    <article class="${isActive("nms") ? "is-active" : ""}">
+                    <article class="${isActive("nms") ? "is-active" : ""} ${isCurrent("nms") ? "is-current" : ""}">
                         <span>NMS result</span>
                         <div class="detection-nms-result ${isActive("nms") ? "is-active" : ""}">
                             <b>keep ${esc(activeProposal.id || "p1")}</b>
@@ -781,7 +858,7 @@
             const p = proposals[0];
             const gt = gts.find((item) => item.id === p?.target) || gts[0];
             return [
-                p ? demoBox(p, sample, "proposal", "proposal before") : "",
+                p ? demoBox(p, sample, "proposal-active", "p1 original") : "",
                 gt ? demoBox(gt, sample, "gt", "ground truth") : "",
                 p?.refined ? demoBox({bbox: p.refined}, sample, "refined", "refined prediction") : ""
             ].join("");
@@ -794,15 +871,12 @@
                 duplicate ? demoBox(duplicate, sample, "nms-delete", "duplicate deleted") : ""
             ].join("");
         }
-        if (["crop", "features", "classifier"].includes(step.id)) {
+        if (["image", "proposals", "crop", "features", "classifier"].includes(step.id)) {
             const p = proposals[0];
             return [
-                p ? demoBox(p, sample, "proposal-active", `${p.id} crop target`) : "",
+                p ? demoBox(p, sample, "proposal-active", `${p.id} ${step.id === "image" ? "proposal" : "crop target"}`) : "",
                 ...proposals.slice(1).map((box, index) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`, "", `--proposal-delay:${(index + 1) * 90}ms;`))
             ].join("");
-        }
-        if (step.id === "image") {
-            return gts.slice(0, 2).map((box) => demoBox(box, sample, "gt", `scene object ${box.class}`)).join("");
         }
         return proposals.map((box, index) => demoBox(box, sample, box.class === "background" ? "low" : "proposal", `${box.id} ${box.class}`, "", `--proposal-delay:${index * 90}ms;`)).join("");
     }
@@ -819,7 +893,7 @@
             return;
         }
         const proposals = demo.proposals || [];
-        els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX / REFINED</th><th>STATUS</th></tr></thead><tbody>${proposals.map((p) => `<tr class="is-${p.class === "background" ? "low-confidence" : "candidate"}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] → [${(p.refined || p.bbox).join(", ")}]</td><td><span>${p.class === "background" ? "background" : "proposal"}</span></td></tr>`).join("")}</tbody>`;
+        els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX / REFINED</th><th>STATUS</th></tr></thead><tbody>${proposals.slice(0, 5).map((p) => `<tr class="is-${p.class === "background" ? "low-confidence" : "candidate"} ${p.id === "p1" ? "is-active-row" : ""}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] → [${(p.refined || p.bbox).join(", ")}]</td><td><span>${p.id === "p1" ? "active proposal" : p.class === "background" ? "background" : "proposal"}</span></td></tr>`).join("")}</tbody>`;
     }
 
     function renderRcnnNotes(demo, step) {
@@ -904,7 +978,31 @@
             els.notesTitle.textContent = "两阶段检测机制";
             els.notesSubtitle.textContent = "TWO-STAGE NOTES";
             els.notesTutorial.innerHTML = `<p><span class="det-note-stage">${esc(copy.stage)}</span><strong>${esc(step.title)}</strong>${esc(copy.text)}</p>`;
-            els.notes.innerHTML = `<dl>${copy.data.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>`;
+
+            const STEP_LABELS = {
+                image: 'Image Input',
+                proposals: 'Selective Search',
+                crop: 'Crop / Warp',
+                features: 'CNN Feature',
+                classifier: 'Classifier',
+                regression: 'BBox Regression',
+                nms: 'NMS'
+            };
+            const ALL_STEPS = ['image', 'proposals', 'crop', 'features', 'classifier', 'regression', 'nms'];
+            const curIdx = ALL_STEPS.indexOf(step.id);
+            const timelineHtml = `
+            <div class="det-notes-timeline">
+                ${ALL_STEPS.map((s, i) => {
+                    const itemState = i < curIdx ? 'done' : i === curIdx ? 'active' : '';
+                    return `<div class="det-notes-timeline-item ${itemState}">
+                        <span class="det-notes-tl-dot"></span>
+                        <span class="det-notes-tl-label">${i + 1}. ${esc(STEP_LABELS[s])}</span>
+                        ${i < curIdx ? '<span class="det-notes-tl-check">✓</span>' : ''}
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+            els.notes.innerHTML = `<dl>${copy.data.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>${timelineHtml}`;
             return;
         }
         const positiveCount = anchors.filter((anchor) => anchor.label === "positive").length;
@@ -964,6 +1062,10 @@
         const step = activeRcnnStep();
         const steps = activeRcnnSteps();
         if (els.pipeline) els.pipeline.hidden = true;
+        if (els.pairCard) {
+            els.pairCard.hidden = true;
+            els.pairCard.innerHTML = "";
+        }
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
         const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
@@ -1021,19 +1123,30 @@
         els.stepLabel.textContent = `${step.phase.toUpperCase()} · STEP ${state.step + 1} / ${result.steps.length}`;
 
         const shouldDrawLow = state.showLow || step.type === "final" || step.type === "confidence";
-        const boxMarkupAll = result.boxes.map((box) => {
+        const statusLayers = {low: [], suppressed: [], candidate: [], raw: [], "compare-b": [], "compare-a": [], kept: []};
+        result.boxes.forEach((box) => {
             const status = statusForBox(box, step, result);
-            if (status === "low" && !shouldDrawLow) return "";
-            return boxMarkup(box, s, status);
-        }).join("");
+            if (status === "low" && !shouldDrawLow) return;
+            statusLayers[status]?.push(boxMarkup(box, s, status));
+        });
+        const boxMarkupAll = [
+            ...statusLayers.low,
+            ...statusLayers.raw,
+            ...statusLayers.candidate,
+            ...statusLayers["compare-b"],
+            ...statusLayers["compare-a"],
+            ...statusLayers.suppressed,
+            ...statusLayers.kept
+        ].join("");
         const c = step.comparison;
         const interMarkup = c?.inter.area > 0 ? `<div class="vision-iou-intersection" style="left:${(c.inter.x1 / s.width) * 100}%;top:${(c.inter.y1 / s.height) * 100}%;width:${(c.inter.width / s.width) * 100}%;height:${(c.inter.height / s.height) * 100}%;"></div>` : "";
         const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "suppress B" : "keep B"}</small></div>` : "";
-        els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge;
+        els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge + renderDecodeAnimation(step, result);
 
         renderSourceControls();
         renderRuntimeMetrics(result);
         renderCandidateTable(result, step);
+        renderPairCard(step);
         renderClassStats(result);
         renderStepper(step);
         renderYoloDecodePipeline(step, result);
@@ -1071,7 +1184,7 @@
 
     function stop() {
         state.playing = false;
-        clearInterval(state.timer);
+        clearTimeout(state.timer);
         els.play.textContent = "自动播放";
     }
 
@@ -1141,8 +1254,11 @@
         const client = await getInferenceClient();
         const result = await client.runDetectionInference(els.image);
         setModelStatus("解码完成", "候选框解码完成，正在执行 confidence filter 与 NMS...");
+        // 真实推理使用模型阈值 0.25，不沿用样例数据的 0.5
+        state.conf = 0.25;
+        els.conf.value = "0.25";
         const current = currentScene();
-        const boxes = result.boxes.map((box, index) => ({...box, id: index + 1}));
+        const boxes = candidatePoolFromInference(result);
         state.inferenceScene = {
             ...current,
             width: result.width || els.image.naturalWidth || current.width,
@@ -1154,7 +1270,7 @@
         state.inferenceError = null;
         state.fallbackReason = "";
         state.step = Math.min(3, compute().steps.length - 1);
-        setModelStatus("后处理完成", `推理完成：解码 ${boxes.length} 个候选框，rawOutputShape=[${(result.rawOutputShape || []).join(", ")}]。`);
+        setModelStatus("后处理完成", `推理完成：展示 Top ${boxes.length} 个 decoded candidates，rawOutputShape=[${(result.rawOutputShape || []).join(", ")}]。`);
         renderClassControls(true);
         render();
     }
@@ -1302,7 +1418,7 @@
         if (state.detMode === "yolo") autoLoadAndRun();
     }));
     els.conf.addEventListener("input", () => { state.conf = Number(els.conf.value); state.step = 4; render(); });
-    els.iou.addEventListener("input", () => { state.iou = Number(els.iou.value); state.step = state.detMode === "yolo" ? Math.min(state.step, compute().steps.length - 1) : state.step; render(); });
+    els.iou.addEventListener("input", () => { state.iou = Number(els.iou.value); state.step = state.detMode === "yolo" ? compute().steps.length - 1 : state.step; render(); });
     els.showLow.addEventListener("change", () => { state.showLow = els.showLow.checked; render(); });
     els.prev.addEventListener("click", () => {
         if (state.detMode === "yolo") state.step = Math.max(0, state.step - 1);
@@ -1318,15 +1434,62 @@
         if (state.playing) return stop();
         state.playing = true;
         els.play.textContent = "暂停播放";
-        state.timer = setInterval(() => {
-            if (state.detMode === "yolo") {
-                const max = compute().steps.length - 1;
-                state.step = state.step >= max ? 0 : state.step + 1;
-            } else {
-                const max = activeRcnnSteps().length - 1;
-                state.rcnnStep = state.rcnnStep >= max ? 0 : state.rcnnStep + 1;
-            }
-            render();
-        }, 1200);
+        function scheduleNext() {
+            const steps = state.detMode === "yolo" ? compute().steps : activeRcnnSteps();
+            const curStep = steps[state.detMode === "yolo" ? state.step : state.rcnnStep];
+            const phaseStr = state.detMode === "yolo" ? curStep?.phase : curStep?.id;
+            const delay = phaseStr === "nms" ? 400 : 1200;
+            state.timer = setTimeout(() => {
+                if (!state.playing) return;
+                if (state.detMode === "yolo") {
+                    const max = compute().steps.length - 1;
+                    state.step = state.step >= max ? 0 : state.step + 1;
+                } else {
+                    const max = activeRcnnSteps().length - 1;
+                    state.rcnnStep = state.rcnnStep >= max ? 0 : state.rcnnStep + 1;
+                }
+                render();
+                scheduleNext();
+            }, delay);
+        }
+        scheduleNext();
     });
+
+    if (els.pipeline) {
+        els.pipeline.addEventListener("click", (e) => {
+            const article = e.target.closest(".det-output-pipeline-track article");
+            if (!article) return;
+
+            const articles = [...els.pipeline.querySelectorAll(".det-output-pipeline-track article")];
+            const clickIndex = articles.indexOf(article);
+            if (clickIndex === -1) return;
+
+            const steps = compute().steps;
+            let targetIndex = -1;
+
+            switch (clickIndex) {
+                case 0:
+                case 1:
+                    targetIndex = steps.findIndex(s => s.phase === "inference");
+                    break;
+                case 2:
+                    targetIndex = steps.findIndex(s => s.phase === "decode");
+                    break;
+                case 3:
+                    targetIndex = steps.findIndex(s => s.phase === "confidence");
+                    break;
+                case 4:
+                    targetIndex = steps.findIndex(s => s.phase === "nms");
+                    break;
+                case 5:
+                    targetIndex = steps.length - 1;
+                    break;
+            }
+
+            if (targetIndex !== -1) {
+                state.step = targetIndex;
+                render();
+            }
+        });
+    }
 }());

@@ -12609,10 +12609,6 @@ body:has(.vision-lab) {
     accent-color: var(--det-accent);
 }
 
-.detection-workbench {
-    align-items: stretch;
-}
-
 .detection-mode-toggle {
     grid-template-columns: 1fr;
 }
@@ -12728,6 +12724,13 @@ body:has(.vision-lab) {
     padding: 7px;
     background: #f8fafc;
     transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    cursor: pointer;
+}
+
+.det-output-pipeline-track article:hover {
+    border-color: var(--det-accent);
+    box-shadow: 0 4px 12px var(--det-shadow);
+    transform: translateY(-1px);
 }
 
 .det-output-pipeline-track article::after {
@@ -12932,6 +12935,116 @@ body:has(.vision-lab) {
     letter-spacing: 0.04em;
 }
 
+.det-pair-card {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #fed7aa;
+    border-radius: 11px;
+    padding: 9px;
+    background: linear-gradient(180deg, #fff7ed, #ffffff);
+}
+
+.det-pair-card[hidden] {
+    display: none !important;
+}
+
+.det-pair-card-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.det-pair-card-head span {
+    color: #9a3412;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+}
+
+.det-pair-card-head strong {
+    min-width: 0;
+    color: #7c2d12;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.det-pair-card-head em {
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: #ffffff;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 950;
+    background: #f97316;
+}
+
+.det-pair-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 0.86fr)) minmax(180px, 1.2fr);
+    gap: 8px;
+}
+
+.det-pair-card-grid article,
+.det-pair-card-grid dl {
+    min-width: 0;
+    margin: 0;
+    border: 1px solid #ffedd5;
+    border-radius: 9px;
+    padding: 7px;
+    background: #ffffff;
+}
+
+.det-pair-card-grid article {
+    display: grid;
+    gap: 4px;
+}
+
+.det-pair-card-grid article.is-a {
+    border-left: 3px solid #f97316;
+}
+
+.det-pair-card-grid article.is-b {
+    border-left: 3px dashed #f97316;
+}
+
+.det-pair-card-grid span,
+.det-pair-card-grid dt {
+    color: #9a3412;
+    font-size: 9px;
+    font-weight: 950;
+}
+
+.det-pair-card-grid strong,
+.det-pair-card-grid dd,
+.det-pair-card-grid code {
+    min-width: 0;
+    margin: 0;
+    color: #0f172a;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.det-pair-card-grid dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.det-pair-card-grid dl div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.det-pair-card-grid dl div:last-child {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+}
+
 .det-runtime-stats,
 .det-class-stats {
     font-size: 11px;
@@ -13023,6 +13136,49 @@ body:has(.vision-lab) {
     color: var(--det-ink);
 }
 
+.det-notes-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--det-line);
+    border-radius: 10px;
+    margin-top: 8px;
+    background: linear-gradient(180deg, #fff, var(--det-soft));
+}
+.det-notes-timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--det-ink);
+    opacity: 0.4;
+    padding: 3px 0;
+}
+.det-notes-timeline-item.done  { opacity: 0.65; }
+.det-notes-timeline-item.active { opacity: 1; font-weight: 600; color: var(--det-accent); }
+.det-notes-tl-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    flex-shrink: 0;
+}
+.det-notes-timeline-item.active .det-notes-tl-dot {
+    background: var(--det-accent);
+    border-color: var(--det-accent);
+}
+.det-notes-timeline-item.done .det-notes-tl-dot {
+    background: var(--det-accent);
+    border-color: var(--det-accent);
+    opacity: 0.5;
+}
+.det-notes-tl-label { flex: 1; }
+.det-notes-tl-check {
+    font-size: 10px;
+    color: var(--det-accent);
+    opacity: 0.7;
+}
+
 .det-notes-data dl {
     display: grid;
     gap: 4px;
@@ -13052,6 +13208,194 @@ body:has(.vision-lab) {
     margin: 0;
     overflow-wrap: anywhere;
     text-align: right;
+}
+
+/* 学术概念卡片填充样式 */
+.det-academic-cards {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px dashed var(--det-line);
+    padding-top: 12px;
+}
+
+.det-academic-card {
+    border: 1px solid var(--det-line);
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.det-academic-card[open] {
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.det-academic-card summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--det-ink);
+    cursor: pointer;
+    list-style: none;
+    background: var(--det-soft);
+    user-select: none;
+}
+
+.det-academic-card summary::-webkit-details-marker {
+    display: none;
+}
+
+.det-card-arrow {
+    transition: transform 0.2s ease;
+    color: #64748b;
+}
+
+.det-academic-card[open] .det-card-arrow {
+    transform: rotate(180deg);
+}
+
+.det-academic-content {
+    padding: 10px;
+    border-top: 1px solid var(--det-line);
+}
+
+.det-academic-desc {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* IoU CSS 纯绘图区 */
+.det-iou-diagram {
+    position: relative;
+    width: 140px;
+    height: 90px;
+    margin: 10px auto;
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.det-diag-box {
+    position: absolute;
+    border: 2px solid;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.det-diag-box.box-a {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+    width: 65px;
+    height: 55px;
+    left: 20px;
+    top: 15px;
+    color: #3b82f6;
+}
+
+.det-diag-box.box-b {
+    border-color: #ec4899;
+    background: rgba(236, 72, 153, 0.05);
+    width: 65px;
+    height: 55px;
+    left: 55px;
+    top: 25px;
+    color: #ec4899;
+}
+
+.det-diag-overlap {
+    position: absolute;
+    left: 55px;
+    top: 25px;
+    width: 30px;
+    height: 45px;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(16, 185, 129, 0.25),
+        rgba(16, 185, 129, 0.25) 3px,
+        rgba(16, 185, 129, 0.4) 3px,
+        rgba(16, 185, 129, 0.4) 6px
+    );
+    border: 1px dashed #10b981;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: #047857;
+    font-weight: 700;
+}
+
+/* IoU 数学公式排版 */
+.det-formula {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    margin-top: 8px;
+    font-family: serif;
+    font-weight: bold;
+}
+
+.det-math-frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 4px;
+}
+
+.det-math-num {
+    border-bottom: 1px solid var(--det-ink);
+    padding: 0 2px 2px;
+    font-size: 10px;
+}
+
+.det-math-den {
+    padding: 2px 2px 0;
+    font-size: 10px;
+}
+
+.det-math-eq {
+    margin-left: 4px;
+    color: var(--det-accent-dark);
+}
+
+/* BBox 回归计算公式排版 */
+.det-math-equations {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--det-soft);
+    padding: 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 10.5px;
+    color: var(--det-ink);
+}
+
+.det-math-equations > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.det-equation-note {
+    font-size: 9px;
+    color: #64748b;
+    font-family: inherit;
 }
 
 .det-iou-equation {
@@ -13216,7 +13560,7 @@ body:has(.vision-lab) {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 120px;
-    max-height: 230px;
+    max-height: 300px;
     overflow: auto;
 }
 
@@ -13279,6 +13623,11 @@ body:has(.vision-lab) {
 .detection-table-wrap tr.is-kept td span {
     color: #166534;
     background: #dcfce7;
+}
+
+.detection-table-wrap tr.is-active-row td {
+    background: color-mix(in srgb, var(--det-soft) 65%, #ffffff);
+    box-shadow: inset 3px 0 0 var(--det-accent);
 }
 
 .detection-stat-list {
@@ -13369,13 +13718,25 @@ body:has(.vision-lab) {
 }
 
 .detection-rcnn-evolution {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
 
+.detection-rcnn-evolution::before {
+    content: "";
+    position: absolute;
+    right: 8%;
+    left: 8%;
+    top: 18px;
+    height: 2px;
+    background: linear-gradient(90deg, #c4b5fd, #7c3aed, #4f46e5);
+}
+
 .detection-rcnn-evolution article {
     position: relative;
+    z-index: 1;
     display: grid;
     gap: 4px;
     min-width: 0;
@@ -13386,13 +13747,14 @@ body:has(.vision-lab) {
 }
 
 .detection-rcnn-evolution article::after {
-    content: "";
+    content: "→";
     position: absolute;
-    right: -10px;
-    top: 50%;
-    width: 10px;
-    height: 2px;
-    background: #c4b5fd;
+    right: -11px;
+    top: 13px;
+    color: #7c3aed;
+    font-size: 12px;
+    font-weight: 950;
+    background: transparent;
 }
 
 .detection-rcnn-evolution article:last-child::after {
@@ -13406,9 +13768,14 @@ body:has(.vision-lab) {
 }
 
 .detection-rcnn-evolution span {
+    width: max-content;
+    border: 1px solid #c4b5fd;
+    border-radius: 999px;
+    padding: 2px 7px;
     color: var(--det-accent-dark);
     font-size: 10px;
     font-weight: 950;
+    background: #ffffff;
 }
 
 .detection-rcnn-evolution strong {
@@ -13557,6 +13924,7 @@ body:has(.vision-lab) {
 }
 
 .detection-lifecycle-grid article {
+    position: relative;
     display: grid;
     align-content: start;
     gap: 7px;
@@ -13570,6 +13938,34 @@ body:has(.vision-lab) {
     opacity: 1;
     transform: translateY(-1px);
     background: linear-gradient(180deg, #ffffff, var(--det-soft));
+}
+
+.detection-lifecycle-grid article.is-current {
+    border-color: var(--det-accent);
+    box-shadow: 0 12px 24px var(--det-shadow);
+}
+
+.detection-lifecycle-grid article::after {
+    content: "→";
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    width: 16px;
+    height: 16px;
+    place-items: center;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 950;
+    background: linear-gradient(135deg, var(--det-accent), var(--det-accent-2));
+    transform: translateY(-50%);
+    animation: detRcnnArrowPulse 1.2s ease-in-out infinite;
+}
+
+.detection-lifecycle-grid article:last-child::after {
+    display: none;
 }
 
 .detection-lifecycle-grid article > span {
@@ -13793,6 +14189,11 @@ body:has(.vision-lab) {
 @keyframes detBoxRefine {
     from { opacity: 0.25; transform: translateX(-48%); }
     to { opacity: 1; transform: translateX(-16%); }
+}
+
+@keyframes detRcnnArrowPulse {
+    0%, 100% { transform: translateY(-50%) scale(1); opacity: 0.78; }
+    50% { transform: translateY(-50%) scale(1.12); opacity: 1; }
 }
 
 .detection-regression-card {
@@ -14077,7 +14478,8 @@ body:has(.vision-lab) {
     }
 
     .det-output-pipeline-track article::after,
-    .detection-rcnn-evolution article::after {
+    .detection-rcnn-evolution article::after,
+    .detection-lifecycle-grid article::after {
         display: none;
     }
 
@@ -14121,6 +14523,7 @@ body:has(.vision-lab) {
 .vision-bbox--raw,
 .vision-bbox--candidate {
     border-color: var(--box-color, var(--det-accent));
+    opacity: 0.65;
     animation: detCandidatePop 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -14132,12 +14535,12 @@ body:has(.vision-lab) {
 .vision-bbox--low {
     border-color: #94a3b8;
     border-style: dashed;
-    opacity: 0.48;
+    opacity: 0.15;
     animation: detLowFade 0.72s ease both;
 }
 
 .vision-bbox--low span {
-    background: #64748b;
+    background: rgba(100, 116, 139, 0.55);
 }
 
 .vision-bbox--compare-a {
@@ -14165,6 +14568,7 @@ body:has(.vision-lab) {
 .vision-bbox--kept {
     border-color: #22c55e;
     border-style: solid;
+    opacity: 0.7;
     animation: detFinalSettle 0.32s ease both;
 }
 
@@ -14175,12 +14579,12 @@ body:has(.vision-lab) {
 .vision-bbox--suppressed {
     border-color: #ef4444;
     border-style: dashed;
-    opacity: 0.78;
+    opacity: 0.12;
     animation: detSuppressFlash 0.5s ease both;
 }
 
 .vision-bbox--suppressed span {
-    background: #dc2626;
+    background: rgba(220, 38, 38, 0.5);
 }
 
 .vision-iou-intersection {
@@ -14221,6 +14625,68 @@ body:has(.vision-lab) {
 .det-iou-badge small {
     font-size: 9px;
     font-weight: 850;
+}
+
+.det-decode-animation {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 9;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(70px, auto));
+    gap: 6px;
+    max-width: calc(100% - 24px);
+    border: 1px solid rgba(14, 165, 233, 0.42);
+    border-radius: 12px;
+    padding: 8px;
+    color: #0c4a6e;
+    background: rgba(236, 254, 255, 0.94);
+    box-shadow: 0 14px 28px rgba(14, 165, 233, 0.12);
+}
+
+.det-decode-animation span,
+.det-decode-animation b,
+.det-decode-animation strong,
+.det-decode-animation code {
+    position: relative;
+    display: grid;
+    align-content: center;
+    min-height: 30px;
+    border: 1px solid #a5f3fc;
+    border-radius: 8px;
+    padding: 5px 7px;
+    font-size: 9px;
+    font-weight: 950;
+    background: #ffffff;
+    animation: detDecodeStep 1.8s ease-in-out infinite;
+}
+
+.det-decode-animation b:nth-of-type(1) { animation-delay: 0.15s; }
+.det-decode-animation b:nth-of-type(2) { animation-delay: 0.3s; }
+.det-decode-animation b:nth-of-type(3) { animation-delay: 0.45s; }
+.det-decode-animation strong { animation-delay: 0.6s; }
+
+.det-decode-animation code {
+    grid-column: 1 / -1;
+    min-height: 22px;
+    color: #0369a1;
+    font-family: Consolas, "Courier New", monospace;
+    animation-delay: 0.75s;
+}
+
+.det-decode-animation span::after,
+.det-decode-animation b::after {
+    content: "→";
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    color: #0891b2;
+    transform: translateY(-50%);
+}
+
+@keyframes detDecodeStep {
+    0%, 100% { transform: translateY(0); border-color: #a5f3fc; }
+    50% { transform: translateY(-2px); border-color: #0ea5e9; box-shadow: 0 8px 16px rgba(14, 165, 233, 0.14); }
 }
 
 @keyframes detCandidatePop {

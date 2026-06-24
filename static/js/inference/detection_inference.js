@@ -1,4 +1,4 @@
-const WORKER_URL = "/static/js/inference/vision_inference_worker.js?v=20260618-webgpu-fix1";
+const WORKER_URL = "/static/js/inference/vision_inference_worker.js?v=20260624-det-noworkernms1";
 
 let sequence = 0;
 

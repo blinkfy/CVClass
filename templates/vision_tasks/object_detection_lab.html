@@ -50,14 +50,6 @@
             </select>
         </label>
 
-        <div class="vision-field">
-            <span>检测视图</span>
-            <div class="overview-segmented-control detection-mode-toggle" aria-label="检测视图">
-                <button class="is-active" type="button" data-det-mode="yolo">真实推理：YOLO 检测</button>
-                <button type="button" data-det-mode="rcnn">机制拆解：R-CNN 流程</button>
-            </div>
-        </div>
-
         <!-- Runtime metrics -->
         <div class="vision-kv-grid" data-yolo-only>
             <div><span>模型状态</span><strong data-det-model-status>未加载</strong></div>
@@ -139,6 +131,7 @@
                 <span class="det-section-label">CLASSES</span>
                 <span class="det-section-label">各类统计</span>
             </div>
+            <div data-det-pair-card class="det-pair-card" hidden></div>
             <table data-det-candidate-table class="det-candidate-table">
                 <thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX</th><th>STATUS</th></tr></thead>
                 <tbody></tbody>
@@ -161,6 +154,49 @@
         <div class="det-notes-tutorial" data-det-notes-tutorial></div>
         <!-- Detail data -->
         <div class="det-notes-data" data-det-notes></div>
+
+        <!-- Academic Info Cards for layout fill and learning -->
+        <div class="det-academic-cards">
+            <!-- IoU Card -->
+            <details class="det-academic-card" open>
+                <summary>
+                    <span>概念解释：IoU 交并比</span>
+                    <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="det-academic-content">
+                    <p class="det-academic-desc">交并比 (Intersection over Union) 衡量预测框与真实框的重合度，是 NMS 和精度评估的核心指标。</p>
+                    <div class="det-iou-diagram">
+                        <div class="det-diag-box box-a"><span>Box A</span></div>
+                        <div class="det-diag-box box-b"><span>Box B</span></div>
+                        <div class="det-diag-overlap"><span>A ∩ B</span></div>
+                    </div>
+                    <div class="det-formula">
+                        <span class="det-math-frac">
+                            <span class="det-math-num">Overlap Area (交集)</span>
+                            <span class="det-math-den">Union Area (并集)</span>
+                        </span>
+                        <span class="det-math-eq">= IoU 分数</span>
+                    </div>
+                </div>
+            </details>
+
+            <!-- BBox Regression Settings -->
+            <details class="det-academic-card" open>
+                <summary>
+                    <span>概念解释：BBox 偏移修正</span>
+                    <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="det-academic-content">
+                    <p class="det-academic-desc">边界框回归 (BBox Regression) 通过预测平移与缩放参数微调候选框位置：</p>
+                    <div class="det-math-equations">
+                        <div>x' = x<sub>p</sub> + d<sub>x</sub> · w<sub>p</sub> <span class="det-equation-note">横向平移</span></div>
+                        <div>y' = y<sub>p</sub> + d<sub>y</sub> · h<sub>p</sub> <span class="det-equation-note">纵向平移</span></div>
+                        <div>w' = w<sub>p</sub> · e<sup>d<sub>w</sub></sup> <span class="det-equation-note">宽度放缩</span></div>
+                        <div>h' = h<sub>p</sub> · e<sup>d<sub>h</sub></sup> <span class="det-equation-note">高度放缩</span></div>
+                    </div>
+                </div>
+            </details>
+        </div>
     </aside>
 
 </section>
