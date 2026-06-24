@@ -165,6 +165,44 @@
             <button type="button" data-seg-step="instance"><span>4</span><strong>YOLO-seg</strong><small>boxes + prototypes</small></button>
             <button type="button" data-seg-step="compare"><span>5</span><strong>Compare</strong><small>map vs set</small></button>
         </div>
+
+        <section class="seg-lab-proscons" aria-labelledby="segProsConsTitle">
+            <div class="overview-section-heading">
+                <div>
+                    <span>CHOOSING THE RIGHT TASK</span>
+                    <h4 id="segProsConsTitle">具体优缺点对比</h4>
+                </div>
+                <p>从输出粒度、交互能力、标注成本和常见失败模式来选择任务类型。</p>
+            </div>
+
+            <div class="seg-lab-proscons-grid">
+                <article data-seg-pros-card="semantic" class="is-focused">
+                    <header><span>Semantic</span><strong>语义分割</strong></header>
+                    <div>
+                        <h5>优点</h5>
+                        <p>全图 dense prediction，擅长道路、天空、墙面、地面等连续区域；可以直接计算类别面积占比和 mIoU。</p>
+                    </div>
+                    <div>
+                        <h5>局限</h5>
+                        <p>同类对象会被合并，无法知道“第几个行人”；边界质量依赖上采样和 skip/fusion 设计。</p>
+                    </div>
+                    <footer>典型应用：自动驾驶可行驶区域、遥感地物分类、医学组织区域。</footer>
+                </article>
+
+                <article data-seg-pros-card="instance">
+                    <header><span>Instance</span><strong>实例分割</strong></header>
+                    <div>
+                        <h5>优点</h5>
+                        <p>每个对象有独立 mask、bbox、score 与 id，适合计数、选择、跟踪和对象级属性分析。</p>
+                    </div>
+                    <div>
+                        <h5>局限</h5>
+                        <p>依赖检测候选框与 NMS，拥挤遮挡时容易漏检；对 sky、road 这类无固定边界的 stuff 不如语义分割自然。</p>
+                    </div>
+                    <footer>典型应用：行人车辆计数、机器人抓取、视频实例跟踪、质检分拣。</footer>
+                </article>
+            </div>
+        </section>
     </div>
 
     <aside class="vision-panel seg-lab-notes-panel">
@@ -195,44 +233,6 @@
             <div class="seg-lab-inspector-list" data-seg-inspector></div>
         </section>
     </aside>
-</section>
-
-<section class="seg-lab-proscons" aria-labelledby="segProsConsTitle">
-    <div class="overview-section-heading">
-        <div>
-            <span>CHOOSING THE RIGHT TASK</span>
-            <h4 id="segProsConsTitle">具体优缺点对比</h4>
-        </div>
-        <p>从输出粒度、交互能力、标注成本和常见失败模式来选择任务类型。</p>
-    </div>
-
-    <div class="seg-lab-proscons-grid">
-        <article data-seg-pros-card="semantic" class="is-focused">
-            <header><span>Semantic</span><strong>语义分割</strong></header>
-            <div>
-                <h5>优点</h5>
-                <p>全图 dense prediction，擅长道路、天空、墙面、地面等连续区域；可以直接计算类别面积占比和 mIoU。</p>
-            </div>
-            <div>
-                <h5>局限</h5>
-                <p>同类对象会被合并，无法知道“第几个行人”；边界质量依赖上采样和 skip/fusion 设计。</p>
-            </div>
-            <footer>典型应用：自动驾驶可行驶区域、遥感地物分类、医学组织区域。</footer>
-        </article>
-
-        <article data-seg-pros-card="instance">
-            <header><span>Instance</span><strong>实例分割</strong></header>
-            <div>
-                <h5>优点</h5>
-                <p>每个对象有独立 mask、bbox、score 与 id，适合计数、选择、跟踪和对象级属性分析。</p>
-            </div>
-            <div>
-                <h5>局限</h5>
-                <p>依赖检测候选框与 NMS，拥挤遮挡时容易漏检；对 sky、road 这类无固定边界的 stuff 不如语义分割自然。</p>
-            </div>
-            <footer>典型应用：行人车辆计数、机器人抓取、视频实例跟踪、质检分拣。</footer>
-        </article>
-    </div>
 </section>
 {% endblock %}
 
