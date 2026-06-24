@@ -199,7 +199,7 @@
         const kind = step.overlay;
         if (kind === "scan") return `<div class="process-scanline"></div><div class="process-letterbox"><i></i><b></b></div>`;
         if (kind === "rays") return `<div class="process-rays">${Array.from({length: 9}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`;
-        if (kind === "boxes") return `<div class="process-candidate-boxes">${Array.from({length: 8}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`;
+        if (kind === "boxes") return `<div class="process-candidate-boxes">${Array.from({length: 8}, (_, i) => `<i style="--i:${i}; --mod3:${i % 3}; --mod4:${i % 4}; --div4:${Math.floor(i / 4)}"></i>`).join("")}</div>`;
         if (kind === "collision") return `<div class="process-nms-collision"><i></i><i></i><b></b><span>keep</span></div>`;
         if (kind === "channels") return `<div class="process-channel-stack">${Array.from({length: 8}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div><div class="process-flow-line"></div>`;
         if (kind === "mask") return `<div class="process-instance-masks"><i></i><i></i><i></i><b>#id</b></div>`;

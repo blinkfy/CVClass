@@ -236,7 +236,7 @@
             : kind === "grabcut"
             ? [
                 ["image", "User Box", "probable FG"],
-                ["feature", "Color Models", "GMM FG/BG"],
+                ["feature", "GMM Models", "K=5 FG/BG"],
                 ["assign", "Graph Weights", "unary + pairwise"],
                 ["update", "Min Cut", "optimize labels"],
                 ["map", "Foreground Mask", "binary output"],
@@ -2767,7 +2767,7 @@
         addEdges(adj);
         let flow = 0;
         const paths = [];
-        const maxRounds = 600;
+        const maxRounds = 4000;
         const eps = 1e-6;
         for (let round = 0; round < maxRounds; round += 1) {
             const parentNode = new Int32Array(nodeCount).fill(-1);
@@ -2926,9 +2926,13 @@
     }
 
     function adjustLight(color, percent) {
-        // 解析 rgb(...) 或者 #hex
+        // 解析 rgb(...) 或者 #hex 或者 {r,g,b}
         let r, g, b;
-        if (color.startsWith("rgb")) {
+        if (typeof color === "object" && color !== null) {
+            r = color.r;
+            g = color.g;
+            b = color.b;
+        } else if (color.startsWith("rgb")) {
             const matches = color.match(/\d+/g);
             r = parseInt(matches[0]);
             g = parseInt(matches[1]);
@@ -2943,6 +2947,45 @@
         g = Math.max(0, Math.min(255, g + percent));
         b = Math.max(0, Math.min(255, b + percent));
         return `rgb(${r},${g},${b})`;
+    }
+
+    function parseColorToRgb(color) {
+        let r, g, b;
+        if (color.startsWith("rgb")) {
+            const matches = color.match(/\d+/g);
+            r = parseInt(matches[0]);
+            g = parseInt(matches[1]);
+            b = parseInt(matches[2]);
+        } else {
+            const hex = color.replace("#", "");
+            r = parseInt(hex.substring(0, 2), 16);
+            g = parseInt(hex.substring(2, 4), 16);
+            b = parseInt(hex.substring(4, 6), 16);
+        }
+        return { r, g, b };
+    }
+
+    function getCellBaseColor(index, cell, gradVal, label, isActive, isBoundary, options) {
+        if (isBoundary) return "#ef4444"; // 红色山脊
+        if (isActive) return "#10b981"; // 绿色水流
+
+        if (label > 0) {
+            return labelFill3D(label);
+        }
+        if (options.scores) {
+            return scoreGradientColor(options.scores[index] ?? 0);
+        }
+        
+        // 真实感色彩渲染
+        const pxR = cell.r;
+        const pxG = cell.g;
+        const pxB = cell.b;
+
+        const blendRatio = 0.52; // 像素色彩占比
+        const r = Math.round(pxR * blendRatio + (224 - gradVal * 170) * (1 - blendRatio));
+        const g = Math.round(pxG * blendRatio + (242 - gradVal * 150) * (1 - blendRatio));
+        const b = Math.round(pxB * blendRatio + (254 - gradVal * 130) * (1 - blendRatio));
+        return `rgb(${Math.max(0, Math.min(255, r))},${Math.max(0, Math.min(255, g))},${Math.max(0, Math.min(255, b))})`;
     }
 
     function buildBasementGridPath(cols, rows, padX, padY, cellHalfW, cellHalfH) {
@@ -2986,37 +3029,36 @@
         const seedList = options.seeds || [];
         const seedCells = new Map(seedList.map((seed) => [seed.index, seed]));
 
+        // 计算每个区域标签对应的当前水面高度（以当前已淹没单元格的最大梯度为水位线）
+        const waterLevels = {};
+        if (options.labels) {
+            options.labels.forEach((label, idx) => {
+                if (label > 0) {
+                    const grad = gradientSource?.[idx] ?? 0;
+                    if (waterLevels[label] === undefined || grad > waterLevels[label]) {
+                        waterLevels[label] = grad;
+                    }
+                }
+            });
+        }
+
         // 查找邻接点的高程数据，进行无缝连接
         const getZ = (x, y) => {
             if (x < 0 || x >= cols || y < 0 || y >= rows) return 0;
             const idx = y * cols + x;
-            return (gradientSource?.[idx] ?? 0) * elevationScale;
-        };
-
-        // 获取单元格上方的真实颜色 (若是输入图像梯度模式，可选用原图色彩混合，这里做精细拟合)
-        const getCellBaseColor = (index, cell, gradVal, label, isActive, isBoundary) => {
-            if (isBoundary) return "#ef4444"; // 红色山脊
-            if (isActive) return "#10b981"; // 绿色水流
-
-            if (options.scores) {
-                return scoreGradientColor(options.scores[index] ?? 0);
-            }
-            if (label > 0) {
-                return labelFill3D(label);
-            }
+            const baseZ = (gradientSource?.[idx] ?? 0) * elevationScale;
+            if (!options.labels) return baseZ;
             
-            // 真实感色彩渲染：将真实的像素 r,g,b 与地形高程图（高山、郁郁葱葱的山坡、河谷）进行物理光照融合，
-            // 确保能与真实图像完全对应上！
-            const pxR = cell.r;
-            const pxG = cell.g;
-            const pxB = cell.b;
-
-            // 图像光泽分量
-            const blendRatio = 0.52; // 像素色彩占比
-            const r = Math.round(pxR * blendRatio + (224 - gradVal * 170) * (1 - blendRatio));
-            const g = Math.round(pxG * blendRatio + (242 - gradVal * 150) * (1 - blendRatio));
-            const b = Math.round(pxB * blendRatio + (254 - gradVal * 130) * (1 - blendRatio));
-            return `rgb(${Math.max(0, Math.min(255, r))},${Math.max(0, Math.min(255, g))},${Math.max(0, Math.min(255, b))})`;
+            const label = options.labels[idx];
+            if (label > 0) {
+                // 水体表面保持水平（水位），高度对应当前波段水位
+                return (waterLevels[label] ?? 0) * elevationScale;
+            }
+            if (label === -1) {
+                // 堤坝处构建起红墙堤坝，高度加高 12 像素
+                return baseZ + 12;
+            }
+            return baseZ;
         };
 
         // 画家算法深度排序 (x + y 从小到大从远到近绘制以实现正确遮挡)
@@ -3063,7 +3105,7 @@
             const leftFace = `${ptLeftX.toFixed(1)},${ptLeftY.toFixed(1)} ${ptLeftX.toFixed(1)},${baseCy.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${cx.toFixed(1)},${ptBottomY.toFixed(1)}`;
             const rightFace = `${cx.toFixed(1)},${ptBottomY.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${ptRightX.toFixed(1)},${baseCy.toFixed(1)} ${ptRightX.toFixed(1)},${ptRightY.toFixed(1)}`;
 
-            const surfaceColor = getCellBaseColor(index, cell, gradVal, label, isActive, isBoundary);
+            const surfaceColor = getCellBaseColor(index, cell, gradVal, label, isActive, isBoundary, options);
             const sideLeftColor = adjustLight(surfaceColor, -24);
             const sideRightColor = adjustLight(surfaceColor, -42);
 
@@ -3076,7 +3118,7 @@
                 const seedR = Math.min(8.5, cellHalfW * 0.95);
                 const seedFont = Math.min(9, cellHalfW * 0.95);
                 seedMarkerHtml = `
-                    <g transform="translate(${cx.toFixed(1)}, ${(ptTopY + cellHalfH - seedR - 2).toFixed(1)})" class="seg-3d-seed">
+                    <g id="seg-seed-g-${index}" transform="translate(${cx.toFixed(1)}, ${(ptTopY + cellHalfH - seedR - 2).toFixed(1)})" class="seg-3d-seed">
                         <circle cx="0" cy="0" r="${seedR.toFixed(1)}" fill="${seedColor}" stroke="#fff" stroke-width="1.2" />
                         <text x="0" y="${(seedFont * 0.35).toFixed(1)}" font-size="${seedFont.toFixed(1)}" font-family="monospace" font-weight="900" text-anchor="middle" fill="#fff">${text}</text>
                     </g>
@@ -3088,17 +3130,17 @@
                     <!-- 基海平面投影黑气泡 -->
                     <polygon points="${cx - cellHalfW},${baseCy} ${cx},${baseCy - cellHalfH} ${cx + cellHalfW},${baseCy} ${cx},${baseCy + cellHalfH}" fill="rgba(15, 23, 42, 0.03)" />
                     <!-- 3D 柱体左下侧面（偏暗防光阴影） -->
-                    <polygon points="${leftFace}" fill="${sideLeftColor}" />
+                    <polygon id="seg-poly-left-${index}" points="${leftFace}" fill="${sideLeftColor}" />
                     <!-- 3D 柱体右下侧面（深暗背光阴影） -->
-                    <polygon points="${rightFace}" fill="${sideRightColor}" />
+                    <polygon id="seg-poly-right-${index}" points="${rightFace}" fill="${sideRightColor}" />
                     <!-- 顶端高低起伏的高程面 -->
-                    <polygon points="${topPoints}" fill="${surfaceColor}" stroke="${surfaceColor}" stroke-width="0.45" stroke-linejoin="round" />
+                    <polygon id="seg-poly-top-${index}" points="${topPoints}" fill="${surfaceColor}" stroke="${surfaceColor}" stroke-width="0.45" stroke-linejoin="round" />
                     ${seedMarkerHtml}
                 </g>
             `;
         }).join("");
 
-        const caption = options.caption ? `<text x="260" y="306" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
+        const caption = options.caption ? `<text id="seg-svg-caption" x="260" y="306" text-anchor="middle" class="seg-svg-note">${escapeHtml(options.caption)}</text>` : "";
 
         return `
             <svg class="seg-concept-svg seg-algo-grid is-3d-terrain" viewBox="0 0 ${viewW} ${viewH}" role="img" aria-label="3D Watershed Terrain">
@@ -3109,6 +3151,239 @@
                 ${caption}
             </svg>
         `;
+    }
+
+    function easeOutQuad(x) {
+        return 1 - (1 - x) * (1 - x);
+    }
+
+    function getCellState(model, options = {}) {
+        const { cells, cols, rows } = model;
+        const gradientSource = options.scores || (state.result ? state.result.gradient : []);
+        const activeSet = new Set(options.activeCells || []);
+        
+        const waterLevels = {};
+        if (options.labels) {
+            options.labels.forEach((label, idx) => {
+                if (label > 0) {
+                    const grad = gradientSource?.[idx] ?? 0;
+                    if (waterLevels[label] === undefined || grad > waterLevels[label]) {
+                        waterLevels[label] = grad;
+                    }
+                }
+            });
+        }
+
+        const getZ = (x, y) => {
+            if (x < 0 || x >= cols || y < 0 || y >= rows) return 0;
+            const idx = y * cols + x;
+            const baseZ = (gradientSource?.[idx] ?? 0);
+            if (!options.labels) return baseZ;
+            
+            const label = options.labels[idx];
+            if (label > 0) {
+                return waterLevels[label] ?? 0;
+            }
+            if (label === -1) {
+                return baseZ + 0.12; 
+            }
+            return baseZ;
+        };
+
+        return cells.map((cell, index) => {
+            const { x, y } = cell;
+            const zTop = getZ(x, y);
+            const zRight = getZ(x + 1, y);
+            const zBottom = getZ(x + 1, y + 1);
+            const zLeft = getZ(x, y + 1);
+
+            const isBoundary = options.labels ? options.labels[index] === -1 : false;
+            const isActive = activeSet.has(index);
+            const label = options.labels ? options.labels[index] : null;
+            const gradVal = gradientSource?.[index] ?? 0;
+
+            const colorRGB = parseColorToRgb(getCellBaseColor(index, cell, gradVal, label, isActive, isBoundary, options));
+
+            return {
+                z: [zTop, zRight, zBottom, zLeft],
+                color: colorRGB
+            };
+        });
+    }
+
+    let terrainAnimId = null;
+    function animateWatershed3D(model, optionsA, optionsB) {
+        if (terrainAnimId) {
+            cancelAnimationFrame(terrainAnimId);
+            terrainAnimId = null;
+        }
+
+        const stateA = getCellState(model, optionsA);
+        const stateB = getCellState(model, optionsB);
+
+        const { cols, rows } = model;
+        const viewW = 520;
+        const viewH = 318;
+        const maxSpan = cols + rows;
+        const margin = 32;
+        const cellHalfW = (viewW - margin * 2) / maxSpan;
+        const cellHalfH = cellHalfW * 0.46;
+        const gridSpan = Math.max(0, maxSpan - 2) * cellHalfH;
+        const elevationScale = Math.min(170, Math.max(80, (viewH - 32 - gridSpan) / 2));
+        const padY = elevationScale + 6;
+        const padX = 260;
+
+        const duration = 280; 
+        const startTime = performance.now();
+
+        function tick(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const t = easeOutQuad(progress);
+
+            model.cells.forEach((cell, index) => {
+                const sA = stateA[index];
+                const sB = stateB[index];
+
+                const zTop = sA.z[0] + t * (sB.z[0] - sA.z[0]);
+                const zRight = sA.z[1] + t * (sB.z[1] - sA.z[1]);
+                const zBottom = sA.z[2] + t * (sB.z[2] - sA.z[2]);
+                const zLeft = sA.z[3] + t * (sB.z[3] - sA.z[3]);
+
+                const r = Math.round(sA.color.r + t * (sB.color.r - sA.color.r));
+                const g = Math.round(sA.color.g + t * (sB.color.g - sA.color.g));
+                const b = Math.round(sA.color.b + t * (sB.color.b - sA.color.b));
+                const colorRGB = { r, g, b };
+
+                const cx = padX + (cell.x - cell.y) * cellHalfW;
+                const cy = padY + (cell.x + cell.y) * cellHalfH;
+                const baseCy = padY + (cell.x + cell.y) * cellHalfH;
+                const baseBottomY = baseCy + cellHalfH;
+
+                const ptTopX = cx;
+                const ptTopY = cy - cellHalfH - zTop * elevationScale;
+
+                const ptRightX = cx + cellHalfW;
+                const ptRightY = cy - zRight * elevationScale;
+
+                const ptBottomX = cx;
+                const ptBottomY = cy + cellHalfH - zBottom * elevationScale;
+
+                const ptLeftX = cx - cellHalfW;
+                const ptLeftY = cy - zLeft * elevationScale;
+
+                const topPoints = `${ptTopX.toFixed(1)},${ptTopY.toFixed(1)} ${ptRightX.toFixed(1)},${ptRightY.toFixed(1)} ${ptBottomX.toFixed(1)},${ptBottomY.toFixed(1)} ${ptLeftX.toFixed(1)},${ptLeftY.toFixed(1)}`;
+                const leftFace = `${ptLeftX.toFixed(1)},${ptLeftY.toFixed(1)} ${ptLeftX.toFixed(1)},${baseCy.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${cx.toFixed(1)},${ptBottomY.toFixed(1)}`;
+                const rightFace = `${cx.toFixed(1)},${ptBottomY.toFixed(1)} ${cx.toFixed(1)},${baseBottomY.toFixed(1)} ${ptRightX.toFixed(1)},${baseCy.toFixed(1)} ${ptRightX.toFixed(1)},${ptRightY.toFixed(1)}`;
+
+                const surfaceColorStr = `rgb(${r},${g},${b})`;
+                const sideLeftColor = adjustLight(colorRGB, -24);
+                const sideRightColor = adjustLight(colorRGB, -42);
+
+                const polyLeft = document.getElementById(`seg-poly-left-${index}`);
+                const polyRight = document.getElementById(`seg-poly-right-${index}`);
+                const polyTop = document.getElementById(`seg-poly-top-${index}`);
+
+                if (polyLeft) {
+                    polyLeft.setAttribute("points", leftFace);
+                    polyLeft.setAttribute("fill", sideLeftColor);
+                }
+                if (polyRight) {
+                    polyRight.setAttribute("points", rightFace);
+                    polyRight.setAttribute("fill", sideRightColor);
+                }
+                if (polyTop) {
+                    polyTop.setAttribute("points", topPoints);
+                    polyTop.setAttribute("fill", surfaceColorStr);
+                    polyTop.setAttribute("stroke", surfaceColorStr);
+                }
+
+                const seedGroup = document.getElementById(`seg-seed-g-${index}`);
+                if (seedGroup) {
+                    const seedR = Math.min(8.5, cellHalfW * 0.95);
+                    const translateY = (ptTopY + cellHalfH - seedR - 2).toFixed(1);
+                    seedGroup.setAttribute("transform", `translate(${cx.toFixed(1)}, ${translateY})`);
+                }
+            });
+
+            const captionEl = document.getElementById("seg-svg-caption");
+            if (captionEl && optionsB.caption) {
+                captionEl.textContent = optionsB.caption;
+            }
+
+            if (progress < 1) {
+                terrainAnimId = requestAnimationFrame(tick);
+            } else {
+                terrainAnimId = null;
+            }
+        }
+
+        terrainAnimId = requestAnimationFrame(tick);
+    }
+
+    let showcaseAnimId = null;
+    function animateShowcaseTransition(showcaseB) {
+        if (showcaseAnimId) {
+            cancelAnimationFrame(showcaseAnimId);
+            showcaseAnimId = null;
+        }
+
+        const maskCanvas = els.conceptMask;
+        if (!maskCanvas) return;
+
+        if (!state.offscreenA) state.offscreenA = document.createElement("canvas");
+        if (!state.offscreenB) state.offscreenB = document.createElement("canvas");
+
+        state.offscreenA.width = maskCanvas.width;
+        state.offscreenA.height = maskCanvas.height;
+        state.offscreenB.width = maskCanvas.width;
+        state.offscreenB.height = maskCanvas.height;
+
+        const ctxA = state.offscreenA.getContext("2d");
+        const ctxB = state.offscreenB.getContext("2d");
+
+        ctxA.drawImage(maskCanvas, 0, 0);
+
+        const meta = drawShowcaseCanvases(showcaseB, els.conceptSource, state.offscreenB);
+        if (!meta) return;
+
+        els.conceptResultTitle.textContent = meta.title || "分割结果 label map";
+        els.conceptResultCaption.textContent = meta.caption || "";
+
+        const isSameMethod = state.lastShowcaseMethod === state.method;
+        state.lastShowcaseMethod = state.method;
+
+        if (!isSameMethod) {
+            drawShowcaseCanvases(showcaseB, els.conceptSource, maskCanvas);
+            return;
+        }
+
+        const duration = 280; 
+        const startTime = performance.now();
+        const mainCtx = maskCanvas.getContext("2d");
+
+        function tick(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const t = easeOutQuad(progress);
+
+            mainCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            
+            mainCtx.globalAlpha = 1 - t;
+            mainCtx.drawImage(state.offscreenA, 0, 0);
+
+            mainCtx.globalAlpha = t;
+            mainCtx.drawImage(state.offscreenB, 0, 0);
+
+            mainCtx.globalAlpha = 1.0; 
+
+            if (progress < 1) {
+                showcaseAnimId = requestAnimationFrame(tick);
+            } else {
+                showcaseAnimId = null;
+            }
+        }
+        showcaseAnimId = requestAnimationFrame(tick);
     }
 
     function conceptGridSvg(model, options = {}) {
@@ -3394,14 +3669,14 @@
                     principle: "矩形框外是确定背景，框内是可能前景；画笔会加入更强的交互约束。",
                 },
                 feature: {
-                    latex: "\\theta_l=(\\mu_l,\\sigma_l),\\quad D_i(l)=-\\log P(I_i\\mid\\theta_l)",
-                    flow: ["current mask", "FG/BG color model", "unary term", "terminal weights"],
-                    principle: "页面用前景/背景颜色模型近似 GMM，前景笔会直接影响 FG 模型。",
+                    latex: "\\theta=\\{\\pi_k,\\mu_k,\\Sigma_k\\}_{k=1}^K,\\quad D_i=-\\log\\sum_k\\pi_k\\,\\mathcal{N}(I_i\\mid\\mu_k,\\Sigma_k)",
+                    flow: ["current mask", "FG/BG GMM (K=5)", "unary term", "terminal weights"],
+                    principle: "FG/BG 各用 5 个高斯分量建模（k-means 初始化 + EM），负对数似然作为 unary 代价。",
                 },
                 update: {
-                    latex: "L^{t+1}=mincut(D(L\\mid\\theta^t)+V(L))",
-                    flow: ["color model", "graph cut", "new mask", "next iteration"],
-                    principle: "颜色模型和图割标签交替更新，边界逐轮贴近目标。",
+                    latex: "L^{t+1}=\\min_{L}\\left[\\sum_i D_i(L_i\\mid\\theta^t)+\\gamma\\sum_{ij}e^{-\\beta\\|I_i-I_j\\|^2}[L_i\\neq L_j]\\right]",
+                    flow: ["GMM unary cost", "max-flow/min-cut", "new mask", "next iteration"],
+                    principle: "GMM 负对数似然为 unary 代价，颜色相似度为 pairwise 代价，min-cut 全局优化标签。",
                 },
                 map: {
                     latex: "\\alpha_i=1[L_i=FG]",
@@ -3585,11 +3860,11 @@
                 stats: "【比喻】“均衡分配”：最终把图像切成了势力最平均的两个半区，输出无监督下根据结构特质归属的平滑聚类。"
             },
             "GrabCut": {
-                image: "【比喻】“划定特区范围”：用方框框定一个特区。框框外面的像素被死刑宣判为“必是背景”，框框内的像素处于待定审查区。",
-                feature: "【比喻】“学习正反面教材”：通过框外的背景像素和框内的临时前景像素，学习前景/背景各自的特征，作为新的指引工具。",
-                update: "【比喻】“反复洗洗切切”：利用最新的好坏特征重新搭起 Graph 切割大坝；切割出新 mask 后，反过来修正 GMM 颜色模型，往复精细迭代多轮。",
-                map: "【比喻】“导出清晰轮廓”：输出透明度二值蒙版。在图像合成或扣图中可直接用作前景轮廓通道。",
-                stats: "【比喻】“收网复盘”：完成精确的前景抠图，并拉出最终的矩形物像边界，计算扣出来的目标面积多大、位置分布在哪。"
+                image: "用矩形框标注前景的大致位置。框外像素标记为确定背景，框内像素标记为可能前景。",
+                feature: "用 5 个高斯分量分别拟合前景和背景的颜色分布（GMM），k-means 初始化后经 EM 迭代优化，能捕捉多模态颜色特征。",
+                update: "以 GMM 负对数似然作为 unary 代价、颜色相似度作为 pairwise 代价，通过 max-flow/min-cut 全局优化二值标签；再用新 mask 修正 GMM，交替迭代。",
+                map: "输出二值前景 mask，可直接用于透明背景、目标裁剪或区域统计。",
+                stats: "基于最终 mask 计算前景面积、外接框和占比。"
             },
             "Watershed": {
                 image: "【比喻】“生成盆地山脉”：提取图像边缘强度（梯度），边界越硬的地方变山峰（梯度大），区域内部等色平缓区变成积水盆地。",
@@ -3755,7 +4030,7 @@
     }
 
     function buildGrabCutPixelModel() {
-        return buildPixelModel(120, 48, 32);
+        return buildPixelModel(60, 32, 22);
     }
 
     function seedsForModel(seedDefs, model) {
@@ -3808,6 +4083,145 @@
         return edges;
     }
 
+    /* ── GMM (Gaussian Mixture Model) for GrabCut ──
+     * K 个对角协方差高斯分量，k-means 初始化 + EM 迭代。
+     * 对应 GrabCut 论文步骤 3：用 GMM 对前景/背景颜色分布建模。
+     */
+    function fitGmm(cells, indexes, k, emIters) {
+        k = k || 5;
+        emIters = emIters || 3;
+        if (indexes.length === 0) {
+            return { components: [{ weight: 1, mean: { r: 128, g: 128, b: 128 }, var: { r: 1e4, g: 1e4, b: 1e4 } }] };
+        }
+        if (indexes.length < k) k = Math.max(1, indexes.length);
+
+        const colors = indexes.map((i) => [cells[i].r, cells[i].g, cells[i].b]);
+
+        // k-means 初始化
+        let means = [];
+        const step = Math.max(1, Math.floor(colors.length / k));
+        for (let c = 0; c < k; c += 1) {
+            const idx = Math.min(colors.length - 1, c * step);
+            means.push(colors[idx].slice());
+        }
+        const assignments = new Array(colors.length);
+        for (let iter = 0; iter < 6; iter += 1) {
+            for (let i = 0; i < colors.length; i += 1) {
+                let bestDist = Infinity;
+                let bestC = 0;
+                for (let c = 0; c < k; c += 1) {
+                    const d = (colors[i][0] - means[c][0]) ** 2
+                        + (colors[i][1] - means[c][1]) ** 2
+                        + (colors[i][2] - means[c][2]) ** 2;
+                    if (d < bestDist) { bestDist = d; bestC = c; }
+                }
+                assignments[i] = bestC;
+            }
+            for (let c = 0; c < k; c += 1) {
+                let sR = 0, sG = 0, sB = 0, n = 0;
+                for (let i = 0; i < colors.length; i += 1) {
+                    if (assignments[i] === c) { sR += colors[i][0]; sG += colors[i][1]; sB += colors[i][2]; n += 1; }
+                }
+                if (n > 0) means[c] = [sR / n, sG / n, sB / n];
+            }
+        }
+
+        // 构建初始分量
+        let components = [];
+        for (let c = 0; c < k; c += 1) {
+            let sR = 0, sG = 0, sB = 0, sR2 = 0, sG2 = 0, sB2 = 0, n = 0;
+            for (let i = 0; i < colors.length; i += 1) {
+                if (assignments[i] === c) {
+                    sR += colors[i][0]; sG += colors[i][1]; sB += colors[i][2];
+                    sR2 += colors[i][0] ** 2; sG2 += colors[i][1] ** 2; sB2 += colors[i][2] ** 2;
+                    n += 1;
+                }
+            }
+            if (n > 0) {
+                components.push({
+                    weight: n / colors.length,
+                    mean: { r: sR / n, g: sG / n, b: sB / n },
+                    var: {
+                        r: Math.max(400, sR2 / n - (sR / n) ** 2),
+                        g: Math.max(400, sG2 / n - (sG / n) ** 2),
+                        b: Math.max(400, sB2 / n - (sB / n) ** 2),
+                    },
+                });
+            }
+        }
+        if (components.length === 0) {
+            components.push({ weight: 1, mean: { r: 128, g: 128, b: 128 }, var: { r: 1e4, g: 1e4, b: 1e4 } });
+        }
+
+        // EM 迭代
+        for (let em = 0; em < emIters; em += 1) {
+            const resp = [];
+            for (let i = 0; i < colors.length; i += 1) {
+                const probs = components.map((comp) => {
+                    const dr = colors[i][0] - comp.mean.r;
+                    const dg = colors[i][1] - comp.mean.g;
+                    const db = colors[i][2] - comp.mean.b;
+                    return comp.weight * Math.exp(-0.5 * (dr * dr / comp.var.r + dg * dg / comp.var.g + db * db / comp.var.b));
+                });
+                const sum = probs.reduce((a, b) => a + b, 0) || 1;
+                resp.push(probs.map((p) => p / sum));
+            }
+            for (let c = 0; c < components.length; c += 1) {
+                let sw = 0, sr = 0, sg = 0, sb = 0, sr2 = 0, sg2 = 0, sb2 = 0;
+                for (let i = 0; i < colors.length; i += 1) {
+                    const r = resp[i][c];
+                    sw += r; sr += r * colors[i][0]; sg += r * colors[i][1]; sb += r * colors[i][2];
+                    sr2 += r * colors[i][0] ** 2; sg2 += r * colors[i][1] ** 2; sb2 += r * colors[i][2] ** 2;
+                }
+                if (sw > 0.5) {
+                    components[c].weight = sw / colors.length;
+                    components[c].mean.r = sr / sw;
+                    components[c].mean.g = sg / sw;
+                    components[c].mean.b = sb / sw;
+                    components[c].var.r = Math.max(400, sr2 / sw - (sr / sw) ** 2);
+                    components[c].var.g = Math.max(400, sg2 / sw - (sg / sw) ** 2);
+                    components[c].var.b = Math.max(400, sb2 / sw - (sb / sw) ** 2);
+                }
+            }
+        }
+        return { components };
+    }
+
+    // 负对数似然：-log P(color | GMM)，使用 LogSumExp 保证数值稳定
+    function gmmNegLogLikelihood(cell, gmm) {
+        let logMax = -Infinity;
+        const logProbs = gmm.components.map((comp) => {
+            const dr = cell.r - comp.mean.r;
+            const dg = cell.g - comp.mean.g;
+            const db = cell.b - comp.mean.b;
+            const lp = Math.log(comp.weight)
+                - 0.5 * (dr * dr / comp.var.r + dg * dg / comp.var.g + db * db / comp.var.b);
+            if (lp > logMax) logMax = lp;
+            return lp;
+        });
+        let sumExp = 0;
+        for (const lp of logProbs) sumExp += Math.exp(lp - logMax);
+        return -(logMax + Math.log(sumExp));
+    }
+
+    function gmmDominantMean(gmm) {
+        let best = gmm.components[0];
+        for (let c = 1; c < gmm.components.length; c += 1) {
+            if (gmm.components[c].weight > best.weight) best = gmm.components[c];
+        }
+        return best.mean;
+    }
+
+    /* ── GrabCut 核算法 ──
+     * 严格遵循 GrabCut 论文流程：
+     * 1. 矩形框标注前景大致位置
+     * 2. 框外 = 确定背景，框内 = 可能前景
+     * 3. GMM 对 FG/BG 颜色分布建模（K=5 分量）
+     * 4. 构建图：Source=FG, Sink=BG, 像素间 n-link
+     * 5. 边权 = 颜色相似度（β 参数自适应）
+     * 6. max-flow / min-cut 全局优化二值标签
+     * 7. GMM 与图割交替迭代直至收敛
+     */
     function runDenseGrabCut(model, box, fgUserSeeds, bgUserSeeds) {
         const fgUserSet = new Set(uniqueIndexes(fgUserSeeds, model));
         const bgUserSet = new Set(uniqueIndexes(bgUserSeeds, model));
@@ -3817,62 +4231,77 @@
             const ny = (cell.y - (box.y0 + box.y1) / 2) / Math.max(1, (box.y1 - box.y0) / 2);
             return nx * nx + ny * ny < 0.62;
         };
+
+        // 步骤 1-2：初始化 trimap
         let labels = model.cells.map((cell, index) => {
             if (bgUserSet.has(index)) return false;
             if (fgUserSet.has(index)) return true;
             return insideBox(cell);
         });
+
+        // 自适应计算 β 参数（论文公式：β = 1 / (2 * E[||I_i - I_j||²])）
+        let sumDistSq = 0;
+        let edgeCount = 0;
+        for (let y = 0; y < model.rows; y += 1) {
+            for (let x = 0; x < model.cols; x += 1) {
+                const index = y * model.cols + x;
+                const cell = model.cells[index];
+                if (x < model.cols - 1) { sumDistSq += colorDistanceSq(cell, model.cells[index + 1]); edgeCount += 1; }
+                if (y < model.rows - 1) { sumDistSq += colorDistanceSq(cell, model.cells[index + model.cols]); edgeCount += 1; }
+            }
+        }
+        const beta = edgeCount > 0 ? 1 / (2 * (sumDistSq / edgeCount)) : 0.001;
+        const gamma = 9; // pairwise 权重（远小于 unary，让颜色项主导分割）
+        const unaryScale = 5; // 放大 GMM 负对数似然，使其显著大于 pairwise
+
         const snapshots = [];
-        const sigmaSq = 54 * 54;
-        for (let iter = 1; iter <= 5; iter += 1) {
-            const fgIndexes = labels.map((label, index) => label ? index : -1).filter((index) => index >= 0);
-            const bgIndexes = labels.map((label, index) => !label ? index : -1).filter((index) => index >= 0);
-            const outsideIndexes = model.cells
-                .filter((cell) => !insideBox(cell))
-                .map((cell) => cell.index);
-            const fgModelIndexes = fgUserSet.size
-                ? [...fgUserSet]
-                : (fgIndexes.length ? fgIndexes : model.cells.filter(insideBox).map((cell) => cell.index));
-            const bgModelIndexes = bgUserSet.size
-                ? [...bgUserSet, ...outsideIndexes]
-                : bgIndexes;
-            const fgMean = colorMean(model.cells, fgModelIndexes);
-            const bgMean = colorMean(model.cells, bgModelIndexes);
+        const iterations = 5;
+        const kComponents = 5;
+
+        for (let iter = 1; iter <= iterations; iter += 1) {
+            // 步骤 3：用当前 mask 拟合 FG/BG 的 GMM
+            const fgIndexes = [];
+            const bgIndexes = [];
+            for (let i = 0; i < labels.length; i += 1) {
+                if (labels[i]) fgIndexes.push(i);
+                else bgIndexes.push(i);
+            }
+            const fgGmm = fitGmm(model.cells, fgIndexes, kComponents, 3);
+            const bgGmm = fitGmm(model.cells, bgIndexes, kComponents, 3);
+
+            // 步骤 4-6：建图 + min-cut
+            // unary: sourceCap = D(BG) = -log P(I|BG), sinkCap = D(FG) = -log P(I|FG)
+            // pairwise: γ·exp(-β·||I_i-I_j||²)
+            const solution = solveGridCut(model.cells, model.cols, model.rows, {
+                unary: (cell, index) => {
+                    if (fgUserSet.has(index)) return { sourceCap: 1000, sinkCap: 0.001 };
+                    if (bgUserSet.has(index) || !insideBox(cell)) return { sourceCap: 0.001, sinkCap: 1000 };
+                    const fgCost = Math.min(80, Math.max(0.01, gmmNegLogLikelihood(cell, fgGmm) * unaryScale));
+                    const bgCost = Math.min(80, Math.max(0.01, gmmNegLogLikelihood(cell, bgGmm) * unaryScale));
+                    return { sourceCap: bgCost, sinkCap: fgCost };
+                },
+                pairwise: (a, b) => gamma * Math.exp(-beta * colorDistanceSq(a, b)),
+            });
+
+            labels = solution.labels;
+
+            // 可视化用 scores（正 = 偏前景）
             const scores = model.cells.map((cell, index) => {
                 if (fgUserSet.has(index)) return 8;
                 if (bgUserSet.has(index) || !insideBox(cell)) return -8;
-                const boxPrior = fgUserSet.size ? 0.34 : 0.58;
-                const fgAffinity = Math.exp(-colorDistanceSq(cell, fgMean) / (2 * sigmaSq)) * 3.2 + boxPrior;
-                const bgAffinity = Math.exp(-colorDistanceSq(cell, bgMean) / (2 * sigmaSq)) * 3.2 + 0.24;
-                return fgAffinity - bgAffinity;
+                return Math.max(-8, Math.min(8, gmmNegLogLikelihood(cell, bgGmm) - gmmNegLogLikelihood(cell, fgGmm)));
             });
-            for (let smooth = 0; smooth < 4; smooth += 1) {
-                const next = labels.slice();
-                model.cells.forEach((cell, index) => {
-                    if (fgUserSet.has(index)) {
-                        next[index] = true;
-                        return;
-                    }
-                    if (bgUserSet.has(index) || !insideBox(cell)) {
-                        next[index] = false;
-                        return;
-                    }
-                    let vote = 0;
-                    neighborIndexes(index, model.cols, model.rows).forEach((neighbor) => {
-                        const weight = Math.exp(-colorDistanceSq(cell, model.cells[neighbor]) / (2 * 34 * 34));
-                        vote += (labels[neighbor] ? 1 : -1) * weight;
-                    });
-                    next[index] = scores[index] + vote * 0.52 > 0;
-                });
-                labels = next;
-            }
+
             snapshots.push({
                 iter,
                 labels: labels.slice(),
-                fgMean,
-                bgMean,
+                fgMean: gmmDominantMean(fgGmm),
+                bgMean: gmmDominantMean(bgGmm),
                 scores,
-                cutEdges: cutEdgesFromLabels(model, labels),
+                cutEdges: solution.cutEdges,
+                maxFlow: solution.maxFlow,
+                fgGmm,
+                bgGmm,
             });
         }
         return { labels, snapshots, insideBox, central };
@@ -4362,19 +4791,19 @@
             status: "GrabCut Algorithm",
             activeMethod: "GrabCut",
             stageTitle: "当前实验模式：GrabCut 前景提取",
-            stripFeature: "box + color model + min-cut",
+            stripFeature: "GMM (K=5) + max-flow/min-cut",
             stripK: "FG/BG",
             stripOutput: "foreground mask",
             regionCount: "2",
             formulaLabel: "GrabCut",
-            formula: "repeat: estimate FG/BG color model → graph cut labels",
-            formulaNote: "框内默认是可能前景；前景笔会学习目标颜色，背景笔是硬背景约束，涂到目标上会强制把那部分挖掉。",
+            formula: "repeat: fit FG/BG GMM → min-cut (max-flow) → update labels",
+            formulaNote: "框内默认是可能前景；GMM 学习 FG/BG 各 5 个高斯分量的颜色分布，min-cut 全局优化二值标签。",
             notes: [
                 ["用户框", "在输入图上拖拽矩形框，框外作为确定背景，框内作为可能前景。"],
                 ["前景/背景笔", "前景笔应画在想保留的衣服/物体上；背景笔只画皮肤、头发或外部背景，画到目标上会被强制扣除。"],
-                ["颜色模型", "每轮用当前 mask 估计 FG/BG 平均颜色，近似 GrabCut 的 GMM 思路。"],
-                ["Graph Cut", "用 unary 颜色项和 pairwise 平滑项求新的二值 mask。"],
-                ["迭代收敛", "mask 与颜色模型交替更新，边界逐渐贴合物体颜色差异。"],
+                ["GMM 建模", "每轮用当前 mask 拟合 FG/BG 各 5 个高斯分量的 GMM（k-means 初始化 + EM 迭代），捕获多模态颜色分布。"],
+                ["Graph Cut", "以 GMM 负对数似然为 unary 代价，颜色相似度（β 自适应）为 pairwise 代价，用 max-flow/min-cut 求全局最优二值 mask。"],
+                ["迭代收敛", "GMM 与图割交替更新，边界逐轮贴近目标轮廓，直至标签稳定。"],
             ],
             showcase: {
                 model,
@@ -4426,9 +4855,9 @@
                         ["iter", String(snapshot.iter)],
                         ["fg cells", String(snapshot.labels.filter(Boolean).length)],
                         ["cut edges", String(snapshot.cutEdges.length)],
-                        ["model", "FG/BG color mean"],
+                        ["model", "GMM K=5"],
                     ]),
-                    stageNote: "每轮先根据当前 mask 估计颜色，再由图割决定下一轮的前景/背景标签。",
+                    stageNote: "每轮先拟合 FG/BG 的 GMM 颜色模型，再用 max-flow/min-cut 全局优化二值标签。",
                     showcase: {
                         model,
                         labels: snapshot.labels,
@@ -4759,6 +5188,7 @@
                     phase: "image",
                     title: "1. 梯度图：把图像看成地形",
                     graph: conceptGridSvg(core.model, { scores: gradientScores, caption: "orange ridges have higher gradient" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, caption: "orange ridges have higher gradient" },
                     matrix: barsHtml(core.gradient.slice(0, 10).map((value, index) => ({ label: `g${index + 1}`, value, color: "#f97316", note: value.toFixed(2) }))),
                     detail: metricCards([["grid", `${core.model.cols}×${core.model.rows}`], ["cue", "color gradient"], ["low areas", "flood first"], ["ridges", "boundary candidates"]]),
                     stageNote: "分水岭把梯度图想象成地形：水从低处扩张，山脊就是分界线。",
@@ -4774,6 +5204,7 @@
                     phase: "feature",
                     title: "2. 设置前景/背景 marker",
                     graph: conceptGridSvg(core.model, { scores: gradientScores, seeds: core.markers, caption: "markers seed the flood basins" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, seeds: core.markers, caption: "markers seed the flood basins" },
                     matrix: metricCards([["FG markers", "label 1 / label 2"], ["BG markers", "label 3"], ["unknown", "all unlabeled cells"], ["next", "priority flood"]]),
                     detail: noteRows([["Marker 约束", "没有 marker 的像素不会立刻分类，而是等待相邻标签扩张。"]]),
                     stageNote: "marker 是分水岭算法的锚点，决定哪些盆地从哪里开始扩张。",
@@ -4792,7 +5223,8 @@
                     return {
                         phase: index < 2 ? "assign" : index < 3 ? "update" : "map",
                         title: `3. Flooding 扩张 ${Math.round((snapshot.processed / core.model.cells.length) * 100)}%`,
-                        graph: conceptGridSvg(core.model, { labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" }),
+                        graph: conceptGridSvg(core.model, { scores: gradientScores, labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" }),
+                        graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: Array.from(snapshot.labels), activeCells: snapshot.frontier, seeds: core.markers, caption: "red cells mark watershed boundaries" },
                         matrix: metricCards([["processed", `${snapshot.processed}/${core.model.cells.length}`], ["frontier", snapshot.frontier.length ? `cell ${snapshot.frontier[0] + 1}` : "done"], ["boundary rule", "labels meet"], ["queue", "low gradient first"]]),
                         detail: barsHtml(props.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${Math.round(prop.ratio * 100)}% final` }))),
                         stageNote: "扩张前沿遇到不同标签时，不再强行归类，而是留下红色分水岭边界。",
@@ -4810,7 +5242,8 @@
                 {
                     phase: "stats",
                     title: "4. Watershed label map",
-                    graph: conceptGridSvg(core.model, { labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" },
                     matrix: metricCards([["labels", String(props.length)], ["boundary", `${boundaryCount} cells`], ["largest", `${Math.max(...props.map((prop) => prop.count))} cells`], ["output", "region id map"]]),
                     detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area ${Math.round(prop.ratio * 100)}%, bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}`])),
                     stageNote: "最终结果是一个 label map：边界为红色，其余网格保存区域编号。",
@@ -4885,6 +5318,7 @@
     function buildRegionsDemo() {
         const denseCore = buildWatershedCore(buildPixelModel(120, 48, 32));
         const core = downsampleDenseToCore(denseCore, buildSampleGrid(30, 20));
+        const gradientScores = core.gradient.map((value) => value * 2 - 1);
         const components = connectedComponents(core.model, core.labels);
         const denseComponents = connectedComponents(denseCore.model, denseCore.labels);
         const props = components.props;
@@ -4920,7 +5354,8 @@
                 {
                     phase: "image",
                     title: "1. 输入 label map",
-                    graph: conceptGridSvg(core.model, { labels: core.labels, caption: "watershed output becomes the region-label input" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: core.labels, caption: "watershed output becomes the region-label input" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: core.labels, caption: "watershed output becomes the region-label input" },
                     matrix: metricCards([["source", "watershed labels"], ["boundary", "ignored for area"], ["task", "measure regions"], ["data type", "integer map"]]),
                     detail: noteRows([["关键点", "label map 是结构化数据，不只是彩色可视化图。"]]),
                     stageNote: "区域属性分析从 label map 开始：每个网格都有自己的整数标签。",
@@ -4935,7 +5370,8 @@
                 {
                     phase: "feature",
                     title: "2. 连通域扫描与重新编号",
-                    graph: conceptGridSvg(core.model, { labels: components.compLabels, activeCells: scanCells, caption: "connected components receive compact ids" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: components.compLabels, activeCells: scanCells, caption: "connected components receive compact ids" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: components.compLabels, activeCells: scanCells, caption: "connected components receive compact ids" },
                     matrix: barsHtml(denseProps.map((prop) => ({ label: `label ${prop.label}`, value: prop.count, color: prop.color, note: `${prop.count} px` }))),
                     detail: metricCards([["components", String(denseProps.length)], ["largest", `${denseProps[0]?.count || 0} px`], ["scan", "BFS/DFS"], ["renumber", "compact ids"]]),
                     stageNote: "扫描时只把同 label 且相邻的网格归为同一区域，离散小块会成为单独 region。",
@@ -4951,7 +5387,8 @@
                 {
                     phase: "assign",
                     title: "3. 面积 area 与 mask ratio",
-                    graph: conceptGridSvg(core.model, { labels: components.compLabels, caption: "area = count(label id)" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: components.compLabels, caption: "area = count(label id)" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: components.compLabels, caption: "area = count(label id)" },
                     matrix: barsHtml(denseProps.map((prop) => ({ label: `label ${prop.label}`, value: prop.ratio, color: prop.color, note: `${Math.round(prop.ratio * 100)}%` }))),
                     detail: noteRows(denseProps.map((prop) => [`label ${prop.label}`, `area=${prop.count}, mask ratio=${Math.round(prop.ratio * 100)}%`])),
                     stageNote: "面积就是该 label 覆盖的网格数量，mask ratio 是它占整幅图的比例。",
@@ -4966,7 +5403,8 @@
                 {
                     phase: "update",
                     title: "4. BBox 与轮廓边界",
-                    graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "dashed boxes are min/max coordinate bounds" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "dashed boxes are min/max coordinate bounds" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "dashed boxes are min/max coordinate bounds" },
                     matrix: noteRows(denseProps.map((prop) => [`label ${prop.label}`, `bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}, contour ${prop.perimeter}`])),
                     detail: metricCards([["bbox rule", "min/max x,y"], ["contour rule", "neighbor differs"], ["shape cue", "perimeter/area"], ["output", "region table"]]),
                     stageNote: "bbox 来自坐标极值，轮廓长度来自边界邻接关系。",
@@ -4983,7 +5421,8 @@
                 {
                     phase: "stats",
                     title: "5. 区域属性表",
-                    graph: conceptGridSvg(core.model, { labels: components.compLabels, bboxes: props, caption: "label map + measured properties" }),
+                    graph: conceptGridSvg(core.model, { scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "label map + measured properties" }),
+                    graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "label map + measured properties" },
                     matrix: `
                         <div class="seg-region-property-table">
                             ${denseProps.map((prop) => `<div><span>label ${prop.label}</span><strong>area ${prop.count} · bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1} · contour ${prop.perimeter}</strong></div>`).join("")}
@@ -5094,7 +5533,39 @@
         const frames = state.concept.frames;
         const frame = frames[clamp(index, 0, frames.length - 1)];
         state.conceptFrameIndex = frames.indexOf(frame);
-        els.graphStage.innerHTML = conceptCard(frame.title, frame.graph, frame.stageNote);
+
+        // 3D 地形图过渡动画
+        const isWatershedOrRegion = state.concept.stepperKind === "watershed" || state.concept.stepperKind === "regions";
+        const has3D = isWatershedOrRegion && frame.graphOptions;
+
+        if (has3D) {
+            const svgEl = els.graphStage.querySelector(".is-3d-terrain");
+            if (svgEl && state.last3DOptions && state.last3DModel === frame.graphOptions.model) {
+                // 更新卡片标题与文字
+                const h4 = els.graphStage.querySelector("h4");
+                const p = els.graphStage.querySelector("p");
+                if (h4) h4.textContent = frame.title;
+                if (p) {
+                    p.textContent = frame.stageNote || "";
+                    p.style.display = frame.stageNote ? "" : "none";
+                }
+                
+                // 执行 Z 轴高度与颜色的插值过渡动画
+                animateWatershed3D(frame.graphOptions.model, state.last3DOptions, frame.graphOptions);
+                state.last3DOptions = frame.graphOptions;
+            } else {
+                // 第一次渲染，直书 HTML
+                els.graphStage.innerHTML = conceptCard(frame.title, frame.graph, frame.stageNote);
+                state.last3DOptions = frame.graphOptions;
+                state.last3DModel = frame.graphOptions.model;
+            }
+        } else {
+            // 普通图像/图形式的 2D 切换
+            els.graphStage.innerHTML = conceptCard(frame.title, frame.graph, frame.stageNote);
+            state.last3DOptions = null;
+            state.last3DModel = null;
+        }
+
         let matrixTitle = "算法中间量";
         let detailTitle = "输出解释";
         if (state.concept?.stepperKind === "watershed") {
@@ -5118,7 +5589,14 @@
         els.formula.innerHTML = renderLatexFormula(meta.latex);
         els.formulaNote.textContent = meta.principle;
         els.notes.innerHTML = renderProcessNotes(state.concept, frame);
-        drawConceptShowcase(frame.showcase || state.concept.showcase);
+        
+        // 渲染右上图效果（支持透明度渐变过渡）
+        if (frame.showcase) {
+            animateShowcaseTransition(frame.showcase);
+        } else {
+            drawConceptShowcase(state.concept.showcase);
+        }
+
         setPhase(frame.phase || "map");
         updateConceptFrameStrip();
     }
@@ -5137,6 +5615,9 @@
         state.compareResult = null;
         state.concept = config;
         state.conceptFrameIndex = 0;
+        state.last3DOptions = null;
+        state.last3DModel = null;
+        state.lastShowcaseMethod = null;
 
         els.kmeansView.hidden = true;
         els.kmeansView.style.setProperty("display", "none", "important");
@@ -5296,7 +5777,7 @@
             state.grabcut.dragStart = cell;
             if (state.grabcut.tool === "box") {
                 state.grabcut.draftBox = { x0: cell.x, y0: cell.y, x1: cell.x, y1: cell.y };
-                rerunGrabCutFromInteraction();
+                drawConceptShowcase(state.concept?.frames?.[state.conceptFrameIndex]?.showcase || state.concept?.showcase);
             } else {
                 addGrabCutSeed(cell.index, state.grabcut.tool, cell.model);
                 drawConceptShowcase(state.concept?.frames?.[state.conceptFrameIndex]?.showcase || state.concept?.showcase);

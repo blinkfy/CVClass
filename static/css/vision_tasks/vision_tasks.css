@@ -10488,6 +10488,19 @@ body:has(.vision-lab) {
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
 }
 
+.cls-compare-image-card {
+    min-width: 0;
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cls-compare-image-card img {
+    max-width: 100%;
+    height: auto;
+}
+
 .cls-compare-stage-summary header {
     display: flex;
     align-items: center;
@@ -15120,8 +15133,8 @@ body:has(.vision-lab) {
     position: absolute;
     width: 36px;
     height: 28px;
-    left: calc((var(--i) % 6) * 15%);
-    top: calc((var(--i) / 6) * 30%);
+    left: calc(var(--mod6) * 15%);
+    top: calc(var(--div6) * 30%);
     animation: processBlockMerge 2.2s ease-in-out infinite;
     animation-delay: calc(var(--i) * -0.055s);
 }
@@ -15339,10 +15352,10 @@ body:has(.vision-lab) {
     position: absolute;
     border: 2px solid #60a5fa;
     border-radius: 6px;
-    width: calc(18% + (var(--i) % 3) * 3%);
-    height: calc(18% + (var(--i) % 4) * 4%);
-    left: calc((var(--i) % 4) * 18% + 4%);
-    top: calc((var(--i) / 4) * 32% + 14%);
+    width: calc(18% + var(--mod3) * 3%);
+    height: calc(18% + var(--mod4) * 4%);
+    left: calc(var(--mod4) * 18% + 4%);
+    top: calc(var(--div4) * 32% + 14%);
     animation: processBoxPop 1.6s ease-in-out infinite;
     animation-delay: calc(var(--i) * 0.035s);
 }

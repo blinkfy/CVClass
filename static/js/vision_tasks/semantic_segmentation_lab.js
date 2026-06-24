@@ -309,7 +309,7 @@
             </div>`;
         if (kind === "blocks") return `
             <div class="semantic-step-visual is-backbone">
-                <div class="process-block-cloud">${Array.from({length: 24}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+                <div class="process-block-cloud">${Array.from({length: 24}, (_, i) => `<i style="--i:${i}; --mod6:${i % 6}; --div6:${Math.floor(i / 6)}"></i>`).join("")}</div>
                 <div class="process-flow-line"></div>
                 <div class="sem-feature-map">${Array.from({length: 36}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
             </div>`;
