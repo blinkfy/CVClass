@@ -3,7 +3,8 @@
 {% block title %}{{ vision_module_title|default('视觉识别与分割实验室') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260624-segb-smoothmesh2">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks.css') }}?v=20260624-segb-distinctsteps1">
 {% endblock %}
 
 {% block content %}
@@ -30,11 +31,13 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260624-overview-console1"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260624-cluster-stepper4"></script>
 {% if active_sub_page == 'classification' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260623-compare-style6"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260624-segb-smoothmesh2"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260624-segb-latex1"></script>
 {% elif active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/object_detection_lab.js') }}?v=20260624-renamed1"></script>
 {% elif active_sub_page == 'semantic' %}
