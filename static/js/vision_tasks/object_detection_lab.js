@@ -84,6 +84,12 @@
         pipeline: $("[data-det-pipeline]"),
         pairCard: $("[data-det-pair-card]"),
         nmsControl: $("[data-det-nms-control]"),
+        tableTitle: $("[data-det-table-title]"),
+        courseStep: $("[data-det-course-step]"),
+        courseGoal: $("[data-det-course-goal]"),
+        courseActive: $("[data-det-course-active]"),
+        courseState: $("[data-det-course-state]"),
+        courseSummary: $("[data-det-course-summary]"),
         stepper: document.querySelector("[data-det-stepper]"),
         stepperItems: [...document.querySelectorAll("[data-det-stepper] [data-det-phase]")]
     };
@@ -230,6 +236,7 @@
 
     function setModeTheme(mode) {
         root.dataset.detModeView = mode === "yolo" ? "yolo" : "rcnn";
+        root.dataset.detSubmode = mode;
     }
 
     function rawOutputShapeText() {
@@ -663,6 +670,7 @@
     }
 
     function renderCandidateTable(result, step) {
+        if (els.tableTitle) els.tableTitle.textContent = "CANDIDATES";
         const relatedIds = new Set([step.currentBoxId, step.compareBoxId].filter(Boolean));
         const sorted = result.boxes
             .slice()
@@ -922,7 +930,10 @@
             {label: "bus", value: primaryClass === "bus" ? 0.87 : 0.18}
         ];
         return `<div class="detection-classifier-bars ${active ? "is-active" : ""}">
-            ${bars.map((bar) => `<div><span>${esc(bar.label)}</span><b style="--score:${Math.max(0.04, Math.min(1, bar.value))}"></b><strong>${bar.value.toFixed(2)}</strong></div>`).join("")}
+            ${bars.map((bar) => {
+                const score = Math.max(0.04, Math.min(1, bar.value));
+                return `<div class="${bar.label === primaryClass ? "is-top" : ""}"><span>${esc(bar.label)}</span><b style="--score-pct:${(score * 100).toFixed(1)}%"></b><strong>${bar.value.toFixed(2)}</strong></div>`;
+            }).join("")}
         </div>`;
     }
 
@@ -979,96 +990,209 @@
         </aside>`;
     }
 
-    function renderRcnnFlow(demo, step) {
+    function rcnnStepMeta(step) {
+        const meta = {
+            image: ["Image", "Input image and active proposal", "Confirm the image content and keep one active proposal in focus.", "proposal"],
+            proposals: ["Proposals", "Selective Search proposal generation", "Show class-agnostic regions before CNN classification.", "proposal"],
+            crop: ["Crop / ROI", "Crop active proposal and warp it", "Extract the active region and resize it to the CNN input size.", "crop"],
+            features: ["CNN Feature", "Feature extraction for one proposal", "Convert the warped patch into a compact feature map and vector.", "feature"],
+            classifier: ["Classifier", "Class score from proposal feature", "Score object classes and background for the active proposal.", "classified"],
+            regression: ["BBox Regression", "Move original box to refined box", "Apply dx, dy, dw, dh to correct the rough proposal box.", "refined"],
+            nms: ["NMS / Final", "Deduplicate refined detections", "Compare refined boxes by IoU and suppress duplicates.", "final"]
+        };
+        const value = meta[step.id] || meta.image;
+        return {label: value[0], title: value[1], goal: value[2], state: value[3]};
+    }
+
+    function renderRcnnCourseConsole(demo, step) {
+        const p = activeRcnnProposal(demo);
+        const meta = rcnnStepMeta(step);
+        if (els.courseStep) els.courseStep.textContent = meta.label;
+        if (els.courseGoal) els.courseGoal.textContent = meta.goal;
+        if (els.courseActive) els.courseActive.textContent = p.id || "--";
+        if (els.courseState) els.courseState.textContent = meta.state;
+        if (!els.courseSummary) return;
+        els.courseSummary.innerHTML = `<dl>
+            <div><dt>proposal id</dt><dd>${esc(p.id || "--")}</dd></div>
+            <div><dt>class</dt><dd>${esc(p.class || "--")}</dd></div>
+            <div><dt>score</dt><dd>${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}</dd></div>
+            <div><dt>proposal bbox</dt><dd>[${esc((p.bbox || []).join(", "))}]</dd></div>
+            <div><dt>refined bbox</dt><dd>[${esc((p.refined || p.bbox || []).join(", "))}]</dd></div>
+            <div><dt>status</dt><dd>${esc(meta.state)}</dd></div>
+        </dl>`;
+    }
+
+    function renderRcnnStepRail(step) {
+        const steps = modeSteppers.rcnn;
+        const currentIndex = Math.max(0, steps.findIndex((item) => item.id === step.id));
+        return `<nav class="det-rcnn-step-rail" aria-label="R-CNN focused steps">
+            ${steps.map((item, index) => `<button type="button" data-rcnn-step="${esc(item.id)}" class="${index < currentIndex ? "is-done" : ""} ${item.id === step.id ? "is-current" : ""}">
+                <span>${index + 1}</span><strong>${esc(item.title)}</strong>
+            </button>`).join("")}
+        </nav>`;
+    }
+
+    function renderProposalCards(proposals, activeProposal, limit = 5) {
+        return `<div class="det-rcnn-proposal-cards">
+            ${proposals.slice(0, limit).map((p, index) => {
+                const active = idText(p.id) === idText(activeProposal.id);
+                const isLow = p.score < state.conf && p.id !== "p1";
+                return `<article data-det-hover-id="${esc(p.id)}" data-det-related-id="${esc(p.id)}" class="${active ? "is-active" : ""} ${isLow ? "is-low" : ""} ${spotlightClassFor(p.id)}" style="--proposal-delay:${index * 90}ms">
+                    <span>${esc(p.id)}</span>
+                    <strong>${esc(p.class || "proposal")}</strong>
+                    <em>${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}</em>
+                    <code>[${esc((p.bbox || []).join(", "))}]</code>
+                </article>`;
+            }).join("")}
+        </div>`;
+    }
+
+    function renderRcnnFocusHeader(step) {
+        const meta = rcnnStepMeta(step);
+        return `<header class="det-rcnn-focus-head">
+            <span>${esc(meta.label)}</span>
+            <h4>${esc(meta.title)}</h4>
+            <p>${esc(meta.goal)}</p>
+        </header>`;
+    }
+
+    function renderCropPatch(label, proposal, extraClass = "") {
+        const sample = demoImageSample();
+        const imageUrl = sample.image ? (sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image)) : "";
+        return `<article class="det-rcnn-patch ${extraClass}" style="--patch-url:url('${esc(imageUrl)}')">
+            <span>${esc(label)}</span>
+            <div class="det-rcnn-patch-image"></div>
+            <code>[${esc((proposal.bbox || []).join(", "))}]</code>
+        </article>`;
+    }
+
+    function renderRcnnNmsFocus(proposals, activeProposal) {
+        const refinedBoxes = proposals
+            .filter((p) => p.class !== "background" && (p.score >= state.conf || p.id === activeProposal.id))
+            .map((p) => ({...p, bbox: p.refined || p.bbox || []}));
+        const active = refinedBoxes.find((p) => idText(p.id) === idText(activeProposal.id)) || refinedBoxes[0] || activeProposal;
+        const peer = refinedBoxes.find((p) => p.id !== active.id && p.class === active.class) || refinedBoxes.find((p) => p.id !== active.id);
+        const pairIou = peer ? iou(active, peer) : 0;
+        const suppressPeer = peer ? pairIou >= state.iou && (active.score || 0) >= (peer.score || 0) : false;
+        return `<div class="det-rcnn-nms-focus">
+            <section>
+                <span>IoU compare</span>
+                <strong>${peer ? `${esc(active.id)} vs ${esc(peer.id)}` : `${esc(active.id || "p1")} only`}</strong>
+                <dl>
+                    <div><dt>IoU</dt><dd>${pairIou.toFixed(2)}</dd></div>
+                    <div><dt>threshold</dt><dd>${state.iou.toFixed(2)}</dd></div>
+                    <div><dt>decision</dt><dd>${suppressPeer ? `suppress ${esc(peer.id)}` : "keep candidate"}</dd></div>
+                </dl>
+            </section>
+            <div class="det-rcnn-refined-list">
+                ${refinedBoxes.slice(0, 5).map((p) => {
+                    const suppressed = peer && p.id === peer.id && suppressPeer;
+                    return `<article data-det-hover-id="${esc(p.id)}" data-det-related-id="${esc(p.id)}" class="${p.id === active.id ? "is-active" : ""} ${suppressed ? "is-suppressed" : ""} ${spotlightClassFor(p.id)}">
+                        <span>${esc(p.id)}</span>
+                        <strong>${esc(p.class)} ${Number(p.score || 0).toFixed(2)}</strong>
+                        <code>[${esc((p.bbox || []).join(", "))}]</code>
+                        <em>${suppressed ? "suppress" : "keep"}</em>
+                    </article>`;
+                }).join("")}
+            </div>
+        </div>`;
+    }
+
+    function renderRcnnStepFocus(demo, step, activeProposal) {
         const proposals = demo.proposals || [];
-        const activeProposal = activeRcnnProposal(demo);
+        const feature = demo.roiPooling?.featureMap || [];
+        const header = renderRcnnFocusHeader(step);
         const offset = activeProposal.offset || {};
         const refined = activeProposal.refined || activeProposal.bbox || [];
-        const phaseOrder = ["image", "proposals", "crop", "features", "classifier", "regression", "nms"];
-        const activeIndex = Math.max(0, phaseOrder.indexOf(step.id));
-        const isActive = (id) => phaseOrder.indexOf(id) <= activeIndex;
-        const isCurrent = (id) => step.id === id;
-        const feature = demo.roiPooling?.featureMap || [];
-        const cards = [
-            ["proposals", "Selective Search", "Class-agnostic proposal region", `${proposals.length} demo proposals`],
-            ["crop", "Crop / Warp", "裁剪 / 变形候选区域 (proposal)", "裁剪缩放统一输入尺寸"],
-            ["features", "CNN Feature", "提取 CNN 特征图 (feature)", "提取固定维特征向量"],
-            ["classifier", "Classifier", "线性分类器分类预测", `分类到 ${activeProposal.cnClass || activeProposal.class || "--"} 置信度 ${Number(activeProposal.score || 0).toFixed(2)}`],
-            ["regression", "BBox Regression", "框平移拉伸精细拟合", `微调横偏 dx:${offset.dx ?? "--"} / 纵偏 dy:${offset.dy ?? "--"}`],
-            ["nms", "NMS", "对修正后的候选框在同类间做极大值抑制 (NMS)", "final result"]
-        ];
-        return `
-            <div class="detection-rcnn-evolution" aria-label="R-CNN series evolution axis">
-                <article class="is-active"><span>R-CNN</span><strong>Selective Search</strong><small>无监督生成 proposal 送入 CNN</small></article>
-                <article class="${isActive("features") ? "is-active" : ""}"><span>Fast R-CNN</span><strong>ROI Pooling</strong><small>整图单次卷积，共享 feature map</small></article>
-                <article class="${isActive("proposals") ? "is-active" : ""}"><span>Faster R-CNN</span><strong>RPN Anchor</strong><small>滑动窗口区域滑动，RPN 生成 proposal</small></article>
-            </div>
-            <div class="detection-demo-flow ${spotlightClassFor(activeProposal.id)}" data-det-related-id="${esc(activeProposal.id || "p1")}">
-                ${cards.map((card) => `<article data-det-related-id="${esc(activeProposal.id || "p1")}" class="${isActive(card[0]) ? "is-active" : ""} ${isCurrent(card[0]) ? "is-current" : ""} ${spotlightClassFor(activeProposal.id)}"><strong>${esc(card[1])}</strong><span>${esc(card[2])}</span><em>${esc(card[3])}</em></article>`).join("")}
-            </div>
-            <section data-det-related-id="${esc(activeProposal.id || "p1")}" class="detection-proposal-lifecycle ${spotlightClassFor(activeProposal.id)}">
-                <header>
-                    <span>两阶段目标检测算法流程</span>
-                    <strong>Proposal ${esc(activeProposal.id || "p1")}</strong>
-                    <em>原图裁剪 (crop / warp) → CNN 特征提取 → classifier (SVM/Softmax) → refined box → NMS</em>
-                </header>
-                <div class="detection-lifecycle-particle"></div>
-                <div class="detection-lifecycle-grid">
-                    <article class="${isActive("proposals") ? "is-active" : ""} ${isCurrent("proposals") || isCurrent("image") ? "is-current" : ""}">
-                        <b class="det-life-no">1</b>
-                        <span>Crop / Warp 裁剪</span>
-                        <strong>[${(activeProposal.bbox || []).join(", ")}]</strong>
-                        <small>使用 Selective Search 算法生成建议框 (proposal)。</small>
-                    </article>
-                    <article class="${isActive("crop") ? "is-active" : ""} ${isCurrent("crop") ? "is-current" : ""}">
-                        <b class="det-life-no">2</b>
-                        <span>Crop / Warp</span>
-                        <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><div class="detection-proposal-patch"><i>crop</i><b>warp</b></div></div>
-                        <small>对于每个 proposal 做裁剪缩放，送入 CNN 做特征计算。</small>
-                    </article>
-                    <article class="${isActive("features") ? "is-active" : ""} ${isCurrent("features") ? "is-current" : ""}">
-                        <b class="det-life-no">3</b>
-                        <span>CNN feature</span>
-                        ${renderFeatureGrid(feature, isActive("features") ? ["2-4", "3-4", "4-4"] : [])}
-                    </article>
-                    <article class="${isActive("classifier") ? "is-active" : ""} ${isCurrent("classifier") ? "is-current" : ""}">
-                        <b class="det-life-no">4</b>
-                        <span>Classifier score</span>
-                        ${renderClassifierBars(activeProposal, isActive("classifier"))}
-                    </article>
-                    <article class="${isActive("regression") ? "is-active" : ""} ${isCurrent("regression") ? "is-current" : ""}">
-                        <b class="det-life-no">5</b>
-                        <span>BBox regression</span>
-                        <div class="detection-regression-track ${isActive("regression") ? "is-active" : ""}">
-                            <i class="is-before"></i><i class="is-after"></i>
-                            <b>original</b><b>refined</b>
-                        </div>
-                    </article>
-                    <article class="${isActive("regression") ? "is-active" : ""} ${isCurrent("regression") ? "is-current" : ""}">
-                        <b class="det-life-no">6</b>
-                        <span>Refined box</span>
-                        <div class="detection-refined-preview ${isActive("regression") ? "is-active" : ""}">
-                            <i></i><b></b>
-                        </div>
-                        <code>[${(activeProposal.bbox || []).join(", ")}] → [${refined.join(", ")}]</code>
-                    </article>
-                    <article class="${isActive("nms") ? "is-active" : ""} ${isCurrent("nms") ? "is-current" : ""}">
-                        <b class="det-life-no">7</b>
-                        <span>NMS result</span>
-                        <div class="detection-nms-result ${isActive("nms") ? "is-active" : ""}">
-                            <b>keep ${esc(activeProposal.id || "p1")}</b>
-                            <b class="is-suppressed">delete duplicate</b>
-                        </div>
-                        <small>通过计算 refined boxes 之间的 IoU 进行非极大值抑制 (NMS)。</small>
-                    </article>
-                </div>
+        const primaryClass = activeProposal.class || "--";
+
+        if (step.id === "image") {
+            return `${header}<div class="det-rcnn-focus-grid">
+                <article class="det-rcnn-focus-copy">
+                    <span>active proposal</span>
+                    <strong>${esc(activeProposal.id || "p1")} / ${esc(primaryClass)}</strong>
+                    <p>The image stage keeps only the active proposal emphasized; other proposals are muted.</p>
+                    <dl>
+                        <div><dt>image size</dt><dd>${demoImageSample().width} x ${demoImageSample().height}</dd></div>
+                        <div><dt>proposal count</dt><dd>${proposals.length}</dd></div>
+                        <div><dt>active bbox</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
+                    </dl>
+                </article>
+                ${renderProposalCards(proposals, activeProposal, 5)}
+            </div>`;
+        }
+
+        if (step.id === "proposals") {
+            return `${header}<div class="det-rcnn-focus-grid">
+                <article class="det-rcnn-focus-copy">
+                    <span>Selective Search</span>
+                    <strong>${proposals.length} proposals</strong>
+                    <p>Class-agnostic regions are generated first. They are not final detections.</p>
+                    <dl>
+                        <div><dt>current id</dt><dd>${esc(activeProposal.id || "--")}</dd></div>
+                        <div><dt>bbox</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
+                        <div><dt>score before CNN</dt><dd>none</dd></div>
+                    </dl>
+                </article>
+                ${renderProposalCards(proposals, activeProposal, 5)}
+            </div>`;
+        }
+
+        if (step.id === "crop") {
+            return `${header}<div class="det-rcnn-crop-flow" data-det-related-id="${esc(activeProposal.id || "p1")}">
+                ${renderCropPatch("source proposal", activeProposal, "is-source")}
+                <div class="det-rcnn-flow-arrow"><span></span></div>
+                ${renderCropPatch("crop patch", activeProposal, "is-crop")}
+                <div class="det-rcnn-flow-arrow"><span></span></div>
+                ${renderCropPatch("warp 224 x 224", activeProposal, "is-warp")}
+            </div>`;
+        }
+
+        if (step.id === "features") {
+            return `${header}<div class="det-rcnn-feature-focus" data-det-related-id="${esc(activeProposal.id || "p1")}">
+                ${renderCropPatch("warped patch", activeProposal, "is-feature-input")}
+                <div class="det-rcnn-cnn-stack"><i>conv</i><i>relu</i><i>pool</i><i>fc</i></div>
+                <section><span>feature map</span>${renderFeatureGrid(feature, ["2-4", "3-4", "4-4"])}</section>
+                <div class="det-rcnn-feature-vector">${[0.22, 0.48, 0.72, 0.56, 0.88, 0.34, 0.62, 0.44].map((v, i) => `<i style="--v:${v};--delay:${i * 35}ms"></i>`).join("")}</div>
+            </div>`;
+        }
+
+        if (step.id === "classifier") {
+            return `${header}<div class="det-rcnn-classifier-focus" data-det-related-id="${esc(activeProposal.id || "p1")}">
+                <article>
+                    <span>proposal feature</span>
+                    <strong>${esc(activeProposal.id || "p1")}</strong>
+                    <p>The classifier scores object classes and background from this proposal feature.</p>
+                </article>
+                <section>
+                    ${renderClassifierBars(activeProposal, true)}
+                    <div class="det-rcnn-verdict"><span>final class</span><strong>${esc(primaryClass)}</strong><em>${Number(activeProposal.score || 0).toFixed(2)}</em></div>
+                </section>
+            </div>`;
+        }
+
+        if (step.id === "regression") {
+            return `${header}<div class="det-rcnn-regression-focus" data-det-related-id="${esc(activeProposal.id || "p1")}">
+                ${renderBBoxRegressionPanel(activeProposal, step)}
                 <dl class="detection-regression-offsets">
                     <div><dt>dx</dt><dd>${offset.dx ?? "--"}</dd></div>
                     <div><dt>dy</dt><dd>${offset.dy ?? "--"}</dd></div>
                     <div><dt>dw</dt><dd>${offset.dw ?? "--"}</dd></div>
                     <div><dt>dh</dt><dd>${offset.dh ?? "--"}</dd></div>
+                    <div><dt>original</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
+                    <div><dt>refined</dt><dd>[${esc(refined.join(", "))}]</dd></div>
                 </dl>
-                ${renderBBoxRegressionPanel(activeProposal, step)}
+            </div>`;
+        }
+
+        return `${header}${renderRcnnNmsFocus(proposals, activeProposal)}`;
+    }
+
+    function renderRcnnFlow(demo, step) {
+        const activeProposal = activeRcnnProposal(demo);
+        return `${renderRcnnStepRail(step)}
+            <section data-det-related-id="${esc(activeProposal.id || "p1")}" class="det-rcnn-focus-board det-rcnn-focus-board--${esc(step.id)} ${spotlightClassFor(activeProposal.id)}">
+                ${renderRcnnStepFocus(demo, step, activeProposal)}
             </section>`;
     }
 
@@ -1227,11 +1351,13 @@
     function renderRcnnTable(demo) {
         if (state.detMode === "roi") {
             const bins = demo.roiPooling?.bins || [];
+            if (els.tableTitle) els.tableTitle.textContent = "ROI BINS";
             els.candidateTable.innerHTML = `<thead><tr><th>BIN</th><th>FEATURE RANGE</th><th>MAX</th><th>OUTPUT</th><th>STATUS</th></tr></thead><tbody>${bins.map((bin) => `<tr><td>${esc(bin.id)}</td><td>${esc(bin.range)}</td><td>${Number(bin.max).toFixed(2)}</td><td>pooled cell</td><td><span>max</span></td></tr>`).join("")}</tbody>`;
             return;
         }
         if (state.detMode === "rpn") {
             const processedAnchors = processRpnAnchors(demo);
+            if (els.tableTitle) els.tableTitle.textContent = "ANCHORS";
             els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>GT</th><th>IoU</th><th>OBJECTNESS / OFFSET</th><th>LABEL</th></tr></thead><tbody>${processedAnchors.map((a) => {
                 const labelClass = a.isLow ? "low-confidence" : `is-${a.dynamicLabel}`;
                 const statusText = a.isLow
@@ -1246,22 +1372,72 @@
             return;
         }
         const proposals = demo.proposals || [];
-        const activeId = activeRcnnProposal(demo).id || "p1";
-        els.candidateTable.innerHTML = `<thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX / REFINED</th><th>STATUS</th></tr></thead><tbody>${proposals.map((p) => {
-            const isLow = p.score < state.conf && p.id !== "p1";
-            const rowClass = isLow ? "low-confidence" : (p.class === "background" ? "low-confidence" : "candidate");
-            const highlightClass = idText(p.id) === idText(activeId) ? "is-active-row is-active" : "";
-            let statusText = p.id === "p1"
-                ? (p.score < state.conf ? "active (low conf)" : "当前步骤活跃检测候选框")
-                : p.class === "background"
-                    ? "background"
-                    : "proposal";
-            if (isLow) {
-                statusText = `已被置信度过滤 (低于  ${state.conf.toFixed(2)})`;
-            }
-            return `<tr data-det-hover-id="${esc(p.id)}" data-det-related-id="${esc(p.id)}" class="${rowClass} ${highlightClass} ${spotlightClassFor(p.id)}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] -> [${(p.refined || p.bbox).join(", ")}]</td><td><span>${statusText}</span></td></tr>`;
-            return `<tr class="${rowClass} ${highlightClass}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] → [${(p.refined || p.bbox).join(", ")}]</td><td><span>${statusText}</span></td></tr>`;
-        }).join("")}</tbody>`;
+        const step = activeRcnnStep();
+        const active = activeRcnnProposal(demo);
+        const activeId = active.id || "p1";
+        const hoverAttrs = (id) => `data-det-hover-id="${esc(id)}" data-det-related-id="${esc(id)}"`;
+        const rowClassFor = (id, extra = "") => `${idText(id) === idText(activeId) ? "is-active-row is-active" : ""} ${extra} ${spotlightClassFor(id)}`;
+        const setTable = (title, header, rows) => {
+            if (els.tableTitle) els.tableTitle.textContent = title;
+            els.candidateTable.innerHTML = `<thead><tr>${header.map((item) => `<th>${esc(item)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
+        };
+
+        if (step.id === "image" || step.id === "crop") {
+            setTable("STEP DETAIL", ["ID", "CLASS", "SCORE", "BBOX", "STATE"], [
+                `<tr ${hoverAttrs(activeId)} class="${rowClassFor(activeId)}"><td>${esc(activeId)}</td><td>${esc(active.class || "--")}</td><td>${Number(active.score || 0).toFixed(2)}</td><td>[${esc((active.bbox || []).join(", "))}]</td><td><span>${step.id === "crop" ? "crop target" : "active proposal"}</span></td></tr>`
+            ]);
+            return;
+        }
+
+        if (step.id === "proposals") {
+            setTable("PROPOSAL LIST", ["ID", "CLASS", "SCORE", "BBOX", "STATE"], proposals.slice(0, 5).map((p) => {
+                const isLow = p.score < state.conf && p.id !== "p1";
+                return `<tr ${hoverAttrs(p.id)} class="${rowClassFor(p.id, isLow || p.class === "background" ? "low-confidence" : "candidate")}"><td>${esc(p.id)}</td><td>${esc(p.class || "proposal")}</td><td>${p.score.toFixed(2)}</td><td>[${esc((p.bbox || []).join(", "))}]</td><td><span>${isLow ? `below conf ${state.conf.toFixed(2)}` : "proposal"}</span></td></tr>`;
+            }));
+            return;
+        }
+
+        if (step.id === "features") {
+            const feature = demo.roiPooling?.featureMap || [];
+            setTable("FEATURE SUMMARY", ["UNIT", "SOURCE", "SHAPE", "OUTPUT", "STATE"], [
+                `<tr class="is-active"><td>patch</td><td>${esc(activeId)}</td><td>[${esc((active.bbox || []).join(", "))}]</td><td>224 x 224</td><td><span>warped input</span></td></tr>`,
+                `<tr><td>conv map</td><td>${feature.length} rows</td><td>${feature[0]?.length || 0} cols</td><td>region feature map</td><td><span>active</span></td></tr>`,
+                `<tr><td>vector</td><td>fc feature</td><td>8 demo dims</td><td>classifier input</td><td><span>ready</span></td></tr>`
+            ]);
+            return;
+        }
+
+        if (step.id === "classifier") {
+            const primaryClass = active.class || "proposal";
+            const score = Number(active.score || 0);
+            setTable("CLASSIFIER SCORES", ["ID", "CLASS", "SCORE", "MEANING", "STATE"], [
+                `<tr class="is-active-row is-active"><td>${esc(activeId)}</td><td>${esc(primaryClass)}</td><td>${score.toFixed(2)}</td><td>highest class score</td><td><span>selected</span></td></tr>`,
+                `<tr><td>${esc(activeId)}</td><td>background</td><td>${Math.max(0.08, (1 - score) * 0.45).toFixed(2)}</td><td>background score</td><td><span>candidate</span></td></tr>`
+            ]);
+            return;
+        }
+
+        if (step.id === "regression") {
+            const offset = active.offset || {};
+            const refined = active.refined || active.bbox || [];
+            const rows = [
+                ["dx", offset.dx, "horizontal center shift"],
+                ["dy", offset.dy, "vertical center shift"],
+                ["dw", offset.dw, "log width scale"],
+                ["dh", offset.dh, "log height scale"]
+            ].map(([key, value, meaning]) => `<tr class="is-active"><td>${esc(activeId)}</td><td>${esc(key)}</td><td>${esc(value ?? "--")}</td><td>${esc(meaning)}</td><td><span>apply</span></td></tr>`);
+            rows.push(`<tr ${hoverAttrs(activeId)} class="${rowClassFor(activeId)}"><td>${esc(activeId)}</td><td>box</td><td>[${esc((active.bbox || []).join(", "))}]</td><td>[${esc(refined.join(", "))}]</td><td><span>refined</span></td></tr>`);
+            setTable("BBOX REGRESSION", ["ID", "VALUE", "ORIGINAL", "REFINED / MEANING", "STATE"], rows);
+            return;
+        }
+
+        setTable("NMS / FINAL", ["ID", "CLASS", "SCORE", "REFINED BOX", "DECISION"], proposals
+            .filter((p) => p.class !== "background")
+            .slice(0, 5)
+            .map((p) => {
+                const duplicate = p.id === "p2" && state.iou <= 0.75;
+                return `<tr ${hoverAttrs(p.id)} class="${rowClassFor(p.id, duplicate ? "is-suppressed" : "is-kept")}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${esc((p.refined || p.bbox || []).join(", "))}]</td><td><span>${duplicate ? "suppress" : "keep"}</span></td></tr>`;
+            }));
     }
 
     function renderRcnnNotes(demo, step) {
@@ -1468,6 +1644,8 @@
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
         const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
         els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
+        const realStage = els.image.closest(".detection-real-stage");
+        if (realStage) realStage.hidden = false;
         if (sample.image) els.image.src = sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image);
         els.missing.textContent = "";
         els.missing.style.display = "none";
@@ -1513,6 +1691,7 @@
         renderRcnnTable(demo);
         setStepper(steps, step.id);
         renderRcnnNotes(demo, step);
+        renderRcnnCourseConsole(demo, step);
         const notesEl = document.querySelector(".det-notes-tutorial");
         if (notesEl) {
             notesEl.classList.add("is-active");
@@ -1535,6 +1714,8 @@
         setModeTheme("yolo");
         updateModeButtons();
         if (els.rcnnStage) els.rcnnStage.hidden = true;
+        const yoloRealStage = els.image.closest(".detection-real-stage");
+        if (yoloRealStage) yoloRealStage.hidden = false;
         const result = compute();
         const s = result.sample;
         const counts = yoloCounts(result);
@@ -1977,6 +2158,18 @@
                 state.step = targetIndex;
                 render();
             }
+        });
+    }
+
+    if (els.rcnnStage) {
+        els.rcnnStage.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-rcnn-step]");
+            if (!button || !els.rcnnStage.contains(button)) return;
+            const steps = activeRcnnSteps();
+            const targetIndex = steps.findIndex((item) => item.id === button.dataset.rcnnStep);
+            if (targetIndex === -1) return;
+            state.rcnnStep = targetIndex;
+            renderRcnnMode();
         });
     }
 }());
