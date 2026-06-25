@@ -559,7 +559,7 @@
 
 .det-notes-data dl {
     display: grid;
-    gap: 4px;
+    gap: 0;
     font-size: 11px;
 }
 
@@ -567,10 +567,15 @@
     display: grid;
     grid-template-columns: minmax(78px, 0.42fr) minmax(0, 1fr);
     gap: 8px;
-    border: 1px solid #e2e8f0;
-    border-radius: 7px;
-    padding: 4px 8px;
-    background: #f8fafc;
+    border: 0;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0;
+    padding: 4px 2px;
+    background: transparent;
+}
+
+.det-notes-data dl > div:last-child {
+    border-bottom: 0;
 }
 
 .det-notes-data dt {
@@ -590,38 +595,38 @@
 
 /* 学术概念卡片填充样式 */
 .det-academic-cards {
-    margin-top: 14px;
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     border-top: 1px dashed var(--det-line);
-    padding-top: 12px;
+    padding-top: 8px;
 }
 
 .det-academic-card {
     border: 1px solid var(--det-line);
     border-radius: 8px;
-    background: #f8fafc;
+    background: #ffffff;
     overflow: hidden;
     transition: all 0.2s ease;
 }
 
 .det-academic-card[open] {
     background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    box-shadow: none;
 }
 
 .det-academic-card summary {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
-    font-size: 11.5px;
+    padding: 6px 9px;
+    font-size: 10.5px;
     font-weight: 700;
     color: var(--det-ink);
     cursor: pointer;
     list-style: none;
-    background: var(--det-soft);
+    background: #f8fafc;
     user-select: none;
 }
 
@@ -639,7 +644,7 @@
 }
 
 .det-academic-content {
-    padding: 10px;
+    padding: 8px 9px;
     border-top: 1px solid var(--det-line);
 }
 
@@ -3197,6 +3202,491 @@
     to { opacity: 0; transform: rotate(calc(var(--i) * 36deg)) translateX(32px) scale(0.45); }
 }
 
+/* Algorithm motion overlay: light, non-blocking teaching layer */
+.det-algo-motion {
+    position: absolute;
+    inset: 0;
+    z-index: 14;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.det-algo-flow-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.det-algo-flow-svg path,
+.det-algo-flow-svg line {
+    fill: none;
+    stroke: rgba(14, 165, 233, 0.72);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 8 7;
+    animation: detFlowDash 0.9s linear infinite;
+    filter: drop-shadow(0 0 4px rgba(14, 165, 233, 0.22));
+}
+
+.det-algo-flow-svg--rcnn path,
+.det-algo-flow-svg--rcnn line,
+[data-detection-lab][data-det-submode="rcnn"] .det-algo-flow-svg path,
+[data-detection-lab][data-det-submode="rcnn"] .det-algo-flow-svg line {
+    stroke: rgba(124, 58, 237, 0.70);
+    filter: drop-shadow(0 0 4px rgba(124, 58, 237, 0.18));
+}
+
+.det-algo-pulse {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pulse-color, #0ea5e9);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color, #0ea5e9) 32%, transparent);
+    transform: translate(-50%, -50%);
+    animation: detAlgoPulse 1.1s ease-out infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+.det-algo-pulse::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border: 1px solid color-mix(in srgb, var(--pulse-color, #0ea5e9) 46%, transparent);
+    border-radius: 999px;
+    animation: detAlgoRing 1.1s ease-out infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+.det-algo-pulse.is-low {
+    --pulse-color: #94a3b8;
+    opacity: 0.56;
+}
+
+.det-algo-pulse.is-kept,
+.det-algo-pulse.is-final,
+.det-algo-pulse.is-rcnn-final {
+    --pulse-color: #22c55e;
+}
+
+.det-algo-pulse.is-rcnn-active,
+.det-algo-pulse.is-rcnn-proposal {
+    --pulse-color: #8b5cf6;
+}
+
+.det-algo-chip {
+    position: absolute;
+    left: 50%;
+    top: 8%;
+    transform: translate(-50%, -50%);
+    display: grid;
+    gap: 2px;
+    max-width: min(260px, 62%);
+    border: 1px solid rgba(14, 165, 233, 0.22);
+    border-radius: 10px;
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+    backdrop-filter: blur(10px);
+    color: #0f172a;
+}
+
+.det-algo-chip b {
+    color: var(--det-accent-dark, #0369a1);
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.det-algo-chip span {
+    color: #475569;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+.det-algo-chip--confidence,
+.det-algo-chip--final {
+    left: 52%;
+    top: 9%;
+}
+
+.det-algo-chip--source,
+.det-algo-chip--corner {
+    left: 12px;
+    top: 12px;
+    transform: none;
+    max-width: min(240px, calc(100% - 24px));
+}
+
+.det-algo-chip--nms {
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.det-algo-chip--rcnn {
+    border-color: rgba(124, 58, 237, 0.24);
+}
+
+.det-algo-chip--rcnn b {
+    color: #6d28d9;
+}
+
+.det-algo-shrink,
+.det-algo-spark {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.det-algo-shrink {
+    background: #94a3b8;
+    animation: detAlgoShrink 0.78s ease-out both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.det-algo-spark {
+    background: #ef4444;
+    animation: detAlgoSpark 0.72s ease-out infinite;
+}
+
+.det-algo-spark.is-rcnn {
+    background: #8b5cf6;
+}
+
+.det-algo-scan {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.62;
+}
+
+.det-algo-scan--x {
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    border-top: 1px dashed rgba(14, 165, 233, 0.46);
+    animation: detAlgoScanX 1.6s ease-in-out infinite;
+}
+
+.det-algo-scan--y {
+    top: 8%;
+    bottom: 8%;
+    left: 50%;
+    border-left: 1px dashed rgba(14, 165, 233, 0.38);
+    animation: detAlgoScanY 1.8s ease-in-out infinite;
+}
+
+.det-algo-scan--tensor {
+    left: 18%;
+    right: 18%;
+    top: 18%;
+    height: 42%;
+    border: 1px dashed rgba(14, 165, 233, 0.34);
+    border-radius: 12px;
+    animation: detAlgoTensorScan 1.5s ease-in-out infinite;
+}
+
+@keyframes detAlgoPulse {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.62); }
+    24% { opacity: 0.95; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0.32; transform: translate(-50%, -50%) scale(0.82); }
+}
+
+@keyframes detAlgoRing {
+    0% { opacity: 0.42; transform: scale(0.35); }
+    100% { opacity: 0; transform: scale(1.65); }
+}
+
+@keyframes detAlgoShrink {
+    0% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+}
+
+@keyframes detAlgoSpark {
+    0% { opacity: 0.88; transform: translate(-50%, -50%) rotate(calc(var(--i) * 45deg)) translateX(0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--i) * 45deg)) translateX(24px) scale(0.35); }
+}
+
+@keyframes detAlgoScanX {
+    0%, 100% { transform: translateY(-34%); opacity: 0.24; }
+    50% { transform: translateY(34%); opacity: 0.7; }
+}
+
+@keyframes detAlgoScanY {
+    0%, 100% { transform: translateX(-32%); opacity: 0.22; }
+    50% { transform: translateX(32%); opacity: 0.58; }
+}
+
+@keyframes detAlgoTensorScan {
+    0%, 100% { transform: scale(0.96); opacity: 0.24; }
+    50% { transform: scale(1.02); opacity: 0.62; }
+}
+
+.det-teach-dashboard {
+    display: grid;
+    gap: 7px;
+    margin-top: 8px;
+    border-top: 1px dashed rgba(148, 163, 184, 0.38);
+    padding-top: 8px;
+}
+
+.det-teach-one-line {
+    display: grid;
+    gap: 4px;
+}
+
+.det-teach-one-line span {
+    width: fit-content;
+    border-radius: 999px;
+    padding: 2px 7px;
+    background: rgba(14, 165, 233, 0.10);
+    color: #0369a1;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.det-teach-one-line p {
+    margin: 0;
+    color: #334155;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.det-teach-formula {
+    border: 0;
+    border-radius: 7px;
+    padding: 5px 7px;
+    background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), rgba(255, 255, 255, 0));
+    color: #0f172a;
+    font-size: 11px;
+    overflow-x: auto;
+}
+
+.det-algo-symbol {
+    display: grid;
+    gap: 3px;
+    padding: 2px 0 4px;
+}
+
+.det-algo-symbol svg {
+    display: block;
+    width: 100%;
+    height: 54px;
+}
+
+.det-algo-symbol p {
+    margin: 0;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.det-algo-symbol p b {
+    color: var(--det-accent-dark, #0369a1);
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.det-algo-symbol svg .det-symbol-flow {
+    fill: none;
+    stroke: rgba(14, 165, 233, 0.42);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 7 5;
+    animation: detFlowDash 1.2s linear infinite;
+}
+
+.det-algo-symbol svg g > * {
+    fill: #ffffff;
+    stroke: #cbd5e1;
+    stroke-width: 1.8;
+    transition: stroke 0.2s ease, fill 0.2s ease, transform 0.2s ease;
+}
+
+.det-algo-symbol svg g text {
+    fill: #64748b;
+    stroke: none;
+    font-size: 12px;
+    font-weight: 900;
+    text-anchor: middle;
+}
+
+.det-algo-symbol svg g.is-done > * {
+    stroke: rgba(14, 165, 233, 0.48);
+}
+
+.det-algo-symbol svg g.is-active > * {
+    fill: rgba(14, 165, 233, 0.10);
+    stroke: #0ea5e9;
+    filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.20));
+}
+
+.det-algo-symbol svg .det-symbol-cross {
+    stroke: #ef4444;
+}
+
+.det-algo-symbol--rcnn svg .det-symbol-flow {
+    stroke: rgba(124, 58, 237, 0.42);
+}
+
+.det-algo-symbol--rcnn svg g.is-done > * {
+    stroke: rgba(124, 58, 237, 0.48);
+}
+
+.det-algo-symbol--rcnn svg g.is-active > * {
+    fill: rgba(124, 58, 237, 0.10);
+    stroke: #7c3aed;
+    filter: drop-shadow(0 0 5px rgba(124, 58, 237, 0.18));
+}
+
+.det-algo-symbol--rcnn p b {
+    color: #6d28d9;
+}
+
+.det-teach-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 1px 0 2px;
+}
+
+.det-teach-flow span {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: max-content;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #64748b;
+    padding-right: 13px;
+}
+
+.det-teach-flow span::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    width: 8px;
+    border-top: 1px solid #cbd5e1;
+}
+
+.det-teach-flow span:last-child::after {
+    display: none;
+}
+
+.det-teach-flow b {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 9px;
+}
+
+.det-teach-flow em {
+    color: inherit;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 850;
+}
+
+.det-teach-flow span.is-active {
+    color: #0369a1;
+}
+
+.det-teach-flow span.is-done {
+    opacity: 0.72;
+}
+
+.det-teach-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding-top: 2px;
+}
+
+.det-teach-stats span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.det-teach-stats b {
+    color: #0f172a;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.det-teach-stats em {
+    color: #64748b;
+    font-size: 8.5px;
+    font-style: normal;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.det-teach-dashboard--rcnn .det-teach-one-line span,
+.det-teach-dashboard--rcnn .det-teach-flow b {
+    background: rgba(124, 58, 237, 0.10);
+    color: #6d28d9;
+}
+
+.det-teach-dashboard--rcnn .det-teach-formula {
+    border-color: rgba(124, 58, 237, 0.18);
+}
+
+.det-teach-dashboard--rcnn .det-teach-flow span.is-active {
+    color: #6d28d9;
+}
+
+.det-teach-boxline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 5px;
+    align-items: center;
+}
+
+.det-teach-boxline span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.det-teach-boxline b {
+    color: #64748b;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.det-teach-boxline code {
+    color: #0f172a;
+    font-size: 9px;
+    overflow-wrap: anywhere;
+}
+
+.det-teach-boxline i {
+    width: 18px;
+    border-top: 1px dashed rgba(124, 58, 237, 0.55);
+}
+
 /* R-CNN focused single-step layout */
 [data-detection-lab] [data-rcnn-only] {
     display: none !important;
@@ -3314,8 +3804,13 @@
 }
 
 [data-detection-lab][data-det-submode="rcnn"] .detection-real-stage {
+    display: block !important;
     max-width: min(calc(100% - 34px), calc(min(40vh, 340px) * var(--det-aspect-raw-x, 1)));
     max-height: min(40vh, 340px);
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .detection-real-stage[data-det-pinned-image="true"][hidden] {
+    display: block !important;
 }
 
 [data-detection-lab][data-det-submode="rcnn"] .detection-table-wrap {
@@ -3453,10 +3948,10 @@
     display: grid;
     gap: 8px;
     align-content: start;
-    border: 1px solid #e9d5ff;
-    border-radius: 12px;
-    padding: 12px;
-    background: #ffffff;
+    border-left: 3px solid rgba(124, 58, 237, 0.35);
+    border-radius: 0;
+    padding: 2px 0 2px 12px;
+    background: transparent;
 }
 
 .det-rcnn-focus-copy span,
@@ -3484,7 +3979,7 @@
 .det-rcnn-focus-copy dl,
 .det-rcnn-nms-focus dl {
     display: grid;
-    gap: 6px;
+    gap: 0;
     margin: 0;
 }
 
@@ -3493,9 +3988,15 @@
     display: grid;
     grid-template-columns: minmax(86px, 0.6fr) minmax(0, 1fr);
     gap: 8px;
-    border-radius: 8px;
-    padding: 5px 7px;
-    background: #f8fafc;
+    border-radius: 0;
+    border-bottom: 1px solid #e9d5ff;
+    padding: 4px 0;
+    background: transparent;
+}
+
+.det-rcnn-focus-copy dl div:last-child,
+.det-rcnn-nms-focus dl div:last-child {
+    border-bottom: 0;
 }
 
 .det-rcnn-focus-copy dt,
@@ -3518,19 +4019,23 @@
 }
 
 .det-rcnn-proposal-cards {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 4px 0;
 }
 
 .det-rcnn-proposal-cards article {
     display: grid;
-    gap: 5px;
-    min-width: 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 11px;
-    padding: 10px;
-    background: #ffffff;
+    gap: 4px;
+    min-width: 112px;
+    border: 0;
+    border-left: 2px solid #ddd6fe;
+    border-radius: 0;
+    padding: 4px 10px;
+    background: transparent;
     opacity: 0;
     transform-origin: center;
     animation: detRcnnProposalGrow 0.42s ease forwards;
@@ -3539,8 +4044,9 @@
 }
 
 .det-rcnn-proposal-cards article.is-active {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12), 0 10px 24px rgba(124, 58, 237, 0.12);
+    border-left-color: #8b5cf6;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.08), rgba(255, 255, 255, 0));
+    box-shadow: none;
 }
 
 .det-rcnn-proposal-cards article.is-low {

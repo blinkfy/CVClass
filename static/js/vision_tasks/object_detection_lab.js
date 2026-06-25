@@ -12,17 +12,26 @@
         return "yolo";
     }
     const initialMode = ["yolo", "rcnn", "roi", "rpn"].includes(initialParams.get("mode")) ? initialParams.get("mode") : modeForPath();
+    const forcePresetSource = initialParams.get("source") === "preset";
+    const initialFocusStep = {
+        preprocess: 1,
+        inference: 2,
+        decode: 3,
+        confidence: 4,
+        nms: 5,
+        final: 999
+    }[initialParams.get("focus")] ?? 0;
     const state = {
         data: null,
         rcnnData: null,
         sampleId: "",
-        source: "inference",
+        source: forcePresetSource ? "preset" : "inference",
         detMode: initialMode,
         conf: 0.25,
         iou: 0.5,
         showLow: true,
         classes: new Set(),
-        step: initialParams.get("focus") === "nms" ? 5 : 0,
+        step: initialFocusStep,
         rcnnStep: 0,
         playing: false,
         timer: null,
@@ -95,49 +104,49 @@
     };
 
     const yoloStepper = [
-        {id: "image", title: "Image", detail: "Image Loaded"},
-        {id: "preprocess", title: "Preprocess", detail: "Letterbox Resize"},
-        {id: "inference", title: "Inference", detail: "ONNX Forward"},
-        {id: "decode", title: "Decode", detail: "rawOutput to boxes"},
-        {id: "confidence", title: "Confidence", detail: "Score Threshold"},
-        {id: "nms", title: "NMS", detail: "IoU Matrix"},
-        {id: "final", title: "Final", detail: "Detections"}
+        {id: "image", title: "图像", detail: "图像已载入"},
+        {id: "preprocess", title: "预处理", detail: "等比缩放填充"},
+        {id: "inference", title: "推理", detail: "ONNX 前向"},
+        {id: "decode", title: "解码", detail: "rawOutput 转框"},
+        {id: "confidence", title: "置信度", detail: "分数阈值"},
+        {id: "nms", title: "NMS", detail: "IoU 矩阵"},
+        {id: "final", title: "最终框", detail: "检测结果"}
     ];
 
     const yoloDecodePipeline = [
-        {id: "raw", title: "rawOutput [1,84,8400]", detail: "84 = xywh + 80 scores"},
-        {id: "points", title: "全景特征点空间总候选数", detail: "8400 dense locations"},
-        {id: "xywh", title: "xywh + class scores", detail: "best class per point"},
-        {id: "判定目标置信度阈值", title: "判定目标置信度阈值", detail: "drop low scores"},
-        {id: "nms", title: "NMS", detail: "IoU suppress"},
-        {id: "final", title: "final boxes", detail: "N x detection"}
+        {id: "raw", title: "rawOutput [1,84,8400]", detail: "84 = xywh + 80 类别分数"},
+        {id: "points", title: "候选点", detail: "8400 个密集位置"},
+        {id: "xywh", title: "xywh + 类别分数", detail: "每点取最高类别"},
+        {id: "threshold", title: "置信度阈值", detail: "丢弃低分框"},
+        {id: "nms", title: "NMS", detail: "按 IoU 抑制"},
+        {id: "final", title: "最终检测框", detail: "N 个检测结果"}
     ];
 
     const modeSteppers = {
         rcnn: [
-            {id: "image", title: "Image", detail: "input"},
-            {id: "proposals", title: "Proposals", detail: "selective search"},
-            {id: "crop", title: "Crop / ROI", detail: "crop + warp"},
-            {id: "features", title: "CNN Feature", detail: "per proposal"},
-            {id: "classifier", title: "Classifier", detail: "class score"},
-            {id: "regression", title: "BBox Regression", detail: "refine box"},
-            {id: "nms", title: "NMS", detail: "deduplicate"}
+            {id: "image", title: "图像", detail: "输入"},
+            {id: "proposals", title: "候选框", detail: "Selective Search"},
+            {id: "crop", title: "裁剪 / ROI", detail: "裁剪与归一化"},
+            {id: "features", title: "CNN 特征", detail: "单个 proposal"},
+            {id: "classifier", title: "分类器", detail: "类别得分"},
+            {id: "regression", title: "边界框回归", detail: "修正框"},
+            {id: "nms", title: "NMS", detail: "去重"}
         ],
         roi: [
-            {id: "image", title: "Image", detail: "candidate box"},
-            {id: "feature", title: "Feature Map", detail: "shared conv"},
+            {id: "image", title: "图像", detail: "候选框"},
+            {id: "feature", title: "特征图", detail: "共享卷积"},
             {id: "roi", title: "ROI Pooling", detail: "quantized ROI"},
-            {id: "head", title: "Class + BBox", detail: "fixed feature"},
-            {id: "nms", title: "NMS", detail: "deduplicate"}
+            {id: "head", title: "分类 + BBox", detail: "定长特征"},
+            {id: "nms", title: "NMS", detail: "去重"}
         ],
         rpn: [
-            {id: "image", title: "Image", detail: "input"},
-            {id: "feature", title: "Feature Map", detail: "sliding window"},
-            {id: "anchors", title: "Anchors", detail: "k boxes / cell"},
+            {id: "image", title: "图像", detail: "输入"},
+            {id: "feature", title: "特征图", detail: "滑动窗口"},
+            {id: "anchors", title: "Anchors", detail: "每格 k 个框"},
             {id: "rpn", title: "RPN", detail: "objectness + offset"},
-            {id: "proposals", title: "Proposals", detail: "positive anchors"},
-            {id: "head", title: "Fast R-CNN Head", detail: "class + bbox"},
-            {id: "final", title: "Final", detail: "NMS output"}
+            {id: "proposals", title: "候选框", detail: "正样本 anchors"},
+            {id: "head", title: "Fast R-CNN 头", detail: "分类 + bbox"},
+            {id: "final", title: "最终框", detail: "NMS 输出"}
         ]
     };
 
@@ -182,6 +191,38 @@
         return {
             x: (x1 + x2) / 2,
             y: (y1 + y2) / 2
+        };
+    }
+
+    function pointPercent(point, sample) {
+        return {
+            x: Math.max(0, Math.min(100, (point.x / Math.max(1, sample.width)) * 100)),
+            y: Math.max(0, Math.min(100, (point.y / Math.max(1, sample.height)) * 100))
+        };
+    }
+
+    function centerStyle(box, sample, extra = "") {
+        const p = pointPercent(boxCenter(box), sample);
+        return `left:${p.x}%;top:${p.y}%;${extra}`;
+    }
+
+    function renderStagePulses(boxes, sample, className = "") {
+        return boxes.slice(0, 12).map((box, index) => {
+            const color = colorFor(box);
+            return `<i class="det-algo-pulse ${esc(className)}" style="${centerStyle(box, sample, `--delay:${index * 70}ms;--pulse-color:${esc(color)};`)}"></i>`;
+        }).join("");
+    }
+
+    function flowLinePoints(aBox, bBox, sample) {
+        const a = boxCenter(aBox);
+        const b = boxCenter(bBox);
+        return {
+            a,
+            b,
+            mid: {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2},
+            ap: pointPercent(a, sample),
+            bp: pointPercent(b, sample),
+            mp: pointPercent({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, sample)
         };
     }
 
@@ -268,9 +309,9 @@
         els.pipeline.hidden = false;
         els.pipeline.innerHTML = `
             <div class="det-output-pipeline-head">
-                <span>MODEL OUTPUT DECODE</span>
-                <strong>${esc(rawOutputShapeText())} → final detections</strong>
-                <em>${counts.decoded} decoded / ${counts.final} final</em>
+                <span>模型输出解码</span>
+                <strong>${esc(rawOutputShapeText())} → 最终检测框</strong>
+                <em>${counts.decoded} 已解码 / ${counts.final} 最终保留</em>
             </div>
             <div class="det-output-pipeline-track">
                 ${yoloDecodePipeline.map((item, index) => `
@@ -295,6 +336,27 @@
     function demoImageSample() {
         const s = selectedPresetSample();
         return { width: s?.width || demoData().image?.width || 640, height: s?.height || demoData().image?.height || 427, image: s?.image || "" };
+    }
+
+    function pinDetectionImageStage(sample) {
+        if (!els.image) return;
+        const stage = els.image.closest(".detection-real-stage");
+        if (!stage) return;
+        stage.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
+        const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
+        stage.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
+        stage.hidden = false;
+        stage.removeAttribute("hidden");
+        stage.dataset.detPinnedImage = "true";
+    }
+
+    function syncDetectionImage(sample) {
+        pinDetectionImageStage(sample);
+        if (!sample.image) return;
+        const nextSrc = sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image);
+        if (els.image.getAttribute("src") !== nextSrc) {
+            els.image.src = nextSrc;
+        }
     }
 
     function activeRcnnSteps() {
@@ -412,11 +474,11 @@
         const suppressedIds = new Set();
         const comparisons = [];
         const steps = [
-            makeStep("image", "image", "Input image loaded. Next: letterbox resize and tensor construction.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("preprocess", "preprocess", "Apply letterbox resize, 张量归一化计算, and HWC to CHW layout.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("inference", "inference", "ONNX Runtime Web has produced the raw output tensor.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("decode", "decode", "Decode rawOutput locations into xywh boxes and class scores.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("confidence", "confidence", "Split decoded boxes by confidence 判定目标置信度阈值 before NMS.", {}, keptIds, suppressedIds, lowIds, candidates)
+            makeStep("image", "image", "输入图像已载入，下一步进行 letterbox 与张量构建。", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("preprocess", "preprocess", "执行 letterbox、张量归一化，并把 HWC 布局转为 CHW。", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("inference", "inference", "ONNX Runtime Web 已输出 raw tensor。", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("decode", "decode", "把 rawOutput 位置解码为 xywh 框和类别分数。", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("confidence", "confidence", "先按置信度阈值筛分候选框，再送入 NMS。", {}, keptIds, suppressedIds, lowIds, candidates)
         ];
 
         for (const box of candidates) {
@@ -436,7 +498,7 @@
                     suppress: score >= state.iou
                 };
                 comparisons.push(comparison);
-                steps.push(makeStep("compare", "nms", `Compare Box A #${keep.id} with Box B #${box.id} by IoU.`, {
+                steps.push(makeStep("compare", "nms", `用 IoU 比较框 A #${keep.id} 与框 B #${box.id}。`, {
                     currentBoxId: keep.id,
                     compareBoxId: box.id,
                     iou: score,
@@ -447,7 +509,7 @@
                     deletedBy = keep;
                     suppressed.set(box.id, keep.id);
                     suppressedIds.add(box.id);
-                    steps.push(makeStep("suppress", "nms", `IoU ${score.toFixed(3)} >= 判定目标置信度阈值 ${state.iou.toFixed(2)}; suppress Box B.`, {
+                    steps.push(makeStep("suppress", "nms", `IoU ${score.toFixed(3)} >= 阈值 ${state.iou.toFixed(2)}；抑制框 B。`, {
                         currentBoxId: keep.id,
                         compareBoxId: box.id,
                         iou: score,
@@ -456,7 +518,7 @@
                     }, keptIds, suppressedIds, lowIds, candidates));
                     break;
                 }
-                steps.push(makeStep("keep", "nms", `IoU ${score.toFixed(3)} < 判定目标置信度阈值 ${state.iou.toFixed(2)}; keep Box B for now.`, {
+                steps.push(makeStep("keep", "nms", `IoU ${score.toFixed(3)} < 阈值 ${state.iou.toFixed(2)}；暂时保留框 B。`, {
                     currentBoxId: keep.id,
                     compareBoxId: box.id,
                     iou: score,
@@ -468,7 +530,7 @@
                 kept.push(box);
                 keptIds.add(box.id);
                 if (!compared) {
-                    steps.push(makeStep("keep", "nms", `Box #${box.id} has no higher-score same-class box to compare; keep it.`, {
+                    steps.push(makeStep("keep", "nms", `框 #${box.id} 没有更高分同类框需要比较，直接保留。`, {
                         currentBoxId: box.id,
                         decision: "keep"
                     }, keptIds, suppressedIds, lowIds, candidates));
@@ -476,7 +538,7 @@
             }
         }
 
-        steps.push(makeStep("final", "final", "NMS post-processing complete. Output final detections.", {}, keptIds, suppressedIds, lowIds, candidates));
+        steps.push(makeStep("final", "final", "NMS 后处理完成，输出最终检测框。", {}, keptIds, suppressedIds, lowIds, candidates));
         return {sample: s, boxes: visibleBoxes, low, candidates, candidateIds, kept, keptIds, suppressed, suppressedIds, comparisons, steps};
     }
 
@@ -511,9 +573,20 @@
         return "candidate";
     }
 
+    function tableStatusLabel(status) {
+        return {
+            raw: "原始候选",
+            "low-confidence": "低分过滤",
+            comparing: "正在比较",
+            suppressed: "NMS 抑制",
+            kept: "最终保留",
+            candidate: "候选框"
+        }[status] || status;
+    }
+
     function boxMarkup(box, s, status) {
         const [x1, y1, x2, y2] = box.bbox;
-        const label = status === "low" ? `${box.class} ${box.score.toFixed(2)} filtered` : `${box.class} ${box.score.toFixed(2)}`;
+        const label = status === "low" ? `${box.class} ${box.score.toFixed(2)} 已过滤` : `${box.class} ${box.score.toFixed(2)}`;
         const spotlightClass = spotlightClassFor(box.id);
         return `<div data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="vision-bbox vision-bbox--${status} ${spotlightClass}" style="left:${(x1 / s.width) * 100}%;top:${(y1 / s.height) * 100}%;width:${((x2 - x1) / s.width) * 100}%;height:${((y2 - y1) / s.height) * 100}%;--box-color:${esc(colorFor(box))}"><span>${esc(label)}</span></div>`;
     }
@@ -632,35 +705,35 @@
     function renderRuntimeMetrics(result) {
         const inference = state.inferenceResult;
         const shape = rawOutputShapeNote();
-        const source = state.source === "preset" ? "Preset JSON" : "ONNX Runtime Web";
+        const source = state.source === "preset" ? "预设结果" : "ONNX Runtime Web";
         const counts = yoloCounts(result);
         els.inputSize.textContent = inference?.inputSize ? `${inference.inputSize} × ${inference.inputSize}` : "640 × 640";
         els.inferenceTime.textContent = Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--";
         els.postprocessTime.textContent = Number.isFinite(inference?.postprocessTime) ? `${inference.postprocessTime.toFixed(1)} ms` : "--";
         els.activeBackend.textContent = state.activeBackend || "--";
         els.stageSource.textContent = source;
-        els.stageBackend.textContent = `Backend: ${state.activeBackend || "--"}`;
-        els.stageInference.textContent = `Inference: ${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}`;
-        els.stageCandidates.textContent = `Candidates: ${counts.decoded}`;
-        els.stageFinal.textContent = `Final: ${counts.final}`;
+        els.stageBackend.textContent = `后端: ${state.activeBackend || "--"}`;
+        els.stageInference.textContent = `推理耗时: ${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}`;
+        els.stageCandidates.textContent = `候选框: ${counts.decoded}`;
+        els.stageFinal.textContent = `最终框: ${counts.final}`;
         els.runtimeStats.innerHTML = `
             <div><dt>rawOutputShape</dt><dd>${esc(shape)}</dd></div>
-            <div><dt>vector layout</dt><dd>4 xywh + 80 class scores</dd></div>
-            <div><dt>全景特征点空间总候选数</dt><dd>8400 dense locations</dd></div>
-            <div><dt>decoded candidate count</dt><dd>${counts.decoded}</dd></div>
-            <div><dt>confidence filtered count</dt><dd>${counts.filtered}</dd></div>
-            <div><dt>NMS kept count</dt><dd>${counts.final}</dd></div>
-            <div><dt>preprocess time</dt><dd>${Number.isFinite(inference?.preprocessTime) ? `${inference.preprocessTime.toFixed(1)} ms` : "--"}</dd></div>
-            <div><dt>inference time</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
-            <div><dt>postprocess time</dt><dd>${Number.isFinite(inference?.postprocessTime) ? `${inference.postprocessTime.toFixed(1)} ms` : "--"}</dd></div>
-            <div><dt>backend</dt><dd>${esc(state.activeBackend || "--")}</dd></div>`;
+            <div><dt>向量布局</dt><dd>4 xywh + 80 类别分数</dd></div>
+            <div><dt>全景特征点空间总候选数</dt><dd>8400 个密集位置</dd></div>
+            <div><dt>解码候选框数</dt><dd>${counts.decoded}</dd></div>
+            <div><dt>过置信度阈值框数</dt><dd>${counts.filtered}</dd></div>
+            <div><dt>NMS 最终保留框数</dt><dd>${counts.final}</dd></div>
+            <div><dt>预处理耗时</dt><dd>${Number.isFinite(inference?.preprocessTime) ? `${inference.preprocessTime.toFixed(1)} ms` : "--"}</dd></div>
+            <div><dt>推理耗时</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
+            <div><dt>后处理耗时</dt><dd>${Number.isFinite(inference?.postprocessTime) ? `${inference.postprocessTime.toFixed(1)} ms` : "--"}</dd></div>
+            <div><dt>激活后端</dt><dd>${esc(state.activeBackend || "--")}</dd></div>`;
     }
 
     function renderClassStats(result) {
         const counts = new Map();
         result.kept.forEach((box) => counts.set(box.class, (counts.get(box.class) || 0) + 1));
         if (!counts.size) {
-            els.classStats.textContent = "No final kept boxes.";
+            els.classStats.textContent = "当前没有最终保留框。";
             return;
         }
         els.classStats.innerHTML = [...counts.entries()]
@@ -670,7 +743,7 @@
     }
 
     function renderCandidateTable(result, step) {
-        if (els.tableTitle) els.tableTitle.textContent = "CANDIDATES";
+        if (els.tableTitle) els.tableTitle.textContent = "候选框队列";
         const relatedIds = new Set([step.currentBoxId, step.compareBoxId].filter(Boolean));
         const sorted = result.boxes
             .slice()
@@ -702,7 +775,7 @@
                     <td>${esc(box.class)}</td>
                     <td>${box.score.toFixed(3)}</td>
                     <td>[${box.bbox.join(", ")}]</td>
-                    <td><span>${status}</span></td>
+                    <td><span>${esc(tableStatusLabel(status))}</span></td>
                 </tr>`;
             }).join("");
         els.candidateTable.innerHTML = rows || `<tr><td colspan="5">暂无候选框。</td></tr>`;
@@ -719,19 +792,19 @@
         els.pairCard.hidden = false;
         els.pairCard.innerHTML = `
             <div class="det-pair-card-head">
-                <span>NMS PAIR COMPARE</span>
+                <span>NMS 框对比较</span>
                 <strong>A#${esc(c.a.id)} × B#${esc(c.b.id)}</strong>
-                <em>${c.suppress ? "suppress" : "keep"}</em>
+                <em>${c.suppress ? "抑制" : "保留"}</em>
             </div>
             <div class="det-pair-card-grid">
-                <article class="is-a"><span>Box A</span><strong>${esc(c.a.class)} · ${c.a.score.toFixed(3)}</strong><code>[${c.a.bbox.join(", ")}]</code></article>
-                <article class="is-b"><span>Box B</span><strong>${esc(c.b.class)} · ${c.b.score.toFixed(3)}</strong><code>[${c.b.bbox.join(", ")}]</code></article>
+                <article class="is-a"><span>框 A</span><strong>${esc(c.a.class)} · ${c.a.score.toFixed(3)}</strong><code>[${c.a.bbox.join(", ")}]</code></article>
+                <article class="is-b"><span>框 B</span><strong>${esc(c.b.class)} · ${c.b.score.toFixed(3)}</strong><code>[${c.b.bbox.join(", ")}]</code></article>
                 <dl>
-                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
-                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
+                    <div><dt>交集面积</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>并集面积</dt><dd>${Math.round(c.union)} px²</dd></div>
                     <div><dt>IoU</dt><dd>${c.iou.toFixed(3)}</dd></div>
-                    <div><dt>判定目标置信度阈值</dt><dd>${state.iou.toFixed(2)}</dd></div>
-                    <div><dt>decision</dt><dd>${c.suppress ? "suppress B" : "keep B"}</dd></div>
+                    <div><dt>IoU 阈值</dt><dd>${state.iou.toFixed(2)}</dd></div>
+                    <div><dt>判定结果</dt><dd>${c.suppress ? "抑制框 B" : "保留框 B"}</dd></div>
                 </dl>
             </div>`;
     }
@@ -766,7 +839,7 @@
         if (step.phase !== "nms" || !state.nmsAnimationStep) return "";
         const c = comparisonForNms(result, step);
         if (!c) {
-            return `<div class="det-nms-sort-badge"><span>1</span><strong>按置信度从高到低排序</strong><em>${result.候选框.length} 候选框</em></div>`;
+            return `<div class="det-nms-sort-badge"><span>1</span><strong>按置信度从高到低排序</strong><em>${result.candidates.length} 候选框</em></div>`;
         }
         const a = boxCenter(c.a);
         const b = boxCenter(c.b);
@@ -782,7 +855,7 @@
                 <div class="det-nms-iou-tooltip" style="left:${(mid.x / s.width) * 100}%;top:${(mid.y / s.height) * 100}%;">
                     <b>${renderLatex("IoU = \\frac{Area\\_of\\_Overlap}{Area\\_of\\_Union}")}</b>
                     <strong>IoU = ${c.iou.toFixed(3)}</strong>
-                    <span>${c.iou >= state.iou ? `>= ${state.iou.toFixed(2)} suppress` : `< ${state.iou.toFixed(2)} keep`}</span>
+                    <span>${c.iou >= state.iou ? `>= ${state.iou.toFixed(2)} 抑制` : `< ${state.iou.toFixed(2)} 保留`}</span>
                 </div>`
             : "";
         const particles = state.nmsAnimationStep >= 4 && c.iou >= state.iou
@@ -791,8 +864,184 @@
         return `<div class="det-nms-slow-layer">${radar}${link}${particles}</div>`;
     }
 
+    function renderYoloStageMotion(step, result, sample) {
+        const counts = yoloCounts(result);
+        const c = comparisonForNms(result, step);
+        const phase = step.phase || step.type || "image";
+        const rawBoxes = result.boxes || [];
+        const candidateBoxes = result.candidates || [];
+        const keptBoxes = result.kept || [];
+        const lowBoxes = result.low || [];
+        let pulses = "";
+        let flow = "";
+        let chip = "";
+        let particles = "";
+
+        if (phase === "image") {
+            chip = `<div class="det-algo-chip det-algo-chip--source">
+                <b>图像输入</b><span>${sample.width} x ${sample.height} 像素进入检测流程</span>
+            </div>`;
+            particles = `<i class="det-algo-scan det-algo-scan--x"></i><i class="det-algo-scan det-algo-scan--y"></i>`;
+        } else if (phase === "preprocess") {
+            chip = `<div class="det-algo-chip det-algo-chip--source">
+                <b>letterbox + 归一化</b><span>${sample.width} x ${sample.height} → 640 x 640 张量</span>
+            </div>`;
+            particles = `<i class="det-algo-scan det-algo-scan--x"></i><i class="det-algo-scan det-algo-scan--y"></i>`;
+        } else if (phase === "decode" || phase === "inference") {
+            const decodedPreview = candidateBoxes.length ? candidateBoxes : rawBoxes;
+            pulses = renderStagePulses(decodedPreview, sample, "is-decode");
+            const target = decodedPreview[0] || rawBoxes[0];
+            if (target) {
+                const center = pointPercent(boxCenter(target), sample);
+                flow = `<svg class="det-algo-flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M 50 8 C 44 24, ${Math.max(8, center.x - 8).toFixed(1)} ${(center.y * 0.62).toFixed(1)}, ${center.x.toFixed(1)} ${center.y.toFixed(1)}"></path>
+                </svg>`;
+                chip = `<div class="det-algo-chip" style="left:${center.x}%;top:${Math.max(8, center.y - 14)}%;">
+                    <b>解码</b><span>${esc(rawOutputShapeText())} → 候选框 #${esc(target.id)}</span>
+                </div>`;
+            } else {
+                chip = `<div class="det-algo-chip det-algo-chip--source">
+                    <b>${phase === "inference" ? "ONNX 前向" : "等待解码"}</b><span>${esc(rawOutputShapeText())} → 候选框</span>
+                </div>`;
+                particles = `<i class="det-algo-scan det-algo-scan--tensor"></i>`;
+            }
+        } else if (phase === "confidence") {
+            pulses = renderStagePulses(candidateBoxes, sample, "is-candidate") + renderStagePulses(lowBoxes, sample, "is-low");
+            chip = `<div class="det-algo-chip det-algo-chip--confidence">
+                <b>置信度过滤</b><span>${counts.decoded} → ${counts.filtered}; θ=${state.conf.toFixed(2)}</span>
+            </div>`;
+            particles = lowBoxes.slice(0, 8).map((box, index) => `<i class="det-algo-shrink" style="${centerStyle(box, sample, `--delay:${index * 55}ms;`)}"></i>`).join("");
+        } else if (phase === "nms" || step.type === "keep" || step.type === "suppress") {
+            pulses = renderStagePulses(keptBoxes, sample, "is-kept");
+            if (c) {
+                const points = flowLinePoints(c.a, c.b, sample);
+                flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--nms" viewBox="0 0 ${sample.width} ${sample.height}" preserveAspectRatio="none" aria-hidden="true">
+                    <line x1="${points.a.x}" y1="${points.a.y}" x2="${points.b.x}" y2="${points.b.y}"></line>
+                </svg>`;
+                chip = `<div class="det-algo-chip det-algo-chip--nms" style="left:${points.mp.x}%;top:${points.mp.y}%;">
+                    <b>IoU ${c.iou.toFixed(3)}</b><span>${c.iou >= state.iou ? "抑制 B" : "保留 B"} / θ=${state.iou.toFixed(2)}</span>
+                </div>`;
+                if (c.suppress) {
+                    particles = Array.from({length: 7}, (_, index) => `<i class="det-algo-spark" style="${centerStyle(c.b, sample, `--i:${index};`)}"></i>`).join("");
+                }
+            } else {
+                chip = `<div class="det-algo-chip det-algo-chip--nms"><b>按分数排序</b><span>${counts.filtered} 个候选进入同类扫描</span></div>`;
+            }
+        } else if (phase === "final" || step.type === "final") {
+            pulses = renderStagePulses(keptBoxes, sample, "is-final");
+            chip = `<div class="det-algo-chip det-algo-chip--final">
+                <b>最终检测</b><span>${counts.filtered} → ${counts.final}; N × [x1,y1,x2,y2,score,class]</span>
+            </div>`;
+        } else {
+            pulses = renderStagePulses(rawBoxes.slice(0, 10), sample, "is-source");
+        }
+
+        return `<div class="det-algo-motion det-algo-motion--yolo det-algo-motion--${esc(phase)}">
+            ${flow}${pulses}${particles}${chip}
+        </div>`;
+    }
+
     function renderStepper(step) {
         setStepper(yoloStepper, step.phase);
+    }
+
+    function renderMiniFlow(items, activeId) {
+        const activeIndex = Math.max(0, items.findIndex((entry) => entry.id === activeId));
+        return `<div class="det-teach-flow">${items.map((item, index) => `
+            <span class="${item.id === activeId ? "is-active" : ""} ${index < activeIndex ? "is-done" : ""}">
+                <b>${index + 1}</b><em>${esc(item.label)}</em>
+            </span>
+        `).join("")}</div>`;
+    }
+
+    function renderYoloAlgoSymbol(phase, counts) {
+        const active = {
+            decode: [0, 1],
+            confidence: [1, 2],
+            nms: [2, 3],
+            final: [3, 4]
+        }[phase] || [0];
+        const nodeClass = (index) => active.includes(index) ? "is-active" : index < active[0] ? "is-done" : "";
+        return `<div class="det-algo-symbol det-algo-symbol--yolo" aria-hidden="true">
+            <svg viewBox="0 0 260 66" role="img">
+                <path class="det-symbol-flow" d="M24 33 H73 C88 33 90 17 105 17 H145 C160 17 162 49 177 49 H236"></path>
+                <g class="${nodeClass(0)}"><rect x="10" y="18" width="28" height="28" rx="5"></rect><text x="24" y="36">T</text></g>
+                <g class="${nodeClass(1)}"><circle cx="82" cy="33" r="15"></circle><text x="82" y="37">B</text></g>
+                <g class="${nodeClass(2)}"><path d="M126 18 L146 18 L137 33 L137 48 L131 51 L131 33 Z"></path></g>
+                <g class="${nodeClass(3)}"><circle cx="187" cy="33" r="18"></circle><circle cx="202" cy="33" r="18"></circle><path class="det-symbol-cross" d="M197 23 L207 43 M207 23 L197 43"></path></g>
+                <g class="${nodeClass(4)}"><rect x="226" y="21" width="28" height="24" rx="4"></rect><path d="M232 33 L238 39 L249 27"></path></g>
+            </svg>
+            <p><b>${counts.decoded}</b> 已解码 → <b>${counts.filtered}</b> 过阈值 → <b>${counts.final}</b> 最终框</p>
+        </div>`;
+    }
+
+    function renderRcnnAlgoSymbol(phase, proposal) {
+        const active = {
+            image: 0,
+            proposals: 0,
+            crop: 1,
+            features: 2,
+            classifier: 3,
+            regression: 4,
+            nms: 5
+        }[phase] ?? 0;
+        const nodeClass = (index) => index === active ? "is-active" : index < active ? "is-done" : "";
+        return `<div class="det-algo-symbol det-algo-symbol--rcnn" aria-hidden="true">
+            <svg viewBox="0 0 286 66" role="img">
+                <path class="det-symbol-flow" d="M24 33 H65 L89 18 H123 L148 33 H184 L211 18 H254"></path>
+                <g class="${nodeClass(0)}"><rect x="10" y="18" width="31" height="30" rx="4"></rect><rect x="18" y="25" width="17" height="15" rx="2"></rect></g>
+                <g class="${nodeClass(1)}"><rect x="70" y="19" width="31" height="28" rx="3"></rect><path d="M77 26 H95 M77 33 H95 M77 40 H95"></path></g>
+                <g class="${nodeClass(2)}">${Array.from({length: 9}, (_, i) => `<circle cx="${128 + (i % 3) * 8}" cy="${24 + Math.floor(i / 3) * 8}" r="2.3"></circle>`).join("")}</g>
+                <g class="${nodeClass(3)}"><rect x="168" y="20" width="30" height="26" rx="4"></rect><path d="M174 39 V30 M183 39 V25 M192 39 V34"></path></g>
+                <g class="${nodeClass(4)}"><rect x="216" y="18" width="28" height="30" rx="4"></rect><rect x="224" y="24" width="28" height="21" rx="4"></rect></g>
+                <g class="${nodeClass(5)}"><circle cx="268" cy="33" r="14"></circle><path d="M262 33 H274 M268 27 V39"></path></g>
+            </svg>
+            <p><b>${esc(proposal.id || "p1")}</b> proposal → 裁剪 → 特征 → 分类 → 修正 → NMS</p>
+        </div>`;
+    }
+
+    function renderYoloTeachingDashboard(step, result) {
+        const counts = yoloCounts(result);
+        const c = comparisonForNms(result, step);
+        const lowCount = Math.max(0, counts.decoded - counts.filtered);
+        const formulaByPhase = {
+            image: "I(x,y) \\rightarrow RGB",
+            preprocess: "X = Letterbox(I) / 255",
+            inference: "Y \\in \\mathbb{R}^{1 \\times 84 \\times 8400}",
+            decode: "x_1=c_x-\\frac{w}{2},\\ y_1=c_y-\\frac{h}{2}",
+            confidence: "score_{max} \\ge \\theta_{conf}",
+            nms: "IoU(A,B)=\\frac{|A \\cap B|}{|A \\cup B|}",
+            final: "D \\in \\mathbb{R}^{N \\times 6}"
+        };
+        const lineByPhase = {
+            image: "原图先保持像素空间不变，等待 letterbox 进入模型输入。",
+            preprocess: "尺寸、比例和数值范围被统一，才可送入 ONNX 前向。",
+            inference: "模型一次性输出 dense tensor，而不是直接输出最终框。",
+            decode: "每个候选点拆出 xywh 与类别分数，再反算成图像坐标框。",
+            confidence: "低分候选先离场，NMS 只处理通过阈值的候选。",
+            nms: c ? `当前比较 A#${c.a.id} 与 B#${c.b.id}，IoU=${c.iou.toFixed(3)}。` : "先按置信度排序，再按类别逐个扫描重叠框。",
+            final: "最终数组只包含 NMS 后保留下来的稳定检测结果。"
+        };
+        const phase = step.type === "final" ? "final" : (step.phase || "image");
+        const flow = [
+            {id: "decode", label: "解码"},
+            {id: "confidence", label: "过滤"},
+            {id: "nms", label: "比较"},
+            {id: "final", label: "输出"}
+        ];
+        const activeFlow = ["image", "preprocess", "inference"].includes(phase) ? "decode" : phase;
+        return `<section class="det-teach-dashboard det-teach-dashboard--yolo">
+            <div class="det-teach-one-line"><span>${esc(phase.toUpperCase())}</span><p>${esc(lineByPhase[phase] || lineByPhase.nms)}</p></div>
+            <div class="det-teach-formula">${renderLatex(formulaByPhase[phase] || formulaByPhase.nms)}</div>
+            ${renderYoloAlgoSymbol(activeFlow, counts)}
+            ${renderMiniFlow(flow, activeFlow)}
+            <div class="det-teach-stats">
+                <span><b>${counts.decoded}</b><em>已解码</em></span>
+                <span><b>${counts.filtered}</b><em>过阈值</em></span>
+                <span><b>${lowCount}</b><em>低分过滤</em></span>
+                <span><b>${counts.final}</b><em>最终框</em></span>
+            </div>
+        </section>`;
     }
 
     function renderNotes(step, result) {
@@ -822,14 +1071,14 @@
         let notesContent = "";
 
         if (step.phase === "image") {
-            tutorialContent = `<p><span class="det-note-stage">Image</span><strong>输入图像</strong>仍是原始 RGB 像素，后续会被 letterbox 到模型固定输入尺寸，再送入 ONNX Runtime。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">图像</span><strong>输入图像</strong>仍是原始 RGB 像素，后续会被 letterbox 到模型固定输入尺寸，再送入 ONNX Runtime。</p>`;
             notesContent = `<dl>
-                <div><dt>input image</dt><dd>${s.width} × ${s.height}</dd></div>
+                <div><dt>输入图像尺寸</dt><dd>${s.width} × ${s.height}</dd></div>
                 <div><dt>预处理生成的输入张量维度</dt><dd>[1, 3, 640, 640]</dd></div>
                 <div><dt>目标前向核心计算流程</dt><dd>image → preprocess → inference → decode</dd></div>
             </dl>`;
         } else if (step.phase === "preprocess") {
-            tutorialContent = `<p><span class="det-note-stage">Preprocess</span><strong>Letterbox + Normalize</strong>保留原图比例，补边到 640×640，并把 HWC 像素布局转成模型需要的 CHW tensor。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">预处理</span><strong>Letterbox + Normalize</strong>保留原图比例，补边到 640×640，并把 HWC 像素布局转成模型需要的 CHW tensor。</p>`;
             notesContent = `<dl>
                 <div><dt>letterbox</dt><dd>${s.width} × ${s.height} → 640 × 640</dd></div>
                 <div><dt>张量归一化计算</dt><dd>RGB / 255</dd></div>
@@ -837,58 +1086,58 @@
                 <div><dt>ONNX 前向输入尺度</dt><dd>[1, 3, 640, 640]</dd></div>
             </dl>`;
         } else if (step.phase === "inference") {
-            tutorialContent = `<p><span class="det-note-stage">Inference</span><strong>ONNX inference</strong>输出 dense tensor。${esc(shape)} 表示 8400 个候选点，每个点有 4 个 xywh 参数和 80 个类别分数。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">推理</span><strong>ONNX inference</strong>输出 dense tensor。${esc(shape)} 表示 8400 个候选点，每个点有 4 个 xywh 参数和 80 个类别分数。</p>`;
             notesContent = `<dl>
-                <div><dt>backend</dt><dd>${esc(state.activeBackend || "--")}</dd></div>
+                <div><dt>激活后端</dt><dd>${esc(state.activeBackend || "--")}</dd></div>
                 <div><dt>rawOutputShape</dt><dd>${esc(rawOutputShapeNote())}</dd></div>
-                <div><dt>单个检测输出位置参数含义</dt><dd>84 = 4 bbox + 80 class scores</dd></div>
-                <div><dt>inference time</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
+                <div><dt>单个检测输出位置参数含义</dt><dd>84 = 4 bbox + 80 类别分数</dd></div>
+                <div><dt>推理耗时</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
             </dl>`;
         } else if (step.phase === "decode") {
-            tutorialContent = `<p><span class="det-note-stage">Decode</span><strong>rawOutput → candidates</strong>遍历 8400 个点，取每个点的 xywh 与最大类别分数，再把中心点宽高换算成图像坐标 bbox。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">解码</span><strong>rawOutput → 候选框</strong>遍历 8400 个点，取每个点的 xywh 与最大类别分数，再把中心点宽高换算成图像坐标 bbox。</p>`;
             notesContent = `<dl>
                 <div><dt>待解码输出张量</dt><dd>${esc(shape)}</dd></div>
                 <div><dt>全景特征点空间总候选数</dt><dd>8400</dd></div>
                 <div><dt>反向解码像素包围框总数</dt><dd>${decodedCount}</dd></div>
                 <div><dt>首个被还原的有效示例候选框</dt><dd>${sampleCandidate ? `#${sampleCandidate.id} ${esc(sampleCandidate.class)} ${sampleCandidate.score.toFixed(3)}` : "--"}</dd></div>
-                <div><dt>box transform</dt><dd>cx, cy, w, h → x1, y1, x2, y2</dd></div>
+                <div><dt>框坐标变换</dt><dd>cx, cy, w, h → x1, y1, x2, y2</dd></div>
             </dl>`;
         } else if (step.phase === "confidence") {
-            tutorialContent = `<p><span class="det-note-stage">Confidence</span><strong>阈值过滤</strong>先删除低置信度框。低于 ${state.conf.toFixed(2)} 的候选框会变灰并淡出，只把高分候选框送入 NMS。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">置信度</span><strong>阈值过滤</strong>先删除低置信度框。低于 ${state.conf.toFixed(2)} 的候选框会变灰并淡出，只把高分候选框送入 NMS。</p>`;
             notesContent = `<dl>
                 <div><dt>接收到待剔除候选总框数</dt><dd>${decodedCount}</dd></div>
                 <div><dt>判定目标置信度阈值</dt><dd>${state.conf.toFixed(2)}</dd></div>
                 <div><dt>置信度合格送入NMS框数</dt><dd>${counts.filtered}</dd></div>
                 <div><dt>因得分低自动淡出过滤框数</dt><dd>${Math.max(0, counts.decoded - counts.filtered)}</dd></div>
-                <div><dt>next stage</dt><dd>sort by score → class-wise NMS</dd></div>
+                <div><dt>下一步</dt><dd>按分数排序 → 同类 NMS</dd></div>
             </dl>`;
         } else if (step.type === "final") {
-            tutorialContent = `<p><span class="det-note-stage">Final</span><strong>最终检测输出</strong>只保留 NMS 后的稳定框。页面输出结构对应前端可消费的 detection 数组。</p>`;
+            tutorialContent = `<p><span class="det-note-stage">最终框</span><strong>最终检测输出</strong>只保留 NMS 后的稳定框。页面输出结构对应前端可消费的 detection 数组。</p>`;
             const avg = result.kept.length ? result.kept.reduce((sum, box) => sum + box.score, 0) / result.kept.length : 0;
             const classText = [...new Set(result.kept.map((box) => box.class))].map((name) => `${name}: ${result.kept.filter((box) => box.class === name).length}`).join(" / ") || "--";
             notesContent = `<dl>
-                <div><dt>final detections</dt><dd>${counts.final}</dd></div>
+                <div><dt>最终检测框数</dt><dd>${counts.final}</dd></div>
                 <div><dt>本帧识别出的物体类别分布</dt><dd>${esc(classText)}</dd></div>
                 <div><dt>全图留存目标平均置信得分</dt><dd>${avg.toFixed(3)}</dd></div>
-                <div><dt>output schema</dt><dd>N × [x1,y1,x2,y2,score,class]</dd></div>
+                <div><dt>输出结构</dt><dd>N × [x1,y1,x2,y2,score,class]</dd></div>
             </dl>
             <div class="det-final-output"><strong>检测输出 JSON 首帧片段预览</strong><code>${esc(JSON.stringify(finalPreview))}</code></div>`;
         } else {
             const c = step.comparison;
             if (c) {
                 const stageName = step.type === "suppress" ? "NMS" : step.type === "keep" ? "NMS" : "IoU";
-                const decisionText = c.suppress ? `IoU >= ${state.iou.toFixed(2)}; NMS suppresses lower-score Box B.` : `当前两候选框交并比 IoU 低于阈值 ${state.iou.toFixed(2)}。算法认为它们属于两不同的目标物理实体，候选框 B 继续予以保留。`;
-                tutorialContent = `<p><span class="det-note-stage">${stageName}</span><strong>Compare A/B</strong>IoU 交并比计算公式 = A ∩ B 重叠面积 / A ∪ B 总合面积。NMS 执行判断规则如下：${decisionText}</p>`;
+                const decisionText = c.suppress ? `IoU >= ${state.iou.toFixed(2)}；NMS 抑制低分框 B。` : `当前两候选框交并比 IoU 低于阈值 ${state.iou.toFixed(2)}。算法认为它们属于两个不同目标，候选框 B 继续保留。`;
+                tutorialContent = `<p><span class="det-note-stage">${stageName}</span><strong>比较 A/B</strong>IoU 交并比计算公式 = A ∩ B 重叠面积 / A ∪ B 总合面积。NMS 执行判断规则如下：${decisionText}</p>`;
                 notesContent = `<div class="det-iou-equation">
                     <span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${Math.round(c.inter.area)} / ${Math.round(c.union)}</small>
                 </div>
                 <div class="detection-pair"><strong>框 A</strong><span>${esc(c.a.class)} ${c.a.score.toFixed(2)}</span><code>[${c.a.bbox.join(", ")}]</code></div>
                 <div class="detection-pair"><strong>框 B</strong><span>${esc(c.b.class)} ${c.b.score.toFixed(2)}</span><code>[${c.b.bbox.join(", ")}]</code></div>
                 <dl>
-                    <div><dt>matrix cell</dt><dd>A#${c.a.id} × B#${c.b.id}</dd></div>
-                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
-                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
-                    <div><dt>NMS decision</dt><dd>${c.suppress ? "suppress Box B" : "认为独立，继续保留 B"}</dd></div>
+                    <div><dt>矩阵单元</dt><dd>A#${c.a.id} × B#${c.b.id}</dd></div>
+                    <div><dt>交集面积</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>并集面积</dt><dd>${Math.round(c.union)} px²</dd></div>
+                    <div><dt>NMS 判定</dt><dd>${c.suppress ? "抑制框 B" : "认为独立，继续保留 B"}</dd></div>
                 </dl>`;
             } else {
                 tutorialContent = `<p><span class="det-note-stage">NMS</span><strong>${esc(step.message)}</strong>当前候选没有同类高分框需要比较，先进入 kept set。</p>`;
@@ -896,7 +1145,7 @@
                     <div><dt>当前主要检查的高分框A</dt><dd>${currentBox ? `#${currentBox.id} ${esc(currentBox.class)} ${currentBox.score.toFixed(3)}` : "--"}</dd></div>
                     <div><dt>已被确定保留框的总数量</dt><dd>${step.keptIds.size}</dd></div>
                     <div><dt>已被干掉剔除框的总数量</dt><dd>${step.suppressedIds.size}</dd></div>
-                    <div><dt>compare target</dt><dd>${compareBox ? `#${compareBox.id}` : "无（此轮对比完成）"}</dd></div>
+                    <div><dt>当前比较对象</dt><dd>${compareBox ? `#${compareBox.id}` : "无（此轮对比完成）"}</dd></div>
                 </dl>`;
             }
         }
@@ -904,7 +1153,7 @@
         if (els.notesTutorial) {
             els.notesTutorial.innerHTML = tutorialContent;
         }
-        els.notes.innerHTML = notesContent;
+        els.notes.innerHTML = notesContent + renderYoloTeachingDashboard(step, result);
     }
 
     function demoBox(box, sample, kind, label, extraClass = "", extraStyle = "") {
@@ -992,13 +1241,13 @@
 
     function rcnnStepMeta(step) {
         const meta = {
-            image: ["Image", "Input image and active proposal", "Confirm the image content and keep one active proposal in focus.", "proposal"],
-            proposals: ["Proposals", "Selective Search proposal generation", "Show class-agnostic regions before CNN classification.", "proposal"],
-            crop: ["Crop / ROI", "Crop active proposal and warp it", "Extract the active region and resize it to the CNN input size.", "crop"],
-            features: ["CNN Feature", "Feature extraction for one proposal", "Convert the warped patch into a compact feature map and vector.", "feature"],
-            classifier: ["Classifier", "Class score from proposal feature", "Score object classes and background for the active proposal.", "classified"],
-            regression: ["BBox Regression", "Move original box to refined box", "Apply dx, dy, dw, dh to correct the rough proposal box.", "refined"],
-            nms: ["NMS / Final", "Deduplicate refined detections", "Compare refined boxes by IoU and suppress duplicates.", "final"]
+            image: ["图像", "输入图像与当前 proposal", "确认图像内容，并让一个活跃 proposal 保持聚焦。", "候选生成"],
+            proposals: ["候选框", "Selective Search 生成候选区域", "在 CNN 分类前先展示类别无关的候选区域。", "候选生成"],
+            crop: ["裁剪 / ROI", "裁剪当前 proposal 并归一化尺寸", "抽取当前区域，并缩放到 CNN 固定输入尺寸。", "裁剪归一化"],
+            features: ["CNN 特征", "单个 proposal 的特征提取", "把归一化后的 patch 转成紧凑的特征图和向量。", "特征提取"],
+            classifier: ["分类器", "由 proposal 特征得到类别分数", "对当前 proposal 计算前景类别与背景得分。", "已分类"],
+            regression: ["边界框回归", "原始框平滑修正为 refined box", "应用 dx、dy、dw、dh 修正粗糙 proposal 框。", "已修正"],
+            nms: ["NMS / 最终", "去除重复的 refined detections", "用 IoU 比较修正后的框，并抑制重复框。", "最终输出"]
         };
         const value = meta[step.id] || meta.image;
         return {label: value[0], title: value[1], goal: value[2], state: value[3]};
@@ -1013,12 +1262,12 @@
         if (els.courseState) els.courseState.textContent = meta.state;
         if (!els.courseSummary) return;
         els.courseSummary.innerHTML = `<dl>
-            <div><dt>proposal id</dt><dd>${esc(p.id || "--")}</dd></div>
-            <div><dt>class</dt><dd>${esc(p.class || "--")}</dd></div>
-            <div><dt>score</dt><dd>${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}</dd></div>
+            <div><dt>当前 proposal</dt><dd>${esc(p.id || "--")}</dd></div>
+            <div><dt>类别</dt><dd>${esc(p.class || "--")}</dd></div>
+            <div><dt>得分</dt><dd>${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}</dd></div>
             <div><dt>proposal bbox</dt><dd>[${esc((p.bbox || []).join(", "))}]</dd></div>
             <div><dt>refined bbox</dt><dd>[${esc((p.refined || p.bbox || []).join(", "))}]</dd></div>
-            <div><dt>status</dt><dd>${esc(meta.state)}</dd></div>
+            <div><dt>当前状态</dt><dd>${esc(meta.state)}</dd></div>
         </dl>`;
     }
 
@@ -1076,12 +1325,12 @@
         const suppressPeer = peer ? pairIou >= state.iou && (active.score || 0) >= (peer.score || 0) : false;
         return `<div class="det-rcnn-nms-focus">
             <section>
-                <span>IoU compare</span>
-                <strong>${peer ? `${esc(active.id)} vs ${esc(peer.id)}` : `${esc(active.id || "p1")} only`}</strong>
+                <span>IoU 比较</span>
+                <strong>${peer ? `${esc(active.id)} vs ${esc(peer.id)}` : `仅 ${esc(active.id || "p1")}`}</strong>
                 <dl>
                     <div><dt>IoU</dt><dd>${pairIou.toFixed(2)}</dd></div>
-                    <div><dt>threshold</dt><dd>${state.iou.toFixed(2)}</dd></div>
-                    <div><dt>decision</dt><dd>${suppressPeer ? `suppress ${esc(peer.id)}` : "keep candidate"}</dd></div>
+                    <div><dt>阈值</dt><dd>${state.iou.toFixed(2)}</dd></div>
+                    <div><dt>判定</dt><dd>${suppressPeer ? `抑制 ${esc(peer.id)}` : "保留候选框"}</dd></div>
                 </dl>
             </section>
             <div class="det-rcnn-refined-list">
@@ -1091,7 +1340,7 @@
                         <span>${esc(p.id)}</span>
                         <strong>${esc(p.class)} ${Number(p.score || 0).toFixed(2)}</strong>
                         <code>[${esc((p.bbox || []).join(", "))}]</code>
-                        <em>${suppressed ? "suppress" : "keep"}</em>
+                        <em>${suppressed ? "抑制" : "保留"}</em>
                     </article>`;
                 }).join("")}
             </div>
@@ -1109,13 +1358,13 @@
         if (step.id === "image") {
             return `${header}<div class="det-rcnn-focus-grid">
                 <article class="det-rcnn-focus-copy">
-                    <span>active proposal</span>
+                    <span>当前 proposal</span>
                     <strong>${esc(activeProposal.id || "p1")} / ${esc(primaryClass)}</strong>
-                    <p>The image stage keeps only the active proposal emphasized; other proposals are muted.</p>
+                    <p>图像阶段只强调当前活跃 proposal，其余候选框降低存在感，便于观察后续生命周期。</p>
                     <dl>
-                        <div><dt>image size</dt><dd>${demoImageSample().width} x ${demoImageSample().height}</dd></div>
-                        <div><dt>proposal count</dt><dd>${proposals.length}</dd></div>
-                        <div><dt>active bbox</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
+                        <div><dt>图像尺寸</dt><dd>${demoImageSample().width} x ${demoImageSample().height}</dd></div>
+                        <div><dt>proposal 数量</dt><dd>${proposals.length}</dd></div>
+                        <div><dt>当前 bbox</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
                     </dl>
                 </article>
                 ${renderProposalCards(proposals, activeProposal, 5)}
@@ -1126,12 +1375,12 @@
             return `${header}<div class="det-rcnn-focus-grid">
                 <article class="det-rcnn-focus-copy">
                     <span>Selective Search</span>
-                    <strong>${proposals.length} proposals</strong>
-                    <p>Class-agnostic regions are generated first. They are not final detections.</p>
+                    <strong>${proposals.length} 个 proposal</strong>
+                    <p>先生成类别无关的候选区域。这些只是可能含有目标的区域，并不是最终检测结果。</p>
                     <dl>
-                        <div><dt>current id</dt><dd>${esc(activeProposal.id || "--")}</dd></div>
+                        <div><dt>当前 ID</dt><dd>${esc(activeProposal.id || "--")}</dd></div>
                         <div><dt>bbox</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
-                        <div><dt>score before CNN</dt><dd>none</dd></div>
+                        <div><dt>CNN 前得分</dt><dd>无</dd></div>
                     </dl>
                 </article>
                 ${renderProposalCards(proposals, activeProposal, 5)}
@@ -1140,19 +1389,19 @@
 
         if (step.id === "crop") {
             return `${header}<div class="det-rcnn-crop-flow" data-det-related-id="${esc(activeProposal.id || "p1")}">
-                ${renderCropPatch("source proposal", activeProposal, "is-source")}
+                ${renderCropPatch("原始 proposal", activeProposal, "is-source")}
                 <div class="det-rcnn-flow-arrow"><span></span></div>
-                ${renderCropPatch("crop patch", activeProposal, "is-crop")}
+                ${renderCropPatch("裁剪 patch", activeProposal, "is-crop")}
                 <div class="det-rcnn-flow-arrow"><span></span></div>
-                ${renderCropPatch("warp 224 x 224", activeProposal, "is-warp")}
+                ${renderCropPatch("warp 到 224 x 224", activeProposal, "is-warp")}
             </div>`;
         }
 
         if (step.id === "features") {
             return `${header}<div class="det-rcnn-feature-focus" data-det-related-id="${esc(activeProposal.id || "p1")}">
-                ${renderCropPatch("warped patch", activeProposal, "is-feature-input")}
+                ${renderCropPatch("归一化 patch", activeProposal, "is-feature-input")}
                 <div class="det-rcnn-cnn-stack"><i>conv</i><i>relu</i><i>pool</i><i>fc</i></div>
-                <section><span>feature map</span>${renderFeatureGrid(feature, ["2-4", "3-4", "4-4"])}</section>
+                <section><span>特征图</span>${renderFeatureGrid(feature, ["2-4", "3-4", "4-4"])}</section>
                 <div class="det-rcnn-feature-vector">${[0.22, 0.48, 0.72, 0.56, 0.88, 0.34, 0.62, 0.44].map((v, i) => `<i style="--v:${v};--delay:${i * 35}ms"></i>`).join("")}</div>
             </div>`;
         }
@@ -1160,13 +1409,13 @@
         if (step.id === "classifier") {
             return `${header}<div class="det-rcnn-classifier-focus" data-det-related-id="${esc(activeProposal.id || "p1")}">
                 <article>
-                    <span>proposal feature</span>
+                    <span>proposal 特征</span>
                     <strong>${esc(activeProposal.id || "p1")}</strong>
-                    <p>The classifier scores object classes and background from this proposal feature.</p>
+                    <p>分类器基于该 proposal 特征，同时计算前景类别和 background 的得分。</p>
                 </article>
                 <section>
                     ${renderClassifierBars(activeProposal, true)}
-                    <div class="det-rcnn-verdict"><span>final class</span><strong>${esc(primaryClass)}</strong><em>${Number(activeProposal.score || 0).toFixed(2)}</em></div>
+                    <div class="det-rcnn-verdict"><span>最终类别</span><strong>${esc(primaryClass)}</strong><em>${Number(activeProposal.score || 0).toFixed(2)}</em></div>
                 </section>
             </div>`;
         }
@@ -1179,8 +1428,8 @@
                     <div><dt>dy</dt><dd>${offset.dy ?? "--"}</dd></div>
                     <div><dt>dw</dt><dd>${offset.dw ?? "--"}</dd></div>
                     <div><dt>dh</dt><dd>${offset.dh ?? "--"}</dd></div>
-                    <div><dt>original</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
-                    <div><dt>refined</dt><dd>[${esc(refined.join(", "))}]</dd></div>
+                    <div><dt>原始框</dt><dd>[${esc((activeProposal.bbox || []).join(", "))}]</dd></div>
+                    <div><dt>修正框</dt><dd>[${esc(refined.join(", "))}]</dd></div>
                 </dl>
             </div>`;
         }
@@ -1276,7 +1525,7 @@
                 if (!isTarget) return;
                 if (anchor.isLow && !showLow) return;
                 const status = anchor.isLow ? "low" : `anchor-${anchor.dynamicLabel}`;
-                const label = `${anchor.id} ${anchor.isLow ? "low conf" : anchor.dynamicLabel} IoU ${anchor.iou.toFixed(2)}`;
+                const label = `${anchor.id} ${anchor.isLow ? "低置信度" : anchor.dynamicLabel} IoU ${anchor.iou.toFixed(2)}`;
                 boxesToRender.push(demoBox(anchor, sample, status, label));
             });
             return boxesToRender.join("");
@@ -1293,11 +1542,11 @@
             const p = activeProposal;
             const gt = gts.find((item) => item.id === p?.target) || gts[0];
             const pClass = p.isLow ? "proposal-low" : "proposal-active";
-            const pLabel = `${p.id} original ${p.isLow ? "(low conf)" : ""}`;
+            const pLabel = `${p.id} 原始框 ${p.isLow ? "(低置信度)" : ""}`;
             return [
                 p ? demoBox(p, sample, pClass, pLabel) : "",
-                gt ? demoBox(gt, sample, "gt", "ground truth") : "",
-                p?.refined ? demoBox({id: p.id, sourceId: p.id, bbox: p.refined}, sample, "refined", "refined prediction") : ""
+                gt ? demoBox(gt, sample, "gt", "真实框") : "",
+                p?.refined ? demoBox({id: p.id, sourceId: p.id, bbox: p.refined}, sample, "refined", "修正框") : ""
             ].join("");
         }
         if (step.id === "nms") {
@@ -1315,10 +1564,10 @@
             if (duplicate) {
                 if (isDuplicateSuppressed) {
                     if (showLow) {
-                        boxes.push(demoBox({...duplicate, id: p.id, sourceId: p.id}, sample, "nms-delete", "duplicate (NMS deleted)"));
+                        boxes.push(demoBox({...duplicate, id: p.id, sourceId: p.id}, sample, "nms-delete", "重复框（NMS 删除）"));
                     }
                 } else {
-                    boxes.push(demoBox({...duplicate, id: p.id, sourceId: p.id}, sample, "refined", "duplicate (NMS kept)"));
+                    boxes.push(demoBox({...duplicate, id: p.id, sourceId: p.id}, sample, "refined", "重复框（NMS 保留）"));
                 }
             }
             return boxes.join("");
@@ -1328,14 +1577,14 @@
             const boxes = [];
             if (p) {
                 const pClass = p.isLow ? "proposal-low" : "proposal-active";
-                boxes.push(demoBox(p, sample, pClass, `${p.id} ${step.id === "image" ? "proposal" : "crop target"} ${p.isLow ? "(low conf)" : ""}`));
+                boxes.push(demoBox(p, sample, pClass, `${p.id} ${step.id === "image" ? "proposal" : "裁剪目标"} ${p.isLow ? "(低置信度)" : ""}`));
             }
             processedProposals.filter((box) => idText(box.id) !== idText(p?.id)).forEach((box, index) => {
                 const isBackground = box.class === "background";
                 const isFilterOut = box.isLow;
                 if ((isBackground || isFilterOut) && !showLow) return;
                 const status = (isBackground || isFilterOut) ? "low" : "proposal";
-                const label = isFilterOut ? `${box.id} low conf` : `${box.id} ${box.class}`;
+                const label = isFilterOut ? `${box.id} 低置信度` : `${box.id} ${box.class}`;
                 boxes.push(demoBox(box, sample, status, label, "", `--proposal-delay:${(index + 1) * 90}ms;`));
             });
             return boxes.join("");
@@ -1346,6 +1595,65 @@
             const status = (isBackground || box.isLow) ? "low" : "proposal";
             return demoBox(box, sample, status, `${box.id} ${box.class}`, "", `--proposal-delay:${index * 90}ms;`);
         }).filter(Boolean).join("");
+    }
+
+    function renderRcnnStageMotion(demo, sample, step) {
+        if (state.detMode !== "rcnn") return "";
+        const proposals = demo.proposals || [];
+        const p = activeRcnnProposal(demo);
+        if (!p?.bbox) return "";
+        const phase = step.id || "image";
+        const center = pointPercent(boxCenter(p), sample);
+        const refinedBox = p.refined ? {id: `${p.id}-refined`, class: p.class, score: p.score, bbox: p.refined} : null;
+        const activePulse = `<i class="det-algo-pulse is-rcnn-active" style="${centerStyle(p, sample, "--pulse-color:#8b5cf6;")}"></i>`;
+        let flow = "";
+        let chip = "";
+        let pulses = activePulse;
+        let sparks = "";
+
+        if (phase === "proposals") {
+            pulses = renderStagePulses(proposals.filter((item) => item.bbox), sample, "is-rcnn-proposal");
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn det-algo-chip--corner">
+                <b>${esc(p.id || "p1")} proposal</b><span>类别无关区域从图像中生成</span>
+            </div>`;
+        } else if (phase === "image") {
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn det-algo-chip--corner">
+                <b>当前 proposal</b><span>${esc(p.id || "p1")} 保持在原图语境中</span>
+            </div>`;
+        } else if (phase === "crop") {
+            flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--rcnn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M ${center.x.toFixed(1)} ${center.y.toFixed(1)} C ${(center.x + 10).toFixed(1)} ${(center.y + 4).toFixed(1)}, 68 42, 82 34"></path>
+            </svg>`;
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn" style="left:82%;top:34%;"><b>crop / warp</b><span>[${esc((p.bbox || []).join(", "))}] → 224 x 224</span></div>`;
+        } else if (phase === "features") {
+            flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--rcnn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M ${center.x.toFixed(1)} ${center.y.toFixed(1)} C 48 48, 62 58, 76 58"></path>
+            </svg>`;
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn" style="left:76%;top:58%;"><b>CNN 特征</b><span>patch → 特征向量</span></div>`;
+        } else if (phase === "classifier") {
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn" style="left:${center.x}%;top:${Math.max(8, center.y - 18)}%;">
+                <b>${esc(p.class || "类别")} ${Number(p.score || 0).toFixed(2)}</b><span>分类器选择前景类别</span>
+            </div>`;
+        } else if (phase === "regression" && refinedBox) {
+            const points = flowLinePoints(p, refinedBox, sample);
+            flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--rcnn" viewBox="0 0 ${sample.width} ${sample.height}" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="${points.a.x}" y1="${points.a.y}" x2="${points.b.x}" y2="${points.b.y}"></line>
+            </svg>`;
+            chip = `<div class="det-algo-chip det-algo-chip--rcnn" style="left:${points.mp.x}%;top:${points.mp.y}%;">
+                <b>边界框回归</b><span>dx ${esc(p.offset?.dx ?? "--")} / dy ${esc(p.offset?.dy ?? "--")}</span>
+            </div>`;
+            sparks = Array.from({length: 6}, (_, index) => `<i class="det-algo-spark is-rcnn" style="${centerStyle(refinedBox, sample, `--i:${index};`)}"></i>`).join("");
+        } else if (phase === "nms") {
+            const refined = proposals.filter((item) => item.class !== "background").map((item) => ({...item, bbox: item.refined || item.bbox}));
+            return `<div class="det-algo-motion det-algo-motion--rcnn det-algo-motion--rcnn-${esc(phase)}">
+                ${renderStagePulses(refined, sample, "is-rcnn-final")}
+                <div class="det-algo-chip det-algo-chip--rcnn"><b>NMS / 最终</b><span>${refined.length} 个修正框 → 重复框抑制</span></div>
+            </div>`;
+        }
+
+        return `<div class="det-algo-motion det-algo-motion--rcnn det-algo-motion--rcnn-${esc(phase)}">
+            ${flow}${pulses}${sparks}${chip}
+        </div>`;
     }
 
     function renderRcnnTable(demo) {
@@ -1440,6 +1748,57 @@
             }));
     }
 
+    function renderRcnnTeachingDashboard(step, demo, proposal) {
+        const proposals = demo.proposals || [];
+        const phase = step.id || "image";
+        const formulaByPhase = {
+            image: "I \\rightarrow \\{p_i\\}",
+            proposals: "P = SelectiveSearch(I)",
+            crop: "patch_i = Warp(I[p_i], 224,224)",
+            features: "f_i = CNN(patch_i)",
+            classifier: "score_c = Softmax(W_c f_i)",
+            regression: "x' = x_p + d_x \\cdot w_p",
+            nms: "IoU=\\frac{|B_i \\cap B_j|}{|B_i \\cup B_j|}"
+        };
+        const lineByPhase = {
+            image: "先在原图语境中锁定 active proposal，后续所有计算都围绕它展开。",
+            proposals: "Selective Search 只生成类别无关的候选区域，还不是检测结果。",
+            crop: "当前 proposal 从原图中被裁剪，再 warp 成 CNN 可接受的固定尺寸。",
+            features: "CNN 把 patch 压缩成语义特征向量，分类和回归共享这段表示。",
+            classifier: "分类头只判断这个 proposal 更像哪一类，背景会被排除。",
+            regression: "回归头输出 dx/dy/dw/dh，将粗 proposal 修正到 refined box。",
+            nms: "完成分类和修正后，再用 IoU 去重保留最终 refined boxes。"
+        };
+        const flow = [
+            {id: "proposals", label: "proposal"},
+            {id: "crop", label: "crop"},
+            {id: "features", label: "feature"},
+            {id: "classifier", label: "score"},
+            {id: "regression", label: "refine"},
+            {id: "nms", label: "NMS"}
+        ];
+        const activeFlow = phase === "image" ? "proposals" : phase;
+        const refined = proposal.refined || proposal.bbox || [];
+        const hasRefinedOutput = phase === "regression" || phase === "nms";
+        return `<section class="det-teach-dashboard det-teach-dashboard--rcnn">
+            <div class="det-teach-one-line"><span>${esc(phase.toUpperCase())}</span><p>${esc(lineByPhase[phase] || lineByPhase.proposals)}</p></div>
+            <div class="det-teach-formula">${renderLatex(formulaByPhase[phase] || formulaByPhase.proposals)}</div>
+            ${renderRcnnAlgoSymbol(phase, proposal)}
+            ${renderMiniFlow(flow, activeFlow)}
+            <div class="det-teach-stats">
+                <span><b>${proposals.length}</b><em>proposals</em></span>
+                <span><b>${esc(proposal.id || "--")}</b><em>active</em></span>
+                <span><b>${Number(proposal.score || 0).toFixed(2)}</b><em>score</em></span>
+                <span><b>${esc(proposal.class || "--")}</b><em>class</em></span>
+            </div>
+            <div class="det-teach-boxline">
+                <span><b>${hasRefinedOutput ? "original" : "current bbox"}</b><code>[${esc((proposal.bbox || []).join(", "))}]</code></span>
+                <i></i>
+                <span><b>${hasRefinedOutput ? "refined" : "next output"}</b><code>${hasRefinedOutput ? `[${esc(refined.join(", "))}]` : "pending"}</code></span>
+            </div>
+        </section>`;
+    }
+
     function renderRcnnNotes(demo, step) {
         const proposals = demo.proposals || [];
         const anchors = demo.anchors || [];
@@ -1523,30 +1882,7 @@
             els.notesSubtitle.textContent = "两阶段逻辑图解";
             els.notesTutorial.innerHTML = `<p><span class="det-note-stage">${esc(copy.stage)}</span><strong>${esc(step.title)}</strong>${esc(copy.text)}</p>`;
 
-            const STEP_LABELS = {
-                image: '图像输入',
-                proposals: 'Selective Search',
-                crop: '裁剪拉伸',
-                features: '特征图卷积提取',
-                classifier: '多阶段分类器器',
-                regression: '边界回归计算偏移',
-                nms: '非极大抑制去重'
-            };
-            const ALL_STEPS = ['image', 'proposals', 'crop', 'features', 'classifier', 'regression', 'nms'];
-            const curIdx = ALL_STEPS.indexOf(step.id);
-            const timelineHtml = `
-            <div class="det-notes-timeline">
-                ${ALL_STEPS.map((s, i) => {
-                    const itemState = i < curIdx ? 'done' : i === curIdx ? 'active' : '';
-                    return `<div class="det-notes-timeline-item ${itemState}">
-                        <span class="det-notes-tl-dot"></span>
-                        <span class="det-notes-tl-label">${i + 1}. ${esc(STEP_LABELS[s])}</span>
-                        ${i < curIdx ? '<span class="det-notes-tl-check">✔</span>' : ''}
-                    </div>`;
-                }).join('')}
-            </div>`;
-
-            els.notes.innerHTML = `<dl>${copy.data.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>${timelineHtml}`;
+            els.notes.innerHTML = `<dl>${copy.data.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</dl>${renderRcnnTeachingDashboard(step, demo, p)}`;
             return;
         }
         const processedAnchorsForNotes = processRpnAnchors(demo);
@@ -1641,12 +1977,7 @@
         els.conf.value = String(state.conf);
         els.iou.value = String(state.iou);
 
-        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, sample.width)} / ${Math.max(1, sample.height)}`);
-        const rawRatio = Math.max(1, sample.width) / Math.max(1, sample.height);
-        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio.toFixed(3));
-        const realStage = els.image.closest(".detection-real-stage");
-        if (realStage) realStage.hidden = false;
-        if (sample.image) els.image.src = sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image);
+        syncDetectionImage(sample);
         els.missing.textContent = "";
         els.missing.style.display = "none";
         els.rcnnStage.hidden = false;
@@ -1673,7 +2004,7 @@
             }
         }
 
-        els.overlay.innerHTML = demo.version ? renderRcnnOverlay(demo, sample, step) : "";
+        els.overlay.innerHTML = demo.version ? renderRcnnOverlay(demo, sample, step) + renderRcnnStageMotion(demo, sample, step) : "";
         els.total.textContent = String(rcnnTotalCount);
         els.kept.textContent = String(rcnnKeptCount);
         els.stageSource.textContent = state.detMode === "rcnn" ? "Two-stage proposal lifecycle" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN 之全特征图 RPN 滑窗区域";
@@ -1714,17 +2045,12 @@
         setModeTheme("yolo");
         updateModeButtons();
         if (els.rcnnStage) els.rcnnStage.hidden = true;
-        const yoloRealStage = els.image.closest(".detection-real-stage");
-        if (yoloRealStage) yoloRealStage.hidden = false;
         const result = compute();
         const s = result.sample;
         const counts = yoloCounts(result);
         state.step = Math.min(state.step, result.steps.length - 1);
         const step = result.steps[state.step] || result.steps[0];
-        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect", `${Math.max(1, s.width)} / ${Math.max(1, s.height)}`);
-        const rawRatio2 = Math.max(1, s.width) / Math.max(1, s.height);
-        els.image.closest(".detection-real-stage")?.style.setProperty("--det-aspect-raw-x", rawRatio2.toFixed(3));
-        els.image.src = s.image.startsWith("blob:") ? s.image : window.cvclassUrl(s.image);
+        syncDetectionImage(s);
         els.missing.textContent = "";
         els.missing.style.display = "none";
         els.confOut.textContent = state.conf.toFixed(2);
@@ -1757,8 +2083,8 @@
         ].join("");
         const c = step.comparison;
         const interMarkup = c?.inter.area > 0 ? `<div class="vision-iou-intersection" style="left:${(c.inter.x1 / s.width) * 100}%;top:${(c.inter.y1 / s.height) * 100}%;width:${(c.inter.width / s.width) * 100}%;height:${(c.inter.height / s.height) * 100}%;"></div>` : "";
-        const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "suppress B" : "keep B"}</small></div>` : "";
-        els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge + renderNmsSlowMotionLayer(step, result, s);
+        const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "抑制 B" : "保留 B"}</small></div>` : "";
+        els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge + renderYoloStageMotion(step, result, s) + renderNmsSlowMotionLayer(step, result, s);
 
         if (step.type === "decode" && result.candidates.length > 0) {
             const burst = document.createElement("div");
@@ -1907,6 +2233,7 @@
     }
 
     async function autoLoadAndRun() {
+        if (forcePresetSource) return;
         if (!state.data || state.detMode !== "yolo") return;
         const token = state.autoToken + 1;
         state.autoToken = token;
@@ -1959,7 +2286,7 @@
             els.inferenceMessage.textContent = "Uploaded image loaded. Running inference automatically.";
             renderClassControls(true);
             render();
-            autoLoadAndRun();
+            if (!forcePresetSource) autoLoadAndRun();
         };
         image.onerror = () => {
             els.inferenceMessage.textContent = "Uploaded image failed to load.";
@@ -1994,7 +2321,7 @@
             state.inferenceScene = sceneFromPreset(s, []);
             renderControls();
             render();
-            autoLoadAndRun();
+            if (!forcePresetSource) autoLoadAndRun();
         })
         .catch(() => {
             els.overlay.innerHTML = `<div class="vision-empty-result">检测样例数据加载失败</div>`;
@@ -2008,7 +2335,7 @@
         state.iou = s.nms_iou_threshold || 0.5;
         els.conf.value = String(state.conf);
         els.iou.value = String(state.iou);
-        state.source = "inference";
+        state.source = forcePresetSource ? "preset" : "inference";
         state.fallbackReason = "";
         state.inferenceScene = sceneFromPreset(s, []);
         state.inferenceResult = null;
@@ -2018,7 +2345,7 @@
         state.step = 0;
         renderClassControls(true);
         render();
-        if (state.detMode === "yolo") autoLoadAndRun();
+        if (state.detMode === "yolo" && !forcePresetSource) autoLoadAndRun();
     });
     els.backend.addEventListener("change", () => {
         state.backend = els.backend.value;
@@ -2030,7 +2357,7 @@
         state.activeBackend = "--";
         setModelStatus("not loaded", "Backend changed. Reloading model and running inference...");
         renderRuntimeMetrics(compute());
-        if (state.detMode === "yolo") autoLoadAndRun();
+        if (state.detMode === "yolo" && !forcePresetSource) autoLoadAndRun();
     });
     els.upload.addEventListener("change", () => {
         const file = els.upload.files?.[0];
@@ -2050,7 +2377,7 @@
         state.hoveredProposalId = null;
         state.nmsAnimationStep = 0;
         render();
-        if (state.detMode === "yolo") autoLoadAndRun();
+        if (state.detMode === "yolo" && !forcePresetSource) autoLoadAndRun();
     }));
     els.conf.addEventListener("input", () => updateYoloThreshold("conf", Number(els.conf.value)));
     els.iou.addEventListener("input", () => updateYoloThreshold("iou", Number(els.iou.value)));
