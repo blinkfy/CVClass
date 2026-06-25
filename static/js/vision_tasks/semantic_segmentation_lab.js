@@ -368,10 +368,8 @@
         const step = processById(state.phase);
         if (els.processOverlay) {
             els.processOverlay.dataset.processStep = step.id;
-            els.processOverlay.classList.remove("is-replaying");
-            els.processOverlay.innerHTML = processOverlayMarkup(step);
-            void els.processOverlay.offsetWidth;
-            els.processOverlay.classList.add("is-replaying");
+            els.processOverlay.innerHTML = "";
+            els.processOverlay.hidden = true;
         }
         if (els.processPrinciple) {
             els.processPrinciple.innerHTML = `
@@ -1114,37 +1112,32 @@
             rgb = "读取失败";
         }
         const score = mask.scoreMap?.[index];
-        const math = probeMath(mask, info?.id, rgb);
-        const bestProb = math.probs[Math.max(0, math.classes.findIndex((item) => Number(item.id) === Number(math.winner?.id)))] || 0;
+        const hasRealScore = Number.isFinite(score);
         state.probeInfo = {
             x,
             y,
             rgb,
             classId: info ? info.id : "--",
             className: info ? label(info) : "未命中",
-            score: Number.isFinite(score) ? score.toFixed(3) : bestProb.toFixed(3),
-            color: info?.color || math.winner?.color || "#94a3b8",
-            logits: math.logits.map((value) => value.toFixed(2)).join(", "),
-            softmax: math.probs.map((value) => value.toFixed(2)).join(", "),
-            argmax: math.winner ? label(math.winner) : "未命中"
+            score: hasRealScore ? score.toFixed(3) : "--",
+            color: info?.color || "#94a3b8"
         };
         const left = Math.max(12, Math.min(rect.width - 244, event.clientX - rect.left + 14));
-        const top = Math.max(12, Math.min(rect.height - 220, event.clientY - rect.top + 14));
+        const top = Math.max(12, Math.min(rect.height - 180, event.clientY - rect.top + 14));
         els.probe.style.setProperty("--probe-left", `${left}px`);
         els.probe.style.setProperty("--probe-top", `${top}px`);
         els.probe.innerHTML = `<strong>Pixel Probe</strong>
             <span>Pixel (x, y): ${x}, ${y}</span>
             <span>RGB: ${esc(rgb)}</span>
-            <span>logits: [${esc(state.probeInfo.logits)}]</span>
-            <div class="semantic-probe-bars">${probeBars(math)}</div>
-            <span>argmax: <b style="color:${esc(state.probeInfo.color)}">${esc(state.probeInfo.argmax)}</b></span>
+            <span>class: <b style="color:${esc(state.probeInfo.color)}">${esc(state.probeInfo.className)}</b></span>
+            <span>confidence: ${esc(state.probeInfo.score)}</span>
             <span>mask color: <i style="background:${esc(state.probeInfo.color)}"></i>${esc(state.probeInfo.color)}</span>`;
         renderNotes();
     }
 
     function clearProbe() {
         state.probeInfo = null;
-        els.probe.innerHTML = `<strong>Pixel Probe</strong><span>移动鼠标读取 x,y、RGB、logits、softmax、argmax 和最终 mask 颜色。</span>`;
+        els.probe.innerHTML = `<strong>Pixel Probe</strong><span>移动鼠标读取 x,y、RGB、当前像素类别、置信度和最终 mask 颜色。</span>`;
         renderNotes();
     }
 

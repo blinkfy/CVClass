@@ -1,4 +1,4 @@
-const WORKER_URL = "/static/js/inference/vision_inference_worker.js?v=20260624-det-noworkernms1";
+const WORKER_URL = "/static/js/inference/vision_inference_worker.js?v=20260625-det-flowdiff1";
 
 let sequence = 0;
 

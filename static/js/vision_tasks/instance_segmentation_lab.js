@@ -97,6 +97,7 @@
         blenderCanvas: $("[data-inst-blender-canvas]"),
         blenderOverlayText: $("[data-inst-blender-overlay-text]"),
         blenderGrid: $("[data-inst-blender-grid]"),
+        blenderSimulatedBadge: $("[data-inst-blender-simulated-badge]"),
         processSteps: $("[data-inst-process-steps]"),
         processOverlay: $("[data-inst-process-overlay]"),
         processPrinciple: $("[data-inst-process-principle]"),
@@ -211,7 +212,8 @@
         const step = processById(state.phase);
         if (els.processOverlay) {
             els.processOverlay.dataset.processStep = step.id;
-            els.processOverlay.innerHTML = processOverlayMarkup(step);
+            els.processOverlay.innerHTML = "";
+            els.processOverlay.hidden = true;
         }
         if (els.processPrinciple) {
             els.processPrinciple.innerHTML = `
@@ -778,15 +780,9 @@
     }
 
     function renderMaskRcnnOverlay(demo, scene, step) {
-        if (!scene || !els.svg) return;
-        const proposals = demo.proposals || [];
-        const overlay = proposals.map((proposal) => {
-            const rect = percentBox(proposal.bbox, scene);
-            const active = ["rpn", "roiAlign", "heads", "maskHead", "instances"].includes(step.id);
-            return `<rect class="instance-maskrcnn-box ${active ? "is-active" : ""}" x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="none" stroke="${esc(proposal.color)}" stroke-width="1.7" vector-effect="non-scaling-stroke"></rect>
-                <text class="instance-svg-label instance-maskrcnn-label" x="${rect.x}" y="${Math.max(4, rect.y - 1)}">${esc(proposal.id)} ${esc(proposal.level)}</text>`;
-        }).join("");
-        els.svg.innerHTML += overlay;
+        // 该叠加层使用预录的 maskrcnn_demo.json 数据，不是当前图片的真实推理结果，
+        // 为避免误导，不再直接绘制在图片上。
+        return;
     }
 
     function renderFpnPanel(demo) {
@@ -881,7 +877,12 @@
             els.maskRcnnDemo.innerHTML = `<div class="vision-empty-result">Mask R-CNN demo data loading...</div>`;
             return;
         }
-        const header = `<div class="instance-maskrcnn-pipeline">${maskRcnnSteps.map((item, index) => `<article class="${item.id === step.id ? "is-active" : ""}" data-maskrcnn-step="${esc(item.id)}"><strong>${esc(item.title)}</strong><span>${esc(item.detail)}</span><i>${index + 1}</i></article>`).join("")}</div>`;
+        const header = `
+            <div class="instance-maskrcnn-demo-header">
+                <span class="instance-maskrcnn-demo-badge">预录演示数据</span>
+                <p>以下 RPN / FPN / Mask Head 等可视化来自预录样例，不代表当前图片的真实推理结果。</p>
+            </div>
+            <div class="instance-maskrcnn-pipeline">${maskRcnnSteps.map((item, index) => `<article class="${item.id === step.id ? "is-active" : ""}" data-maskrcnn-step="${esc(item.id)}"><strong>${esc(item.title)}</strong><span>${esc(item.detail)}</span><i>${index + 1}</i></article>`).join("")}</div>`;
         let body = "";
         if (state.sourceMode === "roiAlign") body = renderRoiAlignPanel(demo);
         else if (state.sourceMode === "maskMetric") body = renderMaskMetricPanel(demo);
@@ -1040,7 +1041,8 @@
 
         const scene = state.currentScene;
         const item = selectedInstance();
-        
+        let isSimulated = false;
+
         if (!els.blenderPlayBtn || !els.blenderOverlayText || !els.blenderGrid) return;
 
         if (!scene || !item) {
@@ -1048,6 +1050,7 @@
             els.blenderOverlayText.classList.remove("hidden");
             els.blenderOverlayText.textContent = "未激活实例。请在左列表点击实例或在图上点击物体使其被选中";
             els.blenderGrid.innerHTML = `<div class="blender-channel-placeholder">等待激活实例检测特征层...</div>`;
+            if (els.blenderSimulatedBadge) els.blenderSimulatedBadge.hidden = true;
             return;
         }
 
@@ -1056,7 +1059,6 @@
 
         // 提取或虚拟 coefficients
         let coeffs = item.coeffs;
-        let isSimulated = false;
 
         if (!coeffs || coeffs.length === 0) {
             isSimulated = true;
@@ -1150,6 +1152,8 @@
                 }
             }
         }
+
+        if (els.blenderSimulatedBadge) els.blenderSimulatedBadge.hidden = !isSimulated;
 
         // 排序挑选前 8 个主要活跃通道
         const indexedCoeffs = coeffs.map((coeff, idx) => ({ idx, coeff }));

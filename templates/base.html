@@ -7,8 +7,10 @@
     <link rel="icon" href="{{ url_for('static', filename='assets/img/icon.png') }}">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/base.css') }}?v=20260624-active-fix1">
+    {% if active_page|default('') != 'object_detection' %}
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
 <body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'knowledge_graph', 'frontier'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }}">
