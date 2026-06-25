@@ -102,8 +102,8 @@
     const processSteps = [
         {
             id: "image",
-            title: "Image",
-            detail: "H×W×3 input",
+            title: "图像输入",
+            detail: "H × W × 3 原始输入",
             input: "原始 RGB 图像",
             compute: "读取像素坐标、RGB 通道和图像尺寸。",
             output: "I ∈ R^{H×W×3}",
@@ -113,8 +113,8 @@
         },
         {
             id: "preprocess",
-            title: "Preprocess",
-            detail: "resize / normalize",
+            title: "预处理",
+            detail: "等比缩放与归一化",
             input: "H×W×3 image",
             compute: "resize 到模型输入尺寸，并执行 0-255 → 0-1 → mean/std normalize。",
             output: "NCHW tensor",
@@ -124,8 +124,8 @@
         },
         {
             id: "backbone",
-            title: "Backbone",
-            detail: "tokens / feature map",
+            title: "编码器骨干网络",
+            detail: "特征特征提取图",
             input: "normalized tensor",
             compute: "编码器聚合局部纹理、边缘和上下文，逐步降低空间分辨率。",
             output: "low-resolution feature map",
@@ -135,8 +135,8 @@
         },
         {
             id: "logits",
-            title: "Pixel Logits",
-            detail: "H′×W′×C",
+            title: "像素级得分 (Logits)",
+            detail: "H′ × W′ × C 类别原始输出",
             input: "feature map F",
             compute: "分类头对每个空间位置输出 C 个类别原始分数。",
             output: "H′×W′×C logits",
@@ -146,8 +146,8 @@
         },
         {
             id: "upsample",
-            title: "Upsample",
-            detail: "restore H×W",
+            title: "上采样高保真",
+            detail: "双线性还原原图空间长宽",
             input: "low-resolution logits",
             compute: "使用双线性插值或 decoder 上采样，把粗网格恢复到原图尺度。",
             output: "H×W×C logits",
@@ -157,8 +157,8 @@
         },
         {
             id: "argmax",
-            title: "Argmax",
-            detail: "class id per pixel",
+            title: "类别归属提取 (Argmax)",
+            detail: "逐像素挑选最大概率类别",
             input: "H×W×C logits",
             compute: "每个像素沿 class channel 比较分数，选择最大类别。",
             output: "H×W class index map",
@@ -168,8 +168,8 @@
         },
         {
             id: "mask",
-            title: "Semantic Mask",
-            detail: "overlay + legend",
+            title: "语义蒙版渲染",
+            detail: "分类图例着色与透明透出",
             input: "H×W class index map",
             compute: "把 class id 映射为类别颜色，并按透明度叠加到原图。",
             output: "colored semantic mask",
@@ -179,8 +179,8 @@
         },
         {
             id: "miou",
-            title: "mIoU",
-            detail: "mean IoU",
+            title: "交并比指标计算",
+            detail: "所有类别 IoU 之算术平均",
             input: "prediction mask + ground truth",
             compute: "按类别计算 intersection / union，再对类别求平均。",
             output: "mean Intersection over Union",
@@ -203,6 +203,20 @@
 
     function canonicalPhase(id) {
         return phaseAliases[id] || id || "image";
+    }
+
+    function canonicalPhaseCN(id) {
+        const cnNames = {
+            "image": "图像输入",
+            "preprocess": "数据预处理",
+            "backbone": "骨干特征提取",
+            "logits": "像素置信度计算",
+            "upsample": "反卷积上采样",
+            "argmax": "类别归属裁决",
+            "mask": "语义蒙版渲染",
+            "miou": "交并比指标校验"
+        };
+        return cnNames[canonicalPhase(id)] || id;
     }
 
     function processById(id) {
@@ -233,11 +247,11 @@
     function topSemanticClasses(limit = 5) {
         const mask = state.currentMask;
         if (!mask?.classes?.length) return [
-            {id: 0, name: "road", cn: "road", color: "#2563eb", ratio: 0.32},
-            {id: 1, name: "building", cn: "building", color: "#22c55e", ratio: 0.24},
-            {id: 2, name: "person", cn: "person", color: "#f97316", ratio: 0.18},
-            {id: 3, name: "sidewalk", cn: "sidewalk", color: "#8b5cf6", ratio: 0.14},
-            {id: 4, name: "sky", cn: "sky", color: "#06b6d4", ratio: 0.12}
+            {id: 0, name: "road", cn: "道路", color: "#2563eb", ratio: 0.32},
+            {id: 1, name: "building", cn: "建筑物", color: "#22c55e", ratio: 0.24},
+            {id: 2, name: "person", cn: "行人", color: "#f97316", ratio: 0.18},
+            {id: 3, name: "sidewalk", cn: "人行道", color: "#8b5cf6", ratio: 0.14},
+            {id: 4, name: "sky", cn: "天空", color: "#06b6d4", ratio: 0.12}
         ].slice(0, limit);
         const byId = new Map(mask.classes.map((item) => [Number(item.id), item]));
         return (mask.distribution || [])
@@ -304,8 +318,8 @@
         if (kind === "scan") return `
             <div class="semantic-step-visual is-preprocess">
                 <div class="process-scanline"></div><div class="process-grid"></div>
-                <div class="sem-normalize-card"><span>RGB 183</span><b></b><strong>0.72</strong></div>
-                <div class="sem-resize-card"><span>${sampleInfo?.width || mask?.width || "H"}×${sampleInfo?.height || mask?.height || "W"}</span><strong>512×512</strong></div>
+                <div class="sem-normalize-card"><span>像素RGB 183</span><b></b><strong>归一化值 0.72</strong></div>
+                <div class="sem-resize-card"><span>${sampleInfo?.width || mask?.width || "H"}×${sampleInfo?.height || mask?.height || "W"}</span><strong>缩放到 512×512</strong></div>
             </div>`;
         if (kind === "blocks") return `
             <div class="semantic-step-visual is-backbone">
@@ -316,18 +330,18 @@
         if (kind === "channels") return `
             <div class="semantic-step-visual is-logits">
                 <div class="process-channel-stack">${Array.from({length: 6}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-logit-panel"><strong>pixel logits</strong>${normalizedBars(classes, winner?.id)}</div>
+                <div class="sem-logit-panel"><strong>特定像素的概率堆叠 (Logits)</strong>${normalizedBars(classes, winner?.id)}</div>
             </div>`;
         if (kind === "expand") return `
             <div class="semantic-step-visual is-upsample">
                 <div class="process-expand-grid">${Array.from({length: 25}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-upsample-arrow">×4</div>
+                <div class="sem-upsample-arrow">上采样缩放 ×4</div>
                 <div class="sem-highres-grid">${Array.from({length: 64}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
             </div>`;
         if (kind === "decision") return `
             <div class="semantic-step-visual is-argmax">
                 <div class="process-decision-map">${Array.from({length: 36}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-argmax-panel"><strong>argmax wins</strong>${normalizedBars(classes, winner?.id)}</div>
+                <div class="sem-argmax-panel"><strong>由最大数 Argmax 抉择的分类</strong>${normalizedBars(classes, winner?.id)}</div>
             </div>`;
         if (kind === "mask") return `
             <div class="semantic-step-visual is-mask">
@@ -337,7 +351,7 @@
         if (kind === "metric") return `
             <div class="semantic-step-visual is-miou">
                 <div class="process-iou-demo"><i class="gt"></i><i class="pred"></i><b></b><span>IoU</span></div>
-                <div class="sem-miou-equation"><strong>Intersection</strong><b>/</b><strong>Union</strong><span>= ${mask ? (fcnMeanIoU(mask) / 100).toFixed(3) : "0.62"}</span></div>
+                <div class="sem-miou-equation"><strong>计算交集区</strong><b>/</b><strong>并集区</strong><span>= ${mask ? (fcnMeanIoU(mask) / 100).toFixed(3) : "0.62"}</span></div>
             </div>`;
         return `
             <div class="semantic-step-visual is-image">
@@ -353,14 +367,14 @@
         const s = sample();
         const top = topClass(mask);
         const topInfo = top ? classById(mask, top.id) : null;
-        if (step.id === "image") return s ? `${s.width} × ${s.height} RGB sample` : "waiting for image";
-        if (step.id === "preprocess") return `${meta.inputSize || state.modelInfo?.inputSizeText || "512 × 512"} input tensor`;
-        if (step.id === "backbone") return `feature map ≈ ${(mask?.height || 512) >> 4} × ${(mask?.width || 512) >> 4}`;
-        if (step.id === "logits") return `${mask?.classes?.length || state.modelInfo?.classCount || "--"} class channels`;
-        if (step.id === "upsample") return `${mask ? `${mask.height} × ${mask.width}` : "H × W"} logits restored`;
-        if (step.id === "argmax") return topInfo ? `winner class: ${label(topInfo)} ${(top.ratio * 100).toFixed(1)}%` : "class map pending";
-        if (step.id === "mask") return `opacity ${(state.opacity * 100).toFixed(0)}%, visible classes ${state.enabled.size || "--"}`;
-        if (step.id === "miou") return mask ? `mIoU ${fcnMeanIoU(mask).toFixed(1)}%` : "metric pending";
+        if (step.id === "image") return s ? `${s.width} × ${s.height} 像素 RGB 原图` : "等待加载图像";
+        if (step.id === "preprocess") return `${meta.inputSize || state.modelInfo?.inputSizeText || "512 × 512"} 的归一化输入张量`;
+        if (step.id === "backbone") return `层低分辨率高级特征图 ≈ ${(mask?.height || 512) >> 4} × ${(mask?.width || 512) >> 4}`;
+        if (step.id === "logits") return `${mask?.classes?.length || state.modelInfo?.classCount || "--"} 类别预测候选概率通道`;
+        if (step.id === "upsample") return `${mask ? `${mask.height} × ${mask.width}` : "H × W"} 空间分辨率张量还原成功`;
+        if (step.id === "argmax") return topInfo ? `winner class: ${label(topInfo)} ${(top.ratio * 100).toFixed(1)}%` : "等待预测分类完成";
+        if (step.id === "mask") return `当前透明度 ${(state.当前透明度 * 100).toFixed(0)}%, 渲染画面类别数 ${state.enabled.size || "--"}`;
+        if (step.id === "miou") return mask ? `mIoU ${fcnMeanIoU(mask).toFixed(1)}%` : "指标生成中";
         return "--";
     }
 
@@ -372,23 +386,15 @@
             els.processOverlay.hidden = true;
         }
         if (els.processPrinciple) {
-            els.processPrinciple.innerHTML = `
-                <div class="process-principle-head">
-                    <span>${esc(step.title)}</span>
-                    <strong>${esc(step.detail)}</strong>
-                </div>
-                <div class="process-principle-motion" data-motion="${esc(step.overlay)}">
-                    ${processOverlayMarkup(step)}
-                </div>
-                <p>${esc(step.desc)}</p>
-            `;
+            els.processPrinciple.innerHTML = "";
+            els.processPrinciple.hidden = true;
         }
         if (els.processCard) {
             const rows = [
-                ["Input", step.input],
-                ["Core Compute", step.compute],
-                ["Output", step.output],
-                ["Current Stats", processStats(step)]
+                ["输入数据结构", step.input],
+                ["前向层核心逻辑", step.compute],
+                ["输出数据结构", step.output],
+                ["当前运行特征数据", processStats(step)]
             ];
             const kicker = els.processCard.querySelector("[data-process-kicker]");
             const title = els.processCard.querySelector("[data-process-title]");
@@ -609,8 +615,8 @@
         const index = phaseIndex(state.phase);
         const pct = processSteps.length > 1 ? (index / (processSteps.length - 1)) * 100 : 0;
         if (els.timelineProgress) els.timelineProgress.style.setProperty("--sem-progress", `${pct}%`);
-        if (els.timelineLabel) els.timelineLabel.textContent = `${String(index + 1).padStart(2, "0")} / ${processSteps.length} · ${processById(state.phase).title}`;
-        if (els.playToggle) els.playToggle.textContent = state.playing ? "Pause" : "Play";
+        if (els.timelineLabel) els.timelineLabel.textContent = `${String(index + 1).padStart(2, "0")} / ${processSteps.length} · ${canonicalPhaseCN(state.phase)}`;
+        if (els.playToggle) els.playToggle.textContent = state.playing ? "暂停" : "自动放映";
         root.classList.toggle("is-sem-playing", state.playing);
     }
 
@@ -671,7 +677,7 @@
         if (els.activeBackend) {
             els.activeBackend.textContent = (state.activeBackend && state.activeBackend !== "--") ? state.activeBackend.toUpperCase() : (meta.backend || "--").toUpperCase();
         }
-        els.stripSource.textContent = mask?.source === "model" ? "Frontend Model" : mask?.source === "fcn" ? "FCN Principle Demo" : "Preset Mask";
+        els.stripSource.textContent = mask?.source === "model" ? "前端网络推理" : mask?.source === "fcn" ? "FCN 二维全卷积原理" : "课程标准预设 Mask";
         els.stripModel.textContent = meta.modelName || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
         els.stripPostprocess.textContent = fmtMs(meta.postprocessTime);
@@ -930,7 +936,7 @@
         state.selectedSource = "model";
         setBusy(true);
         setPhase("preprocess");
-        setModelStatus("加载中", "正在检查本地模型文件...");
+        setModelStatus("正在检查资源", "正在检索系统本地部署的 ONNX 权重文件...");
         try {
             const missing = await checkModelFiles();
             if (missing.length) {
@@ -942,13 +948,13 @@
                 fallbackToPreset(message);
                 return;
             }
-            setModelStatus("加载中", "正在加载 SegFormer-B0 本地 ONNX 模型...");
+            setModelStatus("正在激活权重", "正在加载 SegFormer-B0 本地轻量化模型...");
             const client = await getInferenceClient();
             const info = await client.loadSemanticModel({modelBaseUrl, backend: "webgpu"});
             state.modelInfo = {...info, inputSizeText: `${info.inputSize.width} × ${info.inputSize.height}`};
             state.activeBackend = info.backend;
             state.modelError = "";
-            setModelStatus("已加载", "模型已加载。");
+            setModelStatus("准备绪", "本地 SegFormer-B0 预测引擎状态良好");
             renderRuntime();
             setPhase("logits");
         } catch (error) {
@@ -973,7 +979,7 @@
         setBusy(true);
         try {
             await waitForImage(els.image);
-            setModelStatus("推理中", "正在 resize / normalize 输入图像...");
+            setModelStatus("预处理计算中", "正在对图像像素矩阵执行 letterbox 缩放与中心归一化...");
             setPhase("preprocess");
             await new Promise((resolve) => setTimeout(resolve, 100));
             setPhase("logits");
@@ -985,7 +991,7 @@
             state.activeBackend = result.meta.backend;
             state.modelMask = result;
             state.enabled = new Set(result.classes.map((item) => Number(item.id)));
-            setModelStatus("推理完成", `语义分割推理完成。`);
+            setModelStatus("推理完成", `SegFormer 前向分类与 argmax 计算已全量完成！`);
             setPhase("mask");
             activateMask(result, true);
             setPhase("mask");
@@ -1096,7 +1102,7 @@
         if (!mask) return;
         const rect = els.canvas.getBoundingClientRect();
         if (!rect.width || !rect.height) {
-            els.probe.innerHTML = `<strong>像素探针</strong><span>canvas 坐标映射异常</span>`;
+            els.probe.innerHTML = `<strong>坐标映射</strong><span>图像像素重定位超出视口边界</span>`;
             return;
         }
         const x = Math.max(0, Math.min(mask.width - 1, Math.floor(((event.clientX - rect.left) / rect.width) * mask.width)));
@@ -1126,7 +1132,7 @@
         const top = Math.max(12, Math.min(rect.height - 180, event.clientY - rect.top + 14));
         els.probe.style.setProperty("--probe-left", `${left}px`);
         els.probe.style.setProperty("--probe-top", `${top}px`);
-        els.probe.innerHTML = `<strong>Pixel Probe</strong>
+        els.probe.innerHTML = `<strong>像素微观探针探测器</strong>
             <span>Pixel (x, y): ${x}, ${y}</span>
             <span>RGB: ${esc(rgb)}</span>
             <span>class: <b style="color:${esc(state.probeInfo.color)}">${esc(state.probeInfo.className)}</b></span>
@@ -1137,7 +1143,7 @@
 
     function clearProbe() {
         state.probeInfo = null;
-        els.probe.innerHTML = `<strong>Pixel Probe</strong><span>移动鼠标读取 x,y、RGB、当前像素类别、置信度和最终 mask 颜色。</span>`;
+        els.probe.innerHTML = `<strong>像素微观探针探测器</strong><span>移动鼠标读取 x,y、RGB、当前像素类别、置信度和最终 mask 颜色。</span>`;
         renderNotes();
     }
 

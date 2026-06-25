@@ -216,16 +216,8 @@
             els.processOverlay.hidden = true;
         }
         if (els.processPrinciple) {
-            els.processPrinciple.innerHTML = `
-                <div class="process-principle-head">
-                    <span>${esc(step.title)}</span>
-                    <strong>${esc(step.detail)}</strong>
-                </div>
-                <div class="process-principle-motion" data-motion="${esc(step.overlay)}">
-                    ${processOverlayMarkup(step)}
-                </div>
-                <p>${esc(step.desc)}</p>
-            `;
+            els.processPrinciple.innerHTML = "";
+            els.processPrinciple.hidden = true;
         }
         if (els.processCard) {
             els.processCard.querySelector("[data-process-kicker]").textContent = "INSTANCE STEP";

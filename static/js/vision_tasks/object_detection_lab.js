@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     const root = document.querySelector("[data-detection-lab]");
     if (!root) return;
 
@@ -100,9 +100,9 @@
 
     const yoloDecodePipeline = [
         {id: "raw", title: "rawOutput [1,84,8400]", detail: "84 = xywh + 80 scores"},
-        {id: "points", title: "candidate points", detail: "8400 dense locations"},
+        {id: "points", title: "全景特征点空间总候选数", detail: "8400 dense locations"},
         {id: "xywh", title: "xywh + class scores", detail: "best class per point"},
-        {id: "threshold", title: "threshold", detail: "drop low scores"},
+        {id: "判定目标置信度阈值", title: "判定目标置信度阈值", detail: "drop low scores"},
         {id: "nms", title: "NMS", detail: "IoU suppress"},
         {id: "final", title: "final boxes", detail: "N x detection"}
     ];
@@ -262,7 +262,7 @@
         els.pipeline.innerHTML = `
             <div class="det-output-pipeline-head">
                 <span>MODEL OUTPUT DECODE</span>
-                <strong>${esc(rawOutputShapeText())} 鈫?final detections</strong>
+                <strong>${esc(rawOutputShapeText())} → final detections</strong>
                 <em>${counts.decoded} decoded / ${counts.final} final</em>
             </div>
             <div class="det-output-pipeline-track">
@@ -307,13 +307,13 @@
     function sceneFromPreset(sample, boxes = []) {
         return {
             id: `inference_${sample.id}`,
-            name: `${sample.name} 路 ONNX`,
+            name: `${sample.name} · ONNX`,
             image: sample.image,
             width: sample.width,
             height: sample.height,
             boxes,
-            confidence_threshold: sample.confidence_threshold || 0.25,
-            nms_iou_threshold: sample.nms_iou_threshold || 0.5
+            confidence_判定目标置信度阈值: sample.confidence_threshold || 0.25,
+            nms_iou_判定目标置信度阈值: sample.nms_iou_threshold || 0.5
         };
     }
 
@@ -406,10 +406,10 @@
         const comparisons = [];
         const steps = [
             makeStep("image", "image", "Input image loaded. Next: letterbox resize and tensor construction.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("preprocess", "preprocess", "Apply letterbox resize, normalization, and HWC to CHW layout.", {}, keptIds, suppressedIds, lowIds, candidates),
+            makeStep("preprocess", "preprocess", "Apply letterbox resize, 张量归一化计算, and HWC to CHW layout.", {}, keptIds, suppressedIds, lowIds, candidates),
             makeStep("inference", "inference", "ONNX Runtime Web has produced the raw output tensor.", {}, keptIds, suppressedIds, lowIds, candidates),
             makeStep("decode", "decode", "Decode rawOutput locations into xywh boxes and class scores.", {}, keptIds, suppressedIds, lowIds, candidates),
-            makeStep("confidence", "confidence", "Split decoded boxes by confidence threshold before NMS.", {}, keptIds, suppressedIds, lowIds, candidates)
+            makeStep("confidence", "confidence", "Split decoded boxes by confidence 判定目标置信度阈值 before NMS.", {}, keptIds, suppressedIds, lowIds, candidates)
         ];
 
         for (const box of candidates) {
@@ -440,7 +440,7 @@
                     deletedBy = keep;
                     suppressed.set(box.id, keep.id);
                     suppressedIds.add(box.id);
-                    steps.push(makeStep("suppress", "nms", `IoU ${score.toFixed(3)} >= threshold ${state.iou.toFixed(2)}; suppress Box B.`, {
+                    steps.push(makeStep("suppress", "nms", `IoU ${score.toFixed(3)} >= 判定目标置信度阈值 ${state.iou.toFixed(2)}; suppress Box B.`, {
                         currentBoxId: keep.id,
                         compareBoxId: box.id,
                         iou: score,
@@ -449,7 +449,7 @@
                     }, keptIds, suppressedIds, lowIds, candidates));
                     break;
                 }
-                steps.push(makeStep("keep", "nms", `IoU ${score.toFixed(3)} < threshold ${state.iou.toFixed(2)}; keep Box B for now.`, {
+                steps.push(makeStep("keep", "nms", `IoU ${score.toFixed(3)} < 判定目标置信度阈值 ${state.iou.toFixed(2)}; keep Box B for now.`, {
                     currentBoxId: keep.id,
                     compareBoxId: box.id,
                     iou: score,
@@ -596,7 +596,7 @@
 
     function renderSourceControls() {
         const fallback = state.source === "preset" && state.fallbackReason;
-        const sourceText = state.source === "preset" ? (fallback ? "棰勮缁撴灉妯″紡" : "棰勮缁撴灉妯″紡") : "ONNX Runtime Web";
+        const sourceText = state.source === "preset" ? (fallback ? "预设结果模式" : "预设结果模式") : "ONNX Runtime Web";
         els.sourceNote.textContent = sourceText;
         if (els.sourceReadout) {
             els.sourceReadout.textContent = sourceText;
@@ -627,7 +627,7 @@
         const shape = rawOutputShapeNote();
         const source = state.source === "preset" ? "Preset JSON" : "ONNX Runtime Web";
         const counts = yoloCounts(result);
-        els.inputSize.textContent = inference?.inputSize ? `${inference.inputSize} 脳 ${inference.inputSize}` : "640 脳 640";
+        els.inputSize.textContent = inference?.inputSize ? `${inference.inputSize} × ${inference.inputSize}` : "640 × 640";
         els.inferenceTime.textContent = Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--";
         els.postprocessTime.textContent = Number.isFinite(inference?.postprocessTime) ? `${inference.postprocessTime.toFixed(1)} ms` : "--";
         els.activeBackend.textContent = state.activeBackend || "--";
@@ -639,7 +639,7 @@
         els.runtimeStats.innerHTML = `
             <div><dt>rawOutputShape</dt><dd>${esc(shape)}</dd></div>
             <div><dt>vector layout</dt><dd>4 xywh + 80 class scores</dd></div>
-            <div><dt>candidate points</dt><dd>8400 dense locations</dd></div>
+            <div><dt>全景特征点空间总候选数</dt><dd>8400 dense locations</dd></div>
             <div><dt>decoded candidate count</dt><dd>${counts.decoded}</dd></div>
             <div><dt>confidence filtered count</dt><dd>${counts.filtered}</dd></div>
             <div><dt>NMS kept count</dt><dd>${counts.final}</dd></div>
@@ -697,7 +697,7 @@
                     <td><span>${status}</span></td>
                 </tr>`;
             }).join("");
-        els.candidateTable.innerHTML = rows || `<tr><td colspan="5">鏆傛棤鍊欓€夋銆?/td></tr>`;
+        els.candidateTable.innerHTML = rows || `<tr><td colspan="5">暂无候选框。</td></tr>`;
     }
 
     function renderPairCard(step) {
@@ -712,17 +712,17 @@
         els.pairCard.innerHTML = `
             <div class="det-pair-card-head">
                 <span>NMS PAIR COMPARE</span>
-                <strong>A#${esc(c.a.id)} 脳 B#${esc(c.b.id)}</strong>
+                <strong>A#${esc(c.a.id)} × B#${esc(c.b.id)}</strong>
                 <em>${c.suppress ? "suppress" : "keep"}</em>
             </div>
             <div class="det-pair-card-grid">
-                <article class="is-a"><span>Box A</span><strong>${esc(c.a.class)} 路 ${c.a.score.toFixed(3)}</strong><code>[${c.a.bbox.join(", ")}]</code></article>
-                <article class="is-b"><span>Box B</span><strong>${esc(c.b.class)} 路 ${c.b.score.toFixed(3)}</strong><code>[${c.b.bbox.join(", ")}]</code></article>
+                <article class="is-a"><span>Box A</span><strong>${esc(c.a.class)} · ${c.a.score.toFixed(3)}</strong><code>[${c.a.bbox.join(", ")}]</code></article>
+                <article class="is-b"><span>Box B</span><strong>${esc(c.b.class)} · ${c.b.score.toFixed(3)}</strong><code>[${c.b.bbox.join(", ")}]</code></article>
                 <dl>
-                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px虏</dd></div>
-                    <div><dt>union</dt><dd>${Math.round(c.union)} px虏</dd></div>
+                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
                     <div><dt>IoU</dt><dd>${c.iou.toFixed(3)}</dd></div>
-                    <div><dt>threshold</dt><dd>${state.iou.toFixed(2)}</dd></div>
+                    <div><dt>判定目标置信度阈值</dt><dd>${state.iou.toFixed(2)}</dd></div>
                     <div><dt>decision</dt><dd>${c.suppress ? "suppress B" : "keep B"}</dd></div>
                 </dl>
             </div>`;
@@ -738,16 +738,16 @@
         els.nmsControl.hidden = false;
         const c = comparisonForNms(result, step);
         const buttons = [
-            [0, "Stop", "reset"],
-            [1, "Sort", "score order"],
-            [2, "Scan", "radar from A"],
-            [3, "IoU", "link + formula"],
-            [4, "Suppress", "remove B"]
+            [0, "停止", "重置"],
+            [1, "置信度排序", "降序重新排列"],
+            [2, "对比扫描", "从高分框A开始扫描"],
+            [3, "交并比计算", "公式与两框重合度"],
+            [4, "重叠抑制", "剔除低分重复框B"]
         ];
         els.nmsControl.innerHTML = `
             <div class="det-nms-control-head">
-                <span>NMS SLOW MOTION</span>
-                <strong>${c ? `A#${esc(c.a.id)} / B#${esc(c.b.id)} 路 IoU ${c.iou.toFixed(3)}` : "score-sorted scan"}</strong>
+                <span>NMS 极慢速后处理动画演示</span>
+                <strong>${c ? `A#${esc(c.a.id)} / B#${esc(c.b.id)} · IoU ${c.iou.toFixed(3)}` : "score-sorted scan"}</strong>
             </div>
             <div class="det-nms-control-actions">
                 ${buttons.map(([id, label, detail]) => `<button type="button" data-det-nms-step="${id}" class="${state.nmsAnimationStep === id ? "is-active" : ""}"><b>${label}</b><small>${detail}</small></button>`).join("")}
@@ -758,7 +758,7 @@
         if (step.phase !== "nms" || !state.nmsAnimationStep) return "";
         const c = comparisonForNms(result, step);
         if (!c) {
-            return `<div class="det-nms-sort-badge"><span>1</span><strong>Sort by confidence</strong><em>${result.candidates.length} candidates</em></div>`;
+            return `<div class="det-nms-sort-badge"><span>1</span><strong>按置信度从高到低排序</strong><em>${result.候选框.length} 候选框</em></div>`;
         }
         const a = boxCenter(c.a);
         const b = boxCenter(c.b);
@@ -803,92 +803,92 @@
         }));
 
         if (els.notesTitle) {
-            els.notesTitle.textContent = "Post-process step notes";
+            els.notesTitle.textContent = "后处理具体步骤说明";
         }
 
         if (els.notesSubtitle) {
-            els.notesSubtitle.textContent = "POST-PROCESS NOTES";
+            els.notesSubtitle.textContent = "算法计算细节";
         }
 
         let tutorialContent = "";
         let notesContent = "";
 
         if (step.phase === "image") {
-            tutorialContent = `<p><span class="det-note-stage">Image</span><strong>杈撳叆鍥惧儚</strong>浠嶆槸鍘熷 RGB 鍍忕礌锛屽悗缁細琚?letterbox 鍒版ā鍨嬪浐瀹氳緭鍏ュ昂瀵革紝鍐嶉€佸叆 ONNX Runtime銆?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Image</span><strong>输入图像</strong>仍是原始 RGB 像素，后续会被 letterbox 到模型固定输入尺寸，再送入 ONNX Runtime。</p>`;
             notesContent = `<dl>
-                <div><dt>input image</dt><dd>${s.width} 脳 ${s.height}</dd></div>
-                <div><dt>next tensor</dt><dd>[1, 3, 640, 640]</dd></div>
-                <div><dt>target path</dt><dd>image 鈫?preprocess 鈫?inference 鈫?decode</dd></div>
+                <div><dt>input image</dt><dd>${s.width} × ${s.height}</dd></div>
+                <div><dt>预处理生成的输入张量维度</dt><dd>[1, 3, 640, 640]</dd></div>
+                <div><dt>目标前向核心计算流程</dt><dd>image → preprocess → inference → decode</dd></div>
             </dl>`;
         } else if (step.phase === "preprocess") {
-            tutorialContent = `<p><span class="det-note-stage">Preprocess</span><strong>Letterbox + Normalize</strong>淇濈暀鍘熷浘姣斾緥锛岃ˉ杈瑰埌 640脳640锛屽苟鎶?HWC 鍍忕礌甯冨眬杞垚妯″瀷闇€瑕佺殑 CHW tensor銆?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Preprocess</span><strong>Letterbox + Normalize</strong>保留原图比例，补边到 640×640，并把 HWC 像素布局转成模型需要的 CHW tensor。</p>`;
             notesContent = `<dl>
-                <div><dt>letterbox</dt><dd>${s.width} 脳 ${s.height} 鈫?640 脳 640</dd></div>
-                <div><dt>normalization</dt><dd>RGB / 255</dd></div>
-                <div><dt>layout</dt><dd>HWC 鈫?CHW</dd></div>
-                <div><dt>model input</dt><dd>[1, 3, 640, 640]</dd></div>
+                <div><dt>letterbox</dt><dd>${s.width} × ${s.height} → 640 × 640</dd></div>
+                <div><dt>张量归一化计算</dt><dd>RGB / 255</dd></div>
+                <div><dt>layout</dt><dd>HWC → CHW</dd></div>
+                <div><dt>ONNX 前向输入尺度</dt><dd>[1, 3, 640, 640]</dd></div>
             </dl>`;
         } else if (step.phase === "inference") {
-            tutorialContent = `<p><span class="det-note-stage">Inference</span><strong>ONNX inference</strong>杈撳嚭 dense tensor銆?{esc(shape)} 琛ㄧず 8400 涓€欓€夌偣锛屾瘡涓偣鏈?4 涓?xywh 鍙傛暟鍜?80 涓被鍒垎鏁般€?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Inference</span><strong>ONNX inference</strong>输出 dense tensor。${esc(shape)} 表示 8400 个候选点，每个点有 4 个 xywh 参数和 80 个类别分数。</p>`;
             notesContent = `<dl>
                 <div><dt>backend</dt><dd>${esc(state.activeBackend || "--")}</dd></div>
                 <div><dt>rawOutputShape</dt><dd>${esc(rawOutputShapeNote())}</dd></div>
-                <div><dt>layout meaning</dt><dd>84 = 4 bbox + 80 class scores</dd></div>
+                <div><dt>单个检测输出位置参数含义</dt><dd>84 = 4 bbox + 80 class scores</dd></div>
                 <div><dt>inference time</dt><dd>${Number.isFinite(inference?.inferenceTime) ? `${inference.inferenceTime.toFixed(1)} ms` : "--"}</dd></div>
             </dl>`;
         } else if (step.phase === "decode") {
-            tutorialContent = `<p><span class="det-note-stage">Decode</span><strong>rawOutput 鈫?candidates</strong>閬嶅巻 8400 涓偣锛屽彇姣忎釜鐐圭殑 xywh 涓庢渶澶х被鍒垎鏁帮紝鍐嶆妸涓績鐐瑰楂樻崲绠楁垚鍥惧儚鍧愭爣 bbox銆?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Decode</span><strong>rawOutput → candidates</strong>遍历 8400 个点，取每个点的 xywh 与最大类别分数，再把中心点宽高换算成图像坐标 bbox。</p>`;
             notesContent = `<dl>
-                <div><dt>raw tensor</dt><dd>${esc(shape)}</dd></div>
-                <div><dt>candidate points</dt><dd>8400</dd></div>
-                <div><dt>decoded boxes</dt><dd>${decodedCount}</dd></div>
-                <div><dt>sample candidate</dt><dd>${sampleCandidate ? `#${sampleCandidate.id} ${esc(sampleCandidate.class)} ${sampleCandidate.score.toFixed(3)}` : "--"}</dd></div>
-                <div><dt>box transform</dt><dd>cx, cy, w, h 鈫?x1, y1, x2, y2</dd></div>
+                <div><dt>待解码输出张量</dt><dd>${esc(shape)}</dd></div>
+                <div><dt>全景特征点空间总候选数</dt><dd>8400</dd></div>
+                <div><dt>反向解码像素包围框总数</dt><dd>${decodedCount}</dd></div>
+                <div><dt>首个被还原的有效示例候选框</dt><dd>${sampleCandidate ? `#${sampleCandidate.id} ${esc(sampleCandidate.class)} ${sampleCandidate.score.toFixed(3)}` : "--"}</dd></div>
+                <div><dt>box transform</dt><dd>cx, cy, w, h → x1, y1, x2, y2</dd></div>
             </dl>`;
         } else if (step.phase === "confidence") {
-            tutorialContent = `<p><span class="det-note-stage">Confidence</span><strong>闃堝€艰繃婊?/strong>鍏堝垹闄や綆缃俊搴︽銆備綆浜?${state.conf.toFixed(2)} 鐨勫€欓€夋浼氬彉鐏板苟娣″嚭锛屽彧鎶婇珮鍒嗗€欓€夐€佸叆 NMS銆?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Confidence</span><strong>阈值过滤</strong>先删除低置信度框。低于 ${state.conf.toFixed(2)} 的候选框会变灰并淡出，只把高分候选框送入 NMS。</p>`;
             notesContent = `<dl>
-                <div><dt>decoded candidates</dt><dd>${decodedCount}</dd></div>
-                <div><dt>threshold</dt><dd>${state.conf.toFixed(2)}</dd></div>
-                <div><dt>pass filter</dt><dd>${counts.filtered}</dd></div>
-                <div><dt>filtered low score</dt><dd>${Math.max(0, counts.decoded - counts.filtered)}</dd></div>
-                <div><dt>next stage</dt><dd>sort by score 鈫?class-wise NMS</dd></div>
+                <div><dt>接收到待剔除候选总框数</dt><dd>${decodedCount}</dd></div>
+                <div><dt>判定目标置信度阈值</dt><dd>${state.conf.toFixed(2)}</dd></div>
+                <div><dt>置信度合格送入NMS框数</dt><dd>${counts.filtered}</dd></div>
+                <div><dt>因得分低自动淡出过滤框数</dt><dd>${Math.max(0, counts.decoded - counts.filtered)}</dd></div>
+                <div><dt>next stage</dt><dd>sort by score → class-wise NMS</dd></div>
             </dl>`;
         } else if (step.type === "final") {
-            tutorialContent = `<p><span class="det-note-stage">Final</span><strong>鏈€缁堟娴嬭緭鍑?/strong>鍙繚鐣?NMS 鍚庣殑绋冲畾妗嗐€傞〉闈㈣緭鍑虹粨鏋勫搴斿墠绔彲娑堣垂鐨?detection 鏁扮粍銆?/p>`;
+            tutorialContent = `<p><span class="det-note-stage">Final</span><strong>最终检测输出</strong>只保留 NMS 后的稳定框。页面输出结构对应前端可消费的 detection 数组。</p>`;
             const avg = result.kept.length ? result.kept.reduce((sum, box) => sum + box.score, 0) / result.kept.length : 0;
             const classText = [...new Set(result.kept.map((box) => box.class))].map((name) => `${name}: ${result.kept.filter((box) => box.class === name).length}`).join(" / ") || "--";
             notesContent = `<dl>
                 <div><dt>final detections</dt><dd>${counts.final}</dd></div>
-                <div><dt>class counts</dt><dd>${esc(classText)}</dd></div>
-                <div><dt>avg confidence</dt><dd>${avg.toFixed(3)}</dd></div>
-                <div><dt>output schema</dt><dd>N 脳 [x1,y1,x2,y2,score,class]</dd></div>
+                <div><dt>本帧识别出的物体类别分布</dt><dd>${esc(classText)}</dd></div>
+                <div><dt>全图留存目标平均置信得分</dt><dd>${avg.toFixed(3)}</dd></div>
+                <div><dt>output schema</dt><dd>N × [x1,y1,x2,y2,score,class]</dd></div>
             </dl>
-            <div class="det-final-output"><strong>final detections preview</strong><code>${esc(JSON.stringify(finalPreview))}</code></div>`;
+            <div class="det-final-output"><strong>检测输出 JSON 首帧片段预览</strong><code>${esc(JSON.stringify(finalPreview))}</code></div>`;
         } else {
             const c = step.comparison;
             if (c) {
                 const stageName = step.type === "suppress" ? "NMS" : step.type === "keep" ? "NMS" : "IoU";
-                const decisionText = c.suppress ? `IoU >= ${state.iou.toFixed(2)}; NMS suppresses lower-score Box B.` : `IoU < ${state.iou.toFixed(2)}; Box B remains in the candidate queue.`;
-                tutorialContent = `<p><span class="det-note-stage">${stageName}</span><strong>Compare A/B</strong>IoU = Area(A intersect B) / Area(A union B). ${decisionText}</p>`;
+                const decisionText = c.suppress ? `IoU >= ${state.iou.toFixed(2)}; NMS suppresses lower-score Box B.` : `当前两候选框交并比 IoU 低于阈值 ${state.iou.toFixed(2)}。算法认为它们属于两不同的目标物理实体，候选框 B 继续予以保留。`;
+                tutorialContent = `<p><span class="det-note-stage">${stageName}</span><strong>Compare A/B</strong>IoU 交并比计算公式 = A ∩ B 重叠面积 / A ∪ B 总合面积。NMS 执行判断规则如下：${decisionText}</p>`;
                 notesContent = `<div class="det-iou-equation">
                     <span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${Math.round(c.inter.area)} / ${Math.round(c.union)}</small>
                 </div>
-                <div class="detection-pair"><strong>妗?A</strong><span>${esc(c.a.class)} ${c.a.score.toFixed(2)}</span><code>[${c.a.bbox.join(", ")}]</code></div>
-                <div class="detection-pair"><strong>妗?B</strong><span>${esc(c.b.class)} ${c.b.score.toFixed(2)}</span><code>[${c.b.bbox.join(", ")}]</code></div>
+                <div class="detection-pair"><strong>框 A</strong><span>${esc(c.a.class)} ${c.a.score.toFixed(2)}</span><code>[${c.a.bbox.join(", ")}]</code></div>
+                <div class="detection-pair"><strong>框 B</strong><span>${esc(c.b.class)} ${c.b.score.toFixed(2)}</span><code>[${c.b.bbox.join(", ")}]</code></div>
                 <dl>
-                    <div><dt>matrix cell</dt><dd>A#${c.a.id} 脳 B#${c.b.id}</dd></div>
-                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px虏</dd></div>
-                    <div><dt>union</dt><dd>${Math.round(c.union)} px虏</dd></div>
-                    <div><dt>NMS decision</dt><dd>${c.suppress ? "suppress Box B" : "keep Box B"}</dd></div>
+                    <div><dt>matrix cell</dt><dd>A#${c.a.id} × B#${c.b.id}</dd></div>
+                    <div><dt>intersection</dt><dd>${Math.round(c.inter.area)} px²</dd></div>
+                    <div><dt>union</dt><dd>${Math.round(c.union)} px²</dd></div>
+                    <div><dt>NMS decision</dt><dd>${c.suppress ? "suppress Box B" : "认为独立，继续保留 B"}</dd></div>
                 </dl>`;
             } else {
-                tutorialContent = `<p><span class="det-note-stage">NMS</span><strong>${esc(step.message)}</strong>褰撳墠鍊欓€夋病鏈夊悓绫婚珮鍒嗘闇€瑕佹瘮杈冿紝鍏堣繘鍏?kept set銆?/p>`;
+                tutorialContent = `<p><span class="det-note-stage">NMS</span><strong>${esc(step.message)}</strong>当前候选没有同类高分框需要比较，先进入 kept set。</p>`;
                 notesContent = `<dl>
-                    <div><dt>current box</dt><dd>${currentBox ? `#${currentBox.id} ${esc(currentBox.class)} ${currentBox.score.toFixed(3)}` : "--"}</dd></div>
-                    <div><dt>kept set size</dt><dd>${step.keptIds.size}</dd></div>
-                    <div><dt>suppressed count</dt><dd>${step.suppressedIds.size}</dd></div>
-                    <div><dt>compare target</dt><dd>${compareBox ? `#${compareBox.id}` : "none"}</dd></div>
+                    <div><dt>当前主要检查的高分框A</dt><dd>${currentBox ? `#${currentBox.id} ${esc(currentBox.class)} ${currentBox.score.toFixed(3)}` : "--"}</dd></div>
+                    <div><dt>已被确定保留框的总数量</dt><dd>${step.keptIds.size}</dd></div>
+                    <div><dt>已被干掉剔除框的总数量</dt><dd>${step.suppressedIds.size}</dd></div>
+                    <div><dt>compare target</dt><dd>${compareBox ? `#${compareBox.id}` : "无（此轮对比完成）"}</dd></div>
                 </dl>`;
             }
         }
@@ -954,9 +954,9 @@
         const active = step.id === "regression" || state.hoveredProposalId;
         return `<aside data-det-related-id="${esc(proposal.id || "p1")}" class="det-bbox-reg-panel ${active ? "is-running" : ""} ${spotlightClassFor(proposal.id)}">
             <header>
-                <span>BBox Regression Panel</span>
+                <span>边界框偏移回归计算面板</span>
                 <strong>${esc(proposal.id || "p1")} ${esc(proposal.class || "proposal")}</strong>
-                <em>original box -> refined box</em>
+                <em>算法在内部执行的数学回归演算</em>
             </header>
             <div class="det-reg-canvas" aria-hidden="true">
                 <i class="det-reg-box det-reg-box--original"></i>
@@ -991,40 +991,40 @@
         const feature = demo.roiPooling?.featureMap || [];
         const cards = [
             ["proposals", "Selective Search", "Class-agnostic proposal region", `${proposals.length} demo proposals`],
-            ["crop", "Crop / Warp", "瑁佸壀姣忎釜 proposal", "fixed CNN input"],
-            ["features", "CNN Feature", "鍖哄煙鍥惧儚杩涘叆 CNN", "feature vector"],
-            ["classifier", "Classifier", "Predict class or background", `${activeProposal.class || "--"} ${Number(activeProposal.score || 0).toFixed(2)}`],
-            ["regression", "BBox Regression", "Translate and scale original box", `dx ${offset.dx ?? "--"} / dy ${offset.dy ?? "--"}`],
-            ["nms", "NMS", "鍒犻櫎閲嶅 refined boxes", "final result"]
+            ["crop", "Crop / Warp", "裁剪 / 变形候选区域 (proposal)", "裁剪缩放统一输入尺寸"],
+            ["features", "CNN Feature", "提取 CNN 特征图 (feature)", "提取固定维特征向量"],
+            ["classifier", "Classifier", "线性分类器分类预测", `分类到 ${activeProposal.cnClass || activeProposal.class || "--"} 置信度 ${Number(activeProposal.score || 0).toFixed(2)}`],
+            ["regression", "BBox Regression", "框平移拉伸精细拟合", `微调横偏 dx:${offset.dx ?? "--"} / 纵偏 dy:${offset.dy ?? "--"}`],
+            ["nms", "NMS", "对修正后的候选框在同类间做极大值抑制 (NMS)", "final result"]
         ];
         return `
             <div class="detection-rcnn-evolution" aria-label="R-CNN series evolution axis">
-                <article class="is-active"><span>R-CNN</span><strong>Selective Search</strong><small>proposal 鍚庨€愭 CNN</small></article>
-                <article class="${isActive("features") ? "is-active" : ""}"><span>Fast R-CNN</span><strong>ROI Pooling</strong><small>鍏变韩鏁村浘 feature map</small></article>
-                <article class="${isActive("proposals") ? "is-active" : ""}"><span>Faster R-CNN</span><strong>RPN Anchor</strong><small>瀛︿範寮?proposal 鐢熸垚</small></article>
+                <article class="is-active"><span>R-CNN</span><strong>Selective Search</strong><small>无监督生成 proposal 送入 CNN</small></article>
+                <article class="${isActive("features") ? "is-active" : ""}"><span>Fast R-CNN</span><strong>ROI Pooling</strong><small>整图单次卷积，共享 feature map</small></article>
+                <article class="${isActive("proposals") ? "is-active" : ""}"><span>Faster R-CNN</span><strong>RPN Anchor</strong><small>滑动窗口区域滑动，RPN 生成 proposal</small></article>
             </div>
             <div class="detection-demo-flow ${spotlightClassFor(activeProposal.id)}" data-det-related-id="${esc(activeProposal.id || "p1")}">
                 ${cards.map((card) => `<article data-det-related-id="${esc(activeProposal.id || "p1")}" class="${isActive(card[0]) ? "is-active" : ""} ${isCurrent(card[0]) ? "is-current" : ""} ${spotlightClassFor(activeProposal.id)}"><strong>${esc(card[1])}</strong><span>${esc(card[2])}</span><em>${esc(card[3])}</em></article>`).join("")}
             </div>
             <section data-det-related-id="${esc(activeProposal.id || "p1")}" class="detection-proposal-lifecycle ${spotlightClassFor(activeProposal.id)}">
                 <header>
-                    <span>褰撳墠 Proposal 鐢熷懡鍛ㄦ湡</span>
+                    <span>两阶段目标检测算法流程</span>
                     <strong>Proposal ${esc(activeProposal.id || "p1")}</strong>
-                    <em>鍘熷妗?鈫?crop / warp 鈫?CNN feature 鈫?classifier 鈫?refined box 鈫?NMS</em>
+                    <em>原图裁剪 (crop / warp) → CNN 特征提取 → classifier (SVM/Softmax) → refined box → NMS</em>
                 </header>
                 <div class="detection-lifecycle-particle"></div>
                 <div class="detection-lifecycle-grid">
                     <article class="${isActive("proposals") ? "is-active" : ""} ${isCurrent("proposals") || isCurrent("image") ? "is-current" : ""}">
                         <b class="det-life-no">1</b>
-                        <span>鍘熷妗?/span>
+                        <span>Crop / Warp 裁剪</span>
                         <strong>[${(activeProposal.bbox || []).join(", ")}]</strong>
-                        <small>Selective Search 缁欏嚭绫诲埆鏃犲叧 proposal銆?/small>
+                        <small>使用 Selective Search 算法生成建议框 (proposal)。</small>
                     </article>
                     <article class="${isActive("crop") ? "is-active" : ""} ${isCurrent("crop") ? "is-current" : ""}">
                         <b class="det-life-no">2</b>
                         <span>Crop / Warp</span>
                         <div class="detection-crop-warp-demo ${isCurrent("crop") ? "is-current" : ""}"><div class="detection-proposal-patch"><i>crop</i><b>warp</b></div></div>
-                        <small>鎶?proposal 瑁佸壀骞剁缉鏀句负 CNN 鍥哄畾杈撳叆銆?/small>
+                        <small>对于每个 proposal 做裁剪缩放，送入 CNN 做特征计算。</small>
                     </article>
                     <article class="${isActive("features") ? "is-active" : ""} ${isCurrent("features") ? "is-current" : ""}">
                         <b class="det-life-no">3</b>
@@ -1050,7 +1050,7 @@
                         <div class="detection-refined-preview ${isActive("regression") ? "is-active" : ""}">
                             <i></i><b></b>
                         </div>
-                        <code>[${(activeProposal.bbox || []).join(", ")}] 鈫?[${refined.join(", ")}]</code>
+                        <code>[${(activeProposal.bbox || []).join(", ")}] → [${refined.join(", ")}]</code>
                     </article>
                     <article class="${isActive("nms") ? "is-active" : ""} ${isCurrent("nms") ? "is-current" : ""}">
                         <b class="det-life-no">7</b>
@@ -1059,7 +1059,7 @@
                             <b>keep ${esc(activeProposal.id || "p1")}</b>
                             <b class="is-suppressed">delete duplicate</b>
                         </div>
-                        <small>鍚岀被 refined boxes 鎸?IoU 鍘婚噸銆?/small>
+                        <small>通过计算 refined boxes 之间的 IoU 进行非极大值抑制 (NMS)。</small>
                     </article>
                 </div>
                 <dl class="detection-regression-offsets">
@@ -1079,12 +1079,12 @@
         return `
             <div class="detection-roi-board">
                 <section>
-                    <h4>ROI 鍧愭爣鏄犲皠</h4>
+                    <h4>ROI 坐标映射</h4>
                     <dl>
                         <div><dt>image ROI</dt><dd>[${(roi.roi?.bbox || []).join(", ")}]</dd></div>
                         <div><dt>feature stride</dt><dd>${roi.featureStride || 16}</dd></div>
                         <div><dt>feature ROI</dt><dd>[${(roi.roi?.featureBox || []).join(", ")}]</dd></div>
-                        <div><dt>pooled size</dt><dd>${(roi.pooledSize || [3, 3]).join(" 脳 ")}</dd></div>
+                        <div><dt>pooled size</dt><dd>${(roi.pooledSize || [3, 3]).join(" × ")}</dd></div>
                     </dl>
                 </section>
                 <section>
@@ -1092,7 +1092,7 @@
                     ${renderFeatureGrid(feature, ["2-3", "3-4", "4-4"])}
                 </section>
                 <section>
-                    <h4>Max Pooling 杈撳嚭</h4>
+                    <h4>Max Pooling 输出</h4>
                     <div class="detection-pooled-grid">${bins.map((bin) => `<i style="--v:${bin.max}"><b>${Number(bin.max).toFixed(2)}</b><span>${esc(bin.id)}</span></i>`).join("")}</div>
                 </section>
             </div>`;
@@ -1109,7 +1109,7 @@
                     <div class="detection-anchor-grid">${Array.from({length: 24}, (_, i) => `<i class="${i % 5 === 0 ? "is-hot" : ""}"><span>${i % 5 === 0 ? "k anchors" : ""}</span></i>`).join("")}</div>
                 </section>
                 <section>
-                    <h4>Anchor 鍒ゅ畾瑙勫垯</h4>
+                    <h4>Anchor 判定规则</h4>
                     <dl>
                         <div><dt>positive</dt><dd>${esc(demo.rpnRules?.positive || "IoU >= 0.70")}</dd></div>
                         <div><dt>negative</dt><dd>${esc(demo.rpnRules?.negative || "IoU < 0.30")}</dd></div>
@@ -1117,7 +1117,7 @@
                     </dl>
                 </section>
                 <section>
-                    <h4>RPN 杈撳嚭</h4>
+                    <h4>RPN 输出</h4>
                     <div class="detection-rpn-score">
                         <span><b>${positives}</b> positive anchors</span>
                         <span><b>${negatives}</b> negative anchors</span>
@@ -1252,15 +1252,15 @@
             const rowClass = isLow ? "low-confidence" : (p.class === "background" ? "low-confidence" : "candidate");
             const highlightClass = idText(p.id) === idText(activeId) ? "is-active-row is-active" : "";
             let statusText = p.id === "p1"
-                ? (p.score < state.conf ? "active (low conf)" : "active proposal")
+                ? (p.score < state.conf ? "active (low conf)" : "当前步骤活跃检测候选框")
                 : p.class === "background"
                     ? "background"
                     : "proposal";
             if (isLow) {
-                statusText = `Filtered (Score < ${state.conf.toFixed(2)})`;
+                statusText = `已被置信度过滤 (低于  ${state.conf.toFixed(2)})`;
             }
             return `<tr data-det-hover-id="${esc(p.id)}" data-det-related-id="${esc(p.id)}" class="${rowClass} ${highlightClass} ${spotlightClassFor(p.id)}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] -> [${(p.refined || p.bbox).join(", ")}]</td><td><span>${statusText}</span></td></tr>`;
-            return `<tr class="${rowClass} ${highlightClass}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] 鈫?[${(p.refined || p.bbox).join(", ")}]</td><td><span>${statusText}</span></td></tr>`;
+            return `<tr class="${rowClass} ${highlightClass}"><td>${esc(p.id)}</td><td>${esc(p.class)}</td><td>${p.score.toFixed(2)}</td><td>[${p.bbox.join(", ")}] → [${(p.refined || p.bbox).join(", ")}]</td><td><span>${statusText}</span></td></tr>`;
         }).join("")}</tbody>`;
     }
 
@@ -1272,89 +1272,89 @@
         if (state.detMode === "rcnn") {
             const stageCopy = {
                 image: {
-                    stage: "Selective Search",
-                    text: "Two-stage detection first generates class-agnostic proposals, then classifies and refines each region.",
+                    stage: "候选区域建议 (Selective Search)",
+                    text: "两阶段目标检测（如 Faster R-CNN）先产生与类别无关的候选提取框 (proposal)，然后对每个候选区域进行提取特征图、分类和边界回归精细修复。",
                     data: [
-                        ["input image", `${demoImageSample().width} 脳 ${demoImageSample().height}`],
-                        ["stage 1", "proposal generation"],
-                        ["stage 2", "classify + refine each proposal"],
-                        ["active proposal", p.id || "--"]
+                        ["input image", `${demoImageSample().width} × ${demoImageSample().height}`],
+                        ["第一阶段", "生成候选区域建议框"],
+                        ["第二阶段", "独立特征提取/分类器/公式偏移回归"],
+                        ["当前步骤活跃检测候选框", p.id || "--"]
                     ]
                 },
                 proposals: {
-                    stage: "Selective Search",
-                    text: "Selective Search merges similar regions to produce rough proposals p1, p2, and so on; these boxes are not yet class predictions.",
+                    stage: "候选区域建议 (Selective Search)",
+                    text: "通过无监督颜色/纹理融合，Selective Search 自动把相似图案合并，聚类成约 2000 个不带类别的边界范围候选建议（p1、p2 等）。",
                     data: [
-                        ["proposal count", proposals.length],
-                        ["proposal p1 bbox", `[${(p.bbox || []).join(", ")}]`],
-                        ["proposal type", "class-agnostic region"],
-                        ["next", "crop / warp every proposal"]
+                        ["当前生成的建议框总数", proposals.length],
+                        ["建议框 p1 原始坐标", `[${(p.bbox || []).join(", ")}]`],
+                        ["提取类型", "类别无关的多变像素区域"],
+                        ["下一步操作", "提取对应的原图小图 (Crop/Warp)"]
                     ]
                 },
                 crop: {
-                    stage: "Crop-Warp",
-                    text: "R-CNN crops the active proposal from the image and warps it to the fixed CNN input size.",
+                    stage: "图像裁剪缩放 (Crop / Warp)",
+                    text: "R-CNN crops the 当前步骤活跃检测候选框 from the image and warps it to the fixed CNN input size.",
                     data: [
                         ["proposal", p.id || "--"],
                         ["raw bbox", `[${(p.bbox || []).join(", ")}]`],
-                        ["operation", "crop image patch + warp"],
-                        ["CNN input", "fixed-size region image"]
+                        ["裁剪操作", "裁剪多变区域图像 + 强制拉伸缩放"],
+                        ["CNN 输入数据", "格式统一的边界图像块 (Tensor)"]
                     ]
                 },
                 features: {
-                    stage: "CNN Feature",
-                    text: "The cropped proposal runs through CNN layers to produce a region feature vector.",
+                    stage: "CNN 卷积特征提取",
+                    text: "裁剪缩放后的建议框传入神经网络进行多次卷积，输出一个固定维度的特征向量。传统 R-CNN 中为了避免这步带来大量计算消耗，Fast R-CNN 阶段转为了将整张图做一次卷积后再在特征图上进行 ROI 映射。",
                     data: [
                         ["proposal", p.id || "--"],
-                        ["feature source", "cropped region"],
-                        ["feature role", "region descriptor"],
-                        ["compute cost", "per-proposal CNN"]
+                        ["特征图提取来源", "小图片段"],
+                        ["特征图属性", "该区域的高维语义特征描述子"],
+                        ["运算算力开销", "极高（对2000个框重复进行2000次CNN计算）"]
                     ]
                 },
                 classifier: {
-                    stage: "Classifier",
-                    text: "The region feature enters a classifier that predicts object class or background score.",
+                    stage: "类别独立分类器 (SVM / Softmax)",
+                    text: "该区域特征会被送入特定类别的分类器（如支持向量机 SVM），输出当前建议框属于人、车辆等类别及背景概率，若置信度过低或背景得分高将会在后处理中被直接删除。",
                     data: [
                         ["proposal", p.id || "--"],
-                        ["predicted class", p.class || "--"],
-                        ["classifier score", Number.isFinite(p.score) ? p.score.toFixed(2) : "--"],
-                        ["background handling", "low score or background proposal removed"]
+                        ["回归分类所属类别", p.class || "--"],
+                        ["分类置信度得分", Number.isFinite(p.score) ? p.score.toFixed(2) : "--"],
+                        ["过滤剔除机制", "得分低或非前景框的候选直接舍弃"]
                     ]
                 },
                 regression: {
-                    stage: "BBox Regression",
-                    text: "The bbox regressor predicts dx, dy, dw, dh and moves the rough proposal toward the refined box.",
+                    stage: "边界框回归偏移修正",
+                    text: "回归器根据特征计算出横向平移 dx、纵向平移 dy、宽度放缩 dw、高度放缩 dh 四个参数，微调原本极粗糙的预设候选框坐标，使最终检测框极其贴合边界。",
                     data: [
-                        ["original box", `[${(p.bbox || []).join(", ")}]`],
-                        ["offset", `dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}`],
-                        ["refined box", `[${(p.refined || []).join(", ")}]`],
-                        ["lifecycle", "proposal 鈫?refined detection"]
+                        ["原始建议候选框坐标", `[${(p.bbox || []).join(", ")}]`],
+                        ["回归计算偏移量 (offsets)", `dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}`],
+                        ["回归计算修正后坐标", `[${(p.refined || []).join(", ")}]`],
+                        ["lifecycle", "proposal → refined detection"]
                     ]
                 },
                 nms: {
-                    stage: "NMS",
-                    text: "Refined boxes can still overlap the same object; NMS keeps high-score boxes and removes duplicates.",
+                    stage: "同类候选框极大值剔除 (NMS)",
+                    text: "经过前边分类和回归的物体框可能在同一个物理物体上大段重叠，NMS (非极大值抑制) 对同类别的候选框进行两两交并比 IoU 计算，保留最高分数框并抑制删除其他重复重合框。",
                     data: [
-                        ["NMS input", "classified refined boxes"],
-                        ["keep", `${p.id || "p1"} ${p.class || "--"} ${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}`],
-                        ["delete", "overlapped lower-score duplicate"],
-                        ["output", "final two-stage detections"]
+                        ["非极大值抑制输入", "所有完成类别分类并回归修偏的稳定框"],
+                        ["最终决策保留框", `${p.id || "p1"} ${p.class || "--"} ${Number.isFinite(p.score) ? p.score.toFixed(2) : "--"}`],
+                        ["决策剔除重叠框", "两两 IoU 特别高且分数较低的冗余框"],
+                        ["最终输出", "目标检测全链路过滤后的精细对象数组"]
                     ]
                 }
             };
             const copy = stageCopy[step.id] || stageCopy.image;
-            els.notesTitle.textContent = "Two-stage detection mechanism";
-            els.notesSubtitle.textContent = "TWO-STAGE NOTES";
+            els.notesTitle.textContent = "两阶段目标检测原理";
+            els.notesSubtitle.textContent = "两阶段逻辑图解";
             els.notesTutorial.innerHTML = `<p><span class="det-note-stage">${esc(copy.stage)}</span><strong>${esc(step.title)}</strong>${esc(copy.text)}</p>`;
 
             const STEP_LABELS = {
-                image: 'Image Input',
+                image: '图像输入',
                 proposals: 'Selective Search',
-                crop: 'Crop / Warp',
-                features: 'CNN Feature',
-                classifier: 'Classifier',
-                regression: 'BBox Regression',
-                nms: 'NMS'
+                crop: '裁剪拉伸',
+                features: '特征图卷积提取',
+                classifier: '多阶段分类器器',
+                regression: '边界回归计算偏移',
+                nms: '非极大抑制去重'
             };
             const ALL_STEPS = ['image', 'proposals', 'crop', 'features', 'classifier', 'regression', 'nms'];
             const curIdx = ALL_STEPS.indexOf(step.id);
@@ -1365,7 +1365,7 @@
                     return `<div class="det-notes-timeline-item ${itemState}">
                         <span class="det-notes-tl-dot"></span>
                         <span class="det-notes-tl-label">${i + 1}. ${esc(STEP_LABELS[s])}</span>
-                        ${i < curIdx ? '<span class="det-notes-tl-check">鉁?/span>' : ''}
+                        ${i < curIdx ? '<span class="det-notes-tl-check">✔</span>' : ''}
                     </div>`;
                 }).join('')}
             </div>`;
@@ -1379,41 +1379,41 @@
         const copy = {
             rcnn: {
                 title: "Two-stage detection mechanism",
-                tutorial: `<p><strong>褰撳墠鏈哄埗瑙ｅ喅鐨勯棶棰橈細</strong>婊戝姩绐楀彛浣嶇疆銆佸昂搴﹀拰闀垮姣旂粍鍚堢垎鐐搞€俁-CNN 鐢?proposal 鍏堢瓫鎺夊ぇ閲忚儗鏅尯鍩燂紝鍐嶆墽琛?crop / warp銆丆NN feature銆乧lassifier銆乥box regression 涓?NMS銆?/p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>滑动窗口位置、尺度和长宽比组合爆炸。R-CNN 用 proposal 先筛掉大量背景区域，再执行 crop / warp、CNN feature、classifier、bbox regression 与 NMS。</p>`,
                 subtitle: step.title,
                 data: `<dl>
-                    <div><dt>瑙ｅ喅鐨勯棶棰?/dt><dd>鐢?proposal 鍑忓皯婊戠獥鎼滅储绌洪棿锛屽苟閫氳繃 bbox regression 淇鍊欓€夋銆?/dd></div>
-                    <div><dt>杈撳叆缁撴瀯</dt><dd>image + ${proposals.length} proposals锛屾瘡涓?proposal 浼?crop / warp 鍒?CNN 杈撳叆灏哄銆?/dd></div>
-                    <div><dt>涓棿杈撳嚭</dt><dd>proposal 鈫?crop / warp 鈫?CNN feature 鈫?classifier score 鈫?bbox regression offset銆?/dd></div>
-                    <div><dt>鍏抽敭瑙勫垯 / 鍏紡</dt><dd>bbox' = bbox + (dx, dy, dw, dh)锛屽綋鍓?dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}銆?/dd></div>
-                    <div><dt>涓?YOLO / NMS 鐨勫叧绯?/dt><dd>R-CNN 鏄?two-stage锛沋OLO 鏄?one-stage dense prediction銆備袱鑰呮渶缁堥兘闇€瑕?NMS 鍘绘帀鍚岀被閲嶅妗嗐€?/dd></div>
-                    <div><dt>鏈〉閾捐矾</dt><dd>proposal ${esc(p.id || "--")} 鈫?crop / warp 鈫?CNN feature 鈫?classifier ${esc(p.class || "--")} 鈫?bbox regression 鈫?NMS銆?/dd></div>
+                    <div><dt>解决的问题</dt><dd>用 proposal 减少滑窗搜索空间，并通过 bbox regression 修正候选框。</dd></div>
+                    <div><dt>输入结构</dt><dd>image + ${proposals.length} proposals，每个 proposal 会 crop / warp 到 CNN 输入尺寸。</dd></div>
+                    <div><dt>中间输出</dt><dd>proposal → crop / warp → CNN feature → classifier score → bbox regression offset。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>bbox' = bbox + (dx, dy, dw, dh)，当前 dx ${p.offset?.dx ?? "--"} / dy ${p.offset?.dy ?? "--"} / dw ${p.offset?.dw ?? "--"} / dh ${p.offset?.dh ?? "--"}。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>R-CNN 是 two-stage；YOLO 是 one-stage dense prediction。两者最终都需要 NMS 去掉同类重复框。</dd></div>
+                    <div><dt>本页链路</dt><dd>proposal ${esc(p.id || "--")} → crop / warp → CNN feature → classifier ${esc(p.class || "--")} → bbox regression → NMS。</dd></div>
                 </dl>`
             },
             roi: {
                 title: "Fast R-CNN / ROI Pooling",
-                tutorial: `<p><strong>褰撳墠鏈哄埗瑙ｅ喅鐨勯棶棰橈細</strong>鏃╂湡 R-CNN 瀵规瘡涓?proposal 閲嶅璺?CNN銆俁OI Pooling 璁╂暣鍥惧叡浜?feature map锛屽啀鎶婃瘡涓?ROI 杞垚鍥哄畾灏哄鐗瑰緛銆?/p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>早期 R-CNN 对每个 proposal 重复跑 CNN。ROI Pooling 让整图共享 feature map，再把每个 ROI 转成固定尺寸特征。</p>`,
                 subtitle: step.title,
                 data: `<dl>
-                    <div><dt>瑙ｅ喅鐨勯棶棰?/dt><dd>閬垮厤姣忎釜 proposal 鍗曠嫭鍗风Н锛岀粺涓€鏄犲皠鍒?shared feature map銆?/dd></div>
-                    <div><dt>杈撳叆缁撴瀯</dt><dd>image ROI [${(roi.roi?.bbox || []).join(", ")}] + feature map锛宻tride ${roi.featureStride || 16}銆?/dd></div>
-                    <div><dt>涓棿杈撳嚭</dt><dd>feature map ROI [${(roi.roi?.featureBox || []).join(", ")}] 鈫?pooling grid ${(roi.pooledSize || [3, 3]).join(" 脳 ")}銆?/dd></div>
-                    <div><dt>鍏抽敭瑙勫垯 / 鍏紡</dt><dd>姣忎釜 bin 鍙?max pooling锛岃緭鍑哄浐瀹氬昂瀵?feature锛屽啀閫佸叆 classifier + bbox regressor銆?/dd></div>
-                    <div><dt>涓?YOLO / NMS 鐨勫叧绯?/dt><dd>ROI Pooling 灞炰簬 two-stage head锛沋OLO 鐩存帴浠庣綉鏍奸娴嬫銆俁OI 鍚庣殑鍒嗙被妗嗕粛闇€ NMS 鍘婚噸銆?/dd></div>
-                    <div><dt>鏈〉閾捐矾</dt><dd>image ROI 鈫?feature map ROI 鈫?pooling grid 鈫?max pooling 鈫?fixed-size feature output銆?/dd></div>
+                    <div><dt>解决的问题</dt><dd>避免每个 proposal 单独卷积，统一映射到 shared feature map。</dd></div>
+                    <div><dt>输入结构</dt><dd>image ROI [${(roi.roi?.bbox || []).join(", ")}] + feature map，stride ${roi.featureStride || 16}。</dd></div>
+                    <div><dt>中间输出</dt><dd>feature map ROI [${(roi.roi?.featureBox || []).join(", ")}] → pooling grid ${(roi.pooledSize || [3, 3]).join(" × ")}。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>每个 bin 取 max pooling，输出固定尺寸 feature，再送入 classifier + bbox regressor。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>ROI Pooling 属于 two-stage head；YOLO 直接从网格预测框。ROI 后的分类框仍需 NMS 去重。</dd></div>
+                    <div><dt>本页链路</dt><dd>image ROI → feature map ROI → pooling grid → max pooling → fixed-size feature output。</dd></div>
                 </dl>`
             },
             rpn: {
                 title: "Faster R-CNN / RPN Anchor",
-                tutorial: `<p><strong>褰撳墠鏈哄埗瑙ｅ喅鐨勯棶棰橈細</strong>鐢ㄥ彲瀛︿範鐨?RPN 鏇夸唬 Selective Search銆俁PN 鍦?feature map 涓婃粦鍔紝涓烘瘡涓?anchor 棰勬祴 objectness score 涓?bbox offset銆?/p>`,
+                tutorial: `<p><strong>当前机制解决的问题：</strong>用可学习 of RPN 替代 Selective Search。RPN 在 feature map 上滑动，为每个 anchor 预测 objectness score 和 bbox offset。</p>`,
                 subtitle: step.title,
                 data: `<dl>
-                    <div><dt>瑙ｅ喅鐨勯棶棰?/dt><dd>鑷姩鐢熸垚楂樿川閲?proposals锛屽噺灏戞墜宸ュ€欓€夊尯鍩熺敓鎴愭垚鏈€?/dd></div>
-                    <div><dt>杈撳叆缁撴瀯</dt><dd>shared feature map + ${anchors.length} anchors锛坧ositive ${positiveCount} / negative ${negativeCount}锛夈€?/dd></div>
-                    <div><dt>涓棿杈撳嚭</dt><dd>姣忎釜 anchor 杈撳嚭 objectness score 涓?bbox offset锛屽啀绛涢€?proposal output銆?/dd></div>
-                    <div><dt>鍏抽敭瑙勫垯 / 鍏紡</dt><dd>positive: ${esc(demo.rpnRules?.positive || "IoU >= 0.70")}锛沶egative: ${esc(demo.rpnRules?.negative || "IoU < 0.30")}锛沺roposal = anchor + offset銆?/dd></div>
-                    <div><dt>涓?YOLO / NMS 鐨勫叧绯?/dt><dd>RPN 鏄?two-stage 鐨勫€欓€夋鐢熸垚鍣紱YOLO 鐩存帴杈撳嚭妫€娴嬫銆俁PN proposals 鍜屾渶缁堟娴嬮兘閫氬父瑕佺粡杩?NMS銆?/dd></div>
-                    <div><dt>鏈〉閾捐矾</dt><dd>anchor count ${anchors.length} 鈫?objectness score 鈫?bbox offset 鈫?proposal output 鈫?Fast R-CNN head銆?/dd></div>
+                    <div><dt>解决的问题</dt><dd>自动生成高质量 proposals，减少手工候选区域生成成本。</dd></div>
+                    <div><dt>输入结构</dt><dd>shared feature map + ${anchors.length} anchors（positive ${positiveCount} / negative ${negativeCount}）。</dd></div>
+                    <div><dt>中间输出</dt><dd>每个 anchor 输出 objectness score 和 bbox offset，再筛选 proposal output。</dd></div>
+                    <div><dt>关键规则 / 公式</dt><dd>positive: ${esc(demo.rpnRules?.positive || "IoU >= 0.70")}；negative: ${esc(demo.rpnRules?.negative || "IoU < 0.30")}；proposal = anchor + offset。</dd></div>
+                    <div><dt>与 YOLO / NMS 的关系</dt><dd>RPN 是 two-stage 的候选框生成器；YOLO 直接输出检测框。RPN proposals 和最终检测都通常要经过 NMS。</dd></div>
+                    <div><dt>本页链路</dt><dd>anchor count ${anchors.length} → objectness score → bbox offset → proposal output → Fast R-CNN head。</dd></div>
                 </dl>`
             }
         }[state.detMode];
@@ -1459,7 +1459,8 @@
             els.pairCard.innerHTML = "";
         }
 
-        // 鍚屾闃堝€兼粦鍔ㄦ潯涓庡叾鏁板€兼枃鏈樉绀?        els.confOut.textContent = state.conf.toFixed(2);
+        // 同步阈值滑动条与其数值文本显示
+        els.confOut.textContent = state.conf.toFixed(2);
         els.iouOut.textContent = state.iou.toFixed(2);
         els.conf.value = String(state.conf);
         els.iou.value = String(state.iou);
@@ -1472,7 +1473,8 @@
         els.missing.style.display = "none";
         els.rcnnStage.hidden = false;
 
-        // 鍔ㄦ€佽鏁拌绠?        let rcnnTotalCount = 0;
+        // 动态计数计算
+        let rcnnTotalCount = 0;
         let rcnnKeptCount = 0;
         if (state.detMode === "rpn") {
             const processedAnchors = processRpnAnchors(demo);
@@ -1496,15 +1498,15 @@
         els.overlay.innerHTML = demo.version ? renderRcnnOverlay(demo, sample, step) : "";
         els.total.textContent = String(rcnnTotalCount);
         els.kept.textContent = String(rcnnKeptCount);
-        els.stageSource.textContent = state.detMode === "rcnn" ? "Two-stage proposal lifecycle" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN RPN";
-        els.stageBackend.textContent = state.detMode === "rcnn" ? "Proposal: Selective Search" : "Backend: preset demo data";
-        els.stageInference.textContent = state.detMode === "rcnn" ? "CNN head: conceptual" : "Inference: concept";
-        els.stageCandidates.textContent = state.detMode === "rcnn" ? `Proposals: ${els.total.textContent}` : `Candidates: ${els.total.textContent}`;
-        els.stageFinal.textContent = state.detMode === "rcnn" ? `Refined: ${els.kept.textContent}` : `Final: ${els.kept.textContent}`;
-        els.stepLabel.textContent = `${step.title.toUpperCase()} 路 STEP ${state.rcnnStep + 1} / ${steps.length}`;
+        els.stageSource.textContent = state.detMode === "rcnn" ? "Two-stage proposal lifecycle" : state.detMode === "roi" ? "Fast R-CNN ROI Pooling" : "Faster R-CNN 之全特征图 RPN 滑窗区域";
+        els.stageBackend.textContent = state.detMode === "rcnn" ? "Proposal: Selective Search" : "推理组件: 前端课程精选交互模型演示数据";
+        els.stageInference.textContent = state.detMode === "rcnn" ? "CNN head: conceptual" : "计算层: 滑动窗口参数";
+        els.stageCandidates.textContent = state.detMode === "rcnn" ? `Proposals: ${els.total.textContent}` : `锚框候选: ${els.total.textContent}`;
+        els.stageFinal.textContent = state.detMode === "rcnn" ? `Refined: ${els.kept.textContent}` : `最终检测出: ${els.kept.textContent}`;
+        els.stepLabel.textContent = `${step.title.toUpperCase()} · STEP ${state.rcnnStep + 1} / ${steps.length}`;
         els.runtimeStats.innerHTML = state.detMode === "rcnn"
-            ? `<div><dt>stage 1</dt><dd>Selective Search proposals</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>active proposal</dt><dd>${esc(activeProposal.id || "p1")}</dd></div><div><dt>stage 2</dt><dd>CNN feature + classifier + bbox reg</dd></div>`
-            : `<div><dt>method</dt><dd>${esc(state.detMode)}</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>ground truth boxes</dt><dd>${(demo.groundTruth || []).length}</dd></div><div><dt>NMS</dt><dd>final duplicate removal</dd></div>`;
+            ? `<div><dt>stage 1</dt><dd>Selective Search proposals</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>当前步骤活跃检测候选框</dt><dd>${esc(activeProposal.id || "p1")}</dd></div><div><dt>stage 2</dt><dd>CNN feature + classifier + bbox reg</dd></div>`
+            : `<div><dt>method</dt><dd>${esc(state.detMode)}</dd></div><div><dt>current phase</dt><dd>${esc(step.id)}</dd></div><div><dt>ground truth boxes</dt><dd>${(demo.groundTruth || []).length}</dd></div><div><dt>NMS</dt><dd>最终多类别重复目标去重剔除</dd></div>`;
         els.classStats.innerHTML = state.detMode === "rcnn"
             ? `<span><i style="background:#7c3aed"></i>proposal<strong>${(demo.proposals || []).length}</strong></span><span><i style="background:#4f46e5"></i>refined<strong>${rcnnKeptCount}</strong></span><span><i style="background:#ef4444"></i>background<strong>${(demo.proposals || []).filter((p) => p.class === "background" || (p.score < state.conf && p.id !== "p1")).length}</strong></span>`
             : `<span><i style="background:#2563eb"></i>proposal<strong>${(demo.anchors || []).length}</strong></span><span><i style="background:#22c55e"></i>positive anchor<strong>${rcnnKeptCount}</strong></span><span><i style="background:#ef4444"></i>negative anchor<strong>${processRpnAnchors(demo).filter((a) => a.dynamicLabel === "negative" || a.isLow).length}</strong></span>`;
@@ -1554,7 +1556,7 @@
         els.kept.classList.remove("det-count-roll");
         void els.kept.offsetWidth;
         els.kept.classList.add("det-count-roll");
-        els.stepLabel.textContent = `${step.phase.toUpperCase()} 路 STEP ${state.step + 1} / ${result.steps.length}`;
+        els.stepLabel.textContent = `${step.phase.toUpperCase()} · STEP ${state.step + 1} / ${result.steps.length}`;
 
         const shouldDrawLow = state.showLow && ["decode", "confidence"].includes(step.phase);
         const statusLayers = {low: [], suppressed: [], candidate: [], raw: [], "compare-b": [], "compare-a": [], kept: []};
@@ -1609,7 +1611,7 @@
         const classes = [...new Set(boxes.map((box) => box.class))];
         if (reset) state.classes = new Set(classes);
         if (!classes.length) {
-            els.classFilter.innerHTML = `<p class="detection-empty-hint">褰撳墠鏆傛棤妫€娴嬫绫诲埆銆?/p>`;
+            els.classFilter.innerHTML = `<p class="detection-empty-hint">当前暂无检测框类别。</p>`;
             return;
         }
         els.classFilter.innerHTML = classes.map((name) => {
@@ -1636,7 +1638,7 @@
     function stop() {
         state.playing = false;
         clearTimeout(state.timer);
-        els.play.textContent = "鑷姩鎾斁";
+        els.play.textContent = "自动播放";
     }
 
     async function getInferenceClient() {
@@ -1649,7 +1651,7 @@
     function formatInferenceError(error) {
         if (state.inferenceModule?.handleModelInferenceError) return state.inferenceModule.handleModelInferenceError(error);
         const shape = error?.rawOutputShape ? ` rawOutputShape=[${error.rawOutputShape.join(", ")}]` : "";
-        return `${error?.message || "鎺ㄧ悊澶辫触"}${shape}`;
+        return `${error?.message || "推理失败"}${shape}`;
     }
 
     function fallbackToPreset(error) {
@@ -1660,11 +1662,11 @@
         state.inferenceError = error;
         state.inferenceResult = null;
         state.inferenceScene = null;
-        state.conf = s.confidence_threshold;
-        state.iou = s.nms_iou_threshold;
+        state.conf = s.confidence_threshold || 0.25;
+        state.iou = s.nms_iou_threshold || 0.5;
         els.conf.value = String(state.conf);
         els.iou.value = String(state.iou);
-        els.inferenceMessage.textContent = `ONNX 鎺ㄧ悊涓嶅彲鐢紝宸插洖閫€棰勮缁撴灉锛?{message}`;
+        els.inferenceMessage.textContent = `ONNX 推理不可用，已回退预设结果：${message}`;
         renderClassControls(true);
         state.step = Math.min(4, compute().steps.length - 1);
         render();
@@ -1718,7 +1720,7 @@
         state.inferenceError = null;
         state.fallbackReason = "";
         state.step = Math.min(3, compute().steps.length - 1);
-        setModelStatus("post-process complete", `Inference complete: showing Top ${boxes.length} decoded candidates, rawOutputShape=[${(result.rawOutputShape || []).join(", ")}].`);
+        setModelStatus("post-process complete", `Inference complete: showing Top ${boxes.length} 接收到待剔除候选总框数, rawOutputShape=[${(result.rawOutputShape || []).join(", ")}].`);
         renderClassControls(true);
         render();
     }
@@ -1780,7 +1782,7 @@
         };
         image.onerror = () => {
             els.inferenceMessage.textContent = "Uploaded image failed to load.";
-            els.missing.textContent = "涓婁紶鍥剧墖璇诲彇澶辫触";
+            els.missing.textContent = "上传图片读取失败";
             els.missing.style.display = "flex";
             URL.revokeObjectURL(url);
             if (state.customUrl === url) state.customUrl = null;
@@ -1804,8 +1806,8 @@
             state.data = data;
             state.sampleId = data.default_sample || data.samples[0].id;
             const s = selectedPresetSample();
-            state.conf = s.confidence_threshold;
-            state.iou = s.nms_iou_threshold;
+            state.conf = s.confidence_threshold || 0.25;
+            state.iou = s.nms_iou_threshold || 0.5;
             els.conf.value = String(state.conf);
             els.iou.value = String(state.iou);
             state.inferenceScene = sceneFromPreset(s, []);
@@ -1814,15 +1816,15 @@
             autoLoadAndRun();
         })
         .catch(() => {
-            els.overlay.innerHTML = `<div class="vision-empty-result">妫€娴嬫牱渚嬫暟鎹姞杞藉け璐?/div>`;
+            els.overlay.innerHTML = `<div class="vision-empty-result">检测样例数据加载失败</div>`;
         });
 
     els.sample.addEventListener("change", () => {
         stop();
         state.sampleId = els.sample.value;
         const s = selectedPresetSample();
-        state.conf = s.confidence_threshold;
-        state.iou = s.nms_iou_threshold;
+        state.conf = s.confidence_threshold || 0.25;
+        state.iou = s.nms_iou_threshold || 0.5;
         els.conf.value = String(state.conf);
         els.iou.value = String(state.iou);
         state.source = "inference";
@@ -1832,11 +1834,11 @@
         state.inferenceError = null;
         state.hoveredProposalId = null;
         state.nmsAnimationStep = 0;
-            state.step = 0;
-            renderClassControls(true);
-            render();
-            if (state.detMode === "yolo") autoLoadAndRun();
-        });
+        state.step = 0;
+        renderClassControls(true);
+        render();
+        if (state.detMode === "yolo") autoLoadAndRun();
+    });
     els.backend.addEventListener("change", () => {
         state.backend = els.backend.value;
         state.inferenceClient?.dispose?.();
@@ -1853,7 +1855,7 @@
         const file = els.upload.files?.[0];
         const filenameEl = document.getElementById("detUploadFilename");
         if (filenameEl) {
-            filenameEl.textContent = file ? file.name : "鏈€夋嫨鏂囦欢";
+            filenameEl.textContent = file ? file.name : "未选择文件";
         }
         setInferenceSceneFromUpload(file);
     });
@@ -1885,7 +1887,7 @@
     els.play.addEventListener("click", () => {
         if (state.playing) return stop();
         state.playing = true;
-        els.play.textContent = "鏆傚仠鎾斁";
+        els.play.textContent = "暂停播放";
         function scheduleNext() {
             const steps = state.detMode === "yolo" ? compute().steps : activeRcnnSteps();
             const curStep = steps[state.detMode === "yolo" ? state.step : state.rcnnStep];

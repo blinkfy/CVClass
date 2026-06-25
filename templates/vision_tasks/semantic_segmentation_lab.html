@@ -10,7 +10,7 @@
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>Mask 参数</h3><p>Input &amp; Params</p></div>
+            <div><h3>Mask 参数</h3><p>输入与参数</p></div>
         </div>
 
         <label class="vision-field">
@@ -31,7 +31,7 @@
         </div>
 
         <label class="vision-field">
-            <span>Mask Opacity <output data-sem-opacity-output>65%</output></span>
+            <span>蒙版不透明度 <output data-sem-opacity-output>65%</output></span>
             <input data-sem-opacity type="range" min="0" max="100" value="65">
         </label>
 
@@ -59,7 +59,7 @@
         </div>
 
         <div class="vision-shape-card">
-            <span>Unified Semantic Mask</span>
+            <span>统一语义分割蒙版格式</span>
             <strong>source · classMap · classes · distribution · meta</strong>
             <small>预设 polygon 和模型输出都会转换为同一个 H × W class index map 后再渲染。</small>
         </div>
@@ -67,7 +67,7 @@
 
     <div class="vision-stage-panel semantic-stage-panel">
         <div class="vision-stage-header">
-            <div><span>VISUALIZATION</span><h3>Semantic Mask Overlay</h3></div>
+            <div><span>分割效果呈现</span><h3>语义分割蒙版叠加</h3></div>
             <span class="vision-status-chip" data-sem-miou>mIoU --</span>
         </div>
         <div class="semantic-stage-strip" data-sem-stage-strip>
@@ -80,14 +80,14 @@
         </div>
         <section class="process-step-console semantic-process-console" aria-label="语义分割算法流程">
             <div class="process-step-heading">
-                <span>ALGORITHM FLOW</span>
-                <strong>逐步运算流程</strong>
+                <span>算法流程节点</span>
+                <strong>分割前向运算流程</strong>
             </div>
             <div class="process-filmstrip" data-sem-process-steps></div>
         </section>
         <div class="vision-image-stage semantic-real-stage" data-sem-stage>
             <img data-sem-image alt="语义分割样例图">
-            <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-sem-missing></span></div>
+            <div class="vision-image-placeholder"><strong>未检测到本地图像数据</strong><span data-sem-missing></span></div>
             <canvas data-sem-canvas></canvas>
             <div class="process-visual-overlay semantic-process-overlay" data-sem-process-overlay aria-hidden="true"></div>
             <div class="semantic-probe-card" data-sem-probe></div>
@@ -110,15 +110,15 @@
             </div>
             <div class="semantic-fcn-visual-grid">
                 <section>
-                    <h4>1×1 Conv: channel → class logits</h4>
+                    <h4>1×1 卷积：融合多通道生成类别概率 logits</h4>
                     <div class="semantic-fcn-channel-stack" data-fcn-channel-stack></div>
                 </section>
                 <section>
-                    <h4>Upsampling / Deconvolution</h4>
+                    <h4>上采样 / 反卷积 (Upsampling / Deconv)</h4>
                     <div class="semantic-fcn-upsample" data-fcn-upsample></div>
                 </section>
                 <section>
-                    <h4>Skip connection 对比</h4>
+                    <h4>特征跳跃连接 (Skip Connection) 水平边界对比</h4>
                     <div class="semantic-skip-compare" data-fcn-skip-compare></div>
                 </section>
             </div>
@@ -231,7 +231,7 @@
         </div>
 
         <div class="vision-output-schema">
-            <span>输出结构</span>
+            <span>模型输出标准结构</span>
             <code data-sem-output-schema>H × W class index map</code>
         </div>
     </aside>
@@ -240,12 +240,12 @@
 <section class="semantic-playback-panel" aria-label="语义分割步骤播放控制">
     <div class="semantic-playback-head">
         <div>
-            <span>STEP TIMELINE</span>
+            <span>运算步骤控制轴</span>
             <strong data-sem-step-label>01 / 8 · Image</strong>
         </div>
         <div class="semantic-playback-actions">
-            <button type="button" data-sem-play>Play</button>
-            <button type="button" data-sem-reset>Reset</button>
+            <button type="button" data-sem-play>自动放映</button>
+            <button type="button" data-sem-reset>重置起点</button>
         </div>
     </div>
     <div class="semantic-progress-track" data-sem-progress aria-hidden="true"></div>

@@ -17,12 +17,12 @@
     <aside class="vision-panel vision-control-panel">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>检测参数</h3><p>INPUT &amp; PARAMS</p></div>
+            <div><h3>检测参数</h3><p>输入与参数</p></div>
         </div>
 
         <!-- Sample selector -->
         <label class="vision-field">
-            <span>样例场景</span>
+                <span>样例场景</span>
             <select data-det-sample>
                 <option>加载中…</option>
             </select>
@@ -30,7 +30,7 @@
 
         <!-- Upload -->
         <div class="vision-field" data-yolo-only>
-            <span>上传图片（覆盖样例）</span>
+                <span>上传图片（覆盖样例）</span>
             <div class="det-upload-box">
                 <label class="det-upload-label" for="detUploadInput">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -42,7 +42,7 @@
 
         <!-- Backend selector -->
         <label class="vision-field" data-yolo-only>
-            <span>推理后端</span>
+                <span>推理后端</span>
             <select data-det-backend>
                 <option value="webgpu" selected>WebGPU</option>
                 <option value="wasm">WASM</option>
@@ -61,21 +61,36 @@
         </div>
 
         <!-- Sliders -->
+        <div class="det-control-group-title" data-rcnn-only>
+            <span>01</span><strong>全局核心参数</strong>
+        </div>
         <label class="vision-field">
-            <span>Confidence Threshold <output data-det-conf-output>0.25</output></span>
+            <span>置信度阈值 <output data-det-conf-output>0.25</output></span>
             <input type="range" min="0" max="1" step="0.01" value="0.25" data-det-conf>
         </label>
         <label class="vision-field">
-            <span>IoU Threshold <output data-det-iou-output>0.50</output></span>
+            <span>交并比 (IoU) 阈值 <output data-det-iou-output>0.50</output></span>
             <input type="range" min="0" max="1" step="0.01" value="0.50" data-det-iou>
         </label>
 
         <!-- Show low-conf toggle -->
         <label class="vision-toggle-row">
-            <span>显示高置信度过滤框</span>
+                <span>显示高置信度过滤框</span>
             <input type="checkbox" data-det-show-low checked>
         </label>
-        <p class="vision-hint">YOLO 显示真实推理候选；R-CNN 显示 proposal 生命周期。</p>
+            <p class="vision-hint">YOLO 显示真实推理候选；R-CNN 显示 proposal 生命周期。</p>
+
+        <div class="det-control-group-title" data-rcnn-only>
+            <span>02</span><strong>当前执行步骤</strong>
+        </div>
+        <div class="det-course-step" data-rcnn-only>
+            <span data-det-course-step>Image</span>
+            <p data-det-course-goal>查看输入图像及当前活跃的候选提取区域。</p>
+            <dl>
+                <div><dt>当前框 ID</dt><dd data-det-course-active>p1</dd></div>
+                <div><dt>当前阶段</dt><dd data-det-course-state>proposal</dd></div>
+            </dl>
+        </div>
 
         <!-- Counts -->
         <div class="vision-metric-grid">
@@ -88,7 +103,11 @@
             <button data-det-prev>上一步</button>
             <button data-det-next>下一步</button>
         </div>
-        <button class="det-play-btn" data-det-play>自动播放</button>
+            <button class="det-play-btn" data-det-play>自动播放</button>
+        <div class="det-control-group-title" data-rcnn-only>
+            <span>03</span><strong>本步骤总结</strong>
+        </div>
+        <div class="det-course-summary" data-det-course-summary data-rcnn-only></div>
     </aside>
 
     <!-- ===== Center Stage ===== -->
@@ -96,21 +115,21 @@
         <!-- Stage header -->
         <div class="vision-stage-header">
             <div>
-                <span>DETECTION PLAYGROUND</span>
-                <h3>实景检测可视化</h3>
+                <span>实时目标检测实验室</span>
+        <h3>实景检测可视化</h3>
             </div>
             <div class="det-stage-chips">
-                <span data-det-stage-source>ONNX Runtime Web</span>
-                <span data-det-stage-backend>Backend: --</span>
-                <span data-det-stage-inference>Inference: --</span>
-                <span data-det-stage-candidates>Candidates: --</span>
-                <span data-det-stage-final>Final: --</span>
+                <span data-det-stage-source>ONNX 推理引擎</span>
+                <span data-det-stage-backend>推理后端: --</span>
+                <span data-det-stage-inference>推理耗时: --</span>
+                <span data-det-stage-candidates>总候选框: --</span>
+                <span data-det-stage-final>最终检测: --</span>
             </div>
         </div>
 
         <!-- Step label -->
-        <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 7</div>
-        <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
+            <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 7</div>
+            <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
 
         <!-- Canvas area -->
         <div class="detection-real-stage">
@@ -124,17 +143,17 @@
         <!-- Candidate table -->
         <div class="det-table-wrap detection-table-wrap">
             <div class="det-table-header">
-                <span class="det-section-label">CANDIDATES</span>
+                <span class="det-section-label" data-det-table-title>候选检测框队列</span>
                 <div data-det-class-filter class="det-class-filter"></div>
-                <span class="det-section-label">RUNTIME</span>
-                <span class="det-section-label">排序与逻辑描述</span>
-                <span class="det-section-label">CLASSES</span>
-                <span class="det-section-label">各类统计</span>
+                <span class="det-section-label">耗时统计</span>
+            <span class="det-section-label">排序与逻辑描述</span>
+                <span class="det-section-label">类别统计</span>
+            <span class="det-section-label">各类统计</span>
             </div>
             <div data-det-pair-card class="det-pair-card" hidden></div>
             <div data-det-nms-control class="det-nms-control" hidden></div>
             <table data-det-candidate-table class="det-candidate-table">
-                <thead><tr><th>ID</th><th>CLASS</th><th>SCORE</th><th>BBOX</th><th>STATUS</th></tr></thead>
+                <thead><tr><th>ID</th><th>目标类别</th><th>置信度</th><th>边界框坐标</th><th>后处理状态</th></tr></thead>
                 <tbody></tbody>
             </table>
             <div data-det-runtime-stats class="det-runtime-stats detection-stat-list"></div>
@@ -147,8 +166,8 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3 id="detNotesTitle">后处理步骤说明</h3>
-                <p id="detNotesSubtitle">POST-PROCESS NOTES</p>
+            <h3 id="detNotesTitle">后处理步骤说明</h3>
+                <p id="detNotesSubtitle">后处理操作指引</p>
             </div>
         </div>
         <!-- Tutorial narrative -->
@@ -161,22 +180,22 @@
             <!-- IoU Card -->
             <details class="det-academic-card" open>
                 <summary>
-                    <span>概念解释：IoU 交并比</span>
+            <span>概念解释：IoU 交并比</span>
                     <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
                 </summary>
                 <div class="det-academic-content">
-                    <p class="det-academic-desc">交并比 (Intersection over Union) 衡量预测框与真实框的重合度，是 NMS 和精度评估的核心指标。</p>
+            <p class="det-academic-desc">交并比 (Intersection over Union) 衡量预测框与真实框的重合度，是 NMS 和精度评估的核心指标。</p>
                     <div class="det-iou-diagram">
                         <div class="det-diag-box box-a"><span>Box A</span></div>
                         <div class="det-diag-box box-b"><span>Box B</span></div>
-                        <div class="det-diag-overlap"><span>A ∩ B</span></div>
+            <div class="det-diag-overlap"><span>A ∩ B</span></div>
                     </div>
                     <div class="det-formula">
                         <span class="det-math-frac">
-                            <span class="det-math-num">Overlap Area (交集)</span>
-                            <span class="det-math-den">Union Area (并集)</span>
+                <span class="det-math-num">Overlap Area (交集)</span>
+                <span class="det-math-den">Union Area (并集)</span>
                         </span>
-                        <span class="det-math-eq">= IoU 分数</span>
+                <span class="det-math-eq">= IoU 分数</span>
                     </div>
                 </div>
             </details>
@@ -184,16 +203,16 @@
             <!-- BBox Regression Settings -->
             <details class="det-academic-card" open>
                 <summary>
-                    <span>概念解释：BBox 偏移修正</span>
+            <span>概念解释：BBox 偏移修正</span>
                     <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
                 </summary>
                 <div class="det-academic-content">
-                    <p class="det-academic-desc">边界框回归 (BBox Regression) 通过预测平移与缩放参数微调候选框位置：</p>
+            <p class="det-academic-desc">边界框回归 (BBox Regression) 通过预测平移与缩放参数微调候选框位置：</p>
                     <div class="det-math-equations">
-                        <div>x' = x<sub>p</sub> + d<sub>x</sub> · w<sub>p</sub> <span class="det-equation-note">横向平移</span></div>
-                        <div>y' = y<sub>p</sub> + d<sub>y</sub> · h<sub>p</sub> <span class="det-equation-note">纵向平移</span></div>
-                        <div>w' = w<sub>p</sub> · e<sup>d<sub>w</sub></sup> <span class="det-equation-note">宽度放缩</span></div>
-                        <div>h' = h<sub>p</sub> · e<sup>d<sub>h</sub></sup> <span class="det-equation-note">高度放缩</span></div>
+                <div>x' = x<sub>p</sub> + d<sub>x</sub> · w<sub>p</sub> <span class="det-equation-note">横向平移</span></div>
+                <div>y' = y<sub>p</sub> + d<sub>y</sub> · h<sub>p</sub> <span class="det-equation-note">纵向平移</span></div>
+                <div>w' = w<sub>p</sub> · e<sup>d<sub>w</sub></sup> <span class="det-equation-note">宽度放缩</span></div>
+                <div>h' = h<sub>p</sub> · e<sup>d<sub>h</sub></sup> <span class="det-equation-note">高度放缩</span></div>
                     </div>
                 </div>
             </details>
@@ -203,14 +222,14 @@
 </section>
 
 <!-- ========== Stepper ========== -->
-<ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
-    <li data-det-phase="image"><span>1</span><div><strong>Image</strong><small>Image Loaded</small></div></li>
-    <li data-det-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Letterbox Resize</small></div></li>
-    <li data-det-phase="inference"><span>3</span><div><strong>Inference</strong><small>ONNX Forward</small></div></li>
-    <li data-det-phase="decode"><span>4</span><div><strong>Decode</strong><small>rawOutput to boxes</small></div></li>
-    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence</strong><small>Score Threshold</small></div></li>
-    <li data-det-phase="nms"><span>6</span><div><strong>NMS</strong><small>IoU Matrix</small></div></li>
-    <li data-det-phase="final"><span>7</span><div><strong>Final</strong><small>Detections</small></div></li>
+        <ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
+    <li data-det-phase="image"><span>1</span><div><strong>Image</strong><small>图像加载就绪</small></div></li>
+    <li data-det-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>等比缩放填充</small></div></li>
+    <li data-det-phase="inference"><span>3</span><div><strong>Inference</strong><small>前向推理计算</small></div></li>
+    <li data-det-phase="decode"><span>4</span><div><strong>Decode</strong><small>模型输出解码</small></div></li>
+    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence</strong><small>置信度粗过滤</small></div></li>
+    <li data-det-phase="nms"><span>6</span><div><strong>NMS</strong><small>重叠剔除抑制</small></div></li>
+    <li data-det-phase="final"><span>7</span><div><strong>Final</strong><small>最终检测结果</small></div></li>
 </ol>
 
 </div><!-- /data-detection-lab -->

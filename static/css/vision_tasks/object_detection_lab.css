@@ -1436,7 +1436,7 @@
 .detection-classifier-bars b::after {
     content: "";
     display: block;
-    width: calc(var(--score) * 100%);
+    width: var(--score-pct, 0%);
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--det-accent), var(--det-accent-2));
@@ -3195,4 +3195,716 @@
 @keyframes detNmsParticle {
     from { opacity: 0.9; transform: rotate(calc(var(--i) * 36deg)) translateX(0) scale(1); }
     to { opacity: 0; transform: rotate(calc(var(--i) * 36deg)) translateX(32px) scale(0.45); }
+}
+
+/* R-CNN focused single-step layout */
+[data-detection-lab] [data-rcnn-only] {
+    display: none !important;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-control-group-title[data-rcnn-only] {
+    display: flex !important;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-course-step[data-rcnn-only] {
+    display: grid !important;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-course-summary[data-rcnn-only] {
+    display: block !important;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .vision-control-panel {
+    position: sticky;
+    top: 78px;
+    align-self: start;
+    min-height: min(78vh, 760px);
+}
+
+.det-control-group-title {
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed #d8b4fe;
+    color: #4c1d95;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.det-control-group-title span {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 7px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+}
+
+.det-course-step,
+.det-course-summary {
+    border: 1px solid rgba(196, 181, 253, 0.72);
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
+}
+
+.det-course-step {
+    gap: 8px;
+}
+
+.det-course-step > span {
+    color: #5b21b6;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.det-course-step p {
+    margin: 0;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.det-course-step dl,
+.det-course-summary dl {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.det-course-step dl div,
+.det-course-summary dl div {
+    display: grid;
+    grid-template-columns: minmax(74px, 0.6fr) minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    border: 1px solid #ede9fe;
+    border-radius: 8px;
+    padding: 5px 7px;
+    background: #f8fafc;
+}
+
+.det-course-step dt,
+.det-course-summary dt {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.det-course-step dd,
+.det-course-summary dd {
+    min-width: 0;
+    margin: 0;
+    color: #4c1d95;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.detection-real-stage[hidden] {
+    display: none !important;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .detection-real-stage {
+    max-width: min(calc(100% - 34px), calc(min(40vh, 340px) * var(--det-aspect-raw-x, 1)));
+    max-height: min(40vh, 340px);
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .detection-table-wrap {
+    max-height: 210px;
+    min-height: 108px;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-table-header {
+    opacity: 0.84;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-class-filter,
+[data-detection-lab][data-det-submode="rcnn"] .det-table-header .det-section-label:nth-of-type(n + 2) {
+    display: none;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .det-academic-cards {
+    display: none;
+}
+
+.det-rcnn-step-rail {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.det-rcnn-step-rail button {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 7px 8px;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.82);
+    cursor: pointer;
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.det-rcnn-step-rail button:hover,
+.det-rcnn-step-rail button.is-current {
+    border-color: #a78bfa;
+    background: #ffffff;
+    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.12);
+    transform: translateY(-1px);
+}
+
+.det-rcnn-step-rail button.is-current {
+    animation: detRcnnCurrentPulse 1.8s ease-in-out infinite;
+}
+
+.det-rcnn-step-rail button.is-done span,
+.det-rcnn-step-rail button.is-current span {
+    color: #ffffff;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+}
+
+.det-rcnn-step-rail span {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border-radius: 50%;
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 950;
+    background: #f1f5f9;
+}
+
+.det-rcnn-step-rail strong {
+    min-width: 0;
+    overflow: hidden;
+    color: #334155;
+    font-size: 10px;
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.det-rcnn-focus-board {
+    display: grid;
+    gap: 12px;
+    min-height: 230px;
+    border: 1px solid rgba(196, 181, 253, 0.72);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(10px);
+}
+
+.det-rcnn-focus-head {
+    display: grid;
+    gap: 4px;
+}
+
+.det-rcnn-focus-head span {
+    width: max-content;
+    border: 1px solid #ddd6fe;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #6d28d9;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: #f5f3ff;
+}
+
+.det-rcnn-focus-head h4 {
+    margin: 0;
+    color: #111827;
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.det-rcnn-focus-head p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.det-rcnn-focus-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.74fr) minmax(0, 1.26fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+.det-rcnn-focus-copy {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.det-rcnn-focus-copy span,
+.det-rcnn-feature-focus section > span {
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.det-rcnn-focus-copy strong {
+    color: #312e81;
+    font-size: 17px;
+    font-weight: 950;
+}
+
+.det-rcnn-focus-copy p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.det-rcnn-focus-copy dl,
+.det-rcnn-nms-focus dl {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.det-rcnn-focus-copy dl div,
+.det-rcnn-nms-focus dl div {
+    display: grid;
+    grid-template-columns: minmax(86px, 0.6fr) minmax(0, 1fr);
+    gap: 8px;
+    border-radius: 8px;
+    padding: 5px 7px;
+    background: #f8fafc;
+}
+
+.det-rcnn-focus-copy dt,
+.det-rcnn-nms-focus dt {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.det-rcnn-focus-copy dd,
+.det-rcnn-nms-focus dd {
+    min-width: 0;
+    margin: 0;
+    color: #4c1d95;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.det-rcnn-proposal-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.det-rcnn-proposal-cards article {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 10px;
+    background: #ffffff;
+    opacity: 0;
+    transform-origin: center;
+    animation: detRcnnProposalGrow 0.42s ease forwards;
+    animation-delay: var(--proposal-delay, 0ms);
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+}
+
+.det-rcnn-proposal-cards article.is-active {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12), 0 10px 24px rgba(124, 58, 237, 0.12);
+}
+
+.det-rcnn-proposal-cards article.is-low {
+    opacity: 0.46;
+}
+
+.det-rcnn-proposal-cards span,
+.det-rcnn-refined-list span {
+    color: #7c3aed;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.det-rcnn-proposal-cards strong,
+.det-rcnn-refined-list strong {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.det-rcnn-proposal-cards em,
+.det-rcnn-refined-list em {
+    color: #64748b;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 850;
+}
+
+.det-rcnn-proposal-cards code,
+.det-rcnn-refined-list code,
+.det-rcnn-patch code {
+    color: #64748b;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.det-rcnn-crop-flow,
+.det-rcnn-feature-focus,
+.det-rcnn-classifier-focus,
+.det-rcnn-regression-focus,
+.det-rcnn-nms-focus {
+    display: grid;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.det-rcnn-crop-flow {
+    grid-template-columns: minmax(150px, 1fr) 42px minmax(150px, 1fr) 42px minmax(150px, 1fr);
+}
+
+.det-rcnn-patch {
+    display: grid;
+    gap: 8px;
+    min-height: 180px;
+    border: 1px solid #e9d5ff;
+    border-radius: 13px;
+    padding: 10px;
+    background: #ffffff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.det-rcnn-patch span {
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.det-rcnn-patch-image {
+    min-height: 112px;
+    border: 2px solid #a78bfa;
+    border-radius: 10px;
+    background-image: var(--patch-url);
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 10px 20px rgba(124, 58, 237, 0.12);
+}
+
+.det-rcnn-patch.is-crop .det-rcnn-patch-image {
+    animation: detRcnnCropPull 0.62s ease both;
+}
+
+.det-rcnn-patch.is-warp .det-rcnn-patch-image {
+    aspect-ratio: 1 / 1;
+    min-height: 128px;
+    animation: detWarpMorph 0.62s ease both;
+}
+
+.det-rcnn-flow-arrow {
+    display: grid;
+    place-items: center;
+}
+
+.det-rcnn-flow-arrow span {
+    width: 100%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #c4b5fd, #8b5cf6, #6366f1);
+    animation: detPhotonFlow 0.9s linear infinite;
+}
+
+.det-rcnn-feature-focus {
+    grid-template-columns: minmax(150px, 0.8fr) minmax(82px, 0.45fr) minmax(220px, 1fr) minmax(120px, 0.55fr);
+}
+
+.det-rcnn-cnn-stack {
+    display: grid;
+    gap: 8px;
+}
+
+.det-rcnn-cnn-stack i {
+    display: grid;
+    place-items: center;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    min-height: 34px;
+    color: #5b21b6;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 950;
+    background: #f8fafc;
+    animation: detFeatureStack 0.42s ease both;
+}
+
+.det-rcnn-feature-focus section {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 10px;
+    background: #ffffff;
+}
+
+.det-rcnn-feature-vector {
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 12px 10px;
+    background: #ffffff;
+}
+
+.det-rcnn-feature-vector i {
+    width: 9px;
+    height: 110px;
+    border-radius: 999px 999px 4px 4px;
+    background: linear-gradient(180deg, #8b5cf6, #c4b5fd);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    animation: detVectorRise 0.55s ease both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.det-rcnn-classifier-focus {
+    grid-template-columns: minmax(180px, 0.6fr) minmax(260px, 1fr);
+}
+
+.det-rcnn-classifier-focus article,
+.det-rcnn-classifier-focus section {
+    display: grid;
+    gap: 10px;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 14px;
+    background: #ffffff;
+}
+
+.det-rcnn-classifier-focus article span {
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.det-rcnn-classifier-focus article strong {
+    color: #312e81;
+    font-size: 24px;
+    font-weight: 950;
+}
+
+.det-rcnn-classifier-focus article p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.detection-classifier-bars div.is-top span,
+.detection-classifier-bars div.is-top strong {
+    color: #4c1d95;
+    font-weight: 950;
+}
+
+.detection-classifier-bars div.is-top b {
+    background: #ddd6fe;
+}
+
+.det-rcnn-verdict {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid #c4b5fd;
+    border-radius: 10px;
+    padding: 10px;
+    background: #f5f3ff;
+}
+
+.det-rcnn-verdict span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.det-rcnn-verdict strong {
+    color: #312e81;
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.det-rcnn-verdict em {
+    color: #5b21b6;
+    font-style: normal;
+    font-weight: 950;
+}
+
+.det-rcnn-regression-focus {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.det-rcnn-regression-focus .det-bbox-reg-panel {
+    max-width: none;
+}
+
+.det-rcnn-regression-focus .detection-regression-offsets {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.det-rcnn-nms-focus {
+    grid-template-columns: minmax(220px, 0.58fr) minmax(0, 1fr);
+}
+
+.det-rcnn-nms-focus section {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.det-rcnn-nms-focus section > span {
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.det-rcnn-nms-focus section > strong {
+    color: #312e81;
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.det-rcnn-refined-list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.det-rcnn-refined-list article {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 10px;
+    background: #ffffff;
+    transition: opacity 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+}
+
+.det-rcnn-refined-list article.is-active {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.det-rcnn-refined-list article.is-suppressed {
+    border-color: #fecaca;
+    opacity: 0.38;
+    transform: scale(0.96);
+}
+
+.det-rcnn-refined-list article.is-suppressed em {
+    color: #b91c1c;
+    text-decoration: line-through;
+}
+
+.detection-demo-box.is-rcnn-muted {
+    opacity: 0.28;
+}
+
+[data-detection-lab][data-det-submode="rcnn"] .detection-demo-box--proposal {
+    animation: detRcnnProposalGrow 0.42s ease both;
+    animation-delay: var(--proposal-delay, 0ms);
+}
+
+@keyframes detRcnnCurrentPulse {
+    0%, 100% { box-shadow: 0 10px 22px rgba(124, 58, 237, 0.10); }
+    50% { box-shadow: 0 10px 26px rgba(124, 58, 237, 0.18), 0 0 0 3px rgba(167, 139, 250, 0.14); }
+}
+
+@keyframes detRcnnProposalGrow {
+    0% { opacity: 0; transform: scale(0.88); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes detRcnnCropPull {
+    0% { opacity: 0.55; transform: translateX(-18px) scale(0.92); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes detVectorRise {
+    from { opacity: 0.45; transform: scaleY(0.08); }
+    to { opacity: 1; transform: scaleY(var(--v)); }
+}
+
+@media (max-width: 1180px) {
+    .det-rcnn-step-rail {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .det-rcnn-proposal-cards,
+    .det-rcnn-refined-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .det-rcnn-crop-flow,
+    .det-rcnn-feature-focus,
+    .det-rcnn-classifier-focus,
+    .det-rcnn-nms-focus {
+        grid-template-columns: 1fr;
+    }
+
+    .det-rcnn-flow-arrow {
+        min-height: 18px;
+    }
+}
+
+@media (max-width: 760px) {
+    [data-detection-lab][data-det-submode="rcnn"] .vision-control-panel {
+        position: static;
+        min-height: auto;
+    }
+
+    .det-rcnn-step-rail,
+    .det-rcnn-focus-grid,
+    .det-rcnn-proposal-cards,
+    .det-rcnn-refined-list,
+    .det-rcnn-regression-focus .detection-regression-offsets {
+        grid-template-columns: 1fr;
+    }
 }
