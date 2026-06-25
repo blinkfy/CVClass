@@ -11,10 +11,18 @@
             </div>
         </div>
 
-        <label class="vision-field">
+        <div class="vision-field">
             <span>样例图选择</span>
-            <select data-seg-sample></select>
-        </label>
+            <div class="vis-sample-picker" data-seg-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-seg-sample-trigger>
+                    <span class="vis-sample-picker__label" data-seg-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-seg-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
 
         <div class="vision-field">
             <span>上传图片</span>
@@ -80,6 +88,14 @@
             <div>
                 <span>REAL MODEL COMPARISON</span>
                 <h3>同一图像下的语义 Mask 与实例 Mask</h3>
+                <div class="seg-lab-real-pills" role="status" aria-label="实现状态">
+                    <span class="seg-lab-real-pill is-real">
+                        <i aria-hidden="true"></i>真实推理 · SegFormer-B0 · ONNX Runtime Web
+                    </span>
+                    <span class="seg-lab-real-pill is-real">
+                        <i aria-hidden="true"></i>真实推理 · YOLO11n-seg · ONNX Runtime Web
+                    </span>
+                </div>
             </div>
             <span class="vision-status-chip" data-seg-status>READY</span>
         </div>
@@ -105,6 +121,14 @@
                     <img data-seg-sem-image alt="语义分割输入图">
                     <canvas data-seg-sem-canvas></canvas>
                     <div class="seg-lab-scanline" aria-hidden="true"></div>
+                    <div class="seg-lab-compare-overlay" data-seg-compare-sem aria-hidden="true">
+                        <div class="seg-lab-compare-grid">
+                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                        </div>
+                    </div>
                 </div>
                 <div class="seg-lab-mini-legend" data-seg-sem-legend></div>
                 <footer>
@@ -124,6 +148,11 @@
                     <canvas data-seg-inst-canvas></canvas>
                     <svg data-seg-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割边界框"></svg>
                     <div class="seg-lab-scanline" aria-hidden="true"></div>
+                    <div class="seg-lab-compare-overlay" data-seg-compare-inst aria-hidden="true">
+                        <div class="seg-lab-compare-inst">
+                            <i></i><i></i><i></i>
+                        </div>
+                    </div>
                 </div>
                 <div class="seg-lab-mini-legend" data-seg-inst-legend></div>
                 <footer>
@@ -141,42 +170,59 @@
             <button type="button" data-seg-step="compare"><span>5</span><strong>Compare</strong><small>map vs set</small></button>
         </div>
 
-        <section class="seg-lab-proscons" aria-labelledby="segProsConsTitle">
-            <div class="overview-section-heading">
+        <div class="seg-lab-player" data-seg-player aria-label="推理回放控制">
+            <div class="seg-lab-step-info" data-seg-step-info>
+                <span class="seg-lab-step-name" data-seg-step-name>Image</span>
+                <span class="seg-lab-step-principle" data-seg-step-principle>共享输入图像，两个模型将分别从同一像素集合中提取不同粒度的信息。</span>
+            </div>
+            <div class="seg-lab-progress" data-seg-progress aria-label="步骤进度">
+                <button class="seg-lab-progress-dot is-current" type="button" data-seg-dot="input" aria-label="步骤1 Image"><span>1</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="preprocess" aria-label="步骤2 Preprocess"><span>2</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="semantic" aria-label="步骤3 SegFormer"><span>3</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="instance" aria-label="步骤4 YOLO-seg"><span>4</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="compare" aria-label="步骤5 Compare"><span>5</span></button>
+                <span class="seg-lab-progress-text" data-seg-progress-text>步骤 1 / 5</span>
+            </div>
+            <div class="seg-lab-controls">
+                <button class="seg-lab-ctrl seg-lab-ctrl--step" type="button" data-seg-prev disabled aria-label="上一步">上一步</button>
+                <button class="seg-lab-ctrl seg-lab-ctrl--play" type="button" data-seg-play disabled aria-label="播放或暂停">播放</button>
+                <button class="seg-lab-ctrl seg-lab-ctrl--step" type="button" data-seg-next disabled aria-label="下一步">下一步</button>
+                <label class="seg-lab-speed">
+                    <span>速度</span>
+                    <input type="range" min="0.25" max="1.5" step="0.25" value="0.5" data-seg-speed>
+                    <b data-seg-speed-label>0.5×</b>
+                </label>
+            </div>
+        </div>
+
+        <section class="seg-lab-proscons-compact" aria-labelledby="segProsConsTitle">
+            <div class="overview-section-heading" style="grid-column:1/-1">
                 <div>
                     <span>CHOOSING THE RIGHT TASK</span>
-                    <h4 id="segProsConsTitle">具体优缺点对比</h4>
+                    <h4 id="segProsConsTitle">任务选择速查</h4>
                 </div>
-                <p>从输出粒度、交互能力、标注成本和常见失败模式来选择任务类型。</p>
+                <p>语义：全局类别 · 实例：独立对象 · 选择依据：是否需要区分个体。</p>
             </div>
-
-            <div class="seg-lab-proscons-grid">
-                <article data-seg-pros-card="semantic" class="is-focused">
-                    <header><span>Semantic</span><strong>语义分割</strong></header>
-                    <div>
-                        <h5>优点</h5>
-                        <p>全图 dense prediction，擅长道路、天空、墙面、地面等连续区域；可以直接计算类别面积占比和 mIoU。</p>
-                    </div>
-                    <div>
-                        <h5>局限</h5>
-                        <p>同类对象会被合并，无法知道“第几个行人”；边界质量依赖上采样和 skip/fusion 设计。</p>
-                    </div>
-                    <footer>典型应用：自动驾驶可行驶区域、遥感地物分类、医学组织区域。</footer>
-                </article>
-
-                <article data-seg-pros-card="instance">
-                    <header><span>Instance</span><strong>实例分割</strong></header>
-                    <div>
-                        <h5>优点</h5>
-                        <p>每个对象有独立 mask、bbox、score 与 id，适合计数、选择、跟踪和对象级属性分析。</p>
-                    </div>
-                    <div>
-                        <h5>局限</h5>
-                        <p>依赖检测候选框与 NMS，拥挤遮挡时容易漏检；对 sky、road 这类无固定边界的 stuff 不如语义分割自然。</p>
-                    </div>
-                    <footer>典型应用：行人车辆计数、机器人抓取、视频实例跟踪、质检分拣。</footer>
-                </article>
-            </div>
+            <article data-seg-pros-card="semantic" class="is-focused">
+                <header><span>Semantic</span><strong>语义分割</strong></header>
+                <ul>
+                    <li>全图 dense prediction，擅长连续区域</li>
+                    <li>无法区分同类个体（第几个行人）</li>
+                    <li>典型：自动驾驶可行驶区域、遥感地物</li>
+                </ul>
+            </article>
+            <article data-seg-pros-card="instance">
+                <header><span>Instance</span><strong>实例分割</strong></header>
+                <ul>
+                    <li>每对象独立 mask / id，可计数可跟踪</li>
+                    <li>依赖 NMS，拥挤场景易漏检</li>
+                    <li>典型：行人计数、机器人抓取、视频跟踪</li>
+                </ul>
+            </article>
         </section>
     </div>
 
@@ -189,16 +235,25 @@
             </div>
         </div>
 
+        <div class="seg-lab-link-modes" data-seg-link-modes role="tablist" aria-label="Mask 联动模式">
+            <button class="seg-lab-link-mode-btn is-active" type="button" data-seg-link-mode="hover" role="tab" aria-selected="true">Hover 联动</button>
+            <button class="seg-lab-link-mode-btn" type="button" data-seg-link-mode="click" role="tab" aria-selected="false">点击锁定</button>
+            <button class="seg-lab-link-mode-btn" type="button" data-seg-link-mode="blink" role="tab" aria-selected="false">差异闪烁</button>
+        </div>
+
         <section class="seg-lab-explain-card" data-seg-explain-card>
             <span data-seg-explain-kicker>Semantic Segmentation</span>
             <h4 data-seg-explain-title>语义分割关注“每个像素是什么类别”</h4>
             <p data-seg-explain-copy>适合道路、天空、墙面、地面等 stuff 类别和整体场景理解，但不会把同类多个目标拆成独立对象。</p>
-            <dl>
-                <div><dt>Output</dt><dd data-seg-explain-output>H×W class map / H×W×C logits</dd></div>
-                <div><dt>Metric</dt><dd data-seg-explain-metric>Pixel Accuracy / mIoU</dd></div>
-                <div><dt>Best for</dt><dd data-seg-explain-best>场景理解、区域占比、可通行区域</dd></div>
-            </dl>
         </section>
+
+        <div class="seg-lab-figure-card" data-seg-figure="semantic">
+            <img src="{{ url_for('static', filename='assets/img/semantic-segment2.webp') }}" alt="语义分割输出结构示意" loading="lazy">
+        </div>
+
+        <div class="seg-lab-figure-card" data-seg-figure="instance">
+            <img src="{{ url_for('static', filename='assets/img/instance-segment2.webp') }}" alt="实例分割输出结构示意" loading="lazy">
+        </div>
 
         <section class="seg-lab-inspector">
             <div class="overview-control-title">
@@ -213,5 +268,5 @@
 
 {% block extra_js %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260624-real-compare3"></script>
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260625-figcard1"></script>
 {% endblock %}

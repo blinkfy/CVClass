@@ -42,6 +42,47 @@
         {"id": 5, "class": "desk", "score": 0.82, "bbox": [370, 550, 705, 785], "color": "#EAB308", "polygon": [[382, 560], [690, 552], [705, 735], [650, 785], [390, 770]]},
         {"id": 6, "class": "bag", "score": 0.76, "bbox": [64, 582, 142, 790], "color": "#EC4899", "polygon": [[78, 585], [132, 602], [142, 740], [116, 790], [66, 765], [64, 640]]}
       ]
+    },
+    {
+      "id": "bangkok_traffic",
+      "name": "Traffic Street",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 355,
+      "height": 355,
+      "maskAP": 0.602,
+      "semantic_regions": [
+        {"class": "road", "color": "#7E3F98", "polygon": [[0, 140], [355, 130], [355, 355], [0, 355]]},
+        {"class": "vehicle", "color": "#2563EB", "polygon": [[0, 180], [110, 170], [115, 355], [0, 355]]},
+        {"class": "vehicle", "color": "#2563EB", "polygon": [[130, 190], [270, 180], [280, 310], [125, 320]]},
+        {"class": "vehicle", "color": "#2563EB", "polygon": [[240, 120], [340, 115], [350, 230], [245, 240]]}
+      ],
+      "instances": [
+        {"id": 1, "class": "car", "score": 0.94, "bbox": [0, 180, 110, 355], "color": "#F97316", "polygon": [[5, 185], [108, 175], [112, 352], [2, 355]]},
+        {"id": 2, "class": "car", "score": 0.91, "bbox": [130, 190, 270, 310], "color": "#22C55E", "polygon": [[135, 195], [268, 185], [275, 308], [128, 315]]},
+        {"id": 3, "class": "truck", "score": 0.86, "bbox": [240, 120, 340, 230], "color": "#8B5CF6", "polygon": [[245, 125], [338, 118], [348, 228], [242, 235]]},
+        {"id": 4, "class": "traffic light", "score": 0.74, "bbox": [295, 55, 345, 125], "color": "#EAB308", "polygon": [[300, 58], [342, 55], [345, 122], [298, 122]]}
+      ]
+    },
+    {
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "width": 3840,
+      "height": 2880,
+      "maskAP": 0.591,
+      "semantic_regions": [
+        {"class": "floor", "color": "#A16207", "polygon": [[0, 1660], [3840, 1600], [3840, 2880], [0, 2880]]},
+        {"class": "wall", "color": "#93C5FD", "polygon": [[0, 0], [3840, 0], [3840, 1590], [0, 1610]]},
+        {"class": "table", "color": "#F59E0B", "polygon": [[2460, 1940], [3840, 1850], [3840, 2390], [2360, 2340]]},
+        {"class": "chair", "color": "#22C55E", "polygon": [[2205, 1770], [2465, 1775], [2520, 2240], [2130, 2245]]}
+      ],
+      "instances": [
+        {"id": 1, "class": "chair", "score": 0.88, "bbox": [200, 1700, 850, 2750], "color": "#F97316", "polygon": [[220, 1710], [830, 1720], [840, 2730], [210, 2740]]},
+        {"id": 2, "class": "chair", "score": 0.84, "bbox": [1050, 1800, 1650, 2850], "color": "#22C55E", "polygon": [[1070, 1810], [1630, 1820], [1640, 2830], [1060, 2840]]},
+        {"id": 3, "class": "tv", "score": 0.91, "bbox": [2100, 900, 2850, 1750], "color": "#2563EB", "polygon": [[2120, 920], [2830, 910], [2840, 1730], [2110, 1740]]},
+        {"id": 4, "class": "laptop", "score": 0.79, "bbox": [1200, 1950, 1800, 2350], "color": "#EAB308", "polygon": [[1220, 1970], [1780, 1960], [1790, 2330], [1210, 2340]]},
+        {"id": 5, "class": "backpack", "score": 0.72, "bbox": [2600, 2200, 3100, 2700], "color": "#8B5CF6", "polygon": [[2620, 2220], [3080, 2210], [3090, 2680], [2610, 2690]]}
+      ]
     }
   ]
 }

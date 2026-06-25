@@ -31,11 +31,29 @@
         instanceBackendKey: "",
         selectedInstanceId: null,
         token: 0,
-        customUrl: null
+        customUrl: null,
+        step: "input",
+        playback: "paused",
+        speed: 0.5,
+        playTimer: null,
+        linkMode: "hover",
+        lockedInstanceId: null
+    };
+
+    const STEPS = ["input", "preprocess", "semantic", "instance", "compare"];
+    const STEP_META = {
+        input: {name: "Image", principle: "共享输入图像，两个模型将分别从同一像素集合中提取不同粒度的信息。"},
+        preprocess: {name: "Preprocess", principle: "resize 到模型输入尺寸并归一化，保证两个模型看到的是同一预处理结果。"},
+        semantic: {name: "SegFormer", principle: "语义分支输出 H×W×C logits，经 argmax 得到每像素类别。"},
+        instance: {name: "YOLO-seg", principle: "实例分支输出检测框 + mask 原型，每实例获得独立掩码与 id。"},
+        compare: {name: "Compare", principle: "同一像素在语义图里只有类别，在实例图里可归属独立对象——这就是任务粒度差异。"}
     };
 
     const els = {
-        sample: $("[data-seg-sample]"),
+        sample: $("[data-seg-sample-picker]"),
+        sampleTrigger: $("[data-seg-sample-trigger]"),
+        sampleLabel: $("[data-seg-sample-label]"),
+        sampleGrid: $("[data-seg-sample-grid]"),
         upload: $("[data-seg-upload]"),
         uploadName: $("[data-seg-upload-name]"),
         focusButtons: $$("[data-seg-focus]"),
@@ -77,11 +95,112 @@
         explainMetric: $("[data-seg-explain-metric]"),
         explainBest: $("[data-seg-explain-best]"),
         inspector: $("[data-seg-inspector]"),
-        prosCards: $$("[data-seg-pros-card]")
+        prosCards: $$("[data-seg-pros-card]"),
+        player: $("[data-seg-player]"),
+        stepInfo: $("[data-seg-step-info]"),
+        stepName: $("[data-seg-step-name]"),
+        stepPrinciple: $("[data-seg-step-principle]"),
+        progress: $("[data-seg-progress]"),
+        progressText: $("[data-seg-progress-text]"),
+        dots: $$("[data-seg-dot]"),
+        lines: $$(".seg-lab-progress-line"),
+        prev: $("[data-seg-prev]"),
+        play: $("[data-seg-play]"),
+        next: $("[data-seg-next]"),
+        speed: $("[data-seg-speed]"),
+        speedLabel: $("[data-seg-speed-label]"),
+        linkModeBtns: $$("[data-seg-link-mode]"),
+        semCard: $("[data-seg-card='semantic']"),
+        instCard: $("[data-seg-card='instance']"),
+        compareSemOverlay: $("[data-seg-compare-sem]"),
+        compareInstOverlay: $("[data-seg-compare-inst]"),
+        inspectorTooltip: null,
+        figureCards: $$("[data-seg-figure]")
     };
 
     const semanticCtx = els.semanticCanvas.getContext("2d", {willReadFrequently: true});
     const instanceCtx = els.instanceCanvas.getContext("2d", {willReadFrequently: true});
+
+    // 创建像素 inspector tooltip
+    els.inspectorTooltip = document.createElement("div");
+    els.inspectorTooltip.className = "seg-lab-inspector-tooltip";
+    els.inspectorTooltip.innerHTML = `
+        <div class="tip-title">PIXEL INSPECTOR</div>
+        <div class="tip-row"><span>坐标</span><b data-tip-coord>--</b></div>
+        <div class="tip-row"><span>语义类别</span><b class="tip-sem" data-tip-sem>--</b></div>
+        <div class="tip-row"><span>所属实例</span><b class="tip-inst" data-tip-inst>--</b></div>
+    `;
+    document.body.appendChild(els.inspectorTooltip);
+    const tipEls = {
+        coord: els.inspectorTooltip.querySelector("[data-tip-coord]"),
+        sem: els.inspectorTooltip.querySelector("[data-tip-sem]"),
+        inst: els.inspectorTooltip.querySelector("[data-tip-inst]")
+    };
+
+    function showInspectorTooltip(event) {
+        if (!state.semantic && !state.instance) return;
+        const semCoords = eventToCanvasCoords(event, els.semanticCanvas);
+        if (!semCoords) {
+            hideInspectorTooltip();
+            return;
+        }
+        const {x, y} = semCoords;
+        tipEls.coord.textContent = `(${x}, ${y})`;
+        // 语义类别
+        let semLabel = "--";
+        if (state.semantic) {
+            if (state.semantic.classMap) {
+                const id = state.semantic.classMap[y * state.semantic.width + x];
+                if (id !== undefined && id !== 255) {
+                    const cls = (state.semantic.classes || []).find((c) => Number(c.id) === Number(id));
+                    semLabel = cls ? cls.name || cls.cn || `class_${id}` : `class_${id}`;
+                } else {
+                    semLabel = "背景/未知";
+                }
+            } else {
+                const regions = state.semantic.regions || [];
+                const region = regions.find((r) => Array.isArray(r.polygon) && pointInPolygon(x, y, r.polygon));
+                semLabel = region ? region.className : "背景";
+            }
+        }
+        tipEls.sem.textContent = semLabel;
+        // 所属实例
+        let instLabel = "--";
+        if (state.instance) {
+            const insts = state.instance.instances || [];
+            const found = insts.find((item) => {
+                if (item.mask?.data) {
+                    return item.mask.data[y * state.instance.width + x];
+                }
+                if (item.bbox) {
+                    const [x1, y1, x2, y2] = item.bbox;
+                    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+                }
+                return false;
+            });
+            if (found) {
+                instLabel = `#${found.id} ${found.className} ${found.score.toFixed(2)}`;
+            } else {
+                instLabel = "无实例";
+            }
+        }
+        tipEls.inst.textContent = instLabel;
+        // 定位
+        const pad = 14;
+        const tipW = els.inspectorTooltip.offsetWidth || 200;
+        const tipH = els.inspectorTooltip.offsetHeight || 90;
+        let left = event.clientX + pad;
+        let top = event.clientY + pad;
+        if (left + tipW > window.innerWidth) left = event.clientX - tipW - pad;
+        if (top + tipH > window.innerHeight) top = event.clientY - tipH - pad;
+        els.inspectorTooltip.style.left = `${left}px`;
+        els.inspectorTooltip.style.top = `${top}px`;
+        els.inspectorTooltip.classList.add("is-visible");
+    }
+
+    function hideInspectorTooltip() {
+        if (els.inspectorTooltip) els.inspectorTooltip.classList.remove("is-visible");
+    }
 
     function esc(value) {
         return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -114,7 +233,96 @@
     }
 
     function setStep(step) {
+        if (!STEPS.includes(step)) return;
+        state.step = step;
         els.pipeline.forEach((button) => button.classList.toggle("is-active", button.dataset.segStep === step));
+        const idx = STEPS.indexOf(step);
+        els.dots.forEach((dot, i) => {
+            dot.classList.toggle("is-current", i === idx);
+            dot.classList.toggle("is-done", i < idx);
+        });
+        els.lines.forEach((line, i) => line.classList.toggle("is-done", i < idx));
+        if (els.progressText) els.progressText.textContent = `步骤 ${idx + 1} / ${STEPS.length}`;
+        const meta = STEP_META[step] || {name: step, principle: ""};
+        if (els.stepName) els.stepName.textContent = meta.name;
+        if (els.stepPrinciple) els.stepPrinciple.textContent = meta.principle;
+        const ready = state.semantic || state.instance;
+        if (els.prev) els.prev.disabled = !ready || idx === 0 || state.playback === "playing";
+        if (els.next) els.next.disabled = !ready || idx === STEPS.length - 1 || state.playback === "playing";
+        if (els.play) {
+            els.play.disabled = !ready;
+            els.play.textContent = state.playback === "playing" ? "暂停" : "播放";
+        }
+        // Compare 步骤触发输出结构差异动画
+        if (step === "compare" && ready) {
+            triggerCompareAnimation();
+        } else {
+            hideCompareAnimation();
+        }
+        root.dataset.step = step;
+    }
+
+    function triggerCompareAnimation() {
+        [els.compareSemOverlay, els.compareInstOverlay].forEach((el) => {
+            if (!el) return;
+            el.classList.remove("is-active");
+            // 强制重排让动画重新触发
+            void el.offsetWidth;
+            el.classList.add("is-active");
+        });
+    }
+
+    function hideCompareAnimation() {
+        [els.compareSemOverlay, els.compareInstOverlay].forEach((el) => {
+            if (el) el.classList.remove("is-active");
+        });
+    }
+
+    function playNext() {
+        const idx = STEPS.indexOf(state.step);
+        if (idx < STEPS.length - 1) {
+            setStep(STEPS[idx + 1]);
+        } else {
+            pausePlayback();
+        }
+    }
+
+    function startPlayback() {
+        if (state.playback === "playing") return;
+        state.playback = "playing";
+        if (els.play) els.play.textContent = "暂停";
+        const advance = () => {
+            if (state.playback !== "playing") return;
+            const idx = STEPS.indexOf(state.step);
+            if (idx < STEPS.length - 1) {
+                setStep(STEPS[idx + 1]);
+                state.playTimer = setTimeout(advance, 1100 / state.speed);
+            } else {
+                pausePlayback();
+            }
+        };
+        state.playTimer = setTimeout(advance, 1100 / state.speed);
+        setStep(state.step);
+    }
+
+    function pausePlayback() {
+        state.playback = "paused";
+        if (state.playTimer) {
+            clearTimeout(state.playTimer);
+            state.playTimer = null;
+        }
+        if (els.play) els.play.textContent = "播放";
+        setStep(state.step);
+    }
+
+    function togglePlayback() {
+        if (state.playback === "playing") pausePlayback();
+        else startPlayback();
+    }
+
+    function gotoStep(step) {
+        pausePlayback();
+        setStep(step);
     }
 
     function setBusy(busy) {
@@ -146,7 +354,7 @@
             },
             instance: {
                 kicker: "Instance Segmentation",
-                title: "实例分割关注“每个对象是谁、在哪里”",
+                title: "实例分割关注每个对象是谁、在哪里",
                 body: "在检测基础上为每个目标生成独立 mask，因此同类目标可以计数、选择和跟踪。",
                 output: "N × {bbox,class,score,mask,instance_id}",
                 metric: "Mask IoU / Mask AP",
@@ -164,9 +372,12 @@
         els.explainKicker.textContent = copy.kicker;
         els.explainTitle.textContent = copy.title;
         els.explainCopy.textContent = copy.body;
-        els.explainOutput.textContent = copy.output;
-        els.explainMetric.textContent = copy.metric;
-        els.explainBest.textContent = copy.best;
+        if (els.explainOutput) els.explainOutput.textContent = copy.output;
+        if (els.explainMetric) els.explainMetric.textContent = copy.metric;
+        if (els.explainBest) els.explainBest.textContent = copy.best;
+        // 根据当前 focus 切换 figure-card 显示
+        const figTarget = state.focus === "instance" ? "instance" : "semantic";
+        els.figureCards.forEach((card) => card.classList.toggle("is-active", card.dataset.segFigure === figTarget));
         renderInspector();
     }
 
@@ -601,6 +812,36 @@
         }
     }
 
+    function renderSamplePicker() {
+        const samples = state.data?.samples || [];
+        if (!els.sampleGrid) return;
+        els.sampleGrid.innerHTML = samples.map((item) => `
+            <button type="button" class="vis-sample-picker__card${item.id === state.sampleId ? " is-active" : ""}" data-seg-sample-card="${esc(item.id)}">
+                <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy">
+                <span>${esc(item.name)}</span>
+            </button>
+        `).join("");
+        els.sampleGrid.querySelectorAll("[data-seg-sample-card]").forEach((button) => {
+            button.addEventListener("click", () => {
+                if (button.dataset.segSampleCard === state.sampleId) {
+                    closeSamplePicker();
+                    return;
+                }
+                switchSample(button.dataset.segSampleCard);
+                closeSamplePicker();
+            });
+        });
+        updateSampleLabel();
+    }
+
+    function updateSampleLabel() {
+        const s = state.data?.samples.find((item) => item.id === state.sampleId);
+        if (els.sampleLabel) els.sampleLabel.textContent = s ? s.name : "选择示例图";
+    }
+
+    function closeSamplePicker() { els.sample?.classList.remove("is-open"); }
+    function toggleSamplePicker() { els.sample?.classList.toggle("is-open"); }
+
     function switchSample(sampleId) {
         const sample = state.data.samples.find((item) => item.id === sampleId) || state.data.samples[0];
         state.sampleId = sample.id;
@@ -608,7 +849,6 @@
         state.semantic = null;
         state.instance = null;
         setImage(sample.image, sample.name, sample.width, sample.height);
-        els.sample.value = sample.id;
         els.uploadName.textContent = "选择图片运行双模型";
         state.token += 1;
         setStep("input");
@@ -623,6 +863,7 @@
         els.instanceStatus.textContent = "预设就绪";
         els.semanticBadge.textContent = "PRESET";
         els.instanceBadge.textContent = "PRESET";
+        renderSamplePicker();
         renderAll();
         waitForImage(currentImageElement()).then(() => {
             updateImageMetrics();
@@ -653,7 +894,13 @@
     }
 
     function initControls() {
-        els.sample.addEventListener("change", () => switchSample(els.sample.value));
+        els.sampleTrigger?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleSamplePicker();
+        });
+        document.addEventListener("click", (e) => {
+            if (!els.sample?.contains(e.target)) closeSamplePicker();
+        });
         els.upload.addEventListener("change", () => handleUpload(els.upload.files?.[0]));
         els.focusButtons.forEach((button) => button.addEventListener("click", () => {
             state.focus = button.dataset.segFocus;
@@ -690,16 +937,226 @@
             renderInstanceLegend();
             updateFocus();
         });
+        els.pipeline.forEach((button) => button.addEventListener("click", () => gotoStep(button.dataset.segStep)));
+        els.dots.forEach((dot) => dot.addEventListener("click", () => gotoStep(dot.dataset.segDot)));
+        if (els.prev) els.prev.addEventListener("click", () => {
+            const idx = STEPS.indexOf(state.step);
+            if (idx > 0) gotoStep(STEPS[idx - 1]);
+        });
+        if (els.next) els.next.addEventListener("click", () => {
+            const idx = STEPS.indexOf(state.step);
+            if (idx < STEPS.length - 1) gotoStep(STEPS[idx + 1]);
+        });
+        if (els.play) els.play.addEventListener("click", () => togglePlayback());
+        if (els.speed) els.speed.addEventListener("input", () => {
+            state.speed = Number(els.speed.value);
+            if (els.speedLabel) els.speedLabel.textContent = `${state.speed.toFixed(2)}×`;
+            root.style.setProperty("--seg-lab-speed", String(state.speed));
+            if (state.playback === "playing") {
+                if (state.playTimer) clearTimeout(state.playTimer);
+                state.playTimer = setTimeout(() => {
+                    const idx = STEPS.indexOf(state.step);
+                    if (idx < STEPS.length - 1) {
+                        setStep(STEPS[idx + 1]);
+                        state.playTimer = setTimeout(function tick() {
+                            if (state.playback !== "playing") return;
+                            const i = STEPS.indexOf(state.step);
+                            if (i < STEPS.length - 1) {
+                                setStep(STEPS[i + 1]);
+                                state.playTimer = setTimeout(tick, 1100 / state.speed);
+                            } else {
+                                pausePlayback();
+                            }
+                        }, 1100 / state.speed);
+                    } else {
+                        pausePlayback();
+                    }
+                }, 1100 / state.speed);
+            }
+        });
+        // Mask linkage modes
+        els.linkModeBtns.forEach((btn) => btn.addEventListener("click", () => setLinkMode(btn.dataset.segLinkMode)));
+        // Hover linkage: hovering instance card highlights semantic pixels of same class
+        if (els.instCard) {
+            els.instCard.addEventListener("mousemove", (e) => {
+                if (state.linkMode !== "hover") return;
+                const inst = pickInstanceFromEvent(e);
+                if (inst) {
+                    spotlightInstance(inst.id);
+                } else {
+                    spotlightInstance(null);
+                }
+            });
+            els.instCard.addEventListener("mouseleave", () => {
+                if (state.linkMode !== "hover") return;
+                spotlightInstance(null);
+            });
+        }
+        if (els.semCard) {
+            els.semCard.addEventListener("mousemove", (e) => {
+                if (state.linkMode !== "hover") return;
+                const cls = pickSemanticClassFromEvent(e);
+                if (cls) {
+                    spotlightClass(cls.id);
+                } else {
+                    spotlightClass(null);
+                }
+            });
+            els.semCard.addEventListener("mouseleave", () => {
+                if (state.linkMode !== "hover") return;
+                spotlightClass(null);
+            });
+        }
+        // Click lock: click instance dims other instances in both views
+        if (els.instCard) {
+            els.instCard.addEventListener("click", (e) => {
+                if (state.linkMode !== "click") return;
+                const inst = pickInstanceFromEvent(e);
+                if (inst) {
+                    state.lockedInstanceId = state.lockedInstanceId === inst.id ? null : inst.id;
+                    lockInstance(state.lockedInstanceId);
+                }
+            });
+        }
+        // 像素 inspector tooltip - 在两个 canvas 上监听
+        [els.semanticCanvas, els.instanceCanvas].forEach((canvas) => {
+            if (!canvas) return;
+            canvas.addEventListener("mousemove", showInspectorTooltip);
+            canvas.addEventListener("mouseleave", hideInspectorTooltip);
+        });
     }
 
-    fetch(`${dataRoot}/overview/instance_samples.json`)
+    function setLinkMode(mode) {
+        state.linkMode = mode;
+        root.dataset.linkMode = mode;
+        els.linkModeBtns.forEach((btn) => {
+            const active = btn.dataset.segLinkMode === mode;
+            btn.classList.toggle("is-active", active);
+            btn.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        // 清理前模式的高亮残留
+        spotlightInstance(null);
+        spotlightClass(null);
+        if (state.lockedInstanceId !== null) {
+            lockInstance(null);
+            state.lockedInstanceId = null;
+        }
+    }
+
+    // 把鼠标事件坐标转换为 canvas 像素坐标
+    function eventToCanvasCoords(event, canvas) {
+        if (!canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right ||
+            event.clientY < rect.top || event.clientY > rect.bottom) return null;
+        const x = Math.floor((event.clientX - rect.left) / rect.width * canvas.width);
+        const y = Math.floor((event.clientY - rect.top) / rect.height * canvas.height);
+        return {x, y};
+    }
+
+    function pickInstanceFromEvent(event) {
+        if (!state.instance) return null;
+        const coords = eventToCanvasCoords(event, els.instanceCanvas);
+        if (!coords) return null;
+        const {x, y} = coords;
+        // 优先通过 mask.data 拾取
+        const insts = state.instance.instances || [];
+        for (const item of insts) {
+            if (item.mask?.data) {
+                const idx = y * state.instance.width + x;
+                if (item.mask.data[idx]) return item;
+            } else if (item.bbox) {
+                const [x1, y1, x2, y2] = item.bbox;
+                if (x >= x1 && x <= x2 && y >= y1 && y <= y2) return item;
+            }
+        }
+        return null;
+    }
+
+    function pickSemanticClassFromEvent(event) {
+        if (!state.semantic) return null;
+        const coords = eventToCanvasCoords(event, els.semanticCanvas);
+        if (!coords) return null;
+        const {x, y} = coords;
+        if (state.semantic.classMap) {
+            const id = state.semantic.classMap[y * state.semantic.width + x];
+            if (id === undefined || id === 255) return null;
+            const cls = (state.semantic.classes || []).find((c) => Number(c.id) === Number(id));
+            return cls || null;
+        }
+        // regions fallback
+        const regions = state.semantic.regions || [];
+        for (const region of regions) {
+            if (Array.isArray(region.polygon) && pointInPolygon(x, y, region.polygon)) {
+                const cls = (state.semantic.classes || []).find((c) => c.name === region.className);
+                return cls || {id: -1, name: region.className, color: region.color};
+            }
+        }
+        return null;
+    }
+
+    function pointInPolygon(px, py, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const [xi, yi] = poly[i];
+            const [xj, yj] = poly[j];
+            if (((yi > py) !== (yj > py)) &&
+                (px < (xj - xi) * (py - yi) / ((yj - yi) || 1e-6) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    // Hover: 高亮某实例，其余变暗
+    function spotlightInstance(instanceId) {
+        if (!els.instCard || !els.semCard) return;
+        if (instanceId === null) {
+            els.instCard.classList.remove("is-spotlight", "is-dimmed");
+            els.semCard.classList.remove("is-spotlight", "is-dimmed");
+            return;
+        }
+        els.instCard.classList.add("is-spotlight");
+        els.semCard.classList.add("is-dimmed");
+    }
+
+    // Hover: 高亮某类，其余变暗
+    function spotlightClass(classId) {
+        if (!els.instCard || !els.semCard) return;
+        if (classId === null) {
+            els.instCard.classList.remove("is-spotlight", "is-dimmed");
+            els.semCard.classList.remove("is-spotlight", "is-dimmed");
+            return;
+        }
+        els.semCard.classList.add("is-spotlight");
+        els.instCard.classList.add("is-dimmed");
+    }
+
+    // Click lock: 锁定某实例
+    function lockInstance(instanceId) {
+        if (!els.instCard || !els.semCard) return;
+        if (instanceId === null) {
+            els.instCard.classList.remove("is-locked");
+            els.semCard.classList.remove("is-locked");
+        } else {
+            els.instCard.classList.add("is-locked");
+            els.semCard.classList.add("is-locked");
+            state.selectedInstanceId = instanceId;
+            drawInstanceMasks(state.instance);
+            renderInstanceLegend();
+        }
+    }
+
+    root.dataset.linkMode = state.linkMode;
+    root.dataset.step = state.step;
+
+    fetch(`${dataRoot}/overview/instance_samples.json?v=20260625-samples4`)
         .then((response) => {
             if (!response.ok) throw new Error(`sample http ${response.status}`);
             return response.json();
         })
         .then((data) => {
             state.data = data;
-            els.sample.innerHTML = data.samples.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join("");
             initControls();
             switchSample(data.default_sample || data.samples[0]?.id);
         })
@@ -712,5 +1169,7 @@
         state.semanticClient?.dispose?.();
         state.instanceClient?.dispose?.();
         if (state.customUrl) URL.revokeObjectURL(state.customUrl);
+        if (state.playTimer) clearTimeout(state.playTimer);
+        if (els.inspectorTooltip) els.inspectorTooltip.remove();
     });
 }());

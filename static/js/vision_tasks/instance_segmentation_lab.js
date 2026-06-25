@@ -45,7 +45,10 @@
     };
 
     const els = {
-        sample: $("[data-inst-sample]"),
+        sample: $("[data-inst-sample-picker]"),
+        sampleTrigger: $("[data-inst-sample-trigger]"),
+        sampleLabel: $("[data-inst-sample-label]"),
+        sampleGrid: $("[data-inst-sample-grid]"),
         upload: $("[data-inst-upload]"),
         uploadName: $("[data-inst-upload-name]"),
         sourceButtons: $$("[data-inst-source]"),
@@ -461,9 +464,49 @@
         render();
     }
 
+    function renderSamplePicker() {
+        const samples = state.data?.samples || [];
+        if (!els.sampleGrid) return;
+        els.sampleGrid.innerHTML = samples.map((item) => `
+            <button type="button" class="vis-sample-picker__card${item.id === state.sampleId ? " is-active" : ""}" data-inst-sample-card="${esc(item.id)}">
+                <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy">
+                <span>${esc(item.name)}</span>
+            </button>
+        `).join("");
+        els.sampleGrid.querySelectorAll("[data-inst-sample-card]").forEach((button) => {
+            button.addEventListener("click", () => {
+                if (button.dataset.instSampleCard === state.sampleId) {
+                    closeSamplePicker();
+                    return;
+                }
+                selectSample(button.dataset.instSampleCard);
+                closeSamplePicker();
+            });
+        });
+        updateSampleLabel();
+    }
+
+    function updateSampleLabel() {
+        const s = state.data?.samples.find((item) => item.id === state.sampleId);
+        if (els.sampleLabel) els.sampleLabel.textContent = s ? s.name : "选择示例图";
+    }
+
+    function closeSamplePicker() { els.sample?.classList.remove("is-open"); }
+    function toggleSamplePicker() { els.sample?.classList.toggle("is-open"); }
+
+    function selectSample(sampleId) {
+        state.sampleId = sampleId;
+        state.sourceMode = isCompareView() ? "preset" : "model";
+        state.modelScene = null;
+        renderSamplePicker();
+        renderSourceButtons();
+        activateScene(presetScene(), true);
+        setPhase("image");
+        if (!isCompareView()) autoLoadAndRun("sample");
+    }
+
     function renderControls() {
-        els.sample.innerHTML = state.data.samples.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join("");
-        els.sample.value = state.sampleId;
+        renderSamplePicker();
     }
 
     function renderImage() {
@@ -1678,7 +1721,7 @@
             state.maskRcnnData = null;
         });
 
-    fetch(`${dataRoot}/overview/instance_samples.json`)
+    fetch(`${dataRoot}/overview/instance_samples.json?v=20260625-samples4`)
         .then((response) => response.json())
         .then((data) => {
             state.data = data;
@@ -1693,14 +1736,12 @@
             els.stats.innerHTML = `<div class="vision-empty-result">实例样例数据加载失败</div>`;
         });
 
-    els.sample.addEventListener("change", () => {
-        state.sampleId = els.sample.value;
-        state.sourceMode = isCompareView() ? "preset" : "model";
-        state.modelScene = null;
-        renderSourceButtons();
-        activateScene(presetScene(), true);
-        setPhase("image");
-        if (!isCompareView()) autoLoadAndRun("sample");
+    els.sampleTrigger?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleSamplePicker();
+    });
+    document.addEventListener("click", (e) => {
+        if (!els.sample?.contains(e.target)) closeSamplePicker();
     });
     els.upload.addEventListener("change", () => setUploadImage(els.upload.files?.[0]));
     if (Array.isArray(els.sourceButtons)) {

@@ -8,10 +8,18 @@
             <div><h3>输入与显示设置</h3><p>Input &amp; Display</p></div>
         </div>
 
-        <label class="vision-field">
+        <div class="vision-field">
             <span>样例图选择</span>
-            <select data-inst-sample></select>
-        </label>
+            <div class="vis-sample-picker" data-inst-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-inst-sample-trigger>
+                    <span class="vis-sample-picker__label" data-inst-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-inst-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
 
         <div class="vision-field">
             <span>上传图片（模型模式）</span>
@@ -36,7 +44,6 @@
         <div class="vision-field">
             <span>实例分割视图</span>
             <div class="overview-segmented-control instance-source-toggle" aria-label="实例分割视图">
-                <button type="button" data-inst-source="preset">预设实例结果</button>
                 <button class="is-active" type="button" data-inst-source="model">前端模型推理</button>
                 <button type="button" data-inst-source="maskrcnn">Mask R-CNN 机制</button>
                 <button type="button" data-inst-source="roiAlign">ROI Align 对比</button>

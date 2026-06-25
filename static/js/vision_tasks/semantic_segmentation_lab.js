@@ -40,7 +40,10 @@
     };
 
     const els = {
-        sample: $("[data-sem-sample]"),
+        sample: $("[data-sem-sample-picker]"),
+        sampleTrigger: $("[data-sem-sample-trigger]"),
+        sampleLabel: $("[data-sem-sample-label]"),
+        sampleGrid: $("[data-sem-sample-grid]"),
         sourceButtons: $$("[data-sem-source]"),
         modes: $$("[data-sem-mode]"),
         opacity: $("[data-sem-opacity]"),
@@ -972,9 +975,9 @@
     async function runModel() {
         if (state.busy) return;
         state.selectedSource = "model";
-        if (state.modelStatus !== "已加载" && state.modelStatus !== "推理完成") {
+        if (state.modelStatus !== "准备绪" && state.modelStatus !== "已加载" && state.modelStatus !== "推理完成") {
             await loadModel();
-            if (state.modelStatus !== "已加载") return;
+            if (state.modelStatus !== "准备绪" && state.modelStatus !== "已加载") return;
         }
         setBusy(true);
         try {
@@ -1157,13 +1160,53 @@
         }
     }
 
-    fetch(`${dataRoot}/overview/semantic_samples.json`)
+    function renderSamplePicker() {
+        const samples = state.data?.samples || [];
+        if (!els.sampleGrid) return;
+        els.sampleGrid.innerHTML = samples.map((item) => `
+            <button type="button" class="vis-sample-picker__card${item.id === state.sampleId ? " is-active" : ""}" data-sem-sample-card="${esc(item.id)}">
+                <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy">
+                <span>${esc(item.name)}</span>
+            </button>
+        `).join("");
+        els.sampleGrid.querySelectorAll("[data-sem-sample-card]").forEach((button) => {
+            button.addEventListener("click", () => {
+                if (button.dataset.semSampleCard === state.sampleId) {
+                    closeSamplePicker();
+                    return;
+                }
+                selectSample(button.dataset.semSampleCard);
+                closeSamplePicker();
+            });
+        });
+        updateSampleLabel();
+    }
+
+    function updateSampleLabel() {
+        const s = state.data?.samples.find((item) => item.id === state.sampleId);
+        if (els.sampleLabel) els.sampleLabel.textContent = s ? s.name : "选择示例图";
+    }
+
+    function closeSamplePicker() { els.sample?.classList.remove("is-open"); }
+    function toggleSamplePicker() { els.sample?.classList.toggle("is-open"); }
+
+    function selectSample(sampleId) {
+        state.sampleId = sampleId;
+        state.probeInfo = null;
+        if (state.selectedSource === "preset") state.selectedSource = "model";
+        renderSamplePicker();
+        renderAll(true);
+        clearProbe();
+        state.fcnMask = null;
+        if (state.selectedSource === "model") runModel();
+    }
+
+    fetch(`${dataRoot}/overview/semantic_samples.json?v=20260625-samples4`)
         .then((response) => response.json())
         .then((data) => {
             state.data = data;
             state.sampleId = data.default_sample || data.samples[0].id;
-            els.sample.innerHTML = data.samples.map((item) => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join("");
-            els.sample.value = state.sampleId;
+            renderSamplePicker();
             syncProcessConsole();
             renderAll(true);
             clearProbe();
@@ -1174,14 +1217,12 @@
             els.probe.innerHTML = `<strong>样例数据加载失败</strong>`;
         });
 
-    els.sample.addEventListener("change", () => {
-        state.sampleId = els.sample.value;
-        state.probeInfo = null;
-        renderAll(true);
-        clearProbe();
-        // 自动完成对新样例的运行
-        state.fcnMask = null;
-        if (state.selectedSource === "model") runModel();
+    els.sampleTrigger?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleSamplePicker();
+    });
+    document.addEventListener("click", (e) => {
+        if (!els.sample?.contains(e.target)) closeSamplePicker();
     });
 
     els.sourceButtons.forEach((button) => button.addEventListener("click", () => {

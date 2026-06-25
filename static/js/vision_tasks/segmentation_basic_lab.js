@@ -6480,7 +6480,7 @@
 
     async function init() {
         try {
-            const response = await fetch(`${dataRoot}/segmentation_basic/segmentation_basic_samples.json`);
+            const response = await fetch(`${dataRoot}/segmentation_basic/segmentation_basic_samples.json?v=20260625-segsamp4`);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             state.data = await response.json();
             state.sampleId = state.data.defaultSample || state.data.samples?.[0]?.id || "";

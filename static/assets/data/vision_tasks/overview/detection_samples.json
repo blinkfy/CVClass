@@ -74,6 +74,24 @@
         {"id": 6, "class": "chair", "score": 0.73, "bbox": [960, 505, 1128, 785]},
         {"id": 7, "class": "bag", "score": 0.44, "bbox": [64, 582, 142, 790]}
       ]
+    },
+    {
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "width": 3840,
+      "height": 2880,
+      "confidence_threshold": 0.5,
+      "nms_iou_threshold": 0.45,
+      "boxes": [
+        {"id": 1, "class": "chair", "score": 0.88, "bbox": [200, 1700, 850, 2750]},
+        {"id": 2, "class": "chair", "score": 0.84, "bbox": [1050, 1800, 1650, 2850]},
+        {"id": 3, "class": "tv", "score": 0.91, "bbox": [2100, 900, 2850, 1750]},
+        {"id": 4, "class": "laptop", "score": 0.79, "bbox": [1200, 1950, 1800, 2350]},
+        {"id": 5, "class": "backpack", "score": 0.72, "bbox": [2600, 2200, 3100, 2700]},
+        {"id": 6, "class": "bottle", "score": 0.58, "bbox": [1700, 2000, 1780, 2280]},
+        {"id": 7, "class": "chair", "score": 0.66, "bbox": [3000, 1900, 3550, 2700]}
+      ]
     }
   ]
 }

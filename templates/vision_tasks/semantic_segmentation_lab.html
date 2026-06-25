@@ -13,13 +13,20 @@
             <div><h3>Mask 参数</h3><p>输入与参数</p></div>
         </div>
 
-        <label class="vision-field">
+        <div class="vision-field">
             <span>样例图选择</span>
-            <select data-sem-sample></select>
-        </label>
+            <div class="vis-sample-picker" data-sem-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-sem-sample-trigger>
+                    <span class="vis-sample-picker__label" data-sem-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-sem-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
 
         <div class="overview-segmented-control semantic-source-toggle" aria-label="语义分割结果来源">
-            <button type="button" data-sem-source="preset">预设 mask</button>
             <button class="is-active" type="button" data-sem-source="model">前端模型推理</button>
             <button type="button" data-sem-source="fcn">FCN 原理演示</button>
         </div>

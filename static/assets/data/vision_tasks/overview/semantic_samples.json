@@ -63,6 +63,56 @@
         {"class": "chair", "polygon": [[2205, 1770], [2465, 1775], [2520, 2240], [2130, 2245]], "probability": 0.68},
         {"class": "chair", "polygon": [[3060, 1825], [3310, 1810], [3355, 2405], [2965, 2420]], "probability": 0.67}
       ]
+    },
+    {
+      "id": "bangkok_traffic",
+      "name": "Traffic Street",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 355,
+      "height": 355,
+      "miou": 0.712,
+      "classes": [
+        {"id": 0, "name": "road", "cn": "道路", "color": "#7E3F98"},
+        {"id": 1, "name": "vehicle", "cn": "车辆", "color": "#2563EB"},
+        {"id": 2, "name": "sky", "cn": "天空", "color": "#60A5FA"},
+        {"id": 3, "name": "building", "cn": "建筑", "color": "#6B7280"},
+        {"id": 4, "name": "traffic light", "cn": "交通灯", "color": "#EAB308"}
+      ],
+      "regions": [
+        {"class": "sky", "polygon": [[0, 0], [355, 0], [355, 80], [0, 90]], "probability": 0.8},
+        {"class": "building", "polygon": [[0, 0], [355, 0], [355, 150], [0, 140]], "probability": 0.75},
+        {"class": "road", "polygon": [[0, 140], [355, 130], [355, 355], [0, 355]], "probability": 0.84},
+        {"class": "vehicle", "polygon": [[0, 180], [110, 170], [115, 355], [0, 355]], "probability": 0.78},
+        {"class": "vehicle", "polygon": [[130, 190], [270, 180], [280, 310], [125, 320]], "probability": 0.76},
+        {"class": "vehicle", "polygon": [[240, 120], [340, 115], [350, 230], [245, 240]], "probability": 0.72},
+        {"class": "traffic light", "polygon": [[300, 60], [340, 55], [345, 125], [295, 125]], "probability": 0.68}
+      ]
+    },
+    {
+      "id": "classroom_students",
+      "name": "Classroom Students",
+      "image": "/static/assets/img/classroom_students.jpg",
+      "width": 1200,
+      "height": 800,
+      "miou": 0.738,
+      "classes": [
+        {"id": 0, "name": "floor", "cn": "地面", "color": "#A16207"},
+        {"id": 1, "name": "wall", "cn": "墙面", "color": "#93C5FD"},
+        {"id": 2, "name": "person", "cn": "人", "color": "#EF4444"},
+        {"id": 3, "name": "desk", "cn": "桌子", "color": "#F59E0B"},
+        {"id": 4, "name": "chair", "cn": "椅子", "color": "#22C55E"},
+        {"id": 5, "name": "board", "cn": "白板", "color": "#E5E7EB"}
+      ],
+      "regions": [
+        {"class": "wall", "polygon": [[0, 0], [1200, 0], [1200, 180], [0, 160]], "probability": 0.82},
+        {"class": "board", "polygon": [[0, 0], [140, 0], [130, 320], [0, 330]], "probability": 0.77},
+        {"class": "floor", "polygon": [[0, 480], [1200, 470], [1200, 800], [0, 800]], "probability": 0.85},
+        {"class": "desk", "polygon": [[370, 550], [705, 550], [705, 785], [370, 785]], "probability": 0.74},
+        {"class": "chair", "polygon": [[960, 505], [1128, 505], [1128, 785], [960, 785]], "probability": 0.71},
+        {"class": "person", "polygon": [[545, 255], [610, 255], [615, 410], [540, 410]], "probability": 0.89},
+        {"class": "person", "polygon": [[1020, 372], [1120, 372], [1120, 672], [1020, 672]], "probability": 0.87},
+        {"class": "person", "polygon": [[210, 492], [365, 492], [365, 790], [210, 790]], "probability": 0.85}
+      ]
     }
   ]
 }

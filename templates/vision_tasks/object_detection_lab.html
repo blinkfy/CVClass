@@ -21,12 +21,18 @@
         </div>
 
         <!-- Sample selector -->
-        <label class="vision-field">
-                <span>样例场景</span>
-            <select data-det-sample>
-                <option>加载中…</option>
-            </select>
-        </label>
+        <div class="vision-field">
+            <span>样例场景</span>
+            <div class="vis-sample-picker" data-det-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-det-sample-trigger>
+                    <span class="vis-sample-picker__label" data-det-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-det-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Upload -->
         <div class="vision-field" data-yolo-only>
@@ -84,7 +90,7 @@
             <span>02</span><strong>当前执行步骤</strong>
         </div>
         <div class="det-course-step" data-rcnn-only>
-            <span data-det-course-step>Image</span>
+            <span data-det-course-step>图像</span>
             <p data-det-course-goal>查看输入图像及当前活跃的候选提取区域。</p>
             <dl>
                 <div><dt>当前框 ID</dt><dd data-det-course-active>p1</dd></div>
@@ -104,10 +110,6 @@
             <button data-det-next>下一步</button>
         </div>
             <button class="det-play-btn" data-det-play>自动播放</button>
-        <div class="det-control-group-title" data-rcnn-only>
-            <span>03</span><strong>本步骤总结</strong>
-        </div>
-        <div class="det-course-summary" data-det-course-summary data-rcnn-only></div>
     </aside>
 
     <!-- ===== Center Stage ===== -->
@@ -128,7 +130,7 @@
         </div>
 
         <!-- Step label -->
-            <div class="det-step-label" data-det-step-label>IMAGE · STEP 1 / 7</div>
+            <div class="det-step-label" data-det-step-label>图像 · 步骤 1 / 7</div>
             <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
 
         <!-- Canvas area -->
@@ -175,6 +177,11 @@
         <!-- Detail data -->
         <div class="det-notes-data" data-det-notes></div>
 
+        <div class="det-side-summary-title" data-rcnn-only>
+            <span>03</span><strong>本步骤总结</strong>
+        </div>
+        <div class="det-course-summary det-course-summary--side" data-det-course-summary data-rcnn-only></div>
+
         <!-- Academic Info Cards for layout fill and learning -->
         <div class="det-academic-cards">
             <!-- IoU Card -->
@@ -186,14 +193,14 @@
                 <div class="det-academic-content">
             <p class="det-academic-desc">交并比 (Intersection over Union) 衡量预测框与真实框的重合度，是 NMS 和精度评估的核心指标。</p>
                     <div class="det-iou-diagram">
-                        <div class="det-diag-box box-a"><span>Box A</span></div>
-                        <div class="det-diag-box box-b"><span>Box B</span></div>
+                        <div class="det-diag-box box-a"><span>框 A</span></div>
+                        <div class="det-diag-box box-b"><span>框 B</span></div>
             <div class="det-diag-overlap"><span>A ∩ B</span></div>
                     </div>
                     <div class="det-formula">
                         <span class="det-math-frac">
-                <span class="det-math-num">Overlap Area (交集)</span>
-                <span class="det-math-den">Union Area (并集)</span>
+                <span class="det-math-num">重叠面积（交集）</span>
+                <span class="det-math-den">总覆盖面积（并集）</span>
                         </span>
                 <span class="det-math-eq">= IoU 分数</span>
                     </div>
@@ -223,13 +230,13 @@
 
 <!-- ========== Stepper ========== -->
         <ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
-    <li data-det-phase="image"><span>1</span><div><strong>Image</strong><small>图像加载就绪</small></div></li>
-    <li data-det-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>等比缩放填充</small></div></li>
-    <li data-det-phase="inference"><span>3</span><div><strong>Inference</strong><small>前向推理计算</small></div></li>
-    <li data-det-phase="decode"><span>4</span><div><strong>Decode</strong><small>模型输出解码</small></div></li>
-    <li data-det-phase="confidence"><span>5</span><div><strong>Confidence</strong><small>置信度粗过滤</small></div></li>
+    <li data-det-phase="image"><span>1</span><div><strong>图像</strong><small>图像加载就绪</small></div></li>
+    <li data-det-phase="preprocess"><span>2</span><div><strong>预处理</strong><small>等比缩放填充</small></div></li>
+    <li data-det-phase="inference"><span>3</span><div><strong>推理</strong><small>前向推理计算</small></div></li>
+    <li data-det-phase="decode"><span>4</span><div><strong>解码</strong><small>模型输出解码</small></div></li>
+    <li data-det-phase="confidence"><span>5</span><div><strong>置信度</strong><small>置信度粗过滤</small></div></li>
     <li data-det-phase="nms"><span>6</span><div><strong>NMS</strong><small>重叠剔除抑制</small></div></li>
-    <li data-det-phase="final"><span>7</span><div><strong>Final</strong><small>最终检测结果</small></div></li>
+    <li data-det-phase="final"><span>7</span><div><strong>最终框</strong><small>最终检测结果</small></div></li>
 </ol>
 
 </div><!-- /data-detection-lab -->
