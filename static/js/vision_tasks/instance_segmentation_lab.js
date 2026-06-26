@@ -1243,7 +1243,7 @@
                 <div class="blender-channel-cell" data-inst-blender-ch="${idx}" data-coeff="${coeff.toFixed(3)}">
                     <span class="blender-channel-title">P<sub>${idx}</sub></span>
                     <div class="blender-channel-canvas-wrap">
-                        <canvas data-ch-canvas="${idx}" width="80" height="80"></canvas>
+                        <canvas data-ch-canvas="${idx}" width="72" height="72"></canvas>
                     </div>
                     <div class="blender-channel-coeff-row">
                         <div class="blender-coeff-header">
@@ -1297,10 +1297,11 @@
     }
 
     function drawPrototypeChannelToCanvas(canvas, protoData, chIdx, width, height) {
+        const SIZE = 72;
         const c = canvas.getContext("2d");
-        canvas.width = 80;
-        canvas.height = 80;
-        const imgData = c.createImageData(80, 80);
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const imgData = c.createImageData(SIZE, SIZE);
         const data = imgData.data;
 
         const offset = chIdx * width * height;
@@ -1313,18 +1314,18 @@
         }
         const range = max - min || 1;
 
-        for (let dy = 0; dy < 80; dy++) {
-            for (let dx = 0; dx < 80; dx++) {
-                const sx = Math.floor((dx / 80) * width);
-                const sy = Math.floor((dy / 80) * height);
+        for (let dy = 0; dy < SIZE; dy++) {
+            for (let dx = 0; dx < SIZE; dx++) {
+                const sx = Math.floor((dx / SIZE) * width);
+                const sy = Math.floor((dy / SIZE) * height);
                 const val = protoData[offset + sy * width + sx];
-                
+
                 const n = (val - min) / range;
                 const r = Math.round(n * n * 255);
-                const g = Math.round(Math.sin(n * Math.PI) * 160 + n * 85);
-                const b = Math.round((1 - n) * 90 + n * 255);
-                
-                const p = (dy * 60 + dx) * 4;
+                const g = Math.round(Math.sin(n * Math.PI) * 180 + n * 75);
+                const b = Math.round((1 - n) * 60 + n * 255);
+
+                const p = (dy * SIZE + dx) * 4;
                 data[p] = r;
                 data[p+1] = g;
                 data[p+2] = b;
