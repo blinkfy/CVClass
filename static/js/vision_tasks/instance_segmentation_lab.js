@@ -100,6 +100,9 @@
         blenderCanvas: $("[data-inst-blender-canvas]"),
         blenderOverlayText: $("[data-inst-blender-overlay-text]"),
         blenderGrid: $("[data-inst-blender-grid]"),
+        blenderGridTitle: $("[data-inst-blender-grid-title]"),
+        blenderGridMath: $("[data-inst-blender-grid-math]"),
+        blenderFormulaMath: $("[data-inst-formula-math]"),
         blenderSimulatedBadge: $("[data-inst-blender-simulated-badge]"),
         processSteps: $("[data-inst-process-steps]"),
         processOverlay: $("[data-inst-process-overlay]"),
@@ -113,7 +116,7 @@
             id: "image",
             title: "Image",
             detail: "shared RGB input",
-            formula: "I ∈ R^{H×W×3}",
+            formula: "I \\in \\mathbb{R}^{H \\times W \\times 3}",
             desc: "实例分割从同一张 RGB 图像开始，但目标是找出每个独立对象，而不是只预测像素类别。",
             overlay: "input"
         },
@@ -121,7 +124,7 @@
             id: "preprocess",
             title: "Letterbox",
             detail: "resize + padding",
-            formula: "x = letterbox(I, 640)",
+            formula: "x = \\mathrm{letterbox}(I, 640)",
             desc: "YOLO 系列通常先等比缩放并补边到固定尺寸。动画中的边框向内贴合，表示坐标会被记录以便还原到原图。",
             overlay: "scan"
         },
@@ -129,7 +132,7 @@
             id: "inference",
             title: "YOLO Head",
             detail: "boxes + coeffs",
-            formula: "Y = f_θ(x)",
+            formula: "Y = f_\\theta(x)",
             desc: "模型一次前向同时输出候选框、类别分数和 mask 系数。多束线从图像伸出，表示检测头和分割头共享特征。",
             overlay: "rays"
         },
@@ -137,7 +140,7 @@
             id: "decode",
             title: "Decode",
             detail: "xywh / score / class",
-            formula: "box = decode(anchor, Δx, Δy, Δw, Δh)",
+            formula: "\\mathrm{box} = \\mathrm{decode}(\\text{anchor}, \\Delta x, \\Delta y, \\Delta w, \\Delta h)",
             desc: "原始输出被解码成 bbox、class、score 和 mask coefficients。小标签从特征点弹出，表示候选实例集合形成。",
             overlay: "boxes"
         },
@@ -145,7 +148,7 @@
             id: "nms",
             title: "NMS",
             detail: "remove overlaps",
-            formula: "keep_i if IoU(b_i,b_j) < τ",
+            formula: "\\mathrm{keep}_i \\Leftarrow \\mathrm{IoU}(b_i, b_j) < \\tau",
             desc: "重叠过高且置信度较低的候选框会被抑制。动画中的框发生碰撞和筛选，突出 NMS 的去重作用。",
             overlay: "collision"
         },
@@ -153,7 +156,7 @@
             id: "prototype",
             title: "Prototype",
             detail: "linear mask blend",
-            formula: "M_i = σ(Σ_k c_{ik}P_k)",
+            formula: "M_i = \\sigma\\!\\left(\\sum_k c_{ik} P_k\\right)",
             desc: "YOLO-seg 使用共享 prototype masks 与每个实例自己的系数线性组合，得到该实例的粗 mask。",
             overlay: "channels"
         },
@@ -161,7 +164,7 @@
             id: "masks",
             title: "Instance Mask",
             detail: "crop + id",
-            formula: "instance_i={bbox,class,score,mask_i,id_i}",
+            formula: "\\mathrm{instance}_i = \\{\\mathrm{bbox}, \\mathrm{class}, \\mathrm{score}, M_i, \\mathrm{id}_i\\}",
             desc: "mask 会按 bbox 裁剪并映射回原图，每个对象保留独立颜色和 instance id，便于计数、选择和跟踪。",
             overlay: "mask"
         },
@@ -169,7 +172,7 @@
             id: "maskIou",
             title: "Mask AP",
             detail: "mask quality",
-            formula: "MaskIoU = |M∩G| / |M∪G|",
+            formula: "\\mathrm{MaskIoU} = \\dfrac{|M \\cap G|}{|M \\cup G|}",
             desc: "实例分割评估关注每个实例 mask 与真实标注的像素级重叠，常以不同 IoU 阈值下的 AP 汇总质量。",
             overlay: "metric"
         }
@@ -225,7 +228,8 @@
         if (els.processCard) {
             els.processCard.querySelector("[data-process-kicker]").textContent = "INSTANCE STEP";
             els.processCard.querySelector("[data-process-title]").textContent = step.title;
-            els.processCard.querySelector("[data-process-formula]").textContent = step.formula;
+            const formulaEl = els.processCard.querySelector("[data-process-formula]");
+            if (formulaEl) renderFormula(step.formula, formulaEl);
             els.processCard.querySelector("[data-process-desc]").textContent = step.desc;
         }
     }
@@ -282,6 +286,30 @@
 
     function fmtMs(value) {
         return Number.isFinite(value) ? `${value.toFixed(1)} ms` : "--";
+    }
+
+    function stripDisplayDelimiters(tex) {
+        const s = String(tex || "").trim();
+        if (s.startsWith("$$") && s.endsWith("$$")) return s.slice(2, -2).trim();
+        if (s.startsWith("$") && s.endsWith("$") && !s.startsWith("$$")) return s.slice(1, -1).trim();
+        return s;
+    }
+
+    function renderFormula(tex, el, displayMode = true) {
+        if (!el || !window.katex) {
+            if (el) el.textContent = tex;
+            return false;
+        }
+        const latex = stripDisplayDelimiters(tex);
+        if (!latex) return false;
+        try {
+            window.katex.render(latex, el, {throwOnError: false, displayMode});
+            return true;
+        } catch (e) {
+            console.warn("katex render failed:", latex, e);
+            el.textContent = tex;
+            return false;
+        }
     }
 
     function setProcessSteps(activeId = state.phase) {
@@ -1017,6 +1045,16 @@
         }
         const scene = state.currentScene;
         if (!scene) return;
+        if (els.blenderFormulaMath && !els.blenderFormulaMath.dataset.katexRendered) {
+            if (renderFormula(els.blenderFormulaMath.textContent.trim(), els.blenderFormulaMath)) {
+                els.blenderFormulaMath.dataset.katexRendered = "1";
+            }
+        }
+        if (els.blenderGridMath && !els.blenderGridMath.dataset.katexRendered) {
+            if (renderFormula(els.blenderGridMath.textContent.trim(), els.blenderGridMath, false)) {
+                els.blenderGridMath.dataset.katexRendered = "1";
+            }
+        }
         els.opacityOut.textContent = `${els.opacity.value}%`;
         els.viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.instView === state.view));
         renderSourceButtons();
@@ -1203,13 +1241,13 @@
             const pct = Math.round(Math.min(1, absCoeff / 1.5) * 50); 
             return `
                 <div class="blender-channel-cell" data-inst-blender-ch="${idx}" data-coeff="${coeff.toFixed(3)}">
-                    <span class="blender-channel-title">CH ${idx} (P<sub>${idx}</sub>)</span>
+                    <span class="blender-channel-title">P<sub>${idx}</sub></span>
                     <div class="blender-channel-canvas-wrap">
-                        <canvas data-ch-canvas="${idx}" width="60" height="60"></canvas>
+                        <canvas data-ch-canvas="${idx}" width="80" height="80"></canvas>
                     </div>
                     <div class="blender-channel-coeff-row">
                         <div class="blender-coeff-header">
-                            <span>权重 C<sub>${idx}</sub></span>
+                            <span>C<sub>${idx}</sub></span>
                             <span class="${isPos ? "positive" : "negative"}">${isPos ? "+" : ""}${coeff.toFixed(3)}</span>
                         </div>
                         <div class="blender-coeff-bar-bg">
@@ -1260,11 +1298,11 @@
 
     function drawPrototypeChannelToCanvas(canvas, protoData, chIdx, width, height) {
         const c = canvas.getContext("2d");
-        canvas.width = 60;
-        canvas.height = 60;
-        const imgData = c.createImageData(60, 60);
+        canvas.width = 80;
+        canvas.height = 80;
+        const imgData = c.createImageData(80, 80);
         const data = imgData.data;
-        
+
         const offset = chIdx * width * height;
         let min = 999;
         let max = -999;
@@ -1275,10 +1313,10 @@
         }
         const range = max - min || 1;
 
-        for (let dy = 0; dy < 60; dy++) {
-            for (let dx = 0; dx < 60; dx++) {
-                const sx = Math.floor((dx / 60) * width);
-                const sy = Math.floor((dy / 60) * height);
+        for (let dy = 0; dy < 80; dy++) {
+            for (let dx = 0; dx < 80; dx++) {
+                const sx = Math.floor((dx / 80) * width);
+                const sy = Math.floor((dy / 80) * height);
                 const val = protoData[offset + sy * width + sx];
                 
                 const n = (val - min) / range;
@@ -1465,9 +1503,12 @@
             }
 
             if (step === 10) {
+                const thresholdMath = window.katex
+                    ? window.katex.renderToString("\\sigma(\\sum) \\ge 0.5", {throwOnError: false, displayMode: false})
+                    : "σ(∑) ≥ 0.5";
                 els.blenderOverlayText.innerHTML = `
                     <span style="color:#eab308;font-weight:700">二值截断后处理 (Crop & BBox)</span><br/>
-                    提取 $\\sigma(\\sum) \\ge 0.5$ 得到最终 Instance Mask。
+                    提取 ${thresholdMath} 得到最终 Instance Mask。
                 `;
                 
                 drawFinalBlendedToCanvas(canvas, protoData, coeffs, bbox, sceneWidth, sceneHeight, colorHex);

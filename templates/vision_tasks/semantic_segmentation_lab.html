@@ -31,12 +31,6 @@
             <button type="button" data-sem-source="fcn">FCN 原理演示</button>
         </div>
 
-        <div class="overview-segmented-control semantic-view-modes">
-            <button class="is-active" type="button" data-sem-mode="overlay">叠加图</button>
-            <button type="button" data-sem-mode="image">原图</button>
-            <button type="button" data-sem-mode="mask">纯 mask</button>
-        </div>
-
         <label class="vision-field">
             <span>蒙版不透明度 <output data-sem-opacity-output>65%</output></span>
             <input data-sem-opacity type="range" min="0" max="100" value="65">
@@ -168,7 +162,7 @@
         <section class="process-formula-card" data-sem-process-card aria-live="polite">
             <span data-process-kicker>ALGORITHM STEP</span>
             <h4 data-process-title>逐步运算说明</h4>
-            <code data-process-formula>--</code>
+            <div data-process-formula>--</div>
             <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
         </section>
         <div class="semantic-notes-data" data-sem-notes></div>

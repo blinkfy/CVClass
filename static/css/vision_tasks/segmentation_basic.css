@@ -4429,8 +4429,9 @@
 .seg-lab-result-card {
     --seg-card-accent: #2563eb;
     display: grid;
-    grid-template-rows: auto auto minmax(44px, auto) auto;
+    grid-template-rows: auto auto minmax(90px, 1fr) auto;
     min-width: 0;
+    height: 100%;
     overflow: hidden;
     border: 1px solid #dbeafe;
     border-radius: 15px;
@@ -4528,7 +4529,7 @@
     overflow: hidden;
     border-bottom: 1px solid #edf2f7;
     background: #eaf2ff;
-    aspect-ratio: var(--seg-lab-aspect, 4 / 3);
+    height: clamp(200px, 28vw, 280px);
 }
 
 .seg-lab-visual img,
@@ -4608,8 +4609,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     align-content: start;
-    min-height: 52px;
+    min-height: 90px;
+    max-height: 150px;
     padding: 9px 10px;
+    overflow-y: auto;
 }
 
 .seg-lab-mini-legend button,
@@ -4953,129 +4956,6 @@
     .seg-lab-pipeline {
         grid-template-columns: 1fr;
     }
-}
-
-.blender-channel-placeholder {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 40px 10px;
-    font-size: 11px;
-    color: #94a3b8;
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 8px;
-}
-
-.blender-channel-cell {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    position: relative;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-}
-
-.blender-channel-cell:hover {
-    transform: translateY(-2px);
-    background: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
-}
-
-.blender-channel-cell.active-highlight {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.03);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
-}
-
-.blender-channel-cell.blending-pulse {
-    animation: cellBlendPulse 0.3s ease-in-out;
-}
-
-@keyframes cellBlendPulse {
-    0% { transform: scale(1); border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-    50% { transform: scale(1.08); border-color: #22c55e; background: rgba(34, 197, 94, 0.2); }
-    100% { transform: scale(1); }
-}
-
-.blender-channel-title {
-    font-size: 9px;
-    font-weight: 700;
-    color: #64748b;
-}
-
-.blender-channel-canvas-wrap {
-    width: 60px;
-    height: 60px;
-    background: #090d16;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.blender-channel-canvas-wrap canvas {
-    width: 100%;
-    height: 100%;
-    image-rendering: pxielated;
-}
-
-/* 系数和进度条展示 */
-.blender-channel-coeff-row {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.blender-coeff-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 8px;
-    font-weight: 600;
-    color: #475569;
-}
-
-.blender-coeff-header span.positive {
-    color: #16a34a;
-}
-
-.blender-coeff-header span.negative {
-    color: #dc2626;
-}
-
-.blender-coeff-bar-bg {
-    width: 100%;
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 99px;
-    position: relative;
-    overflow: hidden;
-}
-
-.blender-coeff-bar-fill {
-    height: 100%;
-    border-radius: 99px;
-    position: absolute;
-    left: 50%;
-    width: 0;
-    transition: width 0.3s ease;
-}
-
-.blender-coeff-bar-fill.positive {
-    left: 50%;
-    background: #10b981;
-}
-
-.blender-coeff-bar-fill.negative {
-    background: #ef4444;
 }
 
 /* --- Feature Metric Lens Modals & Triggers --- */

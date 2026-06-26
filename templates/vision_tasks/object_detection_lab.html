@@ -86,6 +86,32 @@
         </label>
             <p class="vision-hint">YOLO 显示真实推理候选；R-CNN 显示 proposal 生命周期。</p>
 
+        <div class="det-yolo-observer-controls" data-yolo-only>
+            <div class="det-control-group-title det-control-group-title--yolo">
+                <span>03</span><strong>观察图层</strong>
+            </div>
+            <label class="vision-field">
+                <span>热力图类型</span>
+                <select data-det-heatmap-type>
+                    <option value="auto">Auto 自动</option>
+                    <option value="objectness">Objectness 目标响应</option>
+                    <option value="class">Class Response 类别响应</option>
+                    <option value="center">Box Center 中心响应</option>
+                    <option value="suppression">Suppression 抑制响应</option>
+                </select>
+            </label>
+            <label class="vision-field">
+                <span>类别筛选</span>
+                <select data-det-heatmap-class>
+                    <option value="all">All 全部</option>
+                </select>
+            </label>
+            <label class="vision-field">
+                <span>热力图透明度 <output data-det-heatmap-alpha-output>55%</output></span>
+                <input type="range" min="0" max="0.8" step="0.05" value="0.55" data-det-heatmap-alpha>
+            </label>
+        </div>
+
         <div class="det-control-group-title" data-rcnn-only>
             <span>02</span><strong>当前执行步骤</strong>
         </div>
@@ -134,10 +160,13 @@
             <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
 
         <!-- Canvas area -->
-        <div class="detection-real-stage">
-            <img data-det-image src="" alt="检测图像">
-            <div data-det-overlay class="det-overlay"></div>
-            <div class="det-missing-hint" data-det-missing></div>
+        <div class="det-yolo-dual-stage">
+            <div class="detection-real-stage">
+                <img data-det-image src="" alt="检测图像">
+                <div data-det-overlay class="det-overlay"></div>
+                <div class="det-missing-hint" data-det-missing></div>
+            </div>
+            <aside class="det-yolo-feature-view" data-det-feature-view aria-label="YOLO 模型内部观察窗"></aside>
         </div>
 
         <div class="detection-rcnn-stage" data-det-rcnn-stage hidden></div>

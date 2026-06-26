@@ -73,6 +73,35 @@
     font-weight: 950;
 }
 
+.overview-legend {
+    display: flex;
+    align-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+}
+
+.overview-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.overview-legend i {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    border-radius: 3px;
+}
+
+.overview-legend .is-muted {
+    opacity: 0.45;
+}
+
 .semantic-ratio-list {
     display: grid;
     gap: 5px;
@@ -537,6 +566,37 @@
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.13);
 }
 
+.sem-tag-chip {
+    position: absolute;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    animation: semTagFadeIn 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.sem-tag-chip.is-segformer {
+    top: 14px;
+    right: 14px;
+    color: #1e40af;
+    background: rgba(37, 99, 235, 0.14);
+    border: 1px solid rgba(37, 99, 235, 0.45);
+}
+.sem-tag-chip.is-fcn {
+    top: 14px;
+    right: 14px;
+    margin-top: 34px;
+    color: #7c2d12;
+    background: rgba(249, 115, 22, 0.14);
+    border: 1px solid rgba(249, 115, 22, 0.45);
+}
+@keyframes semTagFadeIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .sem-coordinate-chip {
     left: 18px;
     bottom: 18px;
@@ -716,15 +776,15 @@
 
 .process-structure-list {
     display: grid;
-    gap: 7px;
+    gap: 6px;
 }
 
 .process-structure-list div {
     display: grid;
-    gap: 3px;
+    gap: 2px;
     border: 1px solid #e2e8f0;
     border-radius: 9px;
-    padding: 7px 8px;
+    padding: 6px 8px;
     background: #f8fafc;
 }
 
@@ -735,16 +795,17 @@
 
 .process-structure-list dt {
     color: #64748b;
-    font-size: 9.5px;
-    font-weight: 900;
+    font-size: 10px;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .process-structure-list dd {
     color: #0f172a;
-    font-size: 11px;
-    font-weight: 850;
-    line-height: 1.45;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.35;
 }
 
 .process-scanline {
@@ -1113,18 +1174,23 @@
     font-size: 15px;
 }
 
-.process-formula-card code {
-    display: block;
+.process-formula-card [data-process-formula] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
     border: 1px solid #bfdbfe;
     border-radius: 10px;
-    padding: 10px;
+    padding: 12px;
     color: #1e40af;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 12px;
+    font-size: 15px;
     line-height: 1.5;
     white-space: normal;
     overflow-wrap: anywhere;
     background: #eff6ff;
+}
+.process-formula-card [data-process-formula] .katex {
+    font-size: 1.15em;
 }
 
 .process-formula-card p {

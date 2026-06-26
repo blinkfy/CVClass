@@ -78,8 +78,6 @@
             </label>
             <p class="instance-model-message" data-inst-model-message>页面会自动运行本地 YOLO11n-seg；预设实例数据仅作为 fallback。</p>
         </div>
-
-        <div class="instance-list" data-inst-list></div>
     </aside>
 
     <div class="vision-stage-panel instance-stage-panel">
@@ -151,20 +149,21 @@
                         </div>
                         <div class="blender-formula-card">
                             <div class="blender-formula-expr" data-inst-formula-math>
-                                \text{Mask}(x,y) = \sigma\left( \sum_{i=1}^{32} C_i \times P_i(x,y) \right)
+                                $$\text{Mask}(x,y)=\sigma\left(\sum_{i=1}^{32} C_i\times P_i(x,y)\right)$$
                             </div>
                             <span class="blender-formula-tip">利用神经网络提取的32个共享原型(Prototypes)与各自的掩膜系数(Coefficients)进行线性组合，求和后对其经过激活函数和BBox掩盖最终截断输出。</span>
                         </div>
                     </div>
                     
                     <div class="blender-grid-section">
-                        <span class="blender-grid-title">活跃的原型通道 (Active Prototypes $P_{1..8}$) </span>
+                        <span class="blender-grid-title" data-inst-blender-grid-title>活跃的原型通道 (Active Prototypes <span data-inst-blender-grid-math>$P_{1..8}$</span>) </span>
                         <div class="blender-channels-grid" data-inst-blender-grid>
                             <div class="blender-channel-placeholder">正在等待提取通道特征...</div>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="instance-list instance-list--deck" data-inst-list></div>
         </div>
     </div>
 
@@ -177,7 +176,7 @@
         <section class="process-formula-card" data-inst-process-card aria-live="polite">
             <span data-process-kicker>ALGORITHM STEP</span>
             <h4 data-process-title>逐步运算说明</h4>
-            <code data-process-formula>--</code>
+            <div data-process-formula>--</div>
             <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
         </section>
         <div class="instance-notes-data" data-inst-notes></div>

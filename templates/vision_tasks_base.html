@@ -15,18 +15,18 @@
 {% elif active_sub_page == 'classification' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/classification_lab.css') }}?v=20260625-split6">
 {% elif active_sub_page == 'segmentation_basic' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260625-samples4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260626-blendergrid3">
 {% elif active_sub_page == 'detection' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/object_detection_lab.css') }}?v=20260625-det-sandbox1">
 {% elif active_sub_page == 'semantic' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260625-maskclean1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260626-structfont1">
 {% elif active_sub_page == 'instance' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260625-maskclean1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260625-maskclean1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260626-structfont1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260626-blendergrid4">
 {% elif active_sub_page == 'compare' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260625-figcard1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260625-maskclean1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260625-maskclean1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260626-blendergrid3">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260626-structfont1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260626-blendergrid4">
 {% endif %}
 {% endblock %}
 
@@ -68,8 +68,8 @@
 {% elif active_sub_page == 'detection' %}
 <script src="{{ url_for('static', filename='js/vision_tasks/object_detection_lab.js') }}?v=20260625-samples4"></script>
 {% elif active_sub_page == 'semantic' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260626-autosrc1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/semantic_segmentation_lab.js') }}?v=20260626-cleanoverlay1"></script>
 {% elif active_sub_page == 'instance' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260625-samples4"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/instance_segmentation_lab.js') }}?v=20260626-blendergrid3"></script>
 {% endif %}
 {% endblock %}

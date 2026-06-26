@@ -47,7 +47,12 @@
         autoToken: 0,
         fallbackReason: "",
         hoveredProposalId: null,
-        nmsAnimationStep: 0
+        selectedDetectionId: null,
+        nmsAnimationStep: 0,
+        heatmapType: "auto",
+        heatmapClass: "all",
+        heatmapAlpha: 0.55,
+        imageRect: {left: 0, top: 0, width: 100, height: 100}
     };
     const els = {
         sample: $("[data-det-sample-picker]"),
@@ -75,6 +80,7 @@
         image: $("[data-det-image]"),
         missing: $("[data-det-missing]"),
         overlay: $("[data-det-overlay]"),
+        featureView: $("[data-det-feature-view]"),
         rcnnStage: $("[data-det-rcnn-stage]"),
         sourceNote: $("[data-det-source-note]"),
         notes: $("[data-det-notes]"),
@@ -96,6 +102,10 @@
         pipeline: $("[data-det-pipeline]"),
         pairCard: $("[data-det-pair-card]"),
         nmsControl: $("[data-det-nms-control]"),
+        heatmapType: $("[data-det-heatmap-type]"),
+        heatmapClass: $("[data-det-heatmap-class]"),
+        heatmapAlpha: $("[data-det-heatmap-alpha]"),
+        heatmapAlphaOut: $("[data-det-heatmap-alpha-output]"),
         tableTitle: $("[data-det-table-title]"),
         courseStep: $("[data-det-course-step]"),
         courseGoal: $("[data-det-course-goal]"),
@@ -161,9 +171,14 @@
         return String(id ?? "");
     }
 
+    function activeSpotlightId() {
+        return state.hoveredProposalId || state.selectedDetectionId;
+    }
+
     function spotlightClassFor(id) {
-        if (!state.hoveredProposalId) return "";
-        return idText(id) === idText(state.hoveredProposalId) ? "is-spotlight" : "is-dimmed";
+        const activeId = activeSpotlightId();
+        if (!activeId) return "";
+        return idText(id) === idText(activeId) ? "is-spotlight" : "is-dimmed";
     }
 
     function renderLatex(tex) {
@@ -204,8 +219,75 @@
         };
     }
 
+    function activeImageRect() {
+        return state.imageRect || {left: 0, top: 0, width: 100, height: 100};
+    }
+
+    function updateImageRenderRect(sample = {}) {
+        if (!els.image) return activeImageRect();
+        const stage = els.image.closest(".detection-real-stage");
+        if (!stage) return activeImageRect();
+        const stageWidth = stage.clientWidth || 0;
+        const stageHeight = stage.clientHeight || 0;
+        if (!stageWidth || !stageHeight) {
+            state.imageRect = {left: 0, top: 0, width: 100, height: 100};
+            return state.imageRect;
+        }
+
+        const imageReady = els.image.complete && els.image.naturalWidth && els.image.naturalHeight;
+        const imageWidth = imageReady ? els.image.naturalWidth : (sample.width || stageWidth);
+        const imageHeight = imageReady ? els.image.naturalHeight : (sample.height || stageHeight);
+        const fit = getComputedStyle(els.image).objectFit || "contain";
+        let drawWidth = stageWidth;
+        let drawHeight = stageHeight;
+        let offsetLeft = 0;
+        let offsetTop = 0;
+
+        if (fit === "contain" && imageWidth && imageHeight) {
+            const scale = Math.min(stageWidth / imageWidth, stageHeight / imageHeight);
+            drawWidth = imageWidth * scale;
+            drawHeight = imageHeight * scale;
+            offsetLeft = (stageWidth - drawWidth) / 2;
+            offsetTop = (stageHeight - drawHeight) / 2;
+        }
+
+        state.imageRect = {
+            left: (offsetLeft / stageWidth) * 100,
+            top: (offsetTop / stageHeight) * 100,
+            width: (drawWidth / stageWidth) * 100,
+            height: (drawHeight / stageHeight) * 100
+        };
+        stage.style.setProperty("--det-img-left", `${state.imageRect.left}%`);
+        stage.style.setProperty("--det-img-top", `${state.imageRect.top}%`);
+        stage.style.setProperty("--det-img-width", `${state.imageRect.width}%`);
+        stage.style.setProperty("--det-img-height", `${state.imageRect.height}%`);
+        return state.imageRect;
+    }
+
+    function imagePointPercent(point, sample) {
+        const p = pointPercent(point, sample);
+        const rect = activeImageRect();
+        return {
+            x: rect.left + (rect.width * p.x) / 100,
+            y: rect.top + (rect.height * p.y) / 100
+        };
+    }
+
+    function imageRectStyle(x, y, w, h, width, height) {
+        const rect = activeImageRect();
+        const x1 = Math.max(0, Math.min(width, x));
+        const y1 = Math.max(0, Math.min(height, y));
+        const x2 = Math.max(0, Math.min(width, x + w));
+        const y2 = Math.max(0, Math.min(height, y + h));
+        const left = rect.left + rect.width * (Math.min(x1, x2) / Math.max(1, width));
+        const top = rect.top + rect.height * (Math.min(y1, y2) / Math.max(1, height));
+        const boxWidth = rect.width * (Math.abs(x2 - x1) / Math.max(1, width));
+        const boxHeight = rect.height * (Math.abs(y2 - y1) / Math.max(1, height));
+        return `left:${left}%;top:${top}%;width:${boxWidth}%;height:${boxHeight}%;`;
+    }
+
     function centerStyle(box, sample, extra = "") {
-        const p = pointPercent(boxCenter(box), sample);
+        const p = imagePointPercent(boxCenter(box), sample);
         return `left:${p.x}%;top:${p.y}%;${extra}`;
     }
 
@@ -223,15 +305,16 @@
             a,
             b,
             mid: {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2},
-            ap: pointPercent(a, sample),
-            bp: pointPercent(b, sample),
-            mp: pointPercent({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, sample)
+            ap: imagePointPercent(a, sample),
+            bp: imagePointPercent(b, sample),
+            mp: imagePointPercent({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, sample)
         };
     }
 
     function activeRcnnProposal(demo) {
         const proposals = demo?.proposals || [];
-        return proposals.find((proposal) => idText(proposal.id) === idText(state.hoveredProposalId)) || proposals[0] || {};
+        const activeId = activeSpotlightId();
+        return proposals.find((proposal) => idText(proposal.id) === idText(activeId)) || proposals[0] || {};
     }
 
     function comparisonForNms(result, step) {
@@ -239,7 +322,7 @@
     }
 
     function applySpotlightState() {
-        const activeId = state.hoveredProposalId;
+        const activeId = activeSpotlightId();
         root.classList.toggle("is-spotlight-active", Boolean(activeId));
         root.querySelectorAll("[data-det-related-id], [data-det-hover-id]").forEach((node) => {
             const nodeId = node.dataset.detRelatedId || node.dataset.detHoverId;
@@ -256,6 +339,14 @@
         if (state.detMode === "rcnn") {
             renderRcnnMode();
             return;
+        }
+        if (state.data) {
+            const result = compute();
+            const step = result.steps[Math.min(state.step, result.steps.length - 1)] || result.steps[0];
+            if (step) {
+                renderYoloFeatureView(step, result);
+                renderNotes(step, result);
+            }
         }
         applySpotlightState();
     }
@@ -329,7 +420,7 @@
 
     function boxStyle(box, width, height) {
         const [x1, y1, x2, y2] = box.bbox;
-        return `left:${(x1 / width) * 100}%;top:${(y1 / height) * 100}%;width:${((x2 - x1) / width) * 100}%;height:${((y2 - y1) / height) * 100}%;`;
+        return imageRectStyle(x1, y1, x2 - x1, y2 - y1, width, height);
     }
 
     function demoData() {
@@ -588,10 +679,9 @@
     }
 
     function boxMarkup(box, s, status) {
-        const [x1, y1, x2, y2] = box.bbox;
         const label = status === "low" ? `${box.class} ${box.score.toFixed(2)} 已过滤` : `${box.class} ${box.score.toFixed(2)}`;
         const spotlightClass = spotlightClassFor(box.id);
-        return `<div data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="vision-bbox vision-bbox--${status} ${spotlightClass}" style="left:${(x1 / s.width) * 100}%;top:${(y1 / s.height) * 100}%;width:${((x2 - x1) / s.width) * 100}%;height:${((y2 - y1) / s.height) * 100}%;--box-color:${esc(colorFor(box))}"><span>${esc(label)}</span></div>`;
+        return `<div data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="vision-bbox vision-bbox--${status} ${spotlightClass}" style="${boxStyle(box, s.width, s.height)}--box-color:${esc(colorFor(box))}"><span>${esc(label)}</span></div>`;
     }
 
     function overlayBoxesForStep(result, step) {
@@ -846,23 +936,25 @@
         }
         const a = boxCenter(c.a);
         const b = boxCenter(c.b);
-        const mid = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+        const aPct = imagePointPercent(a, s);
+        const bPct = imagePointPercent(b, s);
+        const midPct = imagePointPercent({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, s);
         const radar = state.nmsAnimationStep >= 2
-            ? `<div class="det-nms-radar" style="left:${(a.x / s.width) * 100}%;top:${(a.y / s.height) * 100}%;"></div>`
+            ? `<div class="det-nms-radar" style="left:${aPct.x}%;top:${aPct.y}%;"></div>`
             : "";
         const link = state.nmsAnimationStep >= 3
-            ? `<svg class="det-nms-link" viewBox="0 0 ${s.width} ${s.height}" preserveAspectRatio="none" aria-hidden="true">
+            ? `<svg class="det-nms-link" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     <defs><marker id="detNmsArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker></defs>
-                    <line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" marker-end="url(#detNmsArrow)"></line>
+                    <line x1="${aPct.x}" y1="${aPct.y}" x2="${bPct.x}" y2="${bPct.y}" marker-end="url(#detNmsArrow)"></line>
                 </svg>
-                <div class="det-nms-iou-tooltip" style="left:${(mid.x / s.width) * 100}%;top:${(mid.y / s.height) * 100}%;">
+                <div class="det-nms-iou-tooltip" style="left:${midPct.x}%;top:${midPct.y}%;">
                     <b>${renderLatex("IoU = \\frac{Area\\_of\\_Overlap}{Area\\_of\\_Union}")}</b>
                     <strong>IoU = ${c.iou.toFixed(3)}</strong>
                     <span>${c.iou >= state.iou ? `>= ${state.iou.toFixed(2)} 抑制` : `< ${state.iou.toFixed(2)} 保留`}</span>
                 </div>`
             : "";
         const particles = state.nmsAnimationStep >= 4 && c.iou >= state.iou
-            ? `<div class="det-nms-particles" style="left:${(b.x / s.width) * 100}%;top:${(b.y / s.height) * 100}%;">${Array.from({length: 10}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`
+            ? `<div class="det-nms-particles" style="left:${bPct.x}%;top:${bPct.y}%;">${Array.from({length: 10}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>`
             : "";
         return `<div class="det-nms-slow-layer">${radar}${link}${particles}</div>`;
     }
@@ -895,7 +987,7 @@
             pulses = renderStagePulses(decodedPreview, sample, "is-decode");
             const target = decodedPreview[0] || rawBoxes[0];
             if (target) {
-                const center = pointPercent(boxCenter(target), sample);
+                const center = imagePointPercent(boxCenter(target), sample);
                 flow = `<svg class="det-algo-flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     <path d="M 50 8 C 44 24, ${Math.max(8, center.x - 8).toFixed(1)} ${(center.y * 0.62).toFixed(1)}, ${center.x.toFixed(1)} ${center.y.toFixed(1)}"></path>
                 </svg>`;
@@ -918,8 +1010,8 @@
             pulses = renderStagePulses(keptBoxes, sample, "is-kept");
             if (c) {
                 const points = flowLinePoints(c.a, c.b, sample);
-                flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--nms" viewBox="0 0 ${sample.width} ${sample.height}" preserveAspectRatio="none" aria-hidden="true">
-                    <line x1="${points.a.x}" y1="${points.a.y}" x2="${points.b.x}" y2="${points.b.y}"></line>
+                flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--nms" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <line x1="${points.ap.x}" y1="${points.ap.y}" x2="${points.bp.x}" y2="${points.bp.y}"></line>
                 </svg>`;
                 chip = `<div class="det-algo-chip det-algo-chip--nms" style="left:${points.mp.x}%;top:${points.mp.y}%;">
                     <b>IoU ${c.iou.toFixed(3)}</b><span>${c.iou >= state.iou ? "抑制 B" : "保留 B"} / θ=${state.iou.toFixed(2)}</span>
@@ -1056,6 +1148,199 @@
         </section>`;
     }
 
+    function activeYoloBox(result, step) {
+        const activeId = activeSpotlightId() || step.compareBoxId || step.currentBoxId;
+        return findBoxById(result.boxes || [], activeId) || findBoxById(result.candidates || [], activeId) || result.candidates?.[0] || result.boxes?.[0] || null;
+    }
+
+    function heatmapModeForStep(step) {
+        if (state.heatmapType && state.heatmapType !== "auto") return state.heatmapType;
+        if (step.phase === "confidence") return "objectness";
+        if (step.phase === "nms") return "suppression";
+        if (step.phase === "final") return "class";
+        if (step.phase === "decode") return "center";
+        return "objectness";
+    }
+
+    function heatmapBoxesFor(result, step, mode) {
+        const cls = state.heatmapClass;
+        let boxes = [];
+        if (mode === "suppression") {
+            boxes = [...(result.kept || []), ...(result.boxes || []).filter((box) => step.suppressedIds?.has?.(box.id))];
+        } else if (mode === "class") {
+            boxes = step.phase === "final" ? (result.kept || []) : (result.candidates || []);
+        } else if (mode === "center") {
+            boxes = result.boxes || [];
+        } else {
+            boxes = step.phase === "confidence" ? [...(result.candidates || []), ...(result.low || [])] : (result.candidates || result.boxes || []);
+        }
+        return boxes.filter((box) => cls === "all" || box.class === cls).slice(0, 18);
+    }
+
+    function renderHeatmapSpots(result, step, sample, mode, activeBox) {
+        const boxes = heatmapBoxesFor(result, step, mode);
+        if (!boxes.length) {
+            return `<div class="det-yolo-feature-empty">当前没有可用于生成解释热力图的候选框。</div>`;
+        }
+        return `<div class="det-yolo-heatmap-layer det-yolo-heatmap-layer--${esc(mode)}" style="--hm-alpha:${state.heatmapAlpha};">
+            ${boxes.map((box, index) => {
+                const p = pointPercent(boxCenter(box), sample);
+                const score = Math.max(0.12, Math.min(1, Number(box.score) || 0.2));
+                const suppressed = step.suppressedIds?.has?.(box.id);
+                const active = activeBox && idText(activeBox.id) === idText(box.id);
+                return `<i data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="${active ? "is-active" : ""} ${suppressed ? "is-suppressed" : ""} ${spotlightClassFor(box.id)}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;--score:${score};--delay:${index * 42}ms;"></i>`;
+            }).join("")}
+        </div>`;
+    }
+
+    function renderFeatureMiniImage(result, step, sample, mode, activeBox) {
+        const src = sample.image ? (sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image)) : "";
+        const active = activeBox ? pointPercent(boxCenter(activeBox), sample) : {x: 50, y: 50};
+        return `<div class="det-yolo-feature-map">
+            ${src ? `<img src="${esc(src)}" alt="">` : ""}
+            <div class="det-yolo-feature-gridlines" aria-hidden="true"></div>
+            ${renderHeatmapSpots(result, step, sample, mode, activeBox)}
+            <b class="det-yolo-feature-cell" style="left:${active.x.toFixed(2)}%;top:${active.y.toFixed(2)}%;"></b>
+        </div>`;
+    }
+
+    function renderYoloHeadSplit(activeBox) {
+        const score = Number(activeBox?.score || 0);
+        return `<div class="det-yolo-head-split">
+            <div class="is-source"><span>feature cell</span><strong>${activeBox ? `#${esc(activeBox.id)}` : "cell"}</strong></div>
+            <i></i>
+            <div><span>objectness</span><strong>${score ? score.toFixed(2) : "--"}</strong></div>
+            <div><span>class scores</span><strong>${esc(activeBox?.class || "--")}</strong></div>
+            <div><span>bbox offsets</span><strong>cx cy w h</strong></div>
+            <i class="is-merge"></i>
+            <div class="is-output"><span>candidate box</span><strong>${activeBox ? `[${esc(activeBox.bbox.join(", "))}]` : "--"}</strong></div>
+        </div>`;
+    }
+
+    function renderYoloFeaturePyramid() {
+        return `<div class="det-yolo-pyramid">
+            ${[
+                ["P3", "80×80", "小目标 / 密集响应"],
+                ["P4", "40×40", "中尺度目标"],
+                ["P5", "20×20", "大目标 / 语义强"]
+            ].map((item, index) => `<article style="--i:${index};">
+                <span>${item[0]}</span><strong>${item[1]}</strong><em>${item[2]}</em>
+                <div>${Array.from({length: 16}, (_, i) => `<i style="--j:${i};"></i>`).join("")}</div>
+            </article>`).join("")}
+        </div>`;
+    }
+
+    function renderYoloScoreBars(result, activeBox) {
+        const classes = [...new Set((result.candidates || result.boxes || []).map((box) => box.class))].slice(0, 5);
+        const rows = (classes.length ? classes : ["car", "person", "bus"]).map((name) => {
+            const top = (result.candidates || result.boxes || []).filter((box) => box.class === name).sort((a, b) => b.score - a.score)[0];
+            const value = Number(top?.score || (name === activeBox?.class ? activeBox?.score : 0.18)) || 0.18;
+            return {name, value, active: name === activeBox?.class};
+        }).sort((a, b) => b.value - a.value);
+        return `<div class="det-yolo-score-bars">
+            ${rows.map((row) => `<div class="${row.active ? "is-active" : ""}"><span>${esc(row.name)}</span><b style="--score:${Math.max(0.08, Math.min(1, row.value))}"></b><strong>${row.value.toFixed(2)}</strong></div>`).join("")}
+        </div>`;
+    }
+
+    function renderYoloIouMatrix(result, step) {
+        const c = comparisonForNms(result, step);
+        const boxes = result.candidates.slice(0, 4);
+        return `<div class="det-yolo-iou-matrix">
+            ${boxes.map((row) => boxes.map((col) => {
+                const same = row.id === col.id;
+                const value = same ? 1 : iou(row, col);
+                const active = c && ((row.id === c.a.id && col.id === c.b.id) || (row.id === c.b.id && col.id === c.a.id));
+                return `<span class="${same ? "is-self" : ""} ${active ? "is-active" : ""}" style="--iou:${Math.min(1, value)}">${same ? "1.00" : value.toFixed(2)}</span>`;
+            }).join("")).join("")}
+        </div>`;
+    }
+
+    function renderYoloFinalSchema(result) {
+        const rows = result.kept.slice(0, 4);
+        return `<div class="det-yolo-output-schema">
+            <strong>N × [x1, y1, x2, y2, score, class]</strong>
+            ${rows.length ? rows.map((box) => `<code>[${box.bbox.join(", ")}], ${box.score.toFixed(2)}, ${esc(box.class)}</code>`).join("") : `<span>当前阈值下暂无最终检测框</span>`}
+        </div>`;
+    }
+
+    function renderYoloFeatureView(step, result) {
+        if (!els.featureView) return;
+        const sample = result.sample;
+        const mode = heatmapModeForStep(step);
+        const activeBox = activeYoloBox(result, step);
+        const counts = yoloCounts(result);
+        const phase = step.type === "final" ? "final" : (step.phase || "image");
+        const phaseTitle = {
+            image: "输入张量观察",
+            preprocess: "预处理参数",
+            inference: "Backbone / FPN / Head",
+            decode: "Detection Head 输出拆解",
+            confidence: "目标响应热力图",
+            nms: "NMS 抑制观察",
+            final: "最终输出结构"
+        }[phase] || "模型内部观察";
+        const note = {
+            image: "RGB 图像将被调整为模型输入张量，后续响应都回映射到当前图像坐标。",
+            preprocess: "letterbox 保持比例并补边，归一化把像素范围压到 0–1。",
+            inference: "YOLO 通过多尺度特征层同时观察小、中、大目标。",
+            decode: "每个 feature cell 输出 bbox 偏移、类别分数和候选框。",
+            confidence: "解释热力图由 decoded candidates 聚合生成，亮区表示更高目标响应。",
+            nms: "同类高分框先保留，重叠过高的低分框被抑制。",
+            final: "最终输出是 N 行检测数组，可直接被前端或后续业务消费。"
+        }[phase] || "";
+        let body = "";
+        if (phase === "image") {
+            body = `<div class="det-yolo-rgb-stack"><i>R</i><i>G</i><i>B</i><span>${sample.width}×${sample.height}×3</span></div>${renderFeatureMiniImage(result, step, sample, mode, activeBox)}`;
+        } else if (phase === "preprocess") {
+            body = `<div class="det-yolo-preprocess-card">
+                <div><span>输入尺寸</span><strong>640 × 640</strong></div>
+                <div><span>原图尺寸</span><strong>${sample.width} × ${sample.height}</strong></div>
+                <div><span>padding</span><strong>letterbox 自动补边</strong></div>
+                <div><span>normalize</span><strong>RGB / 255</strong></div>
+            </div>${renderFeatureMiniImage(result, step, sample, mode, activeBox)}`;
+        } else if (phase === "inference") {
+            body = `<div class="det-yolo-model-flow"><span>Backbone</span><i></i><span>Neck / FPN</span><i></i><span>Detection Head</span></div>${renderYoloFeaturePyramid()}`;
+        } else if (phase === "decode") {
+            body = `${renderYoloHeadSplit(activeBox)}${renderFeatureMiniImage(result, step, sample, mode, activeBox)}`;
+        } else if (phase === "confidence") {
+            body = `${renderFeatureMiniImage(result, step, sample, mode, activeBox)}${renderYoloScoreBars(result, activeBox)}`;
+        } else if (phase === "nms") {
+            body = `<div class="det-yolo-nms-compact">${renderYoloScoreBars(result, activeBox)}${renderYoloIouMatrix(result, step)}</div>${renderFeatureMiniImage(result, step, sample, mode, activeBox)}`;
+        } else {
+            body = `${renderYoloFinalSchema(result)}${renderFeatureMiniImage(result, step, sample, "class", activeBox)}`;
+        }
+        els.featureView.hidden = false;
+        els.featureView.innerHTML = `<section class="det-yolo-feature-panel det-yolo-feature-panel--${esc(phase)}">
+            <header><span>模型内部观察窗</span><strong>${esc(phaseTitle)}</strong><em>${esc(mode === "auto" ? heatmapModeForStep(step) : mode)} · opacity ${Math.round(state.heatmapAlpha * 100)}%</em></header>
+            <p>${esc(note)}</p>
+            ${body}
+            <footer>
+                <span>候选 ${counts.decoded}</span><span>过阈值 ${counts.filtered}</span><span>最终 ${counts.final}</span>
+                <b>${activeBox ? `#${esc(activeBox.id)} ${esc(activeBox.class)} ${activeBox.score.toFixed(2)}` : "未选中候选框"}</b>
+            </footer>
+        </section>`;
+    }
+
+    function renderYoloActiveContext(step, result) {
+        const activeBox = activeYoloBox(result, step);
+        const mode = heatmapModeForStep(step);
+        const status = activeBox
+            ? step.suppressedIds?.has?.(activeBox.id) ? "NMS 已抑制"
+                : step.keptIds?.has?.(activeBox.id) ? "已保留 / 候选中"
+                    : step.lowIds?.has?.(activeBox.id) ? "低置信度过滤"
+                        : "候选响应"
+            : "未选中";
+        const center = activeBox ? boxCenter(activeBox) : null;
+        return `<dl class="det-yolo-active-context">
+            <div><dt>观察图层</dt><dd>${esc(mode)} / 解释型热力图</dd></div>
+            <div><dt>当前候选</dt><dd>${activeBox ? `#${activeBox.id} ${esc(activeBox.class)} ${activeBox.score.toFixed(3)}` : "--"}</dd></div>
+            <div><dt>候选中心</dt><dd>${center ? `(${Math.round(center.x)}, ${Math.round(center.y)})` : "--"}</dd></div>
+            <div><dt>bbox</dt><dd>${activeBox ? `[${esc(activeBox.bbox.join(", "))}]` : "--"}</dd></div>
+            <div><dt>NMS 状态</dt><dd>${esc(status)}</dd></div>
+        </dl>
+        <p class="det-yolo-heatmap-note">当前热力图基于 decoded candidates 的位置、置信度、类别和 NMS 状态聚合生成，用于解释后处理候选分布，不等同于真实中间层 feature map。</p>`;
+    }
+
     function renderNotes(step, result) {
         const s = result.sample;
         const inference = state.inferenceResult;
@@ -1063,7 +1348,7 @@
         const counts = yoloCounts(result);
         const decodedCount = counts.decoded;
         const sampleCandidate = result.candidates[0] || result.low[0] || null;
-        const currentBox = findBoxById(result.boxes, step.currentBoxId);
+        const currentBox = findBoxById(result.boxes, step.currentBoxId) || activeYoloBox(result, step);
         const compareBox = findBoxById(result.boxes, step.compareBoxId);
         const finalPreview = result.kept.slice(0, 2).map((box) => ({
             bbox: box.bbox,
@@ -1165,7 +1450,7 @@
         if (els.notesTutorial) {
             els.notesTutorial.innerHTML = tutorialContent;
         }
-        els.notes.innerHTML = notesContent + renderYoloTeachingDashboard(step, result);
+        els.notes.innerHTML = notesContent + renderYoloActiveContext(step, result) + renderYoloTeachingDashboard(step, result);
     }
 
     function demoBox(box, sample, kind, label, extraClass = "", extraStyle = "") {
@@ -1696,7 +1981,7 @@
         const p = activeRcnnProposal(demo);
         if (!p?.bbox) return "";
         const phase = step.id || "image";
-        const center = pointPercent(boxCenter(p), sample);
+        const center = imagePointPercent(boxCenter(p), sample);
         const refinedBox = p.refined ? {id: `${p.id}-refined`, class: p.class, score: p.score, bbox: p.refined} : null;
         const activePulse = `<i class="det-algo-pulse is-rcnn-active" style="${centerStyle(p, sample, "--pulse-color:#8b5cf6;")}"></i>`;
         let flow = "";
@@ -1729,8 +2014,8 @@
             </div>`;
         } else if (phase === "regression" && refinedBox) {
             const points = flowLinePoints(p, refinedBox, sample);
-            flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--rcnn" viewBox="0 0 ${sample.width} ${sample.height}" preserveAspectRatio="none" aria-hidden="true">
-                <line x1="${points.a.x}" y1="${points.a.y}" x2="${points.b.x}" y2="${points.b.y}"></line>
+            flow = `<svg class="det-algo-flow-svg det-algo-flow-svg--rcnn" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="${points.ap.x}" y1="${points.ap.y}" x2="${points.bp.x}" y2="${points.bp.y}"></line>
             </svg>`;
             chip = `<div class="det-algo-chip det-algo-chip--rcnn" style="left:${points.mp.x}%;top:${points.mp.y}%;">
                 <b>边界框回归</b><span>dx ${esc(p.offset?.dx ?? "--")} / dy ${esc(p.offset?.dy ?? "--")}</span>
@@ -2063,6 +2348,10 @@
         const steps = activeRcnnSteps();
         const activeProposal = activeRcnnProposal(demo);
         if (els.pipeline) els.pipeline.hidden = true;
+        if (els.featureView) {
+            els.featureView.hidden = true;
+            els.featureView.innerHTML = "";
+        }
         if (els.nmsControl) {
             els.nmsControl.hidden = true;
             els.nmsControl.innerHTML = "";
@@ -2079,6 +2368,7 @@
         els.iou.value = String(state.iou);
 
         syncDetectionImage(sample);
+        updateImageRenderRect(sample);
         els.missing.textContent = "";
         els.missing.style.display = "none";
         els.rcnnStage.hidden = false;
@@ -2152,10 +2442,16 @@
         state.step = Math.min(state.step, result.steps.length - 1);
         const step = result.steps[state.step] || result.steps[0];
         syncDetectionImage(s);
+        renderYoloFeatureView(step, result);
+        updateImageRenderRect(s);
         els.missing.textContent = "";
         els.missing.style.display = "none";
         els.confOut.textContent = state.conf.toFixed(2);
         els.iouOut.textContent = state.iou.toFixed(2);
+        if (els.heatmapType) els.heatmapType.value = state.heatmapType;
+        if (els.heatmapClass) els.heatmapClass.value = state.heatmapClass;
+        if (els.heatmapAlpha) els.heatmapAlpha.value = String(state.heatmapAlpha);
+        if (els.heatmapAlphaOut) els.heatmapAlphaOut.textContent = `${Math.round(state.heatmapAlpha * 100)}%`;
         els.total.textContent = String(counts.decoded);
         els.total.classList.remove("det-count-roll");
         void els.total.offsetWidth;
@@ -2184,7 +2480,7 @@
             ...statusLayers.kept
         ].join("");
         const c = step.comparison;
-        const interMarkup = c?.inter.area > 0 ? `<div class="vision-iou-intersection" style="left:${(c.inter.x1 / s.width) * 100}%;top:${(c.inter.y1 / s.height) * 100}%;width:${(c.inter.width / s.width) * 100}%;height:${(c.inter.height / s.height) * 100}%;"></div>` : "";
+        const interMarkup = c?.inter.area > 0 ? `<div class="vision-iou-intersection" style="${imageRectStyle(c.inter.x1, c.inter.y1, c.inter.width, c.inter.height, s.width, s.height)}"></div>` : "";
         const iouBadge = c ? `<div class="det-iou-badge"><span>IoU</span><strong>${c.iou.toFixed(3)}</strong><small>${c.suppress ? "抑制 B" : "保留 B"}</small></div>` : "";
         els.overlay.innerHTML = boxMarkupAll + interMarkup + iouBadge + renderYoloStageMotion(step, result, s) + renderNmsSlowMotionLayer(step, result, s);
 
@@ -2219,6 +2515,7 @@
         const boxes = currentScene().boxes || [];
         const classes = [...new Set(boxes.map((box) => box.class))];
         if (reset) state.classes = new Set(classes);
+        renderHeatmapClassControls(classes);
         if (!classes.length) {
             els.classFilter.innerHTML = `<p class="detection-empty-hint">当前暂无检测框类别。</p>`;
             return;
@@ -2234,6 +2531,18 @@
                 render();
             });
         });
+    }
+
+    function renderHeatmapClassControls(classes = []) {
+        if (!els.heatmapClass) return;
+        const current = state.heatmapClass || "all";
+        const available = ["all", ...classes];
+        if (!available.includes(current)) state.heatmapClass = "all";
+        els.heatmapClass.innerHTML = available.map((name) => {
+            const label = name === "all" ? "All 全部" : name;
+            return `<option value="${esc(name)}">${esc(label)}</option>`;
+        }).join("");
+        els.heatmapClass.value = state.heatmapClass;
     }
 
     function renderSamplePicker() {
@@ -2287,6 +2596,7 @@
         state.inferenceResult = null;
         state.inferenceError = null;
         state.hoveredProposalId = null;
+        state.selectedDetectionId = null;
         state.nmsAnimationStep = 0;
         state.step = 0;
         renderClassControls(true);
@@ -2306,6 +2616,18 @@
         state.playing = false;
         clearTimeout(state.timer);
         els.play.textContent = "自动播放";
+    }
+
+    let imageRelayoutFrame = 0;
+    function scheduleImageRelayoutRender() {
+        if (!state.data) return;
+        if (imageRelayoutFrame) cancelAnimationFrame(imageRelayoutFrame);
+        imageRelayoutFrame = requestAnimationFrame(() => {
+            imageRelayoutFrame = 0;
+            const sample = state.detMode === "yolo" ? currentScene() : demoImageSample();
+            updateImageRenderRect(sample);
+            render();
+        });
     }
 
     async function getInferenceClient() {
@@ -2522,6 +2844,7 @@
         state.rcnnStep = 0;
         state.step = 0;
         state.hoveredProposalId = null;
+        state.selectedDetectionId = null;
         state.nmsAnimationStep = 0;
         render();
         if (state.detMode === "yolo" && !forcePresetSource) autoLoadAndRun();
@@ -2529,6 +2852,24 @@
     els.conf.addEventListener("input", () => updateYoloThreshold("conf", Number(els.conf.value)));
     els.iou.addEventListener("input", () => updateYoloThreshold("iou", Number(els.iou.value)));
     els.showLow.addEventListener("change", () => { state.showLow = els.showLow.checked; render(); });
+    els.heatmapType?.addEventListener("change", () => {
+        state.heatmapType = els.heatmapType.value || "auto";
+        render();
+    });
+    els.heatmapClass?.addEventListener("change", () => {
+        state.heatmapClass = els.heatmapClass.value || "all";
+        render();
+    });
+    els.heatmapAlpha?.addEventListener("input", () => {
+        state.heatmapAlpha = Math.max(0, Math.min(0.8, Number(els.heatmapAlpha.value) || 0));
+        render();
+    });
+    els.candidateTable?.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-det-hover-id]");
+        if (!target || !root.contains(target)) return;
+        state.selectedDetectionId = target.dataset.detHoverId || null;
+        render();
+    });
     els.prev.addEventListener("click", () => {
         if (state.detMode === "yolo") state.step = Math.max(0, state.step - 1);
         else state.rcnnStep = Math.max(0, state.rcnnStep - 1);
@@ -2582,6 +2923,8 @@
         setHoveredProposal(target.dataset.detHoverId);
     });
     root.addEventListener("focusout", () => setHoveredProposal(null));
+    els.image?.addEventListener("load", scheduleImageRelayoutRender);
+    window.addEventListener("resize", scheduleImageRelayoutRender);
 
     if (els.nmsControl) {
         els.nmsControl.addEventListener("click", (event) => {

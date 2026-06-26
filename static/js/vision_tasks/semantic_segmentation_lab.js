@@ -16,7 +16,6 @@
         data: null,
         sampleId: "",
         selectedSource: initialSource,
-        mode: "overlay",
         opacity: 0.65,
         boundaries: true,
         enabled: new Set(),
@@ -45,7 +44,6 @@
         sampleLabel: $("[data-sem-sample-label]"),
         sampleGrid: $("[data-sem-sample-grid]"),
         sourceButtons: $$("[data-sem-source]"),
-        modes: $$("[data-sem-mode]"),
         opacity: $("[data-sem-opacity]"),
         opacityOut: $("[data-sem-opacity-output]"),
         boundaries: $("[data-sem-boundaries]"),
@@ -110,7 +108,7 @@
             input: "原始 RGB 图像",
             compute: "读取像素坐标、RGB 通道和图像尺寸。",
             output: "I ∈ R^{H×W×3}",
-            formula: "I ∈ R^{H×W×3}",
+            formula: "I \\in \\mathbb{R}^{H \\times W \\times 3}",
             desc: "输入仍是普通 RGB 图像。语义分割的目标不是给整张图一个类别，而是让每个像素都得到一个语义标签。",
             overlay: "input"
         },
@@ -121,7 +119,7 @@
             input: "H×W×3 image",
             compute: "resize 到模型输入尺寸，并执行 0-255 → 0-1 → mean/std normalize。",
             output: "NCHW tensor",
-            formula: "x = (resize(I) / 255 - μ) / σ",
+            formula: "x = \\dfrac{\\mathrm{resize}(I)/255 - \\mu}{\\sigma}",
             desc: "图像先缩放到模型输入尺寸，再按均值和方差归一化，形成 NCHW tensor，保证不同图像进入网络时数值尺度一致。",
             overlay: "scan"
         },
@@ -132,7 +130,7 @@
             input: "normalized tensor",
             compute: "编码器聚合局部纹理、边缘和上下文，逐步降低空间分辨率。",
             output: "low-resolution feature map",
-            formula: "F = Encoder(x)",
+            formula: "F = \\mathrm{Encoder}(x)",
             desc: "编码器把局部纹理、边缘和上下文关系压缩成多尺度特征。动画中的小块向内汇聚，表示空间信息被编码成语义特征。",
             overlay: "blocks"
         },
@@ -143,7 +141,7 @@
             input: "feature map F",
             compute: "分类头对每个空间位置输出 C 个类别原始分数。",
             output: "H′×W′×C logits",
-            formula: "Z_{h,w,c}=W_c·F_{h,w}+b_c",
+            formula: "Z_{h,w,c} = W_c \\cdot F_{h,w} + b_c",
             desc: "分类头在每个空间位置输出 C 个类别分数。它像给每个像素位置放置一个小分类器，分别判断 road、person、building 等类别。",
             overlay: "channels"
         },
@@ -154,7 +152,7 @@
             input: "low-resolution logits",
             compute: "使用双线性插值或 decoder 上采样，把粗网格恢复到原图尺度。",
             output: "H×W×C logits",
-            formula: "Z↑ = Upsample(Z)",
+            formula: "Z^\\uparrow = \\mathrm{Upsample}(Z)",
             desc: "低分辨率 logits 被放大回原图尺度。线条向外伸展，表示稠密预测从粗网格恢复到像素级分辨率。",
             overlay: "expand"
         },
@@ -165,7 +163,7 @@
             input: "H×W×C logits",
             compute: "每个像素沿 class channel 比较分数，选择最大类别。",
             output: "H×W class index map",
-            formula: "ŷ_{h,w}=argmax_c Z↑_{h,w,c}",
+            formula: "\\hat{y}_{h,w} = \\arg\\max_c Z^\\uparrow_{h,w,c}",
             desc: "每个像素从 C 个类别分数中选择最大者，得到 H×W class map。颜色块逐渐锁定，表示类别决策完成。",
             overlay: "decision"
         },
@@ -176,7 +174,7 @@
             input: "H×W class index map",
             compute: "把 class id 映射为类别颜色，并按透明度叠加到原图。",
             output: "colored semantic mask",
-            formula: "Mask(h,w)=color(ŷ_{h,w})",
+            formula: "\\mathrm{Mask}_{h,w} = \\mathrm{color}(\\hat{y}_{h,w})",
             desc: "class map 被映射成颜色并叠加在原图上。这里同类像素会合并成一个语义区域，不区分第几个实例。",
             overlay: "mask"
         },
@@ -187,7 +185,7 @@
             input: "prediction mask + ground truth",
             compute: "按类别计算 intersection / union，再对类别求平均。",
             output: "mean Intersection over Union",
-            formula: "mIoU = (1/C) Σ_c |P_c∩G_c| / |P_c∪G_c|",
+            formula: "\\mathrm{mIoU} = \\dfrac{1}{C} \\sum_{c=1}^{C} \\dfrac{|P_c \\cap G_c|}{|P_c \\cup G_c|}",
             desc: "评价时按类别计算预测区域与真实标注的交并比，再对类别求平均。右侧公式展示了语义分割最常用的质量指标。",
             overlay: "metric"
         }
@@ -321,30 +319,36 @@
         if (kind === "scan") return `
             <div class="semantic-step-visual is-preprocess">
                 <div class="process-scanline"></div><div class="process-grid"></div>
-                <div class="sem-normalize-card"><span>像素RGB 183</span><b></b><strong>归一化值 0.72</strong></div>
-                <div class="sem-resize-card"><span>${sampleInfo?.width || mask?.width || "H"}×${sampleInfo?.height || mask?.height || "W"}</span><strong>缩放到 512×512</strong></div>
+                <div class="sem-normalize-card"><span>RGB 183</span><b></b><strong>→ 0.72</strong></div>
+                <div class="sem-resize-card"><span>${sampleInfo?.width || mask?.width || "H"}×${sampleInfo?.height || mask?.height || "W"}</span><strong>→ 512×512</strong></div>
             </div>`;
         if (kind === "blocks") return `
             <div class="semantic-step-visual is-backbone">
                 <div class="process-block-cloud">${Array.from({length: 24}, (_, i) => `<i style="--i:${i}; --mod6:${i % 6}; --div6:${Math.floor(i / 6)}"></i>`).join("")}</div>
                 <div class="process-flow-line"></div>
                 <div class="sem-feature-map">${Array.from({length: 36}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+                <div class="sem-tag-chip is-segformer">Transformer Encoder</div>
+                <div class="sem-tag-chip is-fcn">CNN Backbone (FCN)</div>
             </div>`;
         if (kind === "channels") return `
             <div class="semantic-step-visual is-logits">
                 <div class="process-channel-stack">${Array.from({length: 6}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-logit-panel"><strong>特定像素的概率堆叠 (Logits)</strong>${normalizedBars(classes, winner?.id)}</div>
+                <div class="sem-logit-panel"><strong>per-pixel logits</strong>${normalizedBars(classes, winner?.id)}</div>
+                <div class="sem-tag-chip is-segformer">MLP Decoder</div>
+                <div class="sem-tag-chip is-fcn">1×1 Conv (FCN 关键创新)</div>
             </div>`;
         if (kind === "expand") return `
             <div class="semantic-step-visual is-upsample">
                 <div class="process-expand-grid">${Array.from({length: 25}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-upsample-arrow">上采样缩放 ×4</div>
+                <div class="sem-upsample-arrow">×4</div>
                 <div class="sem-highres-grid">${Array.from({length: 64}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+                <div class="sem-tag-chip is-segformer">双线性插值</div>
+                <div class="sem-tag-chip is-fcn">反卷积 + Skip Connection</div>
             </div>`;
         if (kind === "decision") return `
             <div class="semantic-step-visual is-argmax">
                 <div class="process-decision-map">${Array.from({length: 36}, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
-                <div class="sem-argmax-panel"><strong>由最大数 Argmax 抉择的分类</strong>${normalizedBars(classes, winner?.id)}</div>
+                <div class="sem-argmax-panel"><strong>argmax → class id</strong>${normalizedBars(classes, winner?.id)}</div>
             </div>`;
         if (kind === "mask") return `
             <div class="semantic-step-visual is-mask">
@@ -354,7 +358,7 @@
         if (kind === "metric") return `
             <div class="semantic-step-visual is-miou">
                 <div class="process-iou-demo"><i class="gt"></i><i class="pred"></i><b></b><span>IoU</span></div>
-                <div class="sem-miou-equation"><strong>计算交集区</strong><b>/</b><strong>并集区</strong><span>= ${mask ? (fcnMeanIoU(mask) / 100).toFixed(3) : "0.62"}</span></div>
+                <div class="sem-miou-equation"><strong>∩</strong><b>/</b><strong>∪</strong><span>= ${mask ? (fcnMeanIoU(mask) / 100).toFixed(3) : "0.62"}</span></div>
             </div>`;
         return `
             <div class="semantic-step-visual is-image">
@@ -383,8 +387,8 @@
 
     function renderProcessVisuals() {
         const step = processById(state.phase);
+        // 不在大图上叠加动画/网格等装饰层，保持原图与 mask 清晰可见
         if (els.processOverlay) {
-            els.processOverlay.dataset.processStep = step.id;
             els.processOverlay.innerHTML = "";
             els.processOverlay.hidden = true;
         }
@@ -405,7 +409,7 @@
             const desc = els.processCard.querySelector("[data-process-desc]");
             if (kicker) kicker.textContent = `SEMANTIC STEP ${phaseIndex(step.id) + 1} / ${processSteps.length}`;
             if (title) title.textContent = step.title;
-            if (formula) formula.textContent = step.formula;
+            if (formula) renderFormula(step.formula, formula);
             if (desc) {
                 desc.outerHTML = `<div class="process-structure-list" data-process-desc>${rows.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join("")}</div>`;
             }
@@ -424,6 +428,29 @@
 
     function fmtMs(value) {
         return Number.isFinite(value) ? `${value.toFixed(1)} ms` : "--";
+    }
+
+    function stripDisplayDelimiters(tex) {
+        const s = String(tex || "").trim();
+        if (s.startsWith("$$") && s.endsWith("$$")) return s.slice(2, -2).trim();
+        return s;
+    }
+
+    function renderFormula(tex, el) {
+        if (!el || !window.katex) {
+            if (el) el.textContent = tex;
+            return false;
+        }
+        const latex = stripDisplayDelimiters(tex);
+        if (!latex) return false;
+        try {
+            window.katex.render(latex, el, {throwOnError: false, displayMode: true});
+            return true;
+        } catch (e) {
+            console.warn("katex render failed:", latex, e);
+            el.textContent = tex;
+            return false;
+        }
     }
 
     function sample() {
@@ -845,9 +872,8 @@
         if (!mask) return;
         els.canvas.width = mask.width;
         els.canvas.height = mask.height;
-        els.stage.dataset.mode = state.mode;
         els.stage.style.setProperty("--sem-aspect", `${Math.max(1, mask.width)} / ${Math.max(1, mask.height)}`);
-        els.canvas.style.opacity = state.mode === "image" ? "0" : (state.mode === "mask" ? "1" : String(state.opacity));
+        els.canvas.style.opacity = String(state.opacity);
         const imageData = ctx.createImageData(mask.width, mask.height);
         const out = imageData.data;
         const colors = new Map();
@@ -857,18 +883,16 @@
                 const id = mask.classMap[i];
                 const p = i * 4;
                 if (!shouldDraw(id)) {
-                    if (state.mode === "mask") {
-                        out[p] = 15; out[p + 1] = 23; out[p + 2] = 42; out[p + 3] = 255;
-                    }
+                    out[p] = 0; out[p + 1] = 0; out[p + 2] = 0; out[p + 3] = 0;
                     continue;
                 }
                 if (boundary(mask, x, y, id)) {
-                    out[p] = 255; out[p + 1] = 255; out[p + 2] = 255; out[p + 3] = state.mode === "mask" ? 235 : 210;
+                    out[p] = 255; out[p + 1] = 255; out[p + 2] = 255; out[p + 3] = 210;
                     continue;
                 }
                 if (!colors.has(id)) colors.set(id, parseColor(classById(mask, id)?.color));
                 const [r, g, b] = colors.get(id);
-                out[p] = r; out[p + 1] = g; out[p + 2] = b; out[p + 3] = state.mode === "mask" ? 238 : 255;
+                out[p] = r; out[p + 1] = g; out[p + 2] = b; out[p + 3] = 255;
             }
         }
         ctx.putImageData(imageData, 0, 0);
@@ -1050,41 +1074,60 @@
             els.notesTitle.textContent = "FCN 原理演示";
             els.notesSubtitle.textContent = title;
             els.notesTutorial.innerHTML = `<p>${desc}</p>`;
-            els.notes.innerHTML = `<dl><div><dt>当前阶段</dt><dd>${esc(state.phase)}</dd></div><div><dt>逐像素分类</dt><dd>H × W pixels → H × W class ids</dd></div><div><dt>1×1 Conv 输出</dt><dd>${mask?.classes?.length || "--"} 个类别通道</dd></div><div><dt>Skip Connection</dt><dd>coarse semantic + fine boundary</dd></div><div><dt>当前类别 IoU</dt><dd>${selected ? `${esc(selected.className)}: ${selected.intersection}/${selected.union} = ${selected.iou.toFixed(3)}` : "--"}</dd></div><div><dt>mIoU</dt><dd>${mask ? `${fcnMeanIoU(mask).toFixed(1)}%` : "--"}</dd></div></dl>`;
+            const iouLatex = `\\mathrm{IoU}_c = \\dfrac{${selected ? selected.intersection : "\\cap"}}{${selected ? selected.union : "\\cup"}} = ${selected ? selected.iou.toFixed(3) : "\\text{--}"}`;
+            els.notes.innerHTML = `<dl><div><dt>当前阶段</dt><dd>${esc(state.phase)}</dd></div><div><dt>逐像素分类</dt><dd>H × W pixels → H × W class ids</dd></div><div><dt>1×1 Conv 输出</dt><dd>${mask?.classes?.length || "--"} 个类别通道</dd></div><div><dt>Skip Connection</dt><dd>coarse semantic + fine boundary</dd></div><div><dt>当前类别 IoU</dt><dd class="katex-math" data-latex="${esc(iouLatex)}"></dd></div><div><dt>mIoU</dt><dd>${mask ? `${fcnMeanIoU(mask).toFixed(1)}%` : "--"}</dd></div></dl>`;
             return;
         }
         if (state.phase === "preprocess") {
             els.notesTitle.textContent = "Preprocess";
             els.notesSubtitle.textContent = "Resize / Normalize";
-            els.notesTutorial.innerHTML = `<p>输入图像会被缩放到模型预处理配置要求的尺寸，并按 ImageNet mean/std 标准化为 NCHW tensor。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>输入图像尺寸</dt><dd>${s?.width || "--"} × ${s?.height || "--"}</dd></div><div><dt>resize / normalize</dt><dd>${meta.inputSize || state.modelInfo?.inputSizeText || "512 × 512"} / ImageNet mean-std</dd></div><div><dt>tensor shape</dt><dd>[1, 3, ${state.modelInfo?.inputSize?.height || 512}, ${state.modelInfo?.inputSize?.width || 512}]</dd></div><div><dt>当前输入来源</dt><dd>${mask?.source === "model" ? "Frontend Model" : "Preset Mask"}</dd></div></dl>`;
+            els.notesTutorial.innerHTML = `<p>resize → NCHW tensor，ImageNet mean/std 归一化。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>${s?.width || "--"} × ${s?.height || "--"}</dd></div><div><dt>目标</dt><dd>${meta.inputSize || state.modelInfo?.inputSizeText || "512 × 512"}</dd></div><div><dt>tensor</dt><dd>[1, 3, H, W]</dd></div></dl>`;
         } else if (state.phase === "backbone") {
             els.notesTitle.textContent = "Backbone";
-            els.notesSubtitle.textContent = "Low-resolution Feature Map";
-            els.notesTutorial.innerHTML = `<p>Backbone 把 RGB tensor 编码为低分辨率语义特征，空间尺寸变小，但上下文语义更强。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>NCHW tensor</dd></div><div><dt>输出</dt><dd>H′ × W′ × D feature map</dd></div><div><dt>当前后端</dt><dd>${esc(state.activeBackend || meta.backend || "--")}</dd></div><div><dt>模型名称</dt><dd>${esc(meta.modelName || "SegFormer-B0")}</dd></div></dl>`;
+            els.notesSubtitle.textContent = "Feature Map";
+            els.notesTutorial.innerHTML = `<p>RGB → 低分辨率语义特征。SegFormer 用 Transformer，FCN 用 CNN。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>NCHW tensor</dd></div><div><dt>输出</dt><dd>H′ × W′ × D</dd></div><div><dt>后端</dt><dd>${esc(state.activeBackend || meta.backend || "--")}</dd></div><div><dt>模型</dt><dd>${esc(meta.modelName || "SegFormer-B0")}</dd></div></dl>`;
         } else if (state.phase === "logits") {
             els.notesTitle.textContent = "Pixel Logits";
-            els.notesSubtitle.textContent = "H×W×C class scores";
-            els.notesTutorial.innerHTML = `<p>分类头在每个像素位置输出 C 个类别 logits。softmax 可以把 logits 转成概率，但最终 mask 通常由 argmax 决定。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>类别数量</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>推理耗时</dt><dd>${fmtMs(meta.inferenceTime)}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div><div><dt>输出结构摘要</dt><dd>${esc(meta.rawOutputSummary || "H′×W′×C logits / class mask")}</dd></div></dl>`;
+            els.notesSubtitle.textContent = "H×W×C scores";
+            els.notesTutorial.innerHTML = `<p>每个像素位置输出 C 类 logits。SegFormer 用 MLP decoder，FCN 用 1×1 conv。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>类别数</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>推理耗时</dt><dd>${fmtMs(meta.inferenceTime)}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div></dl>`;
+        } else if (state.phase === "upsample") {
+            els.notesTitle.textContent = "Upsample";
+            els.notesSubtitle.textContent = "Restore H × W";
+            els.notesTutorial.innerHTML = `<p>低分辨率 logits → 原图尺寸。SegFormer 双线性插值，FCN 反卷积 + skip。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>H′×W′×C logits</dd></div><div><dt>输出</dt><dd>H×W×C logits</dd></div><div><dt>方式</dt><dd>${mask?.source === "model" ? "双线性插值" : "反卷积 + skip"}</dd></div></dl>`;
         } else if (state.phase === "argmax") {
-            els.notesTitle.textContent = "Logits / Argmax";
+            els.notesTitle.textContent = "Argmax";
             els.notesSubtitle.textContent = "C-channel decision";
             const directMask = String(meta.rawOutputSummary || "").includes("class mask");
-            els.notesTutorial.innerHTML = directMask ? `<p>模型 pipeline 已直接返回 mask，类别决策已经完成，页面只需统一为 H × W class index map。</p>` : `<p>如果模型输出是 logits，则逐像素执行 <code>classMap[h,w] = argmax_c logits[c,h,w]</code>。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>类别数量</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div></dl>`;
+            els.notesTutorial.innerHTML = `<p>${directMask ? "模型内部已完成 argmax，直接返回 class mask。" : "逐像素 argmax_c logits[c,h,w] → class id。"}</p>`;
+            els.notes.innerHTML = `<dl><div><dt>类别数</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div></dl>`;
         } else if (state.phase === "mask") {
             els.notesTitle.textContent = "Semantic Mask";
             els.notesSubtitle.textContent = "H × W class map";
-            els.notesTutorial.innerHTML = `<p>渲染层只读取统一 semantic mask：<code>source, width, height, classMap, classes, distribution, meta</code>。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>类别数量</dt><dd>${mask?.classes?.length || "--"}</dd></div><div><dt>最大占比类别</dt><dd>${topInfo ? `${esc(label(topInfo))} ${(top.ratio * 100).toFixed(1)}%` : "--"}</dd></div><div><dt>类别分布</dt><dd>${mask?.distribution?.filter((item) => item.count > 0).slice(0, 4).map((item) => `${label(classById(mask, item.id))}: ${(item.ratio * 100).toFixed(1)}%`).join(" / ") || "--"}</dd></div><div><dt>当前输出结构</dt><dd>H × W class index map</dd></div></dl>`;
+            els.notesTutorial.innerHTML = `<p>class map → 颜色 → 叠加原图。同类合并，不区分实例。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>类别数</dt><dd>${mask?.classes?.length || "--"}</dd></div><div><dt>最大占比</dt><dd>${topInfo ? `${esc(label(topInfo))} ${(top.ratio * 100).toFixed(1)}%` : "--"}</dd></div><div><dt>输出结构</dt><dd>H × W class index map</dd></div></dl>`;
+        } else if (state.phase === "miou") {
+            els.notesTitle.textContent = "mIoU";
+            els.notesSubtitle.textContent = "mean IoU";
+            els.notesTutorial.innerHTML = `<p>每类 IoU = ∩ / ∪，再对类别求平均。像素级 mask 重叠。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>mIoU</dt><dd>${mask ? `${fcnMeanIoU(mask).toFixed(1)}%` : "--"}</dd></div><div><dt>类别数</dt><dd>${mask?.classes?.length || "--"}</dd></div><div><dt>公式</dt><dd class="katex-math" data-latex="\\mathrm{mIoU} = \\dfrac{1}{C} \\sum_{c=1}^{C} \\dfrac{|P_c \\cap G_c|}{|P_c \\cup G_c|}"></dd></div></dl>`;
         } else {
             els.notesTitle.textContent = "Image";
             els.notesSubtitle.textContent = "H×W×3 input";
-            els.notesTutorial.innerHTML = `<p>默认进入预设 mask 模式。切换到前端模型推理后，会自动加载本地 SegFormer 模型并完成推理。</p>`;
-            els.notes.innerHTML = `<dl><div><dt>Source</dt><dd>${mask?.source === "model" ? "Frontend Model" : "Preset Mask"}</dd></div><div><dt>图像尺寸</dt><dd>${s ? `${s.width} × ${s.height}` : "--"}</dd></div></dl>`;
+            els.notesTutorial.innerHTML = `<p>每个像素预测一个 class id，输出 H×W class map。</p>`;
+            els.notes.innerHTML = `<dl><div><dt>Source</dt><dd>${mask?.source === "model" ? "Frontend Model" : "Preset Mask"}</dd></div><div><dt>图像尺寸</dt><dd>${s ? `${s.width} × ${s.height}` : "--"}</dd></div><div><dt>输出</dt><dd>H × W class index map</dd></div></dl>`;
         }
+        renderKaTeXIn(els.notes);
+    }
+
+    function renderKaTeXIn(container) {
+        if (!container) return;
+        container.querySelectorAll(".katex-math").forEach((node) => {
+            renderFormula(node.dataset.latex || node.textContent, node);
+        });
     }
 
     function sampler(mask) {
@@ -1261,11 +1304,7 @@
         });
     }
 
-    els.modes.forEach((button) => button.addEventListener("click", () => {
-        state.mode = button.dataset.semMode;
-        els.modes.forEach((node) => node.classList.toggle("is-active", node === button));
-        draw();
-    }));
+    // view mode removed: overlay is the only mode, opacity slider controls mask visibility
     els.opacity.addEventListener("input", () => {
         state.opacity = Number(els.opacity.value) / 100;
         els.opacityOut.textContent = `${els.opacity.value}%`;
@@ -1345,10 +1384,10 @@
                         throwOnError: false
                     });
                 } catch (e) {
-                    iouMathFormula.innerHTML = `$$IoU = \\frac{|GT \\cap Pred|}{|GT \\cup Pred|} = \\frac{${intersectionArea.toFixed(0)}}{${unionArea.toFixed(0)}} \\approx ${iou.toFixed(3)}$$`;
+                    iouMathFormula.textContent = `IoU = |GT ∩ Pred| / |GT ∪ Pred| = ${intersectionArea.toFixed(0)} / ${unionArea.toFixed(0)} ≈ ${iou.toFixed(3)}`;
                 }
             } else {
-                iouMathFormula.innerHTML = `$$IoU = \\frac{|GT \\cap Pred|}{|GT \\cup Pred|} = \\frac{${intersectionArea.toFixed(0)}}{${unionArea.toFixed(0)}} \\approx ${iou.toFixed(3)}$$`;
+                iouMathFormula.textContent = `IoU = |GT ∩ Pred| / |GT ∪ Pred| = ${intersectionArea.toFixed(0)} / ${unionArea.toFixed(0)} ≈ ${iou.toFixed(3)}`;
             }
         }
     }
