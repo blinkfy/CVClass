@@ -124,6 +124,7 @@
         if ("ResizeObserver" in window) {
             const observer = new ResizeObserver(scheduleUpdate);
             observer.observe(map);
+            map._authorMapResizeObserver = observer;
         }
 
         if (document.fonts && document.fonts.ready) {

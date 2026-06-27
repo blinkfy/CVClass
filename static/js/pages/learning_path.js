@@ -50,8 +50,11 @@
     const keyLevelIds = new Set([
         "level-05-convolution",
         "level-08-canny",
+        "level-11-sift",
         "level-12-matching-panorama",
+        "level-13-cnn-learning",
         "level-16-object-detection",
+        "level-19-semantic-segmentation",
         "level-20-instance-segmentation",
         "level-22-action",
         "level-23-camera-calibration",

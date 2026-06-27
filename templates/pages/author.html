@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}关于作者 · 徐延飞{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/author.css') }}?v=20260627-author19">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/author.css') }}?v=20260627-author32">
 {% endblock %}
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/vendor/hls.min.js') }}?v=1.6.16"></script>
@@ -10,10 +10,13 @@
 {% block content %}
 <div class="author-page">
     <section class="author-hero" aria-labelledby="authorTitle">
+        <div class="author-photo" aria-hidden="true">
+            <img src="{{ url_for('static', filename='assets/author/photo.webp') }}" alt="">
+        </div>
         <div class="author-hero-copy">
             <h1 id="authorTitle">徐延飞</h1>
-            <p class="author-identity">面向计算机视觉、具身智能与智能应用系统的研究与工程实践</p>
-            <p class="author-summary">研究围绕多模态感知、结构化语义理解、任务规划与系统验证展开，关注算法模型在机器人操作、显微图像分析及城市垃圾分类场景中的可复现实现与应用闭环。</p>
+            <p class="author-identity">面向计算机视觉、具身智能与智能应用系统的研究与实践</p>
+            <p class="author-summary">围绕多模态感知、计算机视觉、结构化语义理解展开，关注算法模型在机器人操作、图像分析中的可复现实现与应用闭环。</p>
             <div class="author-stats" aria-label="作者概览">
                 <div><span class="stat-icon stat-icon--green">3</span><strong>3</strong><small>研究方向</small></div>
                 <div><span class="stat-icon stat-icon--blue">10+</span><strong>10+</strong><small>工程仓库</small></div>
@@ -37,31 +40,31 @@
                     <svg viewBox="0 0 32 32"><path d="M10 12h12a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5Z"/><path d="M16 12V6"/><circle cx="12" cy="19" r="1.8"/><circle cx="20" cy="19" r="1.8"/><path d="M12 24h8"/></svg>
                 </span>
                 <strong>具身智能</strong>
-                <small>多模态感知 · 规划控制</small>
+                <small>协同感知 · 规划控制</small>
             </a>
             <a class="map-core" href="#task319Work">
-                <strong>研究工作<br>图谱</strong>
+                <strong>主要工作</strong>
             </a>
             <a class="map-node map-node--pore" href="#poreWork">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><circle cx="10" cy="10" r="4"/><circle cx="22" cy="9" r="3"/><circle cx="19" cy="21" r="6"/><path d="M13 12l4 5M20 12l-1 3"/></svg>
                 </span>
-                <strong>显微图像分析</strong>
+                <strong>科学图像分析</strong>
                 <small>微结构表征 · 孔隙建模</small>
             </a>
             <a class="map-node map-node--app" href="#fentouxiaWork">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><rect x="9" y="4" width="14" height="24" rx="3"/><path d="M13 8h6M14 24h4"/><path d="M12 15h8M12 19h5"/></svg>
                 </span>
-                <strong>移动应用</strong>
-                <small>知识服务 · 系统集成</small>
+                <strong>多模态学习</strong>
+                <small>特征融合 · 语义校准</small>
             </a>
             <a class="map-node map-node--future" href="#fentouxiaWork" aria-label="待扩展工作方向占位">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><path d="M7 16h18"/><path d="M16 7v18"/><circle cx="16" cy="16" r="10"/></svg>
                 </span>
-                <strong>后续研究方向</strong>
-                <small>持续完善 · 预留拓展</small>
+                <strong>计算机视觉</strong>
+                <small>图像分割 · 目标检测</small>
             </a>
         </div>
     </section>
@@ -72,10 +75,10 @@
             <div class="work-copy">
                 <h2 id="task319Title">具身智能自主清洁机器人</h2>
                 <p class="work-subtitle">面向复杂场景的多模态感知、任务规划与机器人操作闭环</p>
-                <p>该工作基于 Isaac Sim 与 IsaacLab 构建仿真验证环境，围绕垃圾目标识别、空间定位、导航决策与机械臂抓取建立端到端流程，并将视觉语言模型、YOLO 实例分割和运动规划模块纳入统一任务框架。</p>
+                <p>该工作基于 Isaac Sim 与 IsaacLab 构建仿真验证环境，围绕大小模型协同垃圾识别、空间定位、导航决策与机械臂抓取建立端到端流程，并将视觉语言模型、YOLO 实例分割和运动规划模块纳入统一任务框架。</p>
                 <ul class="work-bullets">
                     <li>融合 RGB-D、相机图像与点云信息进行环境表征</li>
-                    <li>结合语义分割与目标检测估计类别、位置及可抓取区域</li>
+                    <li>大小模型协同兼顾实时性和准确性，识别类别、位置</li>
                     <li>构建从目标选择、导航站位到抓取投放的任务执行链</li>
                     <li>通过仿真数据与真实样本提升模型迁移和执行稳定性</li>
                 </ul>
@@ -93,10 +96,6 @@
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-scene.webp') }}" alt="">
                         <strong>场景感知</strong><span>RGB-D / 点云</span>
-                    </article>
-                    <article>
-                        <img src="{{ url_for('static', filename='assets/author/rubbish-seg-pred.webp') }}" alt="">
-                        <strong>语义解析</strong><span>实例分割结果</span>
                     </article>
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-grasp-overlay.webp') }}" alt="">
@@ -145,7 +144,7 @@
                     </figure>
                     <div class="method-note">
                         <strong>模块设计目标</strong>
-                        <span>LSCM 引入文本语义先验以提升孔隙-基质判别，ASRM 通过方向敏感结构建模增强细长孔隙与弱边界的连续性保持。</span>
+                        <span>LSCM 引入语义先验提升孔隙-基质判别；ASRM 通过方向敏感建模保持细长孔隙与弱边界连续性。</span>
                     </div>
                 </div>
             </div>
@@ -154,9 +153,9 @@
         <section id="fentouxiaWork" class="work-row work-row--app" aria-labelledby="fentouxiaTitle">
             <div class="work-index">03</div>
             <div class="work-copy">
-                <h2 id="fentouxiaTitle">分投侠 / 智领净界智能垃圾分类应用</h2>
-                <p class="work-subtitle">面向城市垃圾治理的多模态分类与服务系统</p>
-                <p>该系统面向公众垃圾分类应用场景，集成视觉识别、RAG 知识服务、地理信息查询、社区激励与设备联动，实现从分类判别到投放指导、用户反馈和设备管理的应用闭环。</p>
+                <h2 id="fentouxiaTitle">传感器-视觉多模态分类与服务系统</h2>
+                <p class="work-subtitle">面向真实场景的多模态分类与服务系统</p>
+                <p>该系统面向公众应用场景，集成视觉识别、RAG 知识服务、地理信息查询、社区激励与设备联动，实现从分类判别到回收指导、用户反馈和设备管理的应用闭环。</p>
                 <div class="feature-grid">
                     <span>视觉识别</span><span>知识检索问答</span><span>空间投放服务</span><span>社区激励机制</span><span>设备互联</span>
                 </div>
@@ -169,21 +168,22 @@
                     aria-label="分投侠智能垃圾分类应用演示视频"></video>
                 <figcaption>应用端核心功能界面：识别、问答、社区与地图导航</figcaption>
             </figure>
-            <div class="system-card">
-                <h3>系统架构与功能模块</h3>
-                <div class="system-flow">
-                    <span>用户端</span>
-                    <span>视觉识别模块<br><small>YOLOv8 / SAM</small></span>
-                    <span>知识服务模块<br><small>知识库 + 检索</small></span>
-                    <span>社区激励模块<br><small>打卡 / 排行</small></span>
-                    <span>空间服务模块<br><small>投放点 / 导航</small></span>
-                    <span>设备接入模块<br><small>IoT / MQTT</small></span>
+            <div class="system-card app-showcase-card">
+                <h3>系统方案与应用验证</h3>
+                <div class="app-showcase-grid">
+                    <figure class="app-showcase-item app-showcase-item--architecture">
+                        <img src="{{ url_for('static', filename='assets/author/fentouxia-fusion-architecture.webp') }}" alt="多模态特征提取与融合架构图">
+                        <figcaption>多模态特征提取与融合架构</figcaption>
+                    </figure>
+                    <figure class="app-showcase-item app-showcase-item--dashboard">
+                        <img src="{{ url_for('static', filename='assets/author/fentouxia-collection-dashboard.webp') }}" alt="垃圾清运可视化调度大屏">
+                        <figcaption>清运调度可视化大屏</figcaption>
+                    </figure>
+                    <figure class="app-showcase-item app-showcase-item--device">
+                        <img src="{{ url_for('static', filename='assets/author/fentouxia-device-prototype.webp') }}" alt="智能垃圾分类设备原型">
+                        <figcaption>智能分类设备原型</figcaption>
+                    </figure>
                 </div>
-                <div class="data-layer">云端服务与数据层：MySQL / Sequelize / Redis / MQTT 协同支撑</div>
-                <figure class="model-preview">
-                    <img src="{{ url_for('static', filename='assets/author/rubbish-seg-pred.webp') }}" alt="垃圾分类模型预测结果">
-                    <figcaption>视觉模型实验结果用于支撑拍照识别与分类决策</figcaption>
-                </figure>
             </div>
         </section>
     </div>
@@ -191,8 +191,8 @@
     <footer class="author-footer">
         <p>“以工程系统承载研究假设，以实验验证支撑应用转化。”</p>
         <div>
-            <span>邮箱：2951320757@qq.com</span>
-            <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">GitHub</a>
+            <span>邮箱：flynnxv@outlook.com</span>
+            <a href="https://github.com/blinkfy" target="_blank" rel="noopener">GitHub</a>
         </div>
     </footer>
 </div>
