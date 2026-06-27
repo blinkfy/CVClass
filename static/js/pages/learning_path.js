@@ -41,6 +41,27 @@
         generate: "Gen",
         frontier: "AI",
     };
+    const bossLevelIds = new Set([
+        "level-12-matching-panorama",
+        "level-22-action",
+        "level-29-3d-reconstruction",
+        "level-40-unified-vision",
+    ]);
+    const keyLevelIds = new Set([
+        "level-05-convolution",
+        "level-08-canny",
+        "level-12-matching-panorama",
+        "level-16-object-detection",
+        "level-20-instance-segmentation",
+        "level-22-action",
+        "level-23-camera-calibration",
+        "level-26-stereo",
+        "level-29-3d-reconstruction",
+        "level-31-vit-transformer",
+        "level-34-sam",
+        "level-39-vision-banana",
+        "level-40-unified-vision",
+    ]);
 
     const state = {
         data: null,
@@ -160,15 +181,83 @@
         }).join("");
     }
 
-    function levelOffset(index) {
-        const offsets = [10, -18, 18, -8, 12, -16, 16, -6, 14, -12, 18, -4];
-        return offsets[index % offsets.length];
+    function getWorldMapSize(world) {
+        return {
+            width: Math.max(1040, world.levels.length * 90 + 100),
+            height: 330,
+        };
     }
 
-    function linkAngle(index) {
-        const delta = levelOffset(index + 1) - levelOffset(index);
-        if (Math.abs(delta) < 8) return "0deg";
-        return delta > 0 ? "12deg" : "-12deg";
+    function getLevelPoint(index, count, size) {
+        const startX = 70;
+        const endX = size.width - 74;
+        const span = Math.max(endX - startX, 1);
+        const baseX = startX + (span * index) / Math.max(count - 1, 1);
+        const drift = [0, -8, 12, -14, 14, -6, 12, -10, 8, -8, 10, 0];
+        const x = Math.min(endX, Math.max(startX, baseX + drift[index % drift.length]));
+        const wave = [174, 108, 186, 132, 92, 178, 124, 214, 152, 102, 194, 142];
+        return { x, y: wave[index % wave.length] };
+    }
+
+    function buildSmoothSegmentPath(points, index) {
+        const previous = points[Math.max(index - 1, 0)];
+        const from = points[index];
+        const to = points[index + 1];
+        const next = points[Math.min(index + 2, points.length - 1)];
+        const smooth = 0.18;
+        const c1x = from.x + (to.x - previous.x) * smooth;
+        const c1y = from.y + (to.y - previous.y) * smooth;
+        const c2x = to.x - (next.x - from.x) * smooth;
+        const c2y = to.y - (next.y - from.y) * smooth;
+        return `M ${from.x} ${from.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${to.x} ${to.y}`;
+    }
+
+    function buildRoutePath(points) {
+        return points.slice(1).map((_point, index) => buildSmoothSegmentPath(points, index)).join(" ");
+    }
+
+    function buildBranchPath(from, to, direction) {
+        const distance = to.x - from.x;
+        const lift = Math.min(66, Math.max(34, Math.abs(distance) * 0.12)) * direction;
+        const c1x = from.x + distance * 0.34;
+        const c2x = to.x - distance * 0.34;
+        return `M ${from.x} ${from.y} C ${c1x} ${from.y - lift}, ${c2x} ${to.y - lift}, ${to.x} ${to.y}`;
+    }
+
+    function renderBranchSegments(world, learnedModules, points) {
+        const branchPairs = world.levels.length >= 10
+            ? [[1, 3], [4, 6], [7, 9]]
+            : [[1, 3], [4, 6]];
+
+        return branchPairs
+            .filter(([fromIndex, toIndex]) => points[fromIndex] && points[toIndex])
+            .map(([fromIndex, toIndex], branchIndex) => {
+                const fromLevel = world.levels[fromIndex];
+                const toLevel = world.levels[toIndex];
+                const planned = effectiveStatus(fromLevel, learnedModules) === "planned"
+                    || effectiveStatus(toLevel, learnedModules) === "planned";
+                const bright = fromLevel.id === state.selectedLevelId || toLevel.id === state.selectedLevelId;
+                return `
+                    <path
+                        class="map-route-branch ${planned ? "map-route-branch--planned" : "map-route-branch--active"} ${bright ? "is-bright" : ""}"
+                        d="${buildBranchPath(points[fromIndex], points[toIndex], branchIndex % 2 === 0 ? 1 : -1)}"
+                    />
+                `;
+            }).join("");
+    }
+
+    function renderPathSegments(world, learnedModules, points) {
+        return world.levels.slice(1).map((level, index) => {
+            const previous = world.levels[index];
+            const status = effectiveStatus(level, learnedModules);
+            const previousStatus = effectiveStatus(previous, learnedModules);
+            const planned = status === "planned" || previousStatus === "planned";
+            const bright = previous.id === state.selectedLevelId || level.id === state.selectedLevelId;
+            const d = buildSmoothSegmentPath(points, index);
+            return `
+                <path class="map-route-segment ${planned ? "map-route-segment--planned" : "map-route-segment--active"} ${bright ? "is-bright" : ""}" d="${d}" />
+            `;
+        }).join("");
     }
 
     function renderWorlds() {
@@ -178,35 +267,31 @@
             const implemented = world.levels.filter((level) => level.route).length;
             const progress = Number.isFinite(world.progress) ? world.progress : Math.round((implemented / world.levels.length) * 100);
 
+            const mapSize = getWorldMapSize(world);
+            const points = world.levels.map((_level, index) => getLevelPoint(index, world.levels.length, mapSize));
             const levelHtml = world.levels.map((level, index) => {
                 const status = effectiveStatus(level, learnedModules);
                 const meta = getStatusMeta(status);
                 const selected = state.selectedLevelId === level.id;
                 const current = level.id === state.data.defaultLevelId;
-                const previous = world.levels[index - 1];
-                const previousStatus = previous ? effectiveStatus(previous, learnedModules) : "";
-                const linkClass = previous
-                    ? [
-                        "world-path-link",
-                        previousStatus === "planned" || status === "planned" ? "world-path-link--planned" : "world-path-link--active",
-                        previous.id === state.selectedLevelId || level.id === state.selectedLevelId ? "is-bright" : "",
-                    ].filter(Boolean).join(" ")
-                    : "";
                 const keywords = formatList(level.keywords);
+                const point = points[index];
+                const boss = bossLevelIds.has(level.id);
+                const key = keyLevelIds.has(level.id);
 
                 return `
-                    ${previous ? `<span class="${linkClass}" style="--link-angle:${linkAngle(index - 1)}" aria-hidden="true"></span>` : ""}
                     <button
-                        class="world-level-node world-level-node--${meta.className} ${selected ? "is-selected" : ""} ${current ? "is-current" : ""} ${state.renderedOnce ? "is-revealed" : ""}"
+                        class="world-level-node world-level-node--${meta.className} ${selected ? "is-selected" : ""} ${current ? "is-current" : ""} ${key ? "is-key" : ""} ${boss ? "is-boss" : ""} ${state.renderedOnce ? "is-revealed" : ""}"
                         type="button"
                         data-level-id="${escapeHtml(level.id)}"
-                        style="--level-y:${levelOffset(index)}px; --reveal-index:${worldIndex * 8 + index};"
+                        style="--node-x:${point.x}px; --node-y:${point.y}px; --reveal-index:${worldIndex * 10 + index};"
                         aria-pressed="${selected ? "true" : "false"}"
                     >
-                        <span class="level-node-top">
+                        <span class="level-node-marker">
                             <i class="level-icon">${escapeHtml(typeIcons[level.type] || "CV")}</i>
                             <b>${escapeHtml(level.number)}</b>
                         </span>
+                        ${boss ? "<span class=\"level-boss-badge\">FINAL</span>" : ""}
                         <strong>${escapeHtml(level.title)}</strong>
                         <em>${meta.label}</em>
                         <span class="level-tooltip">${escapeHtml(keywords)}</span>
@@ -217,7 +302,7 @@
             return `
                 <article
                     id="${escapeHtml(world.id)}"
-                    class="cv-world-card ${state.focusedWorldId === world.id ? "is-focused" : ""} ${state.renderedOnce ? "is-revealed" : ""}"
+                    class="cv-world-card cv-world-card--${escapeHtml(world.id)} ${state.focusedWorldId === world.id ? "is-focused" : ""} ${state.renderedOnce ? "is-revealed" : ""}"
                     style="--world-color:${escapeHtml(world.themeColor)}"
                 >
                     <div class="cv-world-meta">
@@ -240,7 +325,14 @@
                         </div>
                     </div>
                     <div class="cv-world-map" tabindex="0" aria-label="${escapeHtml(world.title)} 关卡地图">
-                        <div class="cv-world-track">${levelHtml}</div>
+                        <div class="cv-world-track" style="width:${mapSize.width}px;height:${mapSize.height}px;">
+                            <svg class="world-route-svg" viewBox="0 0 ${mapSize.width} ${mapSize.height}" aria-hidden="true" focusable="false">
+                                <path class="map-route-base" d="${buildRoutePath(points)}" />
+                                ${renderBranchSegments(world, learnedModules, points)}
+                                ${renderPathSegments(world, learnedModules, points)}
+                            </svg>
+                            ${levelHtml}
+                        </div>
                     </div>
                 </article>
             `;
