@@ -1,292 +1,123 @@
 {% extends "base.html" %}
-{% block title %}学习路径 - 计算机视觉实验平台{% endblock %}
+{% block title %}CV 学习路径 - 计算机视觉实验平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260627-quest-map40">
+{% endblock %}
+
 {% block content %}
-<div class="home-page learning-path-page">
-    <section class="home-panel learning-directory-hero" aria-labelledby="learningPathPageTitle">
-        <div>
-            <span class="section-label">LEARNING PATH</span>
-            <h1 id="learningPathPageTitle">CV学习目录</h1>
-            <p>计算机视觉从入门到精通。按四大学习域组织全部模块。</p>
+<div
+    class="cv-quest-page"
+    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260627-quest-map40"
+>
+    <section class="cv-quest-hero" aria-labelledby="questHeroTitle">
+        <div class="cv-quest-hero-copy">
+            <h1 id="questHeroTitle">CV 学习路径</h1>
+            <p>以闯关地图方式串联计算机视觉算法：从像素矩阵到三维视觉与多模态前沿。</p>
+            <div class="cv-quest-stats" aria-label="学习路径统计">
+                <article class="cv-quest-stat">
+                    <span id="questTotalCount">--</span>
+                    <strong>总关卡数</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--completed">
+                    <span id="questCompletedCount">--</span>
+                    <strong>已完成</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--mechanism">
+                    <span id="questMechanismCount">--</span>
+                    <strong>机制演示</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--inference">
+                    <span id="questInferenceCount">--</span>
+                    <strong>真实推理</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--frontier">
+                    <span id="questFrontierCount">--</span>
+                    <strong>前沿案例</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--planned">
+                    <span id="questPlannedCount">--</span>
+                    <strong>规划中</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--worlds">
+                    <span id="questWorldCount">--</span>
+                    <strong>覆盖方向数</strong>
+                </article>
+            </div>
         </div>
-        <div class="learning-directory-actions">
+        <div class="cv-quest-hero-actions">
             <a class="home-secondary-button" href="{{ url_for('home') }}">返回首页</a>
             <a class="home-primary-button" href="{{ url_for('knowledge_graph_page') }}">打开知识图谱</a>
         </div>
     </section>
 
-    <section class="home-panel learning-route-panel" aria-labelledby="routePanelTitle">
-        <h2 id="routePanelTitle" class="panel-title">
-            <span class="panel-title-icon panel-title-icon--path" aria-hidden="true"></span>
-            推荐学习路径
-        </h2>
-        <div class="route-map">
-            <article id="path-classic" class="route-card route-card--classic">
-                <h3>经典图像处理路线</h3>
-                <p>图像基础 → 卷积滤波 → 边缘轮廓 → 特征拼接</p>
-            </article>
-            <article id="path-deep" class="route-card route-card--deep">
-                <h3>深度视觉任务路线</h3>
-                <p>CNN 分类 → 目标检测 → 语义分割 → 实例分割 → 姿态估计 → 动作识别</p>
-            </article>
-            <article id="path-geometry" class="route-card route-card--geometry">
-                <h3>几何三维路线</h3>
-                <p>特征匹配 → 相机标定 → 光流 → 双目视觉 → 三维重建</p>
-            </article>
-            <article id="path-frontier" class="route-card route-card--frontier">
-                <h3>前沿模型路线</h3>
-                <p>ViT / Transformer → CLIP → SAM → GAN / Diffusion → VLM → Vision Banana</p>
-            </article>
+    <section class="cv-quest-overview" aria-labelledby="questOverviewTitle">
+        <div class="cv-quest-section-head">
+            <div>
+                <span>Quest Overview</span>
+                <h2 id="questOverviewTitle">总览路线</h2>
+            </div>
         </div>
+        <div id="questOverviewRoute" class="cv-quest-overview-route" aria-live="polite"></div>
     </section>
 
-    <section class="learning-directory-grid" aria-label="完整模块目录">
-        <article id="domain-basic" class="home-panel directory-domain directory-domain--basic">
-            <div class="directory-domain-head">
-                <span class="domain-number">01</span>
+    <section class="cv-quest-board" aria-label="World Quest Map">
+        <div class="cv-quest-worlds">
+            <div class="cv-quest-section-head">
                 <div>
-                    <h2>基础图像计算</h2>
-                    <p>像素、卷积、边缘、角点与图像拼接。</p>
+                    <span>World Quest Map</span>
+                    <h2>四大学习世界</h2>
                 </div>
+                <p>所有 World 默认展开，点击任意关卡查看右侧 Level Panel。</p>
             </div>
-            <div class="catalog-grid">
-                <article class="module-card catalog-module-card" data-learn-module="image-basic">
-                    <h3>图像基础</h3>
-                    <p>灰度化、二值化、直方图与基础图像变换。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="image-basic" href="{{ url_for('grayscale_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="convolution-filter">
-                    <h3>卷积与滤波</h3>
-                    <p>卷积核、Padding、Stride 与图像滤波。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="convolution-filter" href="{{ url_for('convolution_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="edge-contour">
-                    <h3>边缘轮廓</h3>
-                    <p>Sobel、Canny、Hough 与形态学处理。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="edge-contour" href="{{ url_for('edge_detection_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="feature-panorama">
-                    <h3>角点特征</h3>
-                    <p>Harris、FAST、SIFT 等局部特征检测。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="feature-panorama" href="{{ url_for('feature_detection_mode_page', mode='corner') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="feature-panorama">
-                    <h3>图像拼接</h3>
-                    <p>特征匹配、RANSAC、Homography 与全景拼接。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="feature-panorama" href="{{ url_for('feature_detection_mode_page', mode='panorama') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-            </div>
-        </article>
+            <div id="questWorldList" class="cv-quest-world-list" aria-live="polite"></div>
+        </div>
 
-        <article id="domain-deep" class="home-panel directory-domain directory-domain--deep">
-            <div class="directory-domain-head">
-                <span class="domain-number">02</span>
-                <div>
-                    <h2>深度视觉任务</h2>
-                    <p>CNN、分类、检测、分割、姿态估计与动作识别。</p>
-                </div>
+        <aside class="cv-level-panel" aria-labelledby="levelPanelTitle">
+            <div class="cv-level-panel-head">
+                <span id="levelPanelWorld">World --</span>
+                <h2 id="levelPanelTitle">选择一个关卡</h2>
+                <strong id="levelPanelStatus" class="cv-level-status">--</strong>
             </div>
-            <div class="catalog-grid">
-                <article class="module-card catalog-module-card" data-learn-module="cnn-learning">
-                    <h3>CNN 学习</h3>
-                    <p>卷积特征、激活、梯度与反向传播。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="cnn-learning" href="{{ url_for('cnn_visualization_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="classification-lab">
-                    <h3>图像分类</h3>
-                    <p>BoVW 与 CNN 分类任务、Top-K 与评估指标。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="classification-lab" href="{{ url_for('classification_lab_detail_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="object-detection">
-                    <h3>目标检测</h3>
-                    <p>YOLO、R-CNN、候选框、NMS 与 IoU。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="object-detection" href="{{ url_for('object_detection_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="semantic-segmentation">
-                    <h3>语义分割</h3>
-                    <p>Pixel-wise 分类、Semantic Mask 与 mIoU。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="semantic-segmentation" href="{{ url_for('semantic_segmentation_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="instance-segmentation">
-                    <h3>实例分割</h3>
-                    <p>Detection + Mask + Instance ID 与 Mask AP。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="instance-segmentation" href="{{ url_for('instance_segmentation_alias_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="pose-estimation">
-                    <h3>人体姿态估计</h3>
-                    <p>关键点检测、骨架连接与姿态表示。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="action-recognition">
-                    <h3>动作识别</h3>
-                    <p>时序特征、视频分类与行为理解。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-            </div>
-        </article>
+            <div id="levelPanelDifficulty" class="cv-level-stars" aria-label="难度星级"></div>
+            <p id="levelPanelTask" class="cv-level-task">点击地图中的关卡节点查看学习任务、输入输出结构和模块入口。</p>
 
-        <article id="domain-geometry" class="home-panel directory-domain directory-domain--geometry">
-            <div class="directory-domain-head">
-                <span class="domain-number">03</span>
+            <dl class="cv-level-detail-list">
                 <div>
-                    <h2>几何运动与三维视觉</h2>
-                    <p>特征匹配、相机几何、光流、双目与三维重建。</p>
+                    <dt>学习任务</dt>
+                    <dd id="levelTask"></dd>
                 </div>
-            </div>
-            <div class="catalog-grid">
-                <article class="module-card catalog-module-card" data-learn-module="feature-panorama">
-                    <h3>特征匹配</h3>
-                    <p>描述子匹配、Ratio Test 与几何验证。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="feature-panorama" href="{{ url_for('feature_detection_mode_page', mode='matching') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="camera-calibration">
-                    <h3>相机标定</h3>
-                    <p>内参、外参、畸变与棋盘格标定流程。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="optical-flow">
-                    <h3>光流与运动场</h3>
-                    <p>局部运动估计、稠密光流与运动可视化。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="stereo-vision">
-                    <h3>平行双目视觉</h3>
-                    <p>极线约束、视差计算与深度恢复。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="three-d-reconstruction">
-                    <h3>三维重建</h3>
-                    <p>点云、深度图、多视角几何与场景重建。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-            </div>
-        </article>
-
-        <article id="domain-frontier" class="home-panel directory-domain directory-domain--frontier">
-            <div class="directory-domain-head">
-                <span class="domain-number">04</span>
                 <div>
-                    <h2>生成式与多模态前沿</h2>
-                    <p>Transformer、视觉语言模型、分割基础模型与生成式模型。</p>
+                    <dt>输入结构</dt>
+                    <dd id="levelInput"></dd>
                 </div>
-            </div>
-            <div class="catalog-grid">
-                <article class="module-card catalog-module-card" data-learn-module="frontier">
-                    <h3>Transformer / ViT</h3>
-                    <p>从注意力机制到视觉 Transformer。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="frontier" href="{{ url_for('frontier_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="frontier">
-                    <h3>CLIP</h3>
-                    <p>图文对比学习与开放词表识别。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="frontier" href="{{ url_for('frontier_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="frontier">
-                    <h3>SAM</h3>
-                    <p>Segment Anything 与提示式分割。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="frontier" href="{{ url_for('frontier_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="gan">
-                    <h3>GAN</h3>
-                    <p>生成对抗网络与图像生成基础。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="diffusion">
-                    <h3>Diffusion</h3>
-                    <p>扩散模型、去噪过程与条件生成。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="vlm">
-                    <h3>VLM</h3>
-                    <p>视觉语言模型、视觉问答与推理。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="multimodal">
-                    <h3>多模态理解</h3>
-                    <p>图像、文本、视频与交互式视觉理解。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <span class="module-action module-action--disabled">待开放</span>
-                    </div>
-                </article>
-                <article class="module-card catalog-module-card" data-learn-module="frontier">
-                    <h3>Vision Banana</h3>
-                    <p>统一视觉模型能力与前沿任务案例。</p>
-                    <div class="module-card-foot">
-                        <span class="module-status module-status--pending">待学习</span>
-                        <a class="module-action" data-learn-link="frontier" href="{{ url_for('vision_banana_page') }}">进入模块 <span aria-hidden="true">&rarr;</span></a>
-                    </div>
-                </article>
-            </div>
-        </article>
+                <div>
+                    <dt>核心计算</dt>
+                    <dd id="levelCompute"></dd>
+                </div>
+                <div>
+                    <dt>输出结构</dt>
+                    <dd id="levelOutput"></dd>
+                </div>
+                <div>
+                    <dt>关键概念</dt>
+                    <dd id="levelKeywords" class="cv-level-tags"></dd>
+                </div>
+                <div>
+                    <dt>关联指标</dt>
+                    <dd id="levelMetrics"></dd>
+                </div>
+                <div>
+                    <dt>前置关卡</dt>
+                    <dd id="levelPrerequisites"></dd>
+                </div>
+            </dl>
+            <a id="levelEnterButton" class="home-primary-button cv-level-enter" href="#" aria-disabled="true">规划中</a>
+        </aside>
     </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260627-quest-map40"></script>
 {% endblock %}
