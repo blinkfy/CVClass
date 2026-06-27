@@ -172,6 +172,10 @@ def register_page_routes(app, get_model_status):
     def home():
         return render_template("pages/home.html", active_page="home")
 
+    @app.route("/learning-path", methods=["GET"])
+    def learning_path_page():
+        return render_template("pages/learning_path.html", active_page="learning_path")
+
     @app.route("/knowledge-graph", methods=["GET"])
     def knowledge_graph_page():
         return render_template("pages/knowledge_graph.html", active_page="knowledge_graph")
