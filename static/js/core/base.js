@@ -21,18 +21,48 @@
 
     const LEARNED_MODULES_KEY = "cvclass.learnedModules";
     const activePageModuleMap = {
-        grayscale: "image-basic",
-        convolution: "convolution-filter",
-        edge: "edge-contour",
-        feature: "feature-panorama",
-        cnn: "cnn-learning",
-        classification_lab: "classification-lab",
-        segmentation_basic: "segmentation-basic",
-        object_detection: "object-detection",
-        "segmentation_lab:semantic": "semantic-segmentation",
-        "segmentation_lab:instance": "instance-segmentation",
-        segmentation_lab: "semantic-segmentation",
-        frontier: "frontier",
+        grayscale: ["image-basic", "level-01-image-basic", "level-02-color-space", "level-03-threshold", "level-04-histogram"],
+        "convolution:visual": ["convolution-filter", "level-05-convolution"],
+        "convolution:image": ["convolution-filter", "level-06-multichannel-convolution"],
+        "convolution:digit": ["convolution-filter", "level-15-digit-recognition"],
+        convolution: ["convolution-filter", "level-05-convolution"],
+        "edge:compare": ["edge-contour", "level-07-edge-detection"],
+        "edge:kernel": ["edge-contour", "level-07-edge-detection"],
+        "edge:canny": ["edge-contour", "level-08-canny"],
+        "edge:applications": ["edge-contour", "level-09-morphology-contour"],
+        edge: ["edge-contour", "level-07-edge-detection"],
+        "feature:compare": ["feature-panorama", "level-10-corner", "level-11-sift", "level-12-matching-panorama"],
+        "feature:corner": ["feature-panorama", "level-10-corner"],
+        "feature:sift": ["feature-panorama", "level-11-sift"],
+        "feature:matching": ["feature-panorama", "level-12-matching-panorama"],
+        "feature:panorama": ["feature-panorama", "level-12-matching-panorama"],
+        feature: ["feature-panorama", "level-10-corner", "level-11-sift", "level-12-matching-panorama"],
+        "cnn:cnn_train": ["cnn-learning", "level-13-cnn-learning"],
+        "cnn:cnn_explainer": ["cnn-learning", "level-13-cnn-learning"],
+        "cnn:conv_gradient_lab": ["cnn-learning", "level-13-cnn-learning"],
+        cnn: ["cnn-learning", "level-13-cnn-learning"],
+        "classification_lab:overview": ["classification-lab", "level-14-classification"],
+        "classification_lab:classification": ["classification-lab", "level-14-classification"],
+        classification_lab: ["classification-lab", "level-14-classification"],
+        segmentation_basic: ["segmentation-basic"],
+        "object_detection:detection": ["object-detection", "level-16-object-detection"],
+        object_detection: ["object-detection", "level-16-object-detection"],
+        "segmentation_lab:compare": ["semantic-segmentation", "instance-segmentation", "level-19-semantic-segmentation", "level-20-instance-segmentation"],
+        "segmentation_lab:semantic": ["semantic-segmentation", "level-19-semantic-segmentation"],
+        "segmentation_lab:instance": ["instance-segmentation", "level-20-instance-segmentation"],
+        segmentation_lab: ["semantic-segmentation", "level-19-semantic-segmentation"],
+        "frontier:overview": ["frontier", "level-31-vit-transformer", "level-32-clip", "level-34-sam", "level-40-unified-vision"],
+        "frontier:vision_banana": ["frontier", "level-39-vision-banana"],
+        frontier: ["frontier", "level-31-vit-transformer", "level-32-clip", "level-34-sam", "level-40-unified-vision"],
+    };
+    const pathModuleMap = {
+        "/object-detection": ["object-detection", "level-16-object-detection"],
+        "/object-detection/yolo": ["object-detection", "level-16-object-detection", "level-17-yolo-postprocess"],
+        "/object-detection/rcnn": ["object-detection", "level-16-object-detection", "level-18-rcnn"],
+        "/frontier": ["frontier", "level-31-vit-transformer", "level-32-clip", "level-34-sam", "level-40-unified-vision"],
+        "/frontier/vision-banana": ["frontier", "level-39-vision-banana"],
+        "/semantic-segmentation": ["semantic-segmentation", "level-19-semantic-segmentation"],
+        "/instance-segmentation": ["instance-segmentation", "level-20-instance-segmentation"],
     };
 
     function readLearnedModules() {
@@ -48,12 +78,18 @@
         localStorage.setItem(LEARNED_MODULES_KEY, JSON.stringify([...modules]));
     }
 
-    function setModuleLearned(moduleId) {
-        if (!moduleId) return;
+    function setModuleLearned(moduleIds) {
+        const ids = Array.isArray(moduleIds) ? moduleIds : [moduleIds];
+        const validIds = ids.filter(Boolean);
+        if (!validIds.length) return;
+
         const learnedModules = readLearnedModules();
-        if (learnedModules.has(moduleId)) return;
-        learnedModules.add(moduleId);
-        saveLearnedModules(learnedModules);
+        const beforeSize = learnedModules.size;
+        validIds.forEach((moduleId) => learnedModules.add(moduleId));
+
+        if (learnedModules.size !== beforeSize) {
+            saveLearnedModules(learnedModules);
+        }
     }
 
     // Auto mark as learned on page load
@@ -63,7 +99,8 @@
         if (!ap) return;
 
         const scopedPage = asp ? `${ap}:${asp}` : "";
-        let moduleId = activePageModuleMap[scopedPage] || activePageModuleMap[ap];
+        const normalizedPath = window.location.pathname.replace(window.CVCLASS_BASE_PATH || "", "") || "/";
+        const moduleId = pathModuleMap[normalizedPath] || activePageModuleMap[scopedPage] || activePageModuleMap[ap];
 
         if (moduleId) {
             setModuleLearned(moduleId);

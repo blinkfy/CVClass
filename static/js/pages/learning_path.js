@@ -5,7 +5,7 @@
     const dataUrl = root.dataset.questMapUrl;
     const learnedKey = "cvclass.learnedModules";
     const statusMeta = {
-        completed: { label: "已完成", className: "completed" },
+        completed: { label: "已学习", className: "completed" },
         mechanism: { label: "机制演示", className: "mechanism" },
         real_inference: { label: "真实推理", className: "inference" },
         frontier_case: { label: "前沿案例", className: "frontier" },
@@ -62,6 +62,30 @@
         "level-39-vision-banana",
         "level-40-unified-vision",
     ]);
+    const levelLearnedAliases = {
+        "level-01-image-basic": ["image-basic"],
+        "level-02-color-space": ["image-basic"],
+        "level-03-threshold": ["image-basic"],
+        "level-04-histogram": ["image-basic"],
+        "level-05-convolution": ["convolution-filter"],
+        "level-06-multichannel-convolution": ["convolution-filter"],
+        "level-07-edge-detection": ["edge-contour"],
+        "level-08-canny": ["edge-contour"],
+        "level-09-morphology-contour": ["edge-contour"],
+        "level-10-corner": ["feature-panorama"],
+        "level-11-sift": ["feature-panorama"],
+        "level-12-matching-panorama": ["feature-panorama"],
+        "level-13-cnn-learning": ["cnn-learning"],
+        "level-14-classification": ["classification-lab"],
+        "level-16-object-detection": ["object-detection"],
+        "level-19-semantic-segmentation": ["semantic-segmentation"],
+        "level-20-instance-segmentation": ["instance-segmentation"],
+        "level-31-vit-transformer": ["frontier"],
+        "level-32-clip": ["frontier"],
+        "level-34-sam": ["frontier"],
+        "level-39-vision-banana": ["frontier"],
+        "level-40-unified-vision": ["frontier"],
+    };
 
     const state = {
         data: null,
@@ -124,7 +148,9 @@
     }
 
     function effectiveStatus(level, learnedModules) {
-        if (level.status !== "planned" && learnedModules.has(level.id)) return "completed";
+        const aliases = levelLearnedAliases[level.id] || [];
+        const learned = learnedModules.has(level.id) || aliases.some((alias) => learnedModules.has(alias));
+        if (level.status !== "planned" && learned) return "completed";
         return level.status;
     }
 
@@ -151,18 +177,18 @@
     function renderStats() {
         const learnedModules = readLearnedModules();
         const levels = allLevels().map((item) => item.level);
-        const counts = levels.reduce((acc, level) => {
-            const status = effectiveStatus(level, learnedModules);
-            acc[status] = (acc[status] || 0) + 1;
+        const rawStatusCounts = levels.reduce((acc, level) => {
+            acc[level.status] = (acc[level.status] || 0) + 1;
             return acc;
         }, {});
+        const completedCount = levels.filter((level) => effectiveStatus(level, learnedModules) === "completed").length;
 
         el.total.textContent = levels.length;
-        el.completed.textContent = counts.completed || 0;
-        el.mechanism.textContent = counts.mechanism || 0;
-        el.inference.textContent = counts.real_inference || 0;
-        el.frontier.textContent = counts.frontier_case || 0;
-        el.planned.textContent = counts.planned || 0;
+        el.completed.textContent = completedCount;
+        el.mechanism.textContent = rawStatusCounts.mechanism || 0;
+        el.inference.textContent = rawStatusCounts.real_inference || 0;
+        el.frontier.textContent = rawStatusCounts.frontier_case || 0;
+        el.planned.textContent = rawStatusCounts.planned || 0;
         el.worlds.textContent = state.data.worlds.length;
     }
 
@@ -298,6 +324,18 @@
         }).join("");
     }
 
+    function enterLevel(levelId) {
+        const item = findLevel(levelId);
+        if (!item) return;
+
+        const learnedModules = readLearnedModules();
+        const status = effectiveStatus(item.level, learnedModules);
+        const route = resolveRoute(item.level.route);
+        if (!route || status === "planned") return;
+
+        window.location.href = route;
+    }
+
     function renderWorlds() {
         const learnedModules = readLearnedModules();
         el.worldList.innerHTML = state.data.worlds.map((world, worldIndex) => {
@@ -378,6 +416,10 @@
 
         el.worldList.querySelectorAll("[data-level-id]").forEach((button) => {
             button.addEventListener("click", () => selectLevel(button.dataset.levelId, true));
+            button.addEventListener("dblclick", (event) => {
+                event.preventDefault();
+                enterLevel(button.dataset.levelId);
+            });
         });
 
         el.worldList.querySelectorAll("[data-world-focus]").forEach((button) => {

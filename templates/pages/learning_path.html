@@ -2,13 +2,13 @@
 {% block title %}CV 学习路径 - 计算机视觉实验平台{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260627-learning-progress-label">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260627-larger-readable-type">
 {% endblock %}
 
 {% block content %}
 <div
     class="cv-quest-page"
-    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260627-learning-progress-label"
+    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260627-dblclick-enter"
 >
     <section class="cv-quest-hero" aria-labelledby="questHeroTitle">
         <div class="cv-quest-hero-copy">
@@ -21,7 +21,7 @@
                 </article>
                 <article class="cv-quest-stat cv-quest-stat--completed">
                     <span id="questCompletedCount">--</span>
-                    <strong>已完成</strong>
+                    <strong>已学习</strong>
                 </article>
                 <article class="cv-quest-stat cv-quest-stat--mechanism">
                     <span id="questMechanismCount">--</span>
@@ -119,5 +119,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260627-learning-progress-label"></script>
+<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260627-dblclick-enter"></script>
 {% endblock %}

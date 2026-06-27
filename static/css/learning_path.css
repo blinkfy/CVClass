@@ -6,10 +6,10 @@
     --quest-surface: rgba(255, 255, 255, 0.92);
     --quest-shadow: 0 18px 46px rgba(24, 74, 157, 0.12);
     display: grid;
-    gap: 16px;
+    gap: 10px;
     width: 100%;
     margin: 0 auto;
-    padding: 16px 10px 26px;
+    padding: 10px 8px 24px;
     color: var(--quest-text);
     overflow-x: clip;
     overflow-y: visible;
@@ -40,76 +40,95 @@ body.home-page-shell .content-shell {
 .cv-quest-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 28px;
+    gap: 18px;
     align-items: center;
-    min-height: 250px;
-    padding: 34px 38px;
+    min-height: 104px;
+    padding: 14px 18px;
     overflow: hidden;
     background:
         linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 247, 255, 0.96) 52%, rgba(219, 234, 254, 0.9) 100%),
         radial-gradient(circle at 78% 18%, rgba(37, 99, 235, 0.2), transparent 34%);
 }
 
+.cv-quest-hero-copy {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.76fr) minmax(520px, 1.24fr);
+    gap: 6px 18px;
+    align-items: center;
+    min-width: 0;
+}
+
 .cv-quest-hero h1 {
+    grid-column: 1;
     margin: 0;
     color: #061536;
-    font-size: 54px;
+    font-size: 32px;
     font-weight: 900;
     line-height: 1.04;
     letter-spacing: 0;
 }
 
 .cv-quest-hero p {
+    grid-column: 1;
     max-width: 820px;
-    margin: 14px 0 0;
+    margin: 0;
     color: #294164;
-    font-size: 18px;
-    line-height: 1.7;
+    font-size: 14px;
+    line-height: 1.34;
 }
 
 .cv-quest-hero-actions {
     display: flex;
-    gap: 14px;
+    gap: 10px;
     align-items: center;
     justify-content: flex-end;
 }
 
 .cv-quest-hero-actions .home-primary-button,
 .cv-quest-hero-actions .home-secondary-button {
-    min-width: 144px;
+    min-width: 120px;
+    min-height: 38px;
+    padding: 0 14px;
     justify-content: center;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .cv-quest-stats {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(112px, 1fr));
-    gap: 10px;
-    margin-top: 24px;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    align-content: center;
+    margin: 0;
 }
 
 .cv-quest-stat {
-    min-height: 70px;
-    padding: 12px 14px;
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
     border: 1px solid rgba(147, 197, 253, 0.72);
-    border-radius: 12px;
+    border-radius: 999px;
     background: rgba(255, 255, 255, 0.8);
 }
 
 .cv-quest-stat span {
     display: block;
     color: var(--stat-color, var(--quest-blue));
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 900;
     line-height: 1;
 }
 
 .cv-quest-stat strong {
     display: block;
-    margin-top: 8px;
+    margin-top: 0;
     color: #314462;
     font-size: 13px;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .cv-quest-stat--completed { --stat-color: #089981; }
@@ -122,7 +141,12 @@ body.home-page-shell .content-shell {
 .cv-quest-overview {
     min-width: 0;
     overflow: hidden;
-    padding: 20px 24px 22px;
+    padding: 7px 14px 8px;
+    border-radius: 16px;
+}
+
+.cv-quest-overview .cv-quest-section-head {
+    display: none;
 }
 
 .cv-quest-section-head {
@@ -161,16 +185,17 @@ body.home-page-shell .content-shell {
     align-items: center;
     min-width: 0;
     overflow-x: auto;
-    padding: 10px 4px 8px;
+    min-height: 42px;
+    padding: 0 2px;
     scrollbar-width: thin;
 }
 
 .overview-step {
     --step-color: #2563eb;
     position: relative;
-    flex: 0 0 138px;
+    flex: 0 0 102px;
     display: grid;
-    gap: 6px;
+    gap: 3px;
     justify-items: center;
     color: #12325a;
 }
@@ -178,19 +203,19 @@ body.home-page-shell .content-shell {
 .overview-step span {
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
+    width: 25px;
+    height: 25px;
     border: 2px solid color-mix(in srgb, var(--step-color) 70%, #ffffff);
     border-radius: 999px;
     color: #ffffff;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 900;
     background: var(--step-color);
-    box-shadow: 0 10px 24px color-mix(in srgb, var(--step-color) 24%, transparent);
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--step-color) 20%, transparent);
 }
 
 .overview-step strong {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
     white-space: nowrap;
 }
@@ -207,10 +232,10 @@ body.home-page-shell .content-shell {
 .overview-step.is-current::after {
     content: "";
     position: absolute;
-    top: -6px;
+    top: -4px;
     left: 50%;
-    width: 56px;
-    height: 56px;
+    width: 35px;
+    height: 35px;
     border: 2px solid color-mix(in srgb, var(--step-color) 45%, transparent);
     border-radius: 50%;
     transform: translateX(-50%);
@@ -220,9 +245,9 @@ body.home-page-shell .content-shell {
 
 .overview-link {
     position: relative;
-    flex: 0 0 74px;
-    height: 4px;
-    margin: 0 -4px 24px;
+    flex: 0 0 44px;
+    height: 2px;
+    margin: 0 -6px 14px;
     overflow: hidden;
     border-radius: 999px;
     background: #7db2ff;
@@ -251,7 +276,7 @@ body.home-page-shell .content-shell {
 .cv-quest-board {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 16px;
+    gap: 12px;
     align-items: start;
     min-width: 0;
 }
@@ -262,8 +287,26 @@ body.home-page-shell .content-shell {
 
 .cv-quest-world-list {
     display: grid;
-    gap: 14px;
+    gap: 10px;
     min-width: 0;
+}
+
+.cv-quest-worlds > .cv-quest-section-head {
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.cv-quest-worlds > .cv-quest-section-head span {
+    display: none;
+}
+
+.cv-quest-worlds > .cv-quest-section-head h2 {
+    margin: 0;
+    font-size: 21px;
+}
+
+.cv-quest-worlds > .cv-quest-section-head p {
+    font-size: 14px;
 }
 
 .cv-world-card {
@@ -361,13 +404,13 @@ body.home-page-shell .content-shell {
     z-index: 2;
     display: grid;
     align-content: start;
-    gap: 14px;
+    gap: 11px;
     padding: 4px 0 4px 2px;
 }
 
 .cv-world-title-button {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     padding: 0;
     border: 0;
     color: inherit;
@@ -378,7 +421,7 @@ body.home-page-shell .content-shell {
 
 .cv-world-title-button span {
     color: var(--world-color);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -386,9 +429,9 @@ body.home-page-shell .content-shell {
 
 .cv-world-title-button strong {
     color: #07173c;
-    font-size: 22px;
+    font-size: 23px;
     font-weight: 900;
-    line-height: 1.2;
+    line-height: 1.12;
 }
 
 .cv-world-title-button:hover strong {
@@ -398,13 +441,13 @@ body.home-page-shell .content-shell {
 .cv-world-meta p {
     margin: 0;
     color: #53627d;
-    font-size: 13px;
-    line-height: 1.65;
+    font-size: 14px;
+    line-height: 1.42;
 }
 
 .cv-world-progress {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .cv-world-progress div {
@@ -412,7 +455,7 @@ body.home-page-shell .content-shell {
     align-items: center;
     justify-content: space-between;
     color: #4f607d;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
 }
 
@@ -438,16 +481,16 @@ body.home-page-shell .content-shell {
 .cv-world-meta-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .cv-world-meta-grid span {
     min-width: 0;
-    padding: 9px 8px;
+    padding: 7px 6px;
     border: 1px solid color-mix(in srgb, var(--world-color) 16%, #dbeafe);
     border-radius: 10px;
     color: #53627d;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
     text-align: center;
     background: color-mix(in srgb, var(--world-color) 6%, #ffffff);
@@ -675,11 +718,11 @@ body.home-page-shell .content-shell {
     left: 50%;
     display: inline-flex;
     transform: translateX(-50%);
-    padding: 2px 7px;
+    padding: 1px 6px;
     border: 1px solid color-mix(in srgb, var(--node-color) 38%, #ffffff);
     border-radius: 999px;
     color: var(--node-color);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 950;
     letter-spacing: 0.06em;
     background: rgba(255, 255, 255, 0.86);
@@ -697,7 +740,7 @@ body.home-page-shell .content-shell {
     height: 16px;
     border-radius: 999px;
     color: var(--node-color);
-    font-size: 9px;
+    font-size: 10px;
     font-style: normal;
     font-weight: 900;
     background: color-mix(in srgb, var(--node-color) 10%, #ffffff);
@@ -709,7 +752,7 @@ body.home-page-shell .content-shell {
     left: 0;
     right: 0;
     color: var(--node-color);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 900;
     line-height: 1;
 }
@@ -719,13 +762,13 @@ body.home-page-shell .content-shell {
     top: calc(100% + 5px);
     left: 50%;
     display: block;
-    min-height: 30px;
+    min-height: 28px;
     width: 110px;
     max-width: 110px;
     transform: translateX(-50%);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
-    line-height: 1.25;
+    line-height: 1.08;
 }
 
 .world-level-node.is-boss strong {
@@ -739,11 +782,11 @@ body.home-page-shell .content-shell {
     width: fit-content;
     max-width: 100%;
     transform: translateX(-50%);
-    padding: 3px 7px;
+    padding: 2px 6px;
     overflow: hidden;
     border-radius: 999px;
     color: color-mix(in srgb, var(--node-color) 82%, #102246);
-    font-size: 10px;
+    font-size: 11px;
     font-style: normal;
     font-weight: 900;
     text-overflow: ellipsis;
@@ -789,12 +832,12 @@ body.home-page-shell .content-shell {
     top: 76px;
     align-self: start;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     height: fit-content;
     max-height: none;
     min-width: 0;
     overflow: visible;
-    padding: 18px;
+    padding: 16px;
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
@@ -805,12 +848,12 @@ body.home-page-shell .content-shell {
 
 .cv-level-panel-head {
     display: grid;
-    gap: 6px;
+    gap: 5px;
 }
 
 .cv-level-panel-head > span {
     color: var(--quest-blue);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -819,17 +862,17 @@ body.home-page-shell .content-shell {
 .cv-level-panel h2 {
     margin: 0;
     color: #07173c;
-    font-size: 24px;
+    font-size: 25px;
     font-weight: 900;
-    line-height: 1.18;
+    line-height: 1.1;
 }
 
 .cv-level-status {
     width: fit-content;
-    padding: 5px 9px;
+    padding: 4px 8px;
     border-radius: 999px;
     color: var(--panel-status, var(--quest-blue));
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     background: color-mix(in srgb, var(--panel-status, var(--quest-blue)) 10%, #ffffff);
 }
@@ -844,7 +887,7 @@ body.home-page-shell .content-shell {
     display: flex;
     gap: 4px;
     color: #cbd5e1;
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .cv-level-stars span.is-active {
@@ -853,24 +896,24 @@ body.home-page-shell .content-shell {
 
 .cv-level-task {
     margin: 0;
-    padding: 9px 11px;
+    padding: 8px 10px;
     border-left: 3px solid var(--quest-blue);
     border-radius: 0 12px 12px 0;
     color: #2b4567;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    line-height: 1.5;
+    line-height: 1.34;
     background: #f5f9ff;
 }
 
 .cv-level-detail-list {
     display: grid;
-    gap: 7px;
+    gap: 6px;
     margin: 0;
 }
 
 .cv-level-detail-list div {
-    padding: 8px 10px;
+    padding: 7px 9px;
     border: 1px solid #dbe8fb;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.76);
@@ -879,16 +922,16 @@ body.home-page-shell .content-shell {
 .cv-level-detail-list dt {
     margin: 0 0 4px;
     color: #64748b;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
 }
 
 .cv-level-detail-list dd {
     margin: 0;
     color: #102246;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 760;
-    line-height: 1.45;
+    line-height: 1.3;
 }
 
 .cv-level-tags {
@@ -899,10 +942,10 @@ body.home-page-shell .content-shell {
 
 .cv-level-tags span {
     display: inline-flex;
-    padding: 3px 7px;
+    padding: 2px 6px;
     border-radius: 999px;
     color: #1d4ed8;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     background: #edf4ff;
 }
@@ -970,7 +1013,7 @@ body.home-page-shell .content-shell {
 
 @media (max-width: 1440px) {
     .cv-quest-stats {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        max-width: 760px;
     }
 
     .cv-quest-board {
@@ -987,6 +1030,16 @@ body.home-page-shell .content-shell {
     .cv-quest-hero,
     .cv-quest-board {
         grid-template-columns: 1fr;
+    }
+
+    .cv-quest-hero-copy {
+        grid-template-columns: 1fr;
+    }
+
+    .cv-quest-stats {
+        grid-column: 1;
+        grid-row: auto;
+        max-width: none;
     }
 
     .cv-quest-hero-actions {
@@ -1012,15 +1065,16 @@ body.home-page-shell .content-shell {
     }
 
     .cv-quest-hero {
-        padding: 24px 18px;
+        padding: 16px;
+        min-height: 0;
     }
 
     .cv-quest-hero h1 {
-        font-size: 38px;
+        font-size: 30px;
     }
 
     .cv-quest-hero p {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .cv-quest-hero-actions {
@@ -1035,7 +1089,7 @@ body.home-page-shell .content-shell {
     }
 
     .cv-quest-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
     }
 
     .cv-quest-section-head {
@@ -1064,7 +1118,12 @@ body.home-page-shell .content-shell {
 
 @media (max-width: 520px) {
     .cv-quest-stats {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cv-quest-stat {
+        justify-content: space-between;
     }
 
     .cv-world-meta-grid {

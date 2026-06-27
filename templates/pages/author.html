@@ -1,51 +1,67 @@
 {% extends "base.html" %}
 {% block title %}关于作者 · 徐延飞{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/author.css') }}?v=20260627-author5">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/author.css') }}?v=20260627-author19">
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/vendor/hls.min.js') }}?v=1.6.16"></script>
+<script src="{{ url_for('static', filename='js/pages/author.js') }}?v=20260627-map1"></script>
 {% endblock %}
 {% block content %}
 <div class="author-page">
     <section class="author-hero" aria-labelledby="authorTitle">
         <div class="author-hero-copy">
             <h1 id="authorTitle">徐延飞</h1>
-            <p class="author-identity">在计算机视觉与智能系统领域的探索者与实践者</p>
-            <p class="author-summary">围绕“感知 → 理解 → 决策 → 行动”的全流程，把算法研究与工程落地结合，在机器人、显微图像分析与移动应用方向持续构建可用系统。</p>
+            <p class="author-identity">面向计算机视觉、具身智能与智能应用系统的研究与工程实践</p>
+            <p class="author-summary">研究围绕多模态感知、结构化语义理解、任务规划与系统验证展开，关注算法模型在机器人操作、显微图像分析及城市垃圾分类场景中的可复现实现与应用闭环。</p>
             <div class="author-stats" aria-label="作者概览">
-                <div><span class="stat-icon stat-icon--green">3</span><strong>3</strong><small>主要工作方向</small></div>
-                <div><span class="stat-icon stat-icon--blue">10+</span><strong>10+</strong><small>开源仓库</small></div>
-                <div><span class="stat-icon stat-icon--orange">1</span><strong>1</strong><small>论文发表</small></div>
+                <div><span class="stat-icon stat-icon--green">3</span><strong>3</strong><small>研究方向</small></div>
+                <div><span class="stat-icon stat-icon--blue">10+</span><strong>10+</strong><small>工程仓库</small></div>
+                <div><span class="stat-icon stat-icon--orange">1</span><strong>1</strong><small>论文成果</small></div>
             </div>
         </div>
 
         <div class="author-map" aria-label="作者主要工作地图">
             <svg class="map-lines" viewBox="0 0 760 250" aria-hidden="true">
-                <path class="map-line map-line--robot" d="M178 73 C262 62 284 126 365 122" />
-                <path class="map-line map-line--pore" d="M434 122 C519 75 585 62 682 74" />
-                <path class="map-line map-line--app" d="M397 154 C402 190 376 205 319 197" />
+                <path class="map-line-bridge map-line-bridge--robot" data-map-line="robot" />
+                <path class="map-line-bridge map-line-bridge--pore" data-map-line="pore" />
+                <path class="map-line-bridge map-line-bridge--app" data-map-line="app" />
+                <path class="map-line-bridge map-line-bridge--future" data-map-line="future" />
+                <path class="map-line map-line--robot" data-map-line="robot" />
+                <path class="map-line map-line--pore" data-map-line="pore" />
+                <path class="map-line map-line--app" data-map-line="app" />
+                <path class="map-line map-line--future" data-map-line="future" />
             </svg>
             <a class="map-node map-node--robot" href="#task319Work">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><path d="M10 12h12a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5Z"/><path d="M16 12V6"/><circle cx="12" cy="19" r="1.8"/><circle cx="20" cy="19" r="1.8"/><path d="M12 24h8"/></svg>
                 </span>
                 <strong>具身智能</strong>
-                <small>视觉感知 · 导航 · 操作</small>
+                <small>多模态感知 · 规划控制</small>
             </a>
             <a class="map-core" href="#task319Work">
-                <strong>我的工作<br>地图</strong>
+                <strong>研究工作<br>图谱</strong>
             </a>
             <a class="map-node map-node--pore" href="#poreWork">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><circle cx="10" cy="10" r="4"/><circle cx="22" cy="9" r="3"/><circle cx="19" cy="21" r="6"/><path d="M13 12l4 5M20 12l-1 3"/></svg>
                 </span>
                 <strong>显微图像分析</strong>
-                <small>孔隙分割 · 结构保持</small>
+                <small>微结构表征 · 孔隙建模</small>
             </a>
             <a class="map-node map-node--app" href="#fentouxiaWork">
                 <span class="map-icon" aria-hidden="true">
                     <svg viewBox="0 0 32 32"><rect x="9" y="4" width="14" height="24" rx="3"/><path d="M13 8h6M14 24h4"/><path d="M12 15h8M12 19h5"/></svg>
                 </span>
                 <strong>移动应用</strong>
-                <small>识别问答 · 社区互动 · 设备联动</small>
+                <small>知识服务 · 系统集成</small>
+            </a>
+            <a class="map-node map-node--future" href="#fentouxiaWork" aria-label="待扩展工作方向占位">
+                <span class="map-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32"><path d="M7 16h18"/><path d="M16 7v18"/><circle cx="16" cy="16" r="10"/></svg>
+                </span>
+                <strong>后续研究方向</strong>
+                <small>持续完善 · 预留拓展</small>
             </a>
         </div>
     </section>
@@ -54,43 +70,45 @@
         <section id="task319Work" class="work-row work-row--robot" aria-labelledby="task319Title">
             <div class="work-index">01</div>
             <div class="work-copy">
-                <h2 id="task319Title">Task319 具身智能垃圾分拣机器人</h2>
-                <p class="work-subtitle">让机器人在复杂环境中看得懂、找得到、抓得稳</p>
-                <p>基于 Isaac Sim 与 IsaacLab 构建仿真训练平台，完成感知、导航与抓取的全流程闭环，并把视觉语言模型、YOLO 微调和机械臂规划接入同一任务链。</p>
+                <h2 id="task319Title">具身智能自主清洁机器人</h2>
+                <p class="work-subtitle">面向复杂场景的多模态感知、任务规划与机器人操作闭环</p>
+                <p>该工作基于 Isaac Sim 与 IsaacLab 构建仿真验证环境，围绕垃圾目标识别、空间定位、导航决策与机械臂抓取建立端到端流程，并将视觉语言模型、YOLO 实例分割和运动规划模块纳入统一任务框架。</p>
                 <ul class="work-bullets">
-                    <li>多源感知融合：RGB-D / 相机 / 点云</li>
-                    <li>语义分割 + 目标检测：识别垃圾类别与位姿</li>
-                    <li>导航到目标点并执行抓取、投放多件物体</li>
-                    <li>仿真到现实：学习到真实场景的稳定迁移</li>
+                    <li>融合 RGB-D、相机图像与点云信息进行环境表征</li>
+                    <li>结合语义分割与目标检测估计类别、位置及可抓取区域</li>
+                    <li>构建从目标选择、导航站位到抓取投放的任务执行链</li>
+                    <li>通过仿真数据与真实样本提升模型迁移和执行稳定性</li>
                 </ul>
             </div>
-            <figure class="media-card robot-card">
-                <img src="{{ url_for('static', filename='assets/author/task319-scene.webp') }}" alt="Task319 IsaacLab 垃圾分拣仿真场景">
-                <span class="play-mark" aria-hidden="true"></span>
-                <figcaption>IsaacLab 仿真分拣场景</figcaption>
+            <figure class="media-card robot-card video-card">
+                <video class="author-hls-video" controls preload="metadata" playsinline
+                    data-hls-src="{{ url_for('static', filename='assets/author/task319-hls/index.m3u8') }}"
+                    data-fallback-src="{{ url_for('static', filename='assets/author/具身智能.mp4') }}"
+                    aria-label="具身智能自主清洁机器人演示视频"></video>
+                <figcaption>IsaacLab 仿真环境与机器人分拣任务演示</figcaption>
             </figure>
             <div class="flow-card">
-                <h3>感知 → 导航 → 抓取：完整闭环</h3>
+                <h3>感知、规划与执行的闭环流程</h3>
                 <div class="flow-strip">
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-scene.webp') }}" alt="">
-                        <strong>环境感知</strong><span>点云 / 深度图</span>
+                        <strong>场景感知</strong><span>RGB-D / 点云</span>
                     </article>
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/rubbish-seg-pred.webp') }}" alt="">
-                        <strong>语义分割</strong><span>分割结果</span>
+                        <strong>语义解析</strong><span>实例分割结果</span>
                     </article>
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-grasp-overlay.webp') }}" alt="">
-                        <strong>目标检测</strong><span>目标框与位姿</span>
+                        <strong>目标定位</strong><span>目标框与位姿</span>
                     </article>
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-ik-curobo.webp') }}" alt="">
-                        <strong>导航规划</strong><span>全局 / 局部路径</span>
+                        <strong>路径规划</strong><span>全局 / 局部路径</span>
                     </article>
                     <article>
                         <img src="{{ url_for('static', filename='assets/author/task319-control-app.webp') }}" alt="">
-                        <strong>抓取执行</strong><span>分拣控制</span>
+                        <strong>操作执行</strong><span>抓取与投放控制</span>
                     </article>
                 </div>
                 <div class="tech-tags">
@@ -103,32 +121,31 @@
             <div class="work-index">02</div>
             <div class="work-copy">
                 <h2 id="poreTitle">VLSE-Net 岩心 SEM 孔隙鲁棒分割</h2>
-                <p class="work-subtitle">跨尺度、跨域、跨仪器的孔隙精准分割</p>
-                <p>提出 VLSE-Net，在复杂 SEM 图像中增强孔隙与基质的判别能力，并保持细长孔隙与连通结构，为后续岩石物理参数计算提供可靠结果。</p>
+                <p class="work-subtitle">面向异质岩土材料的跨域孔隙结构表征</p>
+                <p>该研究提出 VLSE-Net，通过视觉语言先验与结构增强机制提升复杂 SEM 图像中的孔隙-基质判别能力，并保持细长孔隙及连通结构，为岩石物理参数计算提供可靠分割结果。</p>
                 <div class="metric-row">
-                    <div><span>Dice 提升</span><strong>+3.12%</strong></div>
-                    <div><span>孔隙度误差降低</span><strong>-39.6%</strong></div>
+                    <div><span>Dice 相对提升</span><strong>+3.12%</strong></div>
+                    <div><span>孔隙度误差降幅</span><strong>39.6%</strong></div>
                 </div>
-                <p class="paper-note">已发表：Computers and Geotechnics（中科院一区）</p>
             </div>
             <figure class="media-card module-card">
-                <img src="{{ url_for('static', filename='assets/author/pore-vlse-module.webp') }}" alt="VLSE-Net 结构概览">
-                <figcaption>VLSE-Net 结构概览：LSCM 语义校准 + ASRM 方向结构细化</figcaption>
+                <img src="{{ url_for('static', filename='assets/author/pore-vlse-module-white.webp') }}" alt="VLSE-Net 结构概览">
+                <figcaption>VLSE-Net 架构示意：LSCM 语义校准与 ASRM 方向结构细化</figcaption>
             </figure>
             <div class="pore-result-card">
-                <h3>分割结果可视化（示例）</h3>
-                <div class="pore-result-grid">
-                    <figure>
-                        <img src="{{ url_for('static', filename='assets/author/pore-sem-original.webp') }}" alt="SEM 原始图像">
-                        <figcaption>SEM 图像</figcaption>
+                <h3>关键模块结构可视化</h3>
+                <div class="pore-result-grid pore-result-grid--modules">
+                    <figure class="pore-module-figure pore-module-figure--lscm">
+                        <img src="{{ url_for('static', filename='assets/author/pore-lscm-module-white.webp') }}" alt="LSCM 语义校准模块结构图">
+                        <figcaption>LSCM 语义校准模块</figcaption>
                     </figure>
-                    <figure>
-                        <img src="{{ url_for('static', filename='assets/author/pore-sem-overlay.webp') }}" alt="孔隙分割覆盖图">
-                        <figcaption>VLSE-Net 结果</figcaption>
+                    <figure class="pore-module-figure pore-module-figure--asrm">
+                        <img src="{{ url_for('static', filename='assets/author/pore-asrm-module-white.webp') }}" alt="ASRM 方向结构细化模块结构图">
+                        <figcaption>ASRM 方向结构细化模块</figcaption>
                     </figure>
                     <div class="method-note">
-                        <strong>为什么不只看 Dice</strong>
-                        <span>同时关注 local porosity、local connectivity、connected-component density，让分割结果服务后续岩心定量分析。</span>
+                        <strong>模块设计目标</strong>
+                        <span>LSCM 引入文本语义先验以提升孔隙-基质判别，ASRM 通过方向敏感结构建模增强细长孔隙与弱边界的连续性保持。</span>
                     </div>
                 </div>
             </div>
@@ -138,37 +155,41 @@
             <div class="work-index">03</div>
             <div class="work-copy">
                 <h2 id="fentouxiaTitle">分投侠 / 智领净界智能垃圾分类应用</h2>
-                <p class="work-subtitle">识别、知识、社区、地图、设备的一体化生态</p>
-                <p>面向公众垃圾分类使用场景，综合视觉识别、RAG 知识问答、地图投放点、社区互动与智能设备接入，形成线上线下闭环的绿色生活方式。</p>
+                <p class="work-subtitle">面向城市垃圾治理的多模态分类与服务系统</p>
+                <p>该系统面向公众垃圾分类应用场景，集成视觉识别、RAG 知识服务、地理信息查询、社区激励与设备联动，实现从分类判别到投放指导、用户反馈和设备管理的应用闭环。</p>
                 <div class="feature-grid">
-                    <span>拍照识别</span><span>RAG 知识问答</span><span>地图服务</span><span>社区互动</span><span>设备联动</span>
+                    <span>视觉识别</span><span>知识检索问答</span><span>空间投放服务</span><span>社区激励机制</span><span>设备互联</span>
                 </div>
             </div>
-            <figure class="media-card app-card">
-                <img src="{{ url_for('static', filename='assets/author/fentouxia-app-screens.webp') }}" alt="分投侠应用界面展示">
-                <figcaption>识别、问答、社区、地图导航等核心页面</figcaption>
+            <figure class="media-card app-card video-card">
+                <video class="author-hls-video" controls preload="metadata" playsinline
+                    poster="{{ url_for('static', filename='assets/author/cover.webp') }}"
+                    data-hls-src="{{ url_for('static', filename='assets/author/fentouxia-hls/index.m3u8') }}"
+                    data-fallback-src="{{ url_for('static', filename='assets/author/垃圾分类.mp4') }}"
+                    aria-label="分投侠智能垃圾分类应用演示视频"></video>
+                <figcaption>应用端核心功能界面：识别、问答、社区与地图导航</figcaption>
             </figure>
             <div class="system-card">
-                <h3>系统架构与模块</h3>
+                <h3>系统架构与功能模块</h3>
                 <div class="system-flow">
-                    <span>用户</span>
-                    <span>识别模块<br><small>YOLOv8 + SAM</small></span>
-                    <span>RAG 模块<br><small>知识库 + 检索</small></span>
-                    <span>社区模块<br><small>打卡 / 排行</small></span>
-                    <span>地图模块<br><small>投放点 / 导航</small></span>
-                    <span>设备模块<br><small>IoT / MQTT</small></span>
+                    <span>用户端</span>
+                    <span>视觉识别模块<br><small>YOLOv8 / SAM</small></span>
+                    <span>知识服务模块<br><small>知识库 + 检索</small></span>
+                    <span>社区激励模块<br><small>打卡 / 排行</small></span>
+                    <span>空间服务模块<br><small>投放点 / 导航</small></span>
+                    <span>设备接入模块<br><small>IoT / MQTT</small></span>
                 </div>
-                <div class="data-layer">云端服务与数据层：MySQL / Sequelize / Redis / MQTT</div>
+                <div class="data-layer">云端服务与数据层：MySQL / Sequelize / Redis / MQTT 协同支撑</div>
                 <figure class="model-preview">
                     <img src="{{ url_for('static', filename='assets/author/rubbish-seg-pred.webp') }}" alt="垃圾分类模型预测结果">
-                    <figcaption>视觉模型训练输出支撑拍照识别能力</figcaption>
+                    <figcaption>视觉模型实验结果用于支撑拍照识别与分类决策</figcaption>
                 </figure>
             </div>
         </section>
     </div>
 
     <footer class="author-footer">
-        <p>“工程让想法落地，实验让结论可信，产品让价值放大。”</p>
+        <p>“以工程系统承载研究假设，以实验验证支撑应用转化。”</p>
         <div>
             <span>邮箱：2951320757@qq.com</span>
             <a href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">GitHub</a>
