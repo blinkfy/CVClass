@@ -6,7 +6,7 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
             <div>
-                <h3>MODEL CONTROL</h3>
+                <h3>控制面板</h3>
                 <p>双模型推理控制</p>
             </div>
         </div>
@@ -223,7 +223,7 @@
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
             <div>
-                <h3>OUTPUT STRUCTURE</h3>
+                <h3>输出结构</h3>
                 <p>结构、指标与选择依据</p>
             </div>
         </div>
@@ -235,7 +235,7 @@
         </div>
 
         <section class="seg-lab-explain-card" data-seg-explain-card>
-            <span data-seg-explain-kicker>Semantic Segmentation</span>
+            <span data-seg-explain-kicker>语义分割</span>
             <h4 data-seg-explain-title>语义分割关注“每个像素是什么类别”</h4>
             <p data-seg-explain-copy>适合道路、天空、墙面、地面等 stuff 类别和整体场景理解，但不会把同类多个目标拆成独立对象。</p>
         </section>
@@ -261,5 +261,5 @@
 
 {% block extra_js %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260625-figcard1"></script>
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260626-titlescn1"></script>
 {% endblock %}

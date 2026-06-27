@@ -1,0 +1,56 @@
+{% extends "human_pose/base.html" %}
+
+{% block human_pose_content %}
+<section class="human-overview-grid" aria-label="姿态估计总览">
+    <div class="human-flow-panel">
+        <div class="human-section-head">
+            <span>Task Pipeline</span>
+            <h3>Input Image → Person Region → Keypoints → Skeleton → Pose Vector</h3>
+        </div>
+        <div class="human-overview-flow">
+            <article>
+                <span>01</span>
+                <strong>Input Image</strong>
+                <p>输入可以是整张图像，也可以是检测后的人体 crop。</p>
+            </article>
+            <article>
+                <span>02</span>
+                <strong>Person Region</strong>
+                <p>人体框限定关键点预测的空间范围。</p>
+            </article>
+            <article>
+                <span>03</span>
+                <strong>Keypoints</strong>
+                <p>输出关节点坐标、置信度与可见性。</p>
+            </article>
+            <article>
+                <span>04</span>
+                <strong>Skeleton</strong>
+                <p>按骨架模板连接肩、肘、腕、髋、膝、踝等结构。</p>
+            </article>
+            <article>
+                <span>05</span>
+                <strong>Pose Vector</strong>
+                <p>把关键点坐标合并为可供动作识别使用的结构化向量。</p>
+            </article>
+        </div>
+    </div>
+
+    <aside class="human-summary-panel">
+        <div class="human-section-head">
+            <span>Technical Summary</span>
+            <h3>任务边界</h3>
+        </div>
+        <dl class="human-summary-list">
+            <div><dt>输入</dt><dd>人体图像、人体框或裁剪区域。</dd></div>
+            <div><dt>输出</dt><dd>关键点坐标、score、visible、骨架连接。</dd></div>
+            <div><dt>数据集</dt><dd>LSP / FLIC / COCO Keypoints。</dd></div>
+            <div><dt>指标</dt><dd>PCK、OKS、Keypoint AP。</dd></div>
+        </dl>
+        <div class="human-compare-card">
+            <strong>与分类、检测、分割的区别</strong>
+            <p>姿态估计不只判断“有人”或“人在哪里”，而是输出人体内部的结构点和几何关系。</p>
+        </div>
+    </aside>
+</section>
+{% endblock %}

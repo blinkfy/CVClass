@@ -272,10 +272,10 @@ body:has(.vision-lab) {
 .vision-formula-card,
 .vision-output-schema {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     border: 1px solid #bfdbfe;
     border-radius: 13px;
-    padding: 13px;
+    padding: 10px;
     background: linear-gradient(145deg, #f8fbff, #eef6ff);
 }
 
@@ -287,7 +287,7 @@ body:has(.vision-lab) {
 .vision-formula-card > span,
 .vision-output-schema > span {
     color: var(--vision-blue-dark);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -422,7 +422,7 @@ body:has(.vision-lab) {
     overflow-wrap: anywhere;
     border: 1px solid #dbeafe;
     border-radius: 8px;
-    padding: 8px 9px;
+    padding: 5px 6px;
     color: #1e3a8a;
     font-family: Consolas, "Courier New", monospace;
     font-size: 11px;

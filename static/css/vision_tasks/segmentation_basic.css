@@ -2905,6 +2905,106 @@
     position: relative;
 }
 
+/* ---- 区域属性饼图与统计卡片 ---- */
+.seg-region-pie-chart {
+    display: grid;
+    grid-template-columns: minmax(110px, 1.2fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 13px;
+    padding: 14px;
+    background: linear-gradient(145deg, #ffffff, #f8fbff);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.05);
+}
+
+.seg-region-pie-chart svg {
+    width: 100%;
+    height: auto;
+    max-height: 170px;
+    overflow: visible;
+}
+
+.seg-region-pie-chart path {
+    transition: transform 0.22s ease, opacity 0.22s ease;
+    transform-origin: center;
+}
+
+.seg-region-pie-chart path:hover {
+    transform: scale(1.04);
+    opacity: 0.92;
+}
+
+.seg-region-pie-center {
+    fill: #1e3a8a;
+    font-size: 22px;
+    font-weight: 950;
+}
+
+.seg-region-pie-center-label {
+    fill: #64748b;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.seg-region-pie-legend {
+    display: grid;
+    gap: 6px;
+    align-content: center;
+}
+
+.seg-region-pie-legend__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.seg-region-pie-legend__item::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    border-radius: 3px;
+    background: var(--dot, #93c5fd);
+}
+
+.seg-region-pie-legend__item b {
+    min-width: 0;
+    overflow: hidden;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.seg-region-pie-legend__item em {
+    flex: 0 0 auto;
+    color: var(--dot, #2563eb);
+    font-size: 12.5px;
+    font-weight: 950;
+    font-style: normal;
+}
+
+.seg-region-stat-cards {
+    display: none;
+}
+
+.seg-region-stat-card {
+    display: none;
+}
+
+.seg-region-stat-card__label,
+.seg-region-stat-card__grid,
+.seg-region-stat-card__grid span,
+.seg-region-stat-card__grid strong {
+    display: none;
+}
+
 .seg-analysis-metrics {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4200,8 +4300,8 @@
 .seg-lab-explain-card,
 .seg-lab-inspector {
     display: grid;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
 }
 
 .seg-lab-mode-toggle,
@@ -4778,17 +4878,27 @@
 .seg-lab-explain-card dl,
 .seg-lab-inspector-list {
     display: grid;
-    gap: 7px;
+    gap: 5px;
     margin: 0;
 }
 
-.seg-lab-explain-card dl > div,
-.seg-lab-inspector-list > div {
+.seg-lab-explain-card dl > div {
     display: grid;
-    gap: 3px;
+    gap: 2px;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 8px 9px;
+    padding: 6px 8px;
+    background: #f8fafc;
+}
+
+.seg-lab-inspector-list > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 6px 8px;
     background: #f8fafc;
 }
 
@@ -4802,18 +4912,25 @@
 .seg-lab-explain-card dt,
 .seg-lab-inspector-list dt {
     color: #94a3b8;
-    font-size: 8px;
+    font-size: 11px;
     font-weight: 950;
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
-.seg-lab-explain-card dd,
+.seg-lab-explain-card dd {
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+
 .seg-lab-inspector-list dd {
     overflow-wrap: anywhere;
     color: #0f172a;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
+    text-align: right;
 }
 
 .seg-lab-proscons {
@@ -5819,5 +5936,160 @@
 @keyframes segFigureFadeIn {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Region 子页小字放大（不增加占用空间，同步压缩 padding/间距）
+   ========================================================================== */
+[data-seg-basic-lab][data-segb-family="region"] .method-stage-strip span {
+    font-size: 11.5px !important;
+    padding: 0 9px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-concept-result figcaption,
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-concept-result p {
+    font-size: 12px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-frame-strip strong {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-frame-strip span {
+    font-size: 11px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-concept-card h4 {
+    font-size: 13px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-concept-card p {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-step-focus .seg-concept-card p {
+    font-size: 11px !important;
+    line-height: 1.36 !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-analysis-metrics span {
+    font-size: 10.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-analysis-metrics strong {
+    font-size: 12.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-analysis-metrics div {
+    padding: 7px 9px 7px 28px !important;
+    gap: 3px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-algo-bars b,
+[data-seg-basic-lab][data-segb-family="region"] .seg-algo-bars em {
+    font-size: 11px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-step-focus .seg-algo-bars:has(span:nth-child(5)) span b,
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-step-focus .seg-algo-bars:has(span:nth-child(5)) span em {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-region-row strong {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-region-row em {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-region-row {
+    min-height: 30px !important;
+    padding: 5px !important;
+    gap: 6px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-region-popover {
+    font-size: 11.5px !important;
+    padding: 8px 9px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-region-popover strong {
+    font-size: 12px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-iteration-monitor p {
+    font-size: 11px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-movement-bars span {
+    font-size: 9.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-flowline span {
+    font-size: 10.5px !important;
+    min-height: 30px !important;
+    padding: 4px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-stat-grid span {
+    font-size: 10px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-stat-grid strong {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-stat-grid div {
+    padding: 5px 6px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-current p {
+    font-size: 12px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-concept-analogy strong {
+    font-size: 11px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-concept-analogy p {
+    font-size: 12px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-compact dt {
+    font-size: 12.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-compact dd {
+    font-size: 12px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-compact > div {
+    padding: 9px 11px 9px 13px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-note-current span {
+    font-size: 10.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-basic-note-current p {
+    font-size: 11.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-mini-flow span {
+    font-size: 10.5px !important;
+    min-height: 26px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-cluster-bars div {
+    font-size: 10.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-focus-list dt {
+    font-size: 10.5px !important;
+}
+
+[data-seg-basic-lab][data-segb-family="region"] .seg-notes-focus-list dd {
+    font-size: 11px !important;
 }
 

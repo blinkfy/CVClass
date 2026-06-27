@@ -9,11 +9,11 @@
 
 .oc-row {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: 84px minmax(0, 1fr);
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     border-bottom: 1px solid #eef2f7;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
 }
 
 .oc-row:last-child {
@@ -23,7 +23,7 @@
 
 .oc-label {
     color: #94a3b8;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -31,7 +31,7 @@
 
 .oc-value {
     color: #0f172a;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
 }
 
@@ -240,10 +240,10 @@
 
 .tk-output-summary {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 10px;
+    padding: 7px;
     background: #ffffff;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -253,7 +253,7 @@
     align-items: center;
     gap: 6px;
     color: #1e3a8a;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 950;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -297,9 +297,9 @@
     }
 
     .oc-row {
-        grid-template-columns: 64px minmax(0, 1fr);
-        gap: 6px;
-        padding-bottom: 6px;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 4px;
+        padding-bottom: 4px;
     }
 
     .oc-formula-box {

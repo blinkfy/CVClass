@@ -83,12 +83,27 @@
 }
 
 .det-step-label {
-    font-size: 10px;
-    font-weight: 800;
-    color: #64748b;
-    letter-spacing: 0.08em;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    border-radius: 999px;
+    padding: 4px 10px;
+    color: #4c1d95;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 0 17px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 12px rgba(88, 28, 135, 0.1);
+    backdrop-filter: blur(6px);
+}
+
+[data-detection-lab][data-det-submode="yolo"] .det-step-label,
+[data-detection-lab][data-det-submode="yolo"] .det-step-nav,
+[data-detection-lab][data-det-submode="yolo"] .det-play-btn {
+    display: none !important;
 }
 
 .det-output-pipeline {
@@ -966,7 +981,7 @@
 
 .det-runtime-stats,
 .det-class-stats {
-    font-size: 11px;
+    font-size: 12px;
     color: #475569;
 }
 
@@ -1037,7 +1052,7 @@
 .det-notes-data dl {
     display: grid;
     gap: 0;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .det-notes-data dl > div {
@@ -1047,7 +1062,7 @@
     border: 0;
     border-bottom: 1px solid #e2e8f0;
     border-radius: 0;
-    padding: 4px 2px;
+    padding: 3px 2px;
     background: transparent;
 }
 
@@ -4214,20 +4229,128 @@
     padding-top: 10px;
     border-top: 1px dashed #d8b4fe;
     color: #4c1d95;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 950;
     letter-spacing: 0.07em;
     text-transform: uppercase;
 }
 
+[data-detection-lab] .vision-control-panel {
+    gap: 6px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-field {
+    gap: 2px !important;
+    margin-bottom: 0 !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-field > span,
+[data-detection-lab] .vision-control-panel .vision-toggle-row > span {
+    font-size: 12.5px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-kv-grid {
+    gap: 3px !important;
+    padding: 6px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-kv-grid div {
+    padding: 4px 7px !important;
+    font-size: 11.5px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-metric-grid {
+    gap: 6px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-metric-grid > div {
+    padding: 8px !important;
+    gap: 2px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-metric-grid span {
+    font-size: 10px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-metric-grid strong {
+    font-size: 15px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-step-nav button,
+[data-detection-lab] .vision-control-panel .det-play-btn {
+    font-size: 12.5px !important;
+    height: 34px !important;
+    padding: 0 !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-hint {
+    margin: 3px 0 1px !important;
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-upload-label {
+    min-height: 34px !important;
+    padding: 4px 8px !important;
+    font-size: 12.5px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step {
+    gap: 5px !important;
+    padding: 9px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step > span {
+    font-size: 14px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step p {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step dl {
+    gap: 3px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step dt {
+    font-size: 12px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-course-step dd {
+    font-size: 13px !important;
+}
+
+[data-detection-lab] .vision-control-panel select {
+    min-height: 34px !important;
+    font-size: 12px !important;
+}
+
+[data-detection-lab] .vision-control-panel .vision-toggle-row {
+    margin: 1px 0 !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-step-nav {
+    margin-top: 2px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-play-btn {
+    margin-top: 4px !important;
+}
+
+[data-detection-lab] .vision-control-panel .det-control-group-title {
+    margin-top: 6px !important;
+    padding-top: 8px !important;
+}
+
 .det-side-summary-title {
     align-items: center;
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px dashed rgba(167, 139, 250, 0.55);
     color: #4c1d95;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
     letter-spacing: 0.07em;
     text-transform: uppercase;
@@ -4257,13 +4380,13 @@
 .det-course-summary {
     border: 1px solid rgba(196, 181, 253, 0.72);
     border-radius: 12px;
-    padding: 10px;
+    padding: 8px;
     background: rgba(255, 255, 255, 0.82);
     box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
 }
 
 .det-course-step {
-    gap: 8px;
+    gap: 6px;
 }
 
 .det-course-step > span {
@@ -4275,14 +4398,14 @@
 .det-course-step p {
     margin: 0;
     color: #64748b;
-    font-size: 11px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .det-course-step dl,
 .det-course-summary dl {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     margin: 0;
 }
 
@@ -4294,14 +4417,14 @@
     align-items: center;
     border: 1px solid #ede9fe;
     border-radius: 8px;
-    padding: 5px 7px;
+    padding: 3px 6px;
     background: #f8fafc;
 }
 
 .det-course-step dt,
 .det-course-summary dt {
     color: #64748b;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 850;
     text-transform: uppercase;
 }
@@ -4312,7 +4435,7 @@
     margin: 0;
     color: #4c1d95;
     font-family: Consolas, "Courier New", monospace;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
     text-align: right;
     overflow-wrap: anywhere;
@@ -4421,7 +4544,7 @@
     min-width: 0;
     overflow: hidden;
     color: #334155;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4429,11 +4552,11 @@
 
 .det-rcnn-focus-board {
     display: grid;
-    gap: 12px;
-    min-height: 300px;
+    gap: 10px;
+    min-height: 280px;
     border: 1px solid rgba(196, 181, 253, 0.72);
     border-radius: 14px;
-    padding: 14px;
+    padding: 11px;
     background: rgba(255, 255, 255, 0.84);
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
     backdrop-filter: blur(10px);
@@ -4441,16 +4564,24 @@
 
 .det-rcnn-focus-head {
     display: grid;
-    gap: 4px;
+    gap: 3px;
+}
+
+.det-rcnn-focus-head__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 
 .det-rcnn-focus-head span {
+    flex-shrink: 0;
     width: max-content;
     border: 1px solid #ddd6fe;
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 2px 8px;
     color: #6d28d9;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -4458,28 +4589,32 @@
 }
 
 .det-rcnn-focus-head h4 {
+    min-width: 0;
     margin: 0;
     color: #111827;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 950;
     letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .det-rcnn-focus-head p {
     margin: 0;
     color: #64748b;
     font-size: 12px;
-    line-height: 1.55;
+    line-height: 1.5;
 }
 
 .det-rcnn-algo-canvas {
     position: relative;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     border: 1px solid rgba(196, 181, 253, 0.58);
     border-radius: 16px;
-    padding: 12px;
+    padding: 10px;
     background:
         radial-gradient(circle at var(--active-left, 8%) 18%, rgba(139, 92, 246, 0.16), transparent 26%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.72));
@@ -4518,12 +4653,12 @@
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: repeat(6, minmax(92px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(7, minmax(80px, 1fr));
+    gap: 7px;
     min-width: 0;
 }
 
-.det-rcnn-algo-flow article {
+.det-rcnn-algo-flow button {
     position: relative;
     display: grid;
     justify-items: center;
@@ -4534,11 +4669,12 @@
     padding: 8px 6px 7px;
     background: rgba(255, 255, 255, 0.52);
     opacity: 0.58;
+    cursor: pointer;
     transform: translateY(0) scale(0.985);
     transition: opacity 0.34s ease, transform 0.34s ease, border-color 0.34s ease, background 0.34s ease, box-shadow 0.34s ease;
 }
 
-.det-rcnn-algo-flow article::after {
+.det-rcnn-algo-flow button::after {
     content: "";
     position: absolute;
     left: calc(100% - 2px);
@@ -4549,15 +4685,15 @@
     animation: detRcnnExtendShort 1.3s ease-in-out infinite;
 }
 
-.det-rcnn-algo-flow article:last-child::after {
+.det-rcnn-algo-flow button:last-child::after {
     display: none;
 }
 
-.det-rcnn-algo-flow article.is-done {
+.det-rcnn-algo-flow button.is-done {
     opacity: 0.78;
 }
 
-.det-rcnn-algo-flow article.is-active {
+.det-rcnn-algo-flow button.is-active {
     border-color: rgba(124, 58, 237, 0.44);
     background: rgba(255, 255, 255, 0.86);
     box-shadow: 0 14px 28px rgba(124, 58, 237, 0.12), 0 0 0 5px rgba(124, 58, 237, 0.045);
@@ -4565,16 +4701,22 @@
     transform: translateY(-2px) scale(1);
 }
 
+.det-rcnn-algo-flow button:hover:not(.is-active) {
+    opacity: 0.92;
+    border-color: rgba(124, 58, 237, 0.28);
+    transform: translateY(-1px);
+}
+
 .det-rcnn-algo-flow small {
     color: #7c3aed;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 950;
     letter-spacing: 0.08em;
 }
 
 .det-rcnn-algo-flow strong {
     color: #1e1b4b;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 950;
     text-align: center;
 }
@@ -4582,7 +4724,7 @@
 .det-rcnn-algo-flow p {
     margin: 0;
     color: #64748b;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 750;
     line-height: 1.25;
     text-align: center;
@@ -4600,6 +4742,31 @@
 .det-rcnn-glyph span {
     position: absolute;
     display: block;
+}
+
+.det-rcnn-glyph--image .is-frame {
+    left: 6px;
+    top: 4px;
+    width: 40px;
+    height: 32px;
+    border: 2px solid rgba(124, 58, 237, 0.68);
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(245, 243, 255, 0.9), rgba(221, 214, 254, 0.4));
+}
+
+.det-rcnn-glyph--image .is-scan {
+    left: 10px;
+    top: 10px;
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.8), rgba(139, 92, 246, 0.2));
+    animation: detRcnnImageScan 1.8s ease-in-out infinite;
+}
+
+@keyframes detRcnnImageScan {
+    0%, 100% { transform: translateY(0); opacity: 0.7; }
+    50% { transform: translateY(16px); opacity: 1; }
 }
 
 .det-rcnn-glyph--decompose i {
@@ -4792,7 +4959,7 @@
 
 .det-rcnn-proposal-stream > strong {
     color: #6d28d9;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
     white-space: nowrap;
 }
@@ -4847,13 +5014,13 @@
 .det-rcnn-proposal-stream b,
 .det-rcnn-proposal-stream code {
     font-family: Consolas, "Courier New", monospace;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
 }
 
 .det-rcnn-proposal-stream em {
     color: #64748b;
-    font-size: 10px;
+    font-size: 12px;
     font-style: normal;
     font-weight: 850;
 }
@@ -4958,7 +5125,7 @@
 .det-rcnn-focus-copy span,
 .det-rcnn-feature-focus section > span {
     color: #6d28d9;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -4991,7 +5158,7 @@
     gap: 8px;
     border-radius: 0;
     border-bottom: 1px solid #e9d5ff;
-    padding: 4px 0;
+    padding: 3px 0;
     background: transparent;
 }
 
@@ -5003,7 +5170,7 @@
 .det-rcnn-focus-copy dt,
 .det-rcnn-nms-focus dt {
     color: #64748b;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 800;
 }
 
@@ -5013,7 +5180,7 @@
     margin: 0;
     color: #4c1d95;
     font-family: Consolas, "Courier New", monospace;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
     text-align: right;
     overflow-wrap: anywhere;
@@ -5057,7 +5224,7 @@
 .det-rcnn-proposal-cards span,
 .det-rcnn-refined-list span {
     color: #7c3aed;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 950;
 }
 

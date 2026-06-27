@@ -1385,6 +1385,27 @@ body.home-page-shell .content-shell {
         radial-gradient(circle at 76% 76%, #1d5cff 0 3.5px, transparent 4px);
 }
 
+.mini-icon--pose::before {
+    inset: 4px;
+    background:
+        linear-gradient(62deg, transparent 45%, #16b5d9 46% 51%, transparent 52%) 10px 17px / 12px 18px no-repeat,
+        linear-gradient(-62deg, transparent 45%, #16b5d9 46% 51%, transparent 52%) 20px 17px / 12px 18px no-repeat,
+        linear-gradient(28deg, transparent 46%, #2f7bff 47% 52%, transparent 53%) 8px 8px / 16px 14px no-repeat,
+        linear-gradient(-28deg, transparent 46%, #2f7bff 47% 52%, transparent 53%) 20px 8px / 16px 14px no-repeat,
+        linear-gradient(90deg, transparent 46%, #2f7bff 47% 53%, transparent 54%) 18px 7px / 8px 22px no-repeat;
+}
+
+.mini-icon--pose::after {
+    inset: 0;
+    background:
+        radial-gradient(circle at 50% 14%, #f59e0b 0 3.8px, transparent 4.2px),
+        radial-gradient(circle at 33% 36%, #1d5cff 0 3.2px, transparent 3.8px),
+        radial-gradient(circle at 67% 36%, #1d5cff 0 3.2px, transparent 3.8px),
+        radial-gradient(circle at 50% 54%, #0ea5e9 0 3.2px, transparent 3.8px),
+        radial-gradient(circle at 34% 88%, #64748b 0 3px, transparent 3.5px),
+        radial-gradient(circle at 66% 88%, #64748b 0 3px, transparent 3.5px);
+}
+
 .mini-icon--instance::before {
     inset: 4px;
     border: 1.5px dashed #2f7bff;

@@ -114,7 +114,7 @@
     const processSteps = [
         {
             id: "image",
-            title: "Image",
+            title: "图像输入",
             detail: "shared RGB input",
             formula: "I \\in \\mathbb{R}^{H \\times W \\times 3}",
             desc: "实例分割从同一张 RGB 图像开始，但目标是找出每个独立对象，而不是只预测像素类别。",
@@ -122,7 +122,7 @@
         },
         {
             id: "preprocess",
-            title: "Letterbox",
+            title: "Letterbox 预处理",
             detail: "resize + padding",
             formula: "x = \\mathrm{letterbox}(I, 640)",
             desc: "YOLO 系列通常先等比缩放并补边到固定尺寸。动画中的边框向内贴合，表示坐标会被记录以便还原到原图。",
@@ -130,7 +130,7 @@
         },
         {
             id: "inference",
-            title: "YOLO Head",
+            title: "YOLO 检测头",
             detail: "boxes + coeffs",
             formula: "Y = f_\\theta(x)",
             desc: "模型一次前向同时输出候选框、类别分数和 mask 系数。多束线从图像伸出，表示检测头和分割头共享特征。",
@@ -138,7 +138,7 @@
         },
         {
             id: "decode",
-            title: "Decode",
+            title: "框解码",
             detail: "xywh / score / class",
             formula: "\\mathrm{box} = \\mathrm{decode}(\\text{anchor}, \\Delta x, \\Delta y, \\Delta w, \\Delta h)",
             desc: "原始输出被解码成 bbox、class、score 和 mask coefficients。小标签从特征点弹出，表示候选实例集合形成。",
@@ -146,7 +146,7 @@
         },
         {
             id: "nms",
-            title: "NMS",
+            title: "非极大抑制",
             detail: "remove overlaps",
             formula: "\\mathrm{keep}_i \\Leftarrow \\mathrm{IoU}(b_i, b_j) < \\tau",
             desc: "重叠过高且置信度较低的候选框会被抑制。动画中的框发生碰撞和筛选，突出 NMS 的去重作用。",
@@ -154,7 +154,7 @@
         },
         {
             id: "prototype",
-            title: "Prototype",
+            title: "Mask 原型",
             detail: "linear mask blend",
             formula: "M_i = \\sigma\\!\\left(\\sum_k c_{ik} P_k\\right)",
             desc: "YOLO-seg 使用共享 prototype masks 与每个实例自己的系数线性组合，得到该实例的粗 mask。",
@@ -162,7 +162,7 @@
         },
         {
             id: "masks",
-            title: "Instance Mask",
+            title: "实例掩膜",
             detail: "crop + id",
             formula: "\\mathrm{instance}_i = \\{\\mathrm{bbox}, \\mathrm{class}, \\mathrm{score}, M_i, \\mathrm{id}_i\\}",
             desc: "mask 会按 bbox 裁剪并映射回原图，每个对象保留独立颜色和 instance id，便于计数、选择和跟踪。",
@@ -170,7 +170,7 @@
         },
         {
             id: "maskIou",
-            title: "Mask AP",
+            title: "Mask 平均精度",
             detail: "mask quality",
             formula: "\\mathrm{MaskIoU} = \\dfrac{|M \\cap G|}{|M \\cup G|}",
             desc: "实例分割评估关注每个实例 mask 与真实标注的像素级重叠，常以不同 IoU 阈值下的 AP 汇总质量。",
@@ -240,24 +240,24 @@
     }
 
     const yoloSteps = [
-        {id: "image", title: "Image", detail: "Current / Uploaded"},
-        {id: "preprocess", title: "Preprocess", detail: "Letterbox + CHW"},
-        {id: "inference", title: "Model Inference", detail: "ONNX Runtime Web"},
-        {id: "decode", title: "Decode Boxes", detail: "scores + coeffs"},
-        {id: "nms", title: "NMS", detail: "IoU suppression"},
-        {id: "prototype", title: "Mask Prototype", detail: "coeff × proto"},
-        {id: "masks", title: "Instance Masks", detail: "crop + statistics"}
+        {id: "image", title: "图像输入", detail: "Current / Uploaded"},
+        {id: "preprocess", title: "预处理", detail: "Letterbox + CHW"},
+        {id: "inference", title: "模型推理", detail: "ONNX Runtime Web"},
+        {id: "decode", title: "框解码", detail: "scores + coeffs"},
+        {id: "nms", title: "非极大抑制", detail: "IoU suppression"},
+        {id: "prototype", title: "Mask 原型", detail: "coeff × proto"},
+        {id: "masks", title: "实例掩膜", detail: "crop + statistics"}
     ];
 
     const maskRcnnSteps = [
-        {id: "image", title: "Image", detail: "input image"},
-        {id: "fpn", title: "Backbone + FPN", detail: "P2 / P3 / P4 / P5"},
-        {id: "rpn", title: "RPN Proposals", detail: "class-agnostic boxes"},
-        {id: "roiAlign", title: "ROI Align", detail: "bilinear sampling"},
-        {id: "heads", title: "Class / BBox Head", detail: "parallel branch"},
-        {id: "maskHead", title: "Mask Head", detail: "K × 28 × 28 logits"},
-        {id: "instances", title: "Instance Masks", detail: "per-instance binary"},
-        {id: "maskIou", title: "Mask IoU", detail: "Mask AP threshold"}
+        {id: "image", title: "图像输入", detail: "input image"},
+        {id: "fpn", title: "骨干网络 + FPN", detail: "P2 / P3 / P4 / P5"},
+        {id: "rpn", title: "RPN 候选框", detail: "class-agnostic boxes"},
+        {id: "roiAlign", title: "ROI 对齐", detail: "bilinear sampling"},
+        {id: "heads", title: "类别 / 框回归头", detail: "parallel branch"},
+        {id: "maskHead", title: "Mask 头", detail: "K × 28 × 28 logits"},
+        {id: "instances", title: "实例掩膜", detail: "per-instance binary"},
+        {id: "maskIou", title: "Mask 交并比", detail: "Mask AP threshold"}
     ];
 
     function isMaskRcnnMode() {
@@ -986,13 +986,13 @@
             const summary = demo.metricSummary || {};
             const copy = {
                 image: ["Mask R-CNN 机制", "实例分割 = 检测 + 每个实例的 mask。Mask R-CNN 先检测 proposal，再为每个 proposal 预测独立二值 mask。"],
-                fpn: ["Backbone + FPN", "FPN 把高分辨率定位细节和低分辨率语义信息结合起来：小目标用 P2/P3，大目标用 P4/P5。"],
-                rpn: ["RPN Proposals", "RPN 在 FPN feature map 上生成类别无关 proposals，替代传统 Selective Search。"],
-                roiAlign: ["ROI Align", "ROI Align 保留浮点坐标并用双线性插值采样，避免 ROI Pooling 坐标取整造成的边界偏移。"],
-                heads: ["Class / BBox Head", "分类头输出类别概率，回归头修正 bbox；mask 分支与它们并行。"],
-                maskHead: ["Mask Head", "Mask Head 经过 4 层卷积、上采样和 1×1 conv 得到 K 类 mask logits，再取当前类别对应 binary mask。"],
-                instances: ["Instance Masks", "每个 detection 都有独立 mask，因此同类相邻目标不会像语义分割那样合并成一个区域。"],
-                maskIou: ["Mask IoU / Mask AP", "Mask IoU 使用像素交并比；AP50 表示 IoU ≥ 0.5 记为命中，Mask AP 是多个阈值下的平均。"]
+                fpn: ["骨干网络 + FPN", "FPN 把高分辨率定位细节和低分辨率语义信息结合起来：小目标用 P2/P3，大目标用 P4/P5。"],
+                rpn: ["RPN 候选框", "RPN 在 FPN feature map 上生成类别无关 proposals，替代传统 Selective Search。"],
+                roiAlign: ["ROI 对齐", "ROI Align 保留浮点坐标并用双线性插值采样，避免 ROI Pooling 坐标取整造成的边界偏移。"],
+                heads: ["类别 / 框回归头", "分类头输出类别概率，回归头修正 bbox；mask 分支与它们并行。"],
+                maskHead: ["Mask 头", "Mask Head 经过 4 层卷积、上采样和 1×1 conv 得到 K 类 mask logits，再取当前类别对应 binary mask。"],
+                instances: ["实例掩膜", "每个 detection 都有独立 mask，因此同类相邻目标不会像语义分割那样合并成一个区域。"],
+                maskIou: ["Mask 交并比 / 平均精度", "Mask IoU 使用像素交并比；AP50 表示 IoU ≥ 0.5 记为命中，Mask AP 是多个阈值下的平均。"]
             }[step.id] || ["Mask R-CNN", "实例分割机制演示"];
             els.notesTitle.textContent = copy[0];
             els.notesSubtitle.textContent = step.title;
@@ -1014,16 +1014,16 @@
         const raw = meta.rawOutputShape ? JSON.stringify(meta.rawOutputShape) : "--";
         const proto = Array.isArray(meta.maskPrototypeShape) ? `[${meta.maskPrototypeShape.join(", ")}]` : (meta.maskPrototypeShape || "--");
         const phaseText = {
-            image: ["Image / Preprocess", "载入当前样例或上传图像，预设模式不会触发模型加载。"],
-            preprocess: ["Image / Preprocess", "letterbox resize 到 640×640，RGB normalize，并完成 HWC 到 CHW。"],
-            inference: ["Model Inference", "ONNX Runtime Web 在浏览器端执行 YOLO11n-seg 前向推理。"],
-            decode: ["Decode Boxes", "从 output0 解码 bbox、class scores 与 mask coefficients。"],
-            nms: ["Confidence Filter / NMS", "按置信度过滤候选框，再对同类框执行 IoU NMS。"],
-            prototype: ["Mask Prototype", "使用 mask coefficients 线性组合 prototype masks。"],
-            masks: ["Instance Masks", "resize 回原图、按 bbox crop、threshold 成二值 mask 并统计几何属性。"]
-        }[state.phase] || ["Process Notes", "实例分割流程"];
+            image: ["图像 / 预处理", "载入当前样例或上传图像，预设模式不会触发模型加载。"],
+            preprocess: ["图像 / 预处理", "letterbox resize 到 640×640，RGB normalize，并完成 HWC 到 CHW。"],
+            inference: ["模型推理", "ONNX Runtime Web 在浏览器端执行 YOLO11n-seg 前向推理。"],
+            decode: ["框解码", "从 output0 解码 bbox、class scores 与 mask coefficients。"],
+            nms: ["置信度过滤 / NMS", "按置信度过滤候选框，再对同类框执行 IoU NMS。"],
+            prototype: ["Mask 原型", "使用 mask coefficients 线性组合 prototype masks。"],
+            masks: ["实例掩膜", "resize 回原图、按 bbox crop、threshold 成二值 mask 并统计几何属性。"]
+        }[state.phase] || ["流程说明", "实例分割流程"];
         els.notesTitle.textContent = phaseText[0];
-        els.notesSubtitle.textContent = selected ? `#${selected.id} ${selected.className}` : "Instance Statistics";
+        els.notesSubtitle.textContent = selected ? `#${selected.id} ${selected.className}` : "实例统计";
         els.notesTutorial.innerHTML = `<p>${phaseText[1]}</p>`;
         els.notes.innerHTML = `<dl>
             <div><dt>raw output shape</dt><dd>${esc(raw)}</dd></div>
@@ -1688,7 +1688,7 @@
             activateScene(reason === "upload" && state.modelScene ? state.modelScene : presetScene(), true);
         }
         const pendingStatus = (state.modelStatus === "已加载" || state.modelStatus === "推理完成") ? "已加载" : "加载中";
-        setModelStatus(pendingStatus, "正在自动加载并运行前端模型；预设结果仅作为 fallback。");
+        setModelStatus(pendingStatus, "正在自动加载并运行模型；预设结果仅作为 fallback。");
         try {
             if (state.modelStatus !== "已加载" && state.modelStatus !== "推理完成") {
                 const loaded = await loadModel();

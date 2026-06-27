@@ -1,0 +1,26 @@
+{
+  "status": "preset_sample_mechanism",
+  "metrics": [
+    {
+      "id": "pck",
+      "name": "PCK",
+      "fullName": "Percentage of Correct Keypoints",
+      "definition": "A keypoint is counted correct when its distance to the annotation is below a normalized threshold.",
+      "teachingNote": "PCK emphasizes coordinate accuracy after normalizing by head size, torso size or bbox size."
+    },
+    {
+      "id": "oks",
+      "name": "OKS",
+      "fullName": "Object Keypoint Similarity",
+      "definition": "COCO keypoint metric that compares predicted and annotated joints with per-joint scale factors.",
+      "teachingNote": "OKS plays a role similar to IoU for keypoints and is used for keypoint AP."
+    },
+    {
+      "id": "pose_vector",
+      "name": "Pose Vector",
+      "fullName": "Flattened keypoint coordinate vector",
+      "definition": "[x0, y0, score0, x1, y1, score1, ...] or normalized variants.",
+      "teachingNote": "Action recognition can consume pose vectors frame by frame as a compact body-structure signal."
+    }
+  ]
+}

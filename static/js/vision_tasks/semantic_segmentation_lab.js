@@ -407,7 +407,7 @@
             const title = els.processCard.querySelector("[data-process-title]");
             const formula = els.processCard.querySelector("[data-process-formula]");
             const desc = els.processCard.querySelector("[data-process-desc]");
-            if (kicker) kicker.textContent = `SEMANTIC STEP ${phaseIndex(step.id) + 1} / ${processSteps.length}`;
+            if (kicker) kicker.textContent = `语义步骤 ${phaseIndex(step.id) + 1} / ${processSteps.length}`;
             if (title) title.textContent = step.title;
             if (formula) renderFormula(step.formula, formula);
             if (desc) {
@@ -707,7 +707,7 @@
         if (els.activeBackend) {
             els.activeBackend.textContent = (state.activeBackend && state.activeBackend !== "--") ? state.activeBackend.toUpperCase() : (meta.backend || "--").toUpperCase();
         }
-        els.stripSource.textContent = mask?.source === "model" ? "前端网络推理" : mask?.source === "fcn" ? "FCN 二维全卷积原理" : "课程标准预设 Mask";
+        els.stripSource.textContent = mask?.source === "model" ? "网络推理" : mask?.source === "fcn" ? "FCN 二维全卷积原理" : "课程标准预设 Mask";
         els.stripModel.textContent = meta.modelName || "--";
         els.stripInference.textContent = fmtMs(meta.inferenceTime);
         els.stripPostprocess.textContent = fmtMs(meta.postprocessTime);
@@ -1044,8 +1044,8 @@
         const topInfo = top ? classById(mask, top.id) : null;
         if (state.probeInfo) {
             const p = state.probeInfo;
-            els.notesTitle.textContent = "Pixel Probe";
-            els.notesSubtitle.textContent = `Pixel(${p.x}, ${p.y})`;
+            els.notesTitle.textContent = "像素探针";
+            els.notesSubtitle.textContent = `像素(${p.x}, ${p.y})`;
             els.notesTutorial.innerHTML = `<p>探针把当前位置的 RGB、classMap 和类别表串起来，演示一个像素从 logits 经 softmax 到 argmax 类别的路径。</p>`;
             els.notes.innerHTML = `<dl>
                 <div><dt>Pixel(x,y)</dt><dd>${p.x}, ${p.y}</dd></div>
@@ -1061,13 +1061,13 @@
             const rows = mask?.meta?.miouRows || [];
             const selected = rows.find((row) => Number(row.id) === Number(state.fcnClassId)) || rows[0];
             const phaseCopy = {
-                image: ["Semantic Segmentation = Pixel-wise Classification", "每个像素输出一个 class id，最终得到 H × W class index map。"],
-                preprocess: ["Preprocess", "resize / normalize 把输入图像变为模型可处理的 NCHW tensor。"],
+                image: ["语义分割 = 逐像素分类", "每个像素输出一个 class id，最终得到 H × W class index map。"],
+                preprocess: ["预处理", "resize / normalize 把输入图像变为模型可处理的 NCHW tensor。"],
                 backbone: ["Patch-wise 分类的问题", "滑窗 patch 分类重复计算多、局部信息有限，且不是端到端 dense prediction。"],
                 logits: ["FCN 关键点 1：卷积替换全连接", "1×1 Conv 将每个空间位置的特征通道映射到 C 个类别 logits。"],
                 upsample: ["FCN 关键点 2：上采样 / 反卷积", "通过 deconvolution 或双线性插值把低分辨率 heatmap 放大回原图尺寸。"],
                 argmax: ["logits → argmax", "对每个像素执行 argmax_c logits[c,h,w]，得到最终 class id。"],
-                mask: ["Semantic Mask Overlay", "class id map 被映射为类别颜色并叠加到原图，形成可检查的语义 mask。"],
+                mask: ["语义掩膜叠加", "class id map 被映射为类别颜色并叠加到原图，形成可检查的语义 mask。"],
                 miou: ["mIoU 公式", "IoU_c = intersection_c / union_c，mIoU 是所有类别 IoU 的平均。"]
             };
             const [title, desc] = phaseCopy[state.phase] || phaseCopy.image;
@@ -1079,33 +1079,33 @@
             return;
         }
         if (state.phase === "preprocess") {
-            els.notesTitle.textContent = "Preprocess";
+            els.notesTitle.textContent = "预处理";
             els.notesSubtitle.textContent = "Resize / Normalize";
             els.notesTutorial.innerHTML = `<p>resize → NCHW tensor，ImageNet mean/std 归一化。</p>`;
             els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>${s?.width || "--"} × ${s?.height || "--"}</dd></div><div><dt>目标</dt><dd>${meta.inputSize || state.modelInfo?.inputSizeText || "512 × 512"}</dd></div><div><dt>tensor</dt><dd>[1, 3, H, W]</dd></div></dl>`;
         } else if (state.phase === "backbone") {
-            els.notesTitle.textContent = "Backbone";
+            els.notesTitle.textContent = "骨干网络";
             els.notesSubtitle.textContent = "Feature Map";
             els.notesTutorial.innerHTML = `<p>RGB → 低分辨率语义特征。SegFormer 用 Transformer，FCN 用 CNN。</p>`;
             els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>NCHW tensor</dd></div><div><dt>输出</dt><dd>H′ × W′ × D</dd></div><div><dt>后端</dt><dd>${esc(state.activeBackend || meta.backend || "--")}</dd></div><div><dt>模型</dt><dd>${esc(meta.modelName || "SegFormer-B0")}</dd></div></dl>`;
         } else if (state.phase === "logits") {
-            els.notesTitle.textContent = "Pixel Logits";
+            els.notesTitle.textContent = "像素 Logits";
             els.notesSubtitle.textContent = "H×W×C scores";
             els.notesTutorial.innerHTML = `<p>每个像素位置输出 C 类 logits。SegFormer 用 MLP decoder，FCN 用 1×1 conv。</p>`;
             els.notes.innerHTML = `<dl><div><dt>类别数</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>推理耗时</dt><dd>${fmtMs(meta.inferenceTime)}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div></dl>`;
         } else if (state.phase === "upsample") {
-            els.notesTitle.textContent = "Upsample";
+            els.notesTitle.textContent = "上采样";
             els.notesSubtitle.textContent = "Restore H × W";
             els.notesTutorial.innerHTML = `<p>低分辨率 logits → 原图尺寸。SegFormer 双线性插值，FCN 反卷积 + skip。</p>`;
             els.notes.innerHTML = `<dl><div><dt>输入</dt><dd>H′×W′×C logits</dd></div><div><dt>输出</dt><dd>H×W×C logits</dd></div><div><dt>方式</dt><dd>${mask?.source === "model" ? "双线性插值" : "反卷积 + skip"}</dd></div></dl>`;
         } else if (state.phase === "argmax") {
             els.notesTitle.textContent = "Argmax";
-            els.notesSubtitle.textContent = "C-channel decision";
+            els.notesSubtitle.textContent = "逐像素决策";
             const directMask = String(meta.rawOutputSummary || "").includes("class mask");
             els.notesTutorial.innerHTML = `<p>${directMask ? "模型内部已完成 argmax，直接返回 class mask。" : "逐像素 argmax_c logits[c,h,w] → class id。"}</p>`;
             els.notes.innerHTML = `<dl><div><dt>类别数</dt><dd>${meta.classCount || mask?.classes?.length || "--"}</dd></div><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>rawOutputShape</dt><dd>${Array.isArray(meta.rawOutputShape) ? `[${meta.rawOutputShape.join(", ")}]` : esc(meta.rawOutputShape || "--")}</dd></div></dl>`;
         } else if (state.phase === "mask") {
-            els.notesTitle.textContent = "Semantic Mask";
+            els.notesTitle.textContent = "语义掩膜";
             els.notesSubtitle.textContent = "H × W class map";
             els.notesTutorial.innerHTML = `<p>class map → 颜色 → 叠加原图。同类合并，不区分实例。</p>`;
             els.notes.innerHTML = `<dl><div><dt>mask 尺寸</dt><dd>${mask ? `${mask.height} × ${mask.width}` : "--"}</dd></div><div><dt>类别数</dt><dd>${mask?.classes?.length || "--"}</dd></div><div><dt>最大占比</dt><dd>${topInfo ? `${esc(label(topInfo))} ${(top.ratio * 100).toFixed(1)}%` : "--"}</dd></div><div><dt>输出结构</dt><dd>H × W class index map</dd></div></dl>`;
@@ -1115,7 +1115,7 @@
             els.notesTutorial.innerHTML = `<p>每类 IoU = ∩ / ∪，再对类别求平均。像素级 mask 重叠。</p>`;
             els.notes.innerHTML = `<dl><div><dt>mIoU</dt><dd>${mask ? `${fcnMeanIoU(mask).toFixed(1)}%` : "--"}</dd></div><div><dt>类别数</dt><dd>${mask?.classes?.length || "--"}</dd></div><div><dt>公式</dt><dd class="katex-math" data-latex="\\mathrm{mIoU} = \\dfrac{1}{C} \\sum_{c=1}^{C} \\dfrac{|P_c \\cap G_c|}{|P_c \\cup G_c|}"></dd></div></dl>`;
         } else {
-            els.notesTitle.textContent = "Image";
+            els.notesTitle.textContent = "图像输入";
             els.notesSubtitle.textContent = "H×W×3 input";
             els.notesTutorial.innerHTML = `<p>每个像素预测一个 class id，输出 H×W class map。</p>`;
             els.notes.innerHTML = `<dl><div><dt>Source</dt><dd>${mask?.source === "model" ? "Frontend Model" : "Preset Mask"}</dd></div><div><dt>图像尺寸</dt><dd>${s ? `${s.width} × ${s.height}` : "--"}</dd></div><div><dt>输出</dt><dd>H × W class index map</dd></div></dl>`;

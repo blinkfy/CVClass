@@ -13,7 +13,7 @@
     {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }}">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }} {{ 'human-pose-page-shell' if active_page|default('') == 'human_pose' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
@@ -119,6 +119,16 @@
                 <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'semantic' else '' }}" href="{{ url_for('segmentation_lab_semantic_page') }}">语义分割</a>
                 <a class="{{ 'active' if active_page == 'segmentation_lab' and active_sub_page|default('') == 'instance' else '' }}" href="{{ url_for('segmentation_lab_instance_page') }}">实例分割</a>
             </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="{{ 'active' if active_page == 'human_pose' else '' }}" href="{{ url_for('human_pose_page') }}">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="{{ 'active' if active_page == 'human_pose' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('human_pose_overview_page') }}">姿态估计总览</a>
+                <a class="{{ 'active' if active_page == 'human_pose' and active_sub_page|default('') == 'skeleton' else '' }}" href="{{ url_for('human_pose_skeleton_page') }}">关键点与骨架</a>
+                <a class="{{ 'active' if active_page == 'human_pose' and active_sub_page|default('') == 'mechanism' else '' }}" href="{{ url_for('human_pose_mechanism_page') }}">姿态估计机制</a>
+                <a class="{{ 'active' if active_page == 'human_pose' and active_sub_page|default('') == 'action' else '' }}" href="{{ url_for('human_pose_action_page') }}">动作识别</a>
+            </div>
+
             <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
                 <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">前沿总览</a>

@@ -17,19 +17,19 @@
     const $$ = (selector) => [...root.querySelectorAll(selector)];
     const initialParams = new URLSearchParams(window.location.search);
     const methodLabels = {
-        bovw: "Trained BoVW · Oxford Flowers17",
+        bovw: "视觉词袋 · Oxford Flowers17",
         cnn: "CNN 端到端分类",
-        compare: "BoVW vs CNN 对比",
+        compare: "视觉词袋 vs CNN 对比",
     };
     const cnnModelLabels = {
-        auto: "Auto CNN",
+        auto: "自动 CNN",
         flowers17: "Flowers17 CNN",
         squeezenet: "SqueezeNet 1.1",
         mobilenetv2: "MobileNetV2",
     };
     const bovwEngineLabels = {
-        trained: "Trained BoVW · Oxford Flowers17",
-        principle: "BoVW Principle Demo",
+        trained: "视觉词袋 · Oxford Flowers17",
+        principle: "视觉词袋原理演示",
     };
     const featureLabels = {
         sift: "SIFT-like",
@@ -2175,7 +2175,7 @@
             const isPrototype = topB?.source === "prototype-demo";
             const isTrained = topB?.source === "trained-flowers17";
             els.notesMethodDesc.textContent = isTrained
-                ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
+                ? "当前模式使用本地训练得到的 BoVW 参数进行真实分类。"
                 : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
             if (els.notesFormulaTitle) els.notesFormulaTitle.textContent = "BoVW 核心思想";
             els.notesFormula.textContent = "\\text{score}_c = W_c \\cdot \\operatorname{normalize}(\\mathbf{h}) + b_c";
@@ -2328,7 +2328,7 @@
         }
         if (els.bovwTopkNote) {
             els.bovwTopkNote.textContent = trained
-                ? "当前模式使用本地训练得到的 BoVW 参数进行真实前端分类。"
+                ? "当前模式使用本地训练得到的 BoVW 参数进行真实分类。"
                 : "该模式用于解释 BoVW 原理，不代表真实分类概率。";
         }
         if (els.bovwInferenceProof) {
@@ -2336,7 +2336,7 @@
                 const model = state.bovwModel;
                 els.bovwInferenceProof.hidden = false;
                 els.bovwInferenceProof.innerHTML = `
-                    <span>前端推理</span>
+                    <span>推理</span>
                     <strong>模型配置已加载</strong>
                     <code>词典大小 ${model.vocab_size}×${model.descriptor.dimension}</code>
                     <code>权重 W ${model.labels.length}×${model.vocab_size} + b</code>
@@ -2400,7 +2400,7 @@
             : "不适合输入：复杂街景、多人场景、道路场景";
         const sampleHint = isImagenet
             ? "左侧内置样例偏街景/多人场景，不是 ImageNet 的理想输入；建议上传主体明确的单物体图片，例如 dog / cat / car / cup。"
-            : "当前样例会随模型类别体系切换；上传图片仍会直接进入前端 ONNX 推理。";
+            : "当前样例会随模型类别体系切换；上传图片仍会直接进入 ONNX 推理。";
         els.cnnGuidance.innerHTML = `
             <div class="cls-cnn-guidance-main">
                 <strong>${modelText}</strong>

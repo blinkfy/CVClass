@@ -168,6 +168,53 @@ def register_page_routes(app, get_model_status):
             "vision_module_nav": nav,
         }
 
+    def build_human_pose_context(active_sub_page):
+        subpage_configs = {
+            "overview": {
+                "title": "姿态估计总览",
+                "subtitle": "从人体区域输入到关键点、骨架连接与姿态向量输出，建立人体姿态估计任务的整体视图。",
+            },
+            "skeleton": {
+                "title": "关键点与骨架",
+                "subtitle": "展示 COCO-17 关键点、骨架结构、置信度过滤与姿态向量组织方式。",
+            },
+            "mechanism": {
+                "title": "姿态估计机制",
+                "subtitle": "对比 DeepPose 坐标回归与 Heatmap 峰值定位两类典型机制。",
+            },
+            "action": {
+                "title": "动作识别",
+                "subtitle": "展示视频帧序列、时空特征、3D Convolution 与动作类别概率输出。",
+            },
+        }
+        nav = [
+            {"key": "overview", "label": "姿态估计总览", "href": url_for("human_pose_overview_page")},
+            {"key": "skeleton", "label": "关键点与骨架", "href": url_for("human_pose_skeleton_page")},
+            {"key": "mechanism", "label": "姿态估计机制", "href": url_for("human_pose_mechanism_page")},
+            {"key": "action", "label": "动作识别", "href": url_for("human_pose_action_page")},
+        ]
+        for item in nav:
+            item["active"] = item["key"] == active_sub_page
+
+        config = subpage_configs[active_sub_page]
+        human_pose_status_map = {
+            "skeleton": "真实推理 · 本地 MoveNet MultiPose / Thunder",
+            "action": "真实推理 · 本地动作分类器",
+        }
+        human_pose_status = human_pose_status_map.get(active_sub_page, "预设样例 · 机制拆解")
+        return {
+            "active_page": "human_pose",
+            "active_sub_page": active_sub_page,
+            "human_pose_eyebrow": "STATION 10 · HUMAN POSE & ACTION",
+            "human_pose_title": "人体姿态估计与动作识别",
+            "human_pose_subtitle": "Keypoints、Skeleton、Pose Vector、Heatmap、C3D 与动作分类流程可视化。",
+            "human_pose_badge": "POSE · SKELETON · ACTION",
+            "human_pose_status": human_pose_status,
+            "human_pose_page_title": config["title"],
+            "human_pose_page_subtitle": config["subtitle"],
+            "human_pose_nav": nav,
+        }
+
     @app.route("/")
     def home():
         return render_template("pages/home.html", active_page="home")
@@ -333,6 +380,38 @@ def register_page_routes(app, get_model_status):
         return render_template(
             "vision_tasks/instance_segmentation_lab.html",
             **build_vision_module_context("segmentation_lab", "instance", "instance"),
+        )
+
+    @app.route("/human-pose", methods=["GET"])
+    def human_pose_page():
+        return redirect(url_for("human_pose_skeleton_page"))
+
+    @app.route("/human-pose/overview", methods=["GET"])
+    def human_pose_overview_page():
+        return render_template(
+            "human_pose/overview.html",
+            **build_human_pose_context("overview"),
+        )
+
+    @app.route("/human-pose/skeleton", methods=["GET"])
+    def human_pose_skeleton_page():
+        return render_template(
+            "human_pose/skeleton.html",
+            **build_human_pose_context("skeleton"),
+        )
+
+    @app.route("/human-pose/mechanism", methods=["GET"])
+    def human_pose_mechanism_page():
+        return render_template(
+            "human_pose/mechanism.html",
+            **build_human_pose_context("mechanism"),
+        )
+
+    @app.route("/human-pose/action", methods=["GET"])
+    def human_pose_action_page():
+        return render_template(
+            "human_pose/action_recognition.html",
+            **build_human_pose_context("action"),
         )
 
     @app.route("/frontier", methods=["GET"])

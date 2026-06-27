@@ -3827,58 +3827,58 @@
         const flow = meta.flow || [];
         const compactNotes = (concept?.notes || []).slice(0, 4);
 
-        // 针对不同算法的不同步骤引入通俗的“人话比喻”（拟物化类比）
-        const analogies = {
+        // 步骤说明：直接技术描述，不使用比喻
+        const stepNotes = {
             "K-means RGB": {
-                image: "【比喻】先划分好“片区”：把一整张大城市地图划分为几百个规则的居委会格子，每个格子的平均肤色代表这片居民。",
-                feature: "【比喻】收集“爱好”特征：把所有人的穿衣风格（颜色）提取出来作为一个坐标，颜色越接近的居民，在喜好空间里就挨得越近。",
-                assign: "【比喻】“认领小组”：在全国设立 K 个突击队长（初始中心），每个人（像素格子）根据爱好距离，主动向最聊得来的那个队长靠拢。",
-                update: "【比喻】“寻找核心”：各小组成员选出新的“意见领袖”。聚类中心会移动到当前组内全体成员的最平均偏好上，让群体更稳定。",
-                map: "【比喻】“画出圈子”：重复组队和移动，直到大家都找到了固定归属。相同小组的人手拉手，从而把相连的同色圈子割出来。",
-                stats: "【比喻】“清点门派”：分家结束，盘点每个门派分别抢占了多大地盘、总部坐标在哪里，将图像视觉块转化为了报表数据。"
+                image: "将图像像素按位置划分为规则网格，每个网格用平均 RGB 颜色作为初始特征向量。",
+                feature: "每个像素的特征即 RGB 三维向量。颜色越接近的像素在特征空间中距离越近。",
+                assign: "在特征空间中计算每个像素到 K 个聚类中心的距离，把像素划归到距离最近的中心。",
+                update: "根据当前划分重新计算每个簇的均值向量，并将其作为新的聚类中心。",
+                map: "重复分配与更新直到收敛，相同簇的像素构成一个连通或半连通的视觉区域。",
+                stats: "统计每个簇的像素数量、面积占比、中心坐标和最小外接矩形，将视觉块转为可量化数据。"
             },
             "K-means RGB + XY": {
-                image: "【比喻】划分“网格片区”：将像素整理为局部格，每个格子除了长相（RGB）外，还背负着它的出生地坐标（XY）。",
-                feature: "【比喻】“同乡会筹备”：像素现在的爱好不仅看穿衣习惯，还要看位置。距离本就遥远的人即使穿得一样，也很难硬凑进同一个同乡会。",
-                assign: "【比喻】“就近结盟”：考虑颜值（RGB）和距离（XY）的双重吸引，每个格子各自寻找综合吸引力最强的那位盟主结盟。",
-                update: "【比喻】“团队搬迁”：盟主为了照顾所有的盟友，会把总部搬迁到盟友聚集的“地理中心”与“平均肤色”的平衡点上。",
-                map: "【比喻】“连片建区”：因为地理距离有惩罚，所以最终分出来的团队都是“一块块”连在起的，基本上不会出现散落 of 孤岛小像素点。",
-                stats: "【比喻】“大盘点”：输出包含空间平滑约束的分割标签。不仅数一数各团体的面积，还测量并圈出了它们各团体的外接矩形范围。"
+                image: "将像素整理为局部网格，每个像素的特征同时包含 RGB 颜色与归一化空间坐标 XY。",
+                feature: "特征向量扩展为五维：[R, G, B, x, y]。空间距离较远但颜色相似的像素会被拉开。",
+                assign: "综合考虑颜色差异和空间距离，将每个像素划分到综合距离最小的簇中心。",
+                update: "重新计算各簇在 RGB+XY 联合空间中的均值中心，兼顾颜色均值与几何中心。",
+                map: "由于空间坐标参与度量，聚类结果倾向于形成连片、连续的区域，减少孤立散点。",
+                stats: "输出带空间平滑约束的分割标签，并统计每个簇的面积、外接框和中心坐标。"
             },
             "Graph Cut": {
-                image: "【比喻】“划定两极势力”：视像素点为战场上的士兵，并建立前景 Source（水源）和背景 Sink（下水道）两极势力端点。",
-                feature: "【比喻】“站队投诚”：判断每个士兵（像素）更像哪方阵营。类似前景的士兵，连到 Source 的管道就粗；反之，则连到 Sink 的管道粗。",
-                assign: "【比喻】“肩并肩拉手”：相邻士兵如果肤色/亮度相近，就会手拉手连结，且连结很结实（管道极粗）；颜色不一致的拉得松（管子极细）。",
-                update: "【比喻】“筑坝拦截”：从 Source 源源不断灌水，流经所有连结的管道。水会卡在最窄的位置（瓶颈）。在这些由于颜色不对称而被限流的管子处下刀切开（最小割）。",
-                stats: "【比喻】“尘埃落定”：两极彻底被大坝一分为二，水源一侧即为高亮的前景，下水端一侧代表背景，切断的边便是前背景分界线。"
+                image: "构建图模型：每个像素是节点，额外引入源点 Source 表示前景、汇点 Sink 表示背景。",
+                feature: "根据像素颜色与已知前景/背景模型的匹配程度，分别连接到 Source 和 Sink，容量反映归属概率。",
+                assign: "相邻像素之间建立无向边，边容量由颜色相似度决定；颜色越相似，割断代价越大。",
+                update: "计算 Source 到 Sink 的最大流，最小割将图分为两部分：割集对应前背景分界线。",
+                stats: "最小割一侧为前景，另一侧为背景；切断的边即为最终分割轮廓。"
             },
             "Normalized Cut": {
-                image: "【比喻】“大家都是普通人”：不设立绝对的敌我两极，而是让所有像素节点均匀在特征图中形成互相关联的网络。",
-                feature: "【比喻】“关系网络建立”：算每两个像素的长相与距离。相似但离得近的像素牵上线，线越粗代表它们越玩得来，结成密集的网。",
-                assign: "【比喻】“两步摇摆”：利用光谱分解算一个“倾向值（特征向量）”。这会让网络里的像素自动分成两大摇摆派系，并在倾向图上极化分化成两半。",
-                update: "【比喻】“一刀切中庸”：以倾斜倾向线的中位数一分为二。它会寻找一个切口，既让切断的连接线最少（防止切错），又保证两边的人数规模相当（防止极端的孤立小杂点）。",
-                stats: "【比喻】“均衡分配”：最终把图像切成了势力最平均的两个半区，输出无监督下根据结构特质归属的平滑聚类。"
+                image: "构建无向加权图：所有像素为节点，按颜色与空间邻近度建立连接，不预设前景/背景。",
+                feature: "边的权重同时衡量像素相似度和空间邻近度，形成关联矩阵与度矩阵。",
+                assign: "求解广义特征值问题得到第二小特征向量（Fiedler 向量），作为像素的二分倾向值。",
+                update: "以 Fiedler 向量的中位数为阈值将像素划分为两部分，使割代价低且两部分规模均衡。",
+                stats: "输出两类标签，得到结构一致、规模均衡的二值分割结果。"
             },
             "GrabCut": {
                 image: "用矩形框标注前景的大致位置。框外像素标记为确定背景，框内像素标记为可能前景。",
-                feature: "用 5 个高斯分量分别拟合前景和背景的颜色分布（GMM），k-means 初始化后经 EM 迭代优化，能捕捉多模态颜色特征。",
+                feature: "用 5 个高斯分量分别拟合前景和背景的颜色分布（GMM），k-means 初始化后经 EM 迭代优化。",
                 update: "以 GMM 负对数似然作为 unary 代价、颜色相似度作为 pairwise 代价，通过 max-flow/min-cut 全局优化二值标签；再用新 mask 修正 GMM，交替迭代。",
                 map: "输出二值前景 mask，可直接用于透明背景、目标裁剪或区域统计。",
                 stats: "基于最终 mask 计算前景面积、外接框和占比。"
             },
             "Watershed": {
-                image: "【比喻】“生成盆地山脉”：提取图像边缘强度（梯度），边界越硬的地方变山峰（梯度大），区域内部等色平缓区变成积水盆地。",
-                feature: "【比喻】“雨水起点”：在各个确定的盆地底部（种子点）注入不同颜色的墨水。每个盆地是以后割裂开的种子政权。",
-                assign: "【比喻】“大水慢灌”：水位均匀上升。有标签的彩色墨水自下而上沿着地势蔓延（利用优先队列，梯度低、容易蔓延的地方先流过去）。",
-                map: "【比喻】“筑起水坝”：不同颜色的墨水在山脊（高梯度处）相遇，在相遇的交界点上筑起无法逾越的大坝（分水岭）。",
-                stats: "【比喻】“流域版图分配”：当所有地方都被灌满并且山脊大坝合围后，不同的流域便对应了最终的各个分割区块标签图。"
+                image: "计算图像梯度幅值，边界处梯度大、区域内部梯度小，将梯度图作为分水岭的“地形高度”。",
+                feature: "由用户或算法给出前景/背景种子点（marker），作为不同区域的扩张起点。",
+                assign: "从种子点开始，按梯度由低到高的顺序通过优先队列向外扩张，逐步占领相邻像素。",
+                map: "当两个不同标签的扩张前沿相遇时，相遇点被标记为分水岭边界（label = -1）。",
+                stats: "最终 label map 中，除边界像素外，每个像素都被赋予一个区域 id，形成完整分割。"
             }
         };
 
-        const methodAnalogy = analogies[concept?.activeMethod] || {};
+        const methodAnalogy = stepNotes[concept?.activeMethod] || {};
         const currentPhase = frame?.phase || "image";
         const currentAnalogyHtml = methodAnalogy[currentPhase]
-            ? `<div class="seg-concept-analogy">💡 <strong>原理解释类比：</strong><p>${escapeHtml(methodAnalogy[currentPhase])}</p></div>`
+            ? `<div class="seg-concept-analogy"><strong>当前步骤说明</strong><p>${escapeHtml(methodAnalogy[currentPhase])}</p></div>`
             : "";
 
         return `
@@ -5245,7 +5245,7 @@
                     graph: conceptGridSvg(core.model, { scores: gradientScores, labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" }),
                     graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: core.labels, seeds: core.markers, caption: "final watershed labels and boundary" },
                     matrix: metricCards([["labels", String(props.length)], ["boundary", `${boundaryCount} cells`], ["largest", `${Math.max(...props.map((prop) => prop.count))} cells`], ["output", "region id map"]]),
-                    detail: noteRows(props.map((prop) => [`label ${prop.label}`, `area ${Math.round(prop.ratio * 100)}%, bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1}`])),
+                    detail: `${regionPieChartSvg(props)}${regionStatCards(props)}`,
                     stageNote: "最终结果是一个 label map：边界为红色，其余网格保存区域编号。",
                     showcase: {
                         model: denseCore.model,
@@ -5423,11 +5423,7 @@
                     title: "5. 区域属性表",
                     graph: conceptGridSvg(core.model, { scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "label map + measured properties" }),
                     graphOptions: { type: "3d", model: core.model, scores: gradientScores, labels: components.compLabels, bboxes: props, caption: "label map + measured properties" },
-                    matrix: `
-                        <div class="seg-region-property-table">
-                            ${denseProps.map((prop) => `<div><span>label ${prop.label}</span><strong>area ${prop.count} · bbox ${prop.maxX - prop.minX + 1}×${prop.maxY - prop.minY + 1} · contour ${prop.perimeter}</strong></div>`).join("")}
-                        </div>
-                    `,
+                    matrix: `${regionPieChartSvg(denseProps)}${regionStatCards(denseProps)}`,
                     detail: metricCards([["regions", String(denseProps.length)], ["largest ratio", `${Math.round((denseProps[0]?.ratio || 0) * 100)}%`], ["computed", "area / bbox / contour"], ["ready for", "filtering or grading"]]),
                     stageNote: "最终输出就是可用于筛选、排序、评价的区域属性表。",
                     showcase: {
@@ -6076,6 +6072,69 @@
         `;
     }
 
+    function regionPieChartSvg(props, options = {}) {
+        const total = Math.max(1, props.reduce((sum, prop) => sum + (prop.count || 0), 0));
+        const cx = options.cx || 64;
+        const cy = options.cy || 64;
+        const r = options.r || 54;
+        const innerR = options.innerR || 30;
+        const colors = props.map((prop) => prop.color || labelFill(prop.label));
+        let startAngle = -Math.PI / 2;
+        const slices = props.map((prop, index) => {
+            const ratio = (prop.count || 0) / total;
+            const angle = ratio * Math.PI * 2;
+            const endAngle = startAngle + angle;
+            const x1 = cx + r * Math.cos(startAngle);
+            const y1 = cy + r * Math.sin(startAngle);
+            const x2 = cx + r * Math.cos(endAngle);
+            const y2 = cy + r * Math.sin(endAngle);
+            const x1Inner = cx + innerR * Math.cos(startAngle);
+            const y1Inner = cy + innerR * Math.sin(startAngle);
+            const x2Inner = cx + innerR * Math.cos(endAngle);
+            const y2Inner = cy + innerR * Math.sin(endAngle);
+            const largeArc = angle > Math.PI ? 1 : 0;
+            const d = [
+                `M ${x1Inner} ${y1Inner}`,
+                `L ${x1} ${y1}`,
+                `A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`,
+                `L ${x2Inner} ${y2Inner}`,
+                `A ${innerR} ${innerR} 0 ${largeArc} 0 ${x1Inner} ${y1Inner}`,
+                "Z",
+            ].join(" ");
+            const midAngle = startAngle + angle / 2;
+            const labelR = (r + innerR) / 2;
+            const lx = cx + labelR * Math.cos(midAngle);
+            const ly = cy + labelR * Math.sin(midAngle);
+            startAngle = endAngle;
+            return { ...prop, ratio, d, lx, ly, color: colors[index] };
+        });
+        const legendItems = slices.map((slice, index) => `
+            <span class="seg-region-pie-legend__item" style="--dot:${slice.color}">
+                <b>label ${slice.label}</b>
+                <em>${Math.round(slice.ratio * 100)}%</em>
+            </span>
+        `).join("");
+        return `
+            <div class="seg-region-pie-chart">
+                <svg viewBox="0 0 128 128" role="img" aria-label="区域面积占比饼图">
+                    ${slices.map((slice) => `
+                        <path d="${slice.d}" fill="${slice.color}" stroke="#ffffff" stroke-width="2">
+                            <title>label ${slice.label}: ${Math.round(slice.ratio * 100)}%</title>
+                        </path>
+                        ${slice.ratio > 0.08 ? `<text x="${slice.lx}" y="${slice.ly}" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="10" font-weight="900">${Math.round(slice.ratio * 100)}%</text>` : ""}
+                    `).join("")}
+                    <text x="${cx}" y="${cy + 4}" text-anchor="middle" class="seg-region-pie-center">${props.length}</text>
+                    <text x="${cx}" y="${cy + 14}" text-anchor="middle" class="seg-region-pie-center-label">regions</text>
+                </svg>
+                <div class="seg-region-pie-legend">${legendItems}</div>
+            </div>
+        `;
+    }
+
+    function regionStatCards(props) {
+        return "";
+    }
+
     function renderGraphCut() {
         renderAlgorithmConcept(buildGraphCutDemo());
         return;
@@ -6372,14 +6431,16 @@
                 ${regionLabelMapSvg()}
             </section>
         `;
+        const hardcodedRegionProps = [
+            { label: 1, count: 159, ratio: 0.159, minX: 0, maxX: 155, minY: 0, maxY: 101, perimeter: 412, color: "#93c5fd" },
+            { label: 2, count: 272, ratio: 0.272, minX: 0, maxX: 203, minY: 0, maxY: 167, perimeter: 536, color: "#86efac" },
+            { label: 3, count: 86, ratio: 0.086, minX: 0, maxX: 127, minY: 0, maxY: 57, perimeter: 248, color: "#fdba74" },
+        ];
         els.matrixStage.innerHTML = `
             <section class="seg-concept-card">
                 <h4>区域统计表</h4>
-                <div class="seg-region-property-table">
-                    <div><span>label 1</span><strong>area 15.9% · bbox 156×102</strong></div>
-                    <div><span>label 2</span><strong>area 27.2% · bbox 204×168</strong></div>
-                    <div><span>label 3</span><strong>area 8.6% · bbox 128×58</strong></div>
-                </div>
+                ${regionPieChartSvg(hardcodedRegionProps)}
+                ${regionStatCards(hardcodedRegionProps)}
             </section>
         `;
         els.conceptDetail.innerHTML = `

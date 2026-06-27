@@ -1,0 +1,266 @@
+{
+  "pageStatus": "真实推理 · 本地姿态序列分类器",
+  "modelStatus": "Action page loads /static/assets/models/human_pose/action/pose_sequence_classifier.json and runs a real local softmax forward pass over pose-sequence features; sample probabilities are fallback only.",
+  "inputShape": {
+    "height": 112,
+    "width": 112,
+    "channels": 3,
+    "defaultT": 8,
+    "maxT": 16
+  },
+  "conv3d": {
+    "kernel": "3 × 3 × 3",
+    "stride": "1 × 1 × 1",
+    "windowSize": 4,
+    "featureDim": 512
+  },
+  "defaultSample": "waving",
+  "pipeline": [
+    {
+      "id": "video",
+      "label": "Video Clip",
+      "summary": "输入短视频片段或连续帧。"
+    },
+    {
+      "id": "frames",
+      "label": "Frame Sequence",
+      "summary": "展开为 T 张 RGB 帧并保留时间顺序。"
+    },
+    {
+      "id": "conv3d",
+      "label": "3D Convolution",
+      "summary": "卷积核同时覆盖时间、高度与宽度。"
+    },
+    {
+      "id": "feature",
+      "label": "Spatiotemporal Feature",
+      "summary": "多帧姿态变化被抽取为时序特征向量。"
+    },
+    {
+      "id": "class",
+      "label": "Action Class",
+      "summary": "本地 softmax 分类器输出动作类别概率。"
+    }
+  ],
+  "classes": [
+    "waving",
+    "jumping",
+    "running",
+    "standing",
+    "walking",
+    "clapping"
+  ],
+  "samples": [
+    {
+      "id": "waving",
+      "label": "Waving · 挥手",
+      "className": "waving",
+      "description": "手臂在时间轴上周期性摆动，局部上肢运动强，躯干位移较小。",
+      "motion": {
+        "type": "waving",
+        "bodyShift": 0.02,
+        "armAmplitude": 0.22,
+        "legAmplitude": 0.03,
+        "sceneHue": 204
+      },
+      "probabilities": [
+        {
+          "label": "waving",
+          "score": 0.82
+        },
+        {
+          "label": "clapping",
+          "score": 0.08
+        },
+        {
+          "label": "standing",
+          "score": 0.05
+        },
+        {
+          "label": "walking",
+          "score": 0.03
+        },
+        {
+          "label": "jumping",
+          "score": 0.02
+        }
+      ]
+    },
+    {
+      "id": "jumping",
+      "label": "Jumping · 跳跃",
+      "className": "jumping",
+      "description": "人体中心高度快速上下变化，双臂和双腿在起跳与落地阶段同步展开。",
+      "motion": {
+        "type": "jumping",
+        "bodyShift": 0.16,
+        "armAmplitude": 0.18,
+        "legAmplitude": 0.12,
+        "sceneHue": 190
+      },
+      "probabilities": [
+        {
+          "label": "jumping",
+          "score": 0.76
+        },
+        {
+          "label": "running",
+          "score": 0.11
+        },
+        {
+          "label": "walking",
+          "score": 0.06
+        },
+        {
+          "label": "standing",
+          "score": 0.04
+        },
+        {
+          "label": "waving",
+          "score": 0.03
+        }
+      ]
+    },
+    {
+      "id": "running",
+      "label": "Running · 跑步",
+      "className": "running",
+      "description": "左右手脚呈交替周期，人体中心沿水平方向移动，时序差异比单帧姿态更关键。",
+      "motion": {
+        "type": "running",
+        "bodyShift": 0.1,
+        "armAmplitude": 0.12,
+        "legAmplitude": 0.18,
+        "sceneHue": 214
+      },
+      "probabilities": [
+        {
+          "label": "running",
+          "score": 0.79
+        },
+        {
+          "label": "walking",
+          "score": 0.12
+        },
+        {
+          "label": "jumping",
+          "score": 0.04
+        },
+        {
+          "label": "waving",
+          "score": 0.03
+        },
+        {
+          "label": "standing",
+          "score": 0.02
+        }
+      ]
+    },
+    {
+      "id": "standing",
+      "label": "Standing · 站立",
+      "className": "standing",
+      "description": "人体中心和四肢位移很小，时序特征接近静止基线。",
+      "motion": {
+        "type": "standing",
+        "bodyShift": 0.018,
+        "armAmplitude": 0.025,
+        "legAmplitude": 0.02,
+        "sceneHue": 198
+      },
+      "probabilities": [
+        {
+          "label": "standing",
+          "score": 0.72
+        },
+        {
+          "label": "walking",
+          "score": 0.12
+        },
+        {
+          "label": "waving",
+          "score": 0.08
+        },
+        {
+          "label": "clapping",
+          "score": 0.04
+        },
+        {
+          "label": "running",
+          "score": 0.03
+        }
+      ]
+    },
+    {
+      "id": "walking",
+      "label": "Walking · 行走",
+      "className": "walking",
+      "description": "人体中心缓慢水平移动，手脚交替但幅度小于跑步。",
+      "motion": {
+        "type": "walking",
+        "bodyShift": 0.08,
+        "armAmplitude": 0.09,
+        "legAmplitude": 0.12,
+        "sceneHue": 210
+      },
+      "probabilities": [
+        {
+          "label": "walking",
+          "score": 0.7
+        },
+        {
+          "label": "running",
+          "score": 0.14
+        },
+        {
+          "label": "standing",
+          "score": 0.07
+        },
+        {
+          "label": "jumping",
+          "score": 0.05
+        },
+        {
+          "label": "waving",
+          "score": 0.04
+        }
+      ]
+    },
+    {
+      "id": "clapping",
+      "label": "Clapping · 鼓掌",
+      "className": "clapping",
+      "description": "双手在胸前周期性靠近和分离，腕间距离是主要时序特征。",
+      "motion": {
+        "type": "clapping",
+        "bodyShift": 0.02,
+        "armAmplitude": 0.18,
+        "legAmplitude": 0.02,
+        "sceneHue": 188
+      },
+      "probabilities": [
+        {
+          "label": "clapping",
+          "score": 0.74
+        },
+        {
+          "label": "waving",
+          "score": 0.1
+        },
+        {
+          "label": "standing",
+          "score": 0.08
+        },
+        {
+          "label": "walking",
+          "score": 0.04
+        },
+        {
+          "label": "jumping",
+          "score": 0.04
+        }
+      ]
+    }
+  ],
+  "modelUrl": "/static/assets/models/human_pose/action/pose_sequence_classifier.json"
+}

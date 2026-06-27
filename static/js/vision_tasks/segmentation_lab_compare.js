@@ -345,7 +345,7 @@
 
         const copy = {
             semantic: {
-                kicker: "Semantic Segmentation",
+                kicker: "语义分割",
                 title: "语义分割关注“每个像素是什么类别”",
                 body: "适合道路、天空、墙面、地面等 stuff 类别和整体场景理解，但不会把同类多个目标拆成独立对象。",
                 output: "H×W class map / H×W×C logits",
@@ -353,7 +353,7 @@
                 best: "场景理解、区域占比、可通行区域"
             },
             instance: {
-                kicker: "Instance Segmentation",
+                kicker: "实例分割",
                 title: "实例分割关注每个对象是谁、在哪里",
                 body: "在检测基础上为每个目标生成独立 mask，因此同类目标可以计数、选择和跟踪。",
                 output: "N × {bbox,class,score,mask,instance_id}",
@@ -361,7 +361,7 @@
                 best: "目标计数、实例选择、对象级属性统计"
             },
             compare: {
-                kicker: "Task Difference",
+                kicker: "任务差异",
                 title: "同一图像，两种不同粒度的理解",
                 body: "语义分割输出 dense class map；实例分割输出目标集合。前者强在全局区域，后者强在独立对象。",
                 output: "class map vs instance set",

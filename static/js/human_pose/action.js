@@ -1,0 +1,649 @@
+(function () {
+    const root = document.querySelector("[data-human-action]");
+    if (!root) return;
+
+    const el = {
+        sampleSelect: root.querySelector("[data-action-sample]"),
+        frameSlider: root.querySelector("[data-action-frames]"),
+        frameOutput: root.querySelector("[data-action-frames-output]"),
+        speed: root.querySelector("[data-action-speed]"),
+        toggles: Array.from(root.querySelectorAll("[data-action-toggle]")),
+        topk: root.querySelector("[data-action-topk]"),
+        play: root.querySelector("[data-action-play]"),
+        reset: root.querySelector("[data-action-reset]"),
+        version: root.querySelector("[data-action-version]"),
+        stageTitle: root.querySelector("[data-action-stage-title]"),
+        statusChip: root.querySelector("[data-action-status-chip]"),
+        sampleLabel: root.querySelector("[data-action-sample-label]"),
+        tensorChip: root.querySelector("[data-action-tensor-chip]"),
+        windowChip: root.querySelector("[data-action-window-chip]"),
+        clip: root.querySelector("[data-action-clip]"),
+        frameStrip: root.querySelector("[data-action-frames-strip]"),
+        convWindow: root.querySelector("[data-action-conv-window]"),
+        inputShape: root.querySelector("[data-action-input-shape]"),
+        convKernel: root.querySelector("[data-action-conv-kernel]"),
+        featureGrid: root.querySelector("[data-action-feature-grid]"),
+        featureNote: root.querySelector("[data-action-feature-note]"),
+        pipeline: root.querySelector("[data-action-pipeline]"),
+        probabilities: root.querySelector("[data-action-probabilities]"),
+        noteShape: root.querySelector("[data-action-note-shape]"),
+        noteClass: root.querySelector("[data-action-note-class]"),
+        noteTopk: root.querySelector("[data-action-note-topk]"),
+        noteStep: root.querySelector("[data-action-note-step]"),
+        noteDescription: root.querySelector("[data-action-note-description]"),
+        noteC3d: root.querySelector("[data-action-note-c3d]"),
+        stepper: document.querySelector("[data-action-stepper]"),
+    };
+
+    const state = {
+        data: null,
+        sample: null,
+        frameCount: 8,
+        activeFrame: 0,
+        activeStep: 0,
+        topK: 5,
+        showRgb: true,
+        showSkeleton: true,
+        showWindow: true,
+        timer: 0,
+        playTick: 0,
+        actionModel: null,
+        actionPrediction: null,
+        actionFeatures: [],
+        modelError: false,
+    };
+
+    const skeletonPairs = [
+        ["head", "neck"],
+        ["neck", "leftShoulder"],
+        ["neck", "rightShoulder"],
+        ["leftShoulder", "leftElbow"],
+        ["leftElbow", "leftWrist"],
+        ["rightShoulder", "rightElbow"],
+        ["rightElbow", "rightWrist"],
+        ["neck", "hip"],
+        ["hip", "leftKnee"],
+        ["leftKnee", "leftAnkle"],
+        ["hip", "rightKnee"],
+        ["rightKnee", "rightAnkle"],
+    ];
+
+    const pointNames = [
+        "head",
+        "neck",
+        "leftShoulder",
+        "rightShoulder",
+        "leftElbow",
+        "rightElbow",
+        "leftWrist",
+        "rightWrist",
+        "hip",
+        "leftKnee",
+        "rightKnee",
+        "leftAnkle",
+        "rightAnkle",
+    ];
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function fetchJson(url) {
+        return fetch(url, { cache: "no-store" }).then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
+            return response.json();
+        });
+    }
+
+    function visibleFrames() {
+        return Math.max(4, Math.min(Number(state.frameCount) || 8, state.data?.inputShape?.maxT || 16));
+    }
+
+    function pipelineSteps() {
+        return state.data?.pipeline || [];
+    }
+
+    function activePipelineStep() {
+        return pipelineSteps()[state.activeStep] || pipelineSteps()[0] || {};
+    }
+
+    function generatePose(frameIndex, total) {
+        const motion = state.sample?.motion || {};
+        const progress = total <= 1 ? 0 : frameIndex / (total - 1);
+        const wave = Math.sin(progress * Math.PI * 2);
+        const doubleWave = Math.sin(progress * Math.PI * 4);
+        const type = motion.type || "waving";
+        let baseX = 0.5;
+        let baseY = 0.48;
+        if (type === "running") {
+            baseX += (progress - 0.5) * Math.max(0.1, (motion.bodyShift || 0.1) * 1.6);
+            baseY += doubleWave * 0.016;
+        } else if (type === "walking") {
+            baseX += (progress - 0.5) * Math.max(0.06, motion.bodyShift || 0.08);
+            baseY += doubleWave * 0.007;
+        } else if (type === "jumping") {
+            baseY -= Math.max(0, Math.sin(progress * Math.PI * 2)) * (motion.bodyShift || 0.14);
+        } else if (type === "standing") {
+            baseX += wave * (motion.bodyShift || 0.018) * 0.18;
+            baseY += doubleWave * (motion.bodyShift || 0.018) * 0.08;
+        } else if (type === "clapping") {
+            baseY += doubleWave * (motion.bodyShift || 0.02) * 0.04;
+        }
+
+        const arm = motion.armAmplitude || 0.12;
+        const leg = motion.legAmplitude || 0.1;
+        let leftArmSwing = 0.05;
+        let rightArmSwing = -Math.abs(wave) * arm - 0.08;
+        let legSwing = wave * leg * 0.25;
+        if (type === "running") {
+            leftArmSwing = wave * arm;
+            rightArmSwing = -wave * arm;
+            legSwing = wave * leg;
+        } else if (type === "walking") {
+            leftArmSwing = wave * arm * 0.72;
+            rightArmSwing = -wave * arm * 0.72;
+            legSwing = wave * leg * 0.7;
+        } else if (type === "jumping") {
+            leftArmSwing = -Math.abs(wave) * arm;
+            rightArmSwing = -Math.abs(wave) * arm;
+            legSwing = Math.abs(wave) * leg;
+        } else if (type === "standing") {
+            leftArmSwing = wave * arm * 0.1;
+            rightArmSwing = -leftArmSwing;
+            legSwing = wave * leg * 0.04;
+        } else if (type === "clapping") {
+            const clap = (Math.sin(progress * Math.PI * 4) + 1) / 2;
+            leftArmSwing = -clap * arm;
+            rightArmSwing = clap * arm;
+            legSwing = wave * leg * 0.05;
+        }
+
+        const pose = {
+            head: [baseX, baseY - 0.27],
+            neck: [baseX, baseY - 0.18],
+            leftShoulder: [baseX - 0.09, baseY - 0.16],
+            rightShoulder: [baseX + 0.09, baseY - 0.16],
+            leftElbow: [baseX - 0.15 + leftArmSwing * 0.35, baseY - 0.03 + Math.abs(leftArmSwing) * 0.2],
+            rightElbow: [baseX + 0.15 + rightArmSwing * 0.35, baseY - 0.04 + rightArmSwing * 0.55],
+            leftWrist: [baseX - 0.17 + leftArmSwing * 0.55, baseY + 0.11 + Math.abs(leftArmSwing) * 0.18],
+            rightWrist: [baseX + 0.17 + rightArmSwing * 0.62, baseY + 0.1 + rightArmSwing * 0.78],
+            hip: [baseX, baseY + 0.05],
+            leftKnee: [baseX - 0.07 - legSwing * 0.26, baseY + 0.24],
+            rightKnee: [baseX + 0.07 + legSwing * 0.26, baseY + 0.24],
+            leftAnkle: [baseX - 0.08 - legSwing * 0.48, baseY + 0.42 + Math.abs(legSwing) * 0.08],
+            rightAnkle: [baseX + 0.08 + legSwing * 0.48, baseY + 0.42 + Math.abs(legSwing) * 0.08],
+        };
+        if (type === "clapping") {
+            const clap = (Math.sin(progress * Math.PI * 4) + 1) / 2;
+            pose.leftElbow = [baseX - 0.13 + clap * 0.05, baseY - 0.01];
+            pose.rightElbow = [baseX + 0.13 - clap * 0.05, baseY - 0.01];
+            pose.leftWrist = [baseX - 0.16 + clap * (0.12 + arm * 0.45), baseY + 0.02];
+            pose.rightWrist = [baseX + 0.16 - clap * (0.12 + arm * 0.45), baseY + 0.02];
+        }
+        Object.values(pose).forEach((point) => {
+            point[0] = Math.max(0.03, Math.min(0.97, point[0]));
+            point[1] = Math.max(0.03, Math.min(0.97, point[1]));
+        });
+        return pose;
+    }
+
+    function pointAttr(point) {
+        const x = Math.max(7, Math.min(93, point[0] * 100));
+        const y = Math.max(7, Math.min(95, point[1] * 100));
+        return { x, y };
+    }
+
+    function renderPoseSvg(frameIndex, total) {
+        const pose = generatePose(frameIndex, total);
+        const lines = skeletonPairs.map(([from, to]) => {
+            const p1 = pointAttr(pose[from]);
+            const p2 = pointAttr(pose[to]);
+            return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"></line>`;
+        }).join("");
+        const joints = Object.entries(pose).map(([name, point]) => {
+            const p = pointAttr(point);
+            const r = name === "head" ? 4.8 : 3.1;
+            return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"></circle>`;
+        }).join("");
+        return `<svg viewBox="0 0 100 100" aria-hidden="true">${lines}${joints}</svg>`;
+    }
+
+    function buildPoseSequence() {
+        const total = visibleFrames();
+        return Array.from({ length: total }, (_, index) => generatePose(index, total));
+    }
+
+    function range(values) {
+        if (!values.length) return 0;
+        return Math.max(...values) - Math.min(...values);
+    }
+
+    function distance(left, right) {
+        return Math.hypot(Number(left?.[0] || 0) - Number(right?.[0] || 0), Number(left?.[1] || 0) - Number(right?.[1] || 0));
+    }
+
+    function pointSeries(sequence, name, axis) {
+        return sequence.map((frame) => Number(frame[name]?.[axis] || 0));
+    }
+
+    function meanPointSpeed(sequence, name) {
+        if (sequence.length < 2) return 0;
+        let total = 0;
+        for (let index = 1; index < sequence.length; index += 1) {
+            total += distance(sequence[index - 1][name], sequence[index][name]);
+        }
+        return total / (sequence.length - 1);
+    }
+
+    function extractActionFeatures(sequence) {
+        const wristDistances = sequence.map((frame) => distance(frame.leftWrist, frame.rightWrist));
+        const ankleDistances = sequence.map((frame) => distance(frame.leftAnkle, frame.rightAnkle));
+        const centers = sequence.map((frame) => [
+            (frame.neck[0] + frame.hip[0]) / 2,
+            (frame.neck[1] + frame.hip[1]) / 2,
+        ]);
+        let centerSpeed = 0;
+        for (let index = 1; index < centers.length; index += 1) {
+            centerSpeed += distance(centers[index - 1], centers[index]);
+        }
+        centerSpeed = centers.length > 1 ? centerSpeed / (centers.length - 1) : 0;
+        const handsAboveHeadRatio = sequence.filter((frame) => (
+            frame.leftWrist[1] < frame.head[1] + 0.07
+            || frame.rightWrist[1] < frame.head[1] + 0.07
+        )).length / Math.max(1, sequence.length);
+
+        return [
+            range(pointSeries(sequence, "hip", 0)),
+            range(pointSeries(sequence, "hip", 1)),
+            range(pointSeries(sequence, "head", 1)),
+            range(pointSeries(sequence, "rightWrist", 0)),
+            range(pointSeries(sequence, "rightWrist", 1)),
+            range(pointSeries(sequence, "leftWrist", 0)),
+            range(pointSeries(sequence, "leftWrist", 1)),
+            Math.min(...wristDistances),
+            wristDistances.reduce((sum, value) => sum + value, 0) / Math.max(1, wristDistances.length),
+            (meanPointSpeed(sequence, "leftWrist") + meanPointSpeed(sequence, "rightWrist")) / 2,
+            (meanPointSpeed(sequence, "leftAnkle") + meanPointSpeed(sequence, "rightAnkle")) / 2,
+            range(ankleDistances),
+            centerSpeed,
+            handsAboveHeadRatio,
+        ];
+    }
+
+    function softmax(logits) {
+        const maxLogit = Math.max(...logits);
+        const exps = logits.map((value) => Math.exp(value - maxLogit));
+        const total = exps.reduce((sum, value) => sum + value, 0) || 1;
+        return exps.map((value) => value / total);
+    }
+
+    function currentProbabilities() {
+        return state.actionPrediction?.probabilities || state.sample?.probabilities || [];
+    }
+
+    function setPageStatus(text) {
+        const heroState = document.querySelector(".human-pose-state");
+        if (heroState) heroState.textContent = text;
+        if (el.version) el.version.textContent = text;
+    }
+
+    function runActionInference() {
+        if (!state.sample) return;
+        if (!state.actionModel) {
+            state.actionPrediction = null;
+            if (state.modelError) setPageStatus("模型失败 · 预设 fallback");
+            return;
+        }
+        const sequence = buildPoseSequence();
+        const features = extractActionFeatures(sequence);
+        const mean = state.actionModel.normalization?.mean || [];
+        const scale = state.actionModel.normalization?.scale || [];
+        const weights = state.actionModel.linearSoftmax?.weights || [];
+        const bias = state.actionModel.linearSoftmax?.bias || [];
+        const normalized = features.map((value, index) => (value - Number(mean[index] || 0)) / Math.max(1e-6, Number(scale[index] || 1)));
+        const logits = weights.map((row, classIndex) => (
+            row.reduce((sum, weight, featureIndex) => sum + Number(weight || 0) * normalized[featureIndex], Number(bias[classIndex] || 0))
+        ));
+        const temperature = Math.max(1, Number(state.actionModel.linearSoftmax?.temperature || 1));
+        const scores = softmax(logits.map((value) => value / temperature));
+        const probabilities = (state.actionModel.classes || []).map((label, index) => ({
+            label,
+            score: scores[index] || 0,
+        })).sort((left, right) => right.score - left.score);
+        state.actionFeatures = features;
+        state.actionPrediction = {
+            probabilities,
+            top1: probabilities[0]?.label || "--",
+            confidence: probabilities[0]?.score || 0,
+            featureNames: state.actionModel.featureNames || [],
+            modelId: state.actionModel.id || "pose_sequence_action_classifier",
+        };
+        setPageStatus("真实推理 · 本地动作分类器");
+    }
+
+    function setPlaying(isPlaying) {
+        root.classList.toggle("is-playing", isPlaying);
+        if (el.play) el.play.textContent = isPlaying ? "播放中 · 点击停止" : "播放流程";
+    }
+
+    function stopPlayback() {
+        if (state.timer) {
+            window.clearTimeout(state.timer);
+            state.timer = 0;
+        }
+        setPlaying(false);
+    }
+
+    function renderControls() {
+        if (!state.data || !el.sampleSelect) return;
+        el.sampleSelect.innerHTML = state.data.samples
+            .map((sample) => `<option value="${escapeHtml(sample.id)}">${escapeHtml(sample.label)}</option>`)
+            .join("");
+        el.sampleSelect.value = state.sample?.id || state.data.defaultSample;
+        if (el.version) {
+            el.version.textContent = state.actionModel
+                ? "真实推理 · 本地动作分类器"
+                : "真实推理准备中 · 本地动作分类器";
+        }
+        if (el.frameSlider) {
+            el.frameSlider.max = String(state.data.inputShape?.maxT || 16);
+            el.frameSlider.value = String(state.frameCount);
+        }
+    }
+
+    function renderFrames() {
+        if (!state.sample || !el.frameStrip) return;
+        const count = visibleFrames();
+        const hue = state.sample.motion?.sceneHue || 204;
+        el.frameStrip.style.setProperty("--action-frame-count", count);
+        el.frameStrip.innerHTML = Array.from({ length: count }, (_, index) => {
+            const active = index === state.activeFrame;
+            const clipStart = Math.max(0, Math.min(state.activeFrame, count - (state.data.conv3d?.windowSize || 4)));
+            const inWindow = index >= clipStart && index < clipStart + (state.data.conv3d?.windowSize || 4);
+            return `
+                <article
+                    class="${active ? "is-active" : ""} ${inWindow ? "is-in-window" : ""}"
+                    data-action-frame="${index}"
+                    style="--frame-hue:${hue + index * 1.8};--motion-shift:${(index / Math.max(1, count - 1)).toFixed(3)}"
+                    tabindex="0"
+                    role="button"
+                    aria-label="frame ${index + 1}"
+                >
+                    <span>t${index + 1}</span>
+                    <div class="human-frame-visual">
+                        <i class="human-frame-rgb"></i>
+                        <div class="human-frame-skeleton">${renderPoseSvg(index, count)}</div>
+                    </div>
+                </article>
+            `;
+        }).join("");
+
+        el.frameStrip.querySelectorAll("[data-action-frame]").forEach((frame) => {
+            frame.addEventListener("click", () => {
+                stopPlayback();
+                state.activeFrame = Number(frame.dataset.actionFrame);
+                state.activeStep = Math.min(2, state.activeStep || 1);
+                renderAll();
+            });
+            frame.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    frame.click();
+                }
+            });
+        });
+    }
+
+    function renderConvWindow() {
+        if (!el.convWindow || !el.frameStrip || !state.data) return;
+        const count = visibleFrames();
+        const windowSize = Math.min(state.data.conv3d?.windowSize || 4, count);
+        const start = Math.max(0, Math.min(state.activeFrame, count - windowSize));
+        el.convWindow.style.setProperty("--window-start", start);
+        el.convWindow.style.setProperty("--window-size", windowSize);
+        el.convWindow.style.setProperty("--frame-count", count);
+        el.convWindow.hidden = !state.showWindow || state.activeStep < 2;
+        if (el.windowChip) {
+            el.windowChip.textContent = `3D window: t${start + 1} - t${start + windowSize}`;
+        }
+    }
+
+    function renderFeatureGrid() {
+        if (!el.featureGrid) return;
+        const active = state.activeStep >= 2;
+        el.featureGrid.innerHTML = Array.from({ length: 32 }, (_, index) => {
+            const hot = active && (index + state.activeFrame + state.activeStep) % 5 === 0;
+            return `<i class="${hot ? "is-active" : ""}" style="transition-delay:${index * 10}ms"></i>`;
+        }).join("");
+        el.featureGrid.classList.toggle("is-active", active);
+        if (el.featureNote) {
+            el.featureNote.textContent = active
+                ? `窗口中心 t${state.activeFrame + 1} 的局部响应正在合并为 ${state.data?.conv3d?.featureDim || 512} 维特征。`
+                : "多帧局部响应合并为时空特征。";
+        }
+    }
+
+    function renderPipeline() {
+        const steps = pipelineSteps();
+        if (el.pipeline) {
+            el.pipeline.innerHTML = steps.slice(0, 5).map((step, index) => `
+                <article
+                    class="${index === state.activeStep ? "is-active" : ""} ${index < state.activeStep ? "is-done" : ""}"
+                    data-action-step="${index}"
+                    tabindex="0"
+                    role="button"
+                >
+                    <strong>${escapeHtml(step.label)}</strong>
+                    <span>${escapeHtml(step.summary)}</span>
+                </article>
+                ${index < Math.min(steps.length, 5) - 1 ? "<b></b>" : ""}
+            `).join("");
+            el.pipeline.querySelectorAll("[data-action-step]").forEach((item) => bindStepNode(item));
+        }
+        if (el.stepper) {
+            el.stepper.innerHTML = steps.map((step, index) => `
+                <li
+                    class="${index === state.activeStep ? "is-active" : ""}"
+                    data-action-step="${index}"
+                    tabindex="0"
+                    role="button"
+                >
+                    <span>${index + 1}</span>
+                    <div><strong>${escapeHtml(step.label)}</strong><small>${escapeHtml(step.summary)}</small></div>
+                </li>
+            `).join("");
+            el.stepper.querySelectorAll("[data-action-step]").forEach((item) => bindStepNode(item));
+        }
+    }
+
+    function bindStepNode(node) {
+        node.addEventListener("click", () => {
+            stopPlayback();
+            state.activeStep = Number(node.dataset.actionStep);
+            if (state.activeStep >= 2) {
+                state.activeFrame = Math.max(1, Math.min(state.activeFrame, visibleFrames() - 1));
+            }
+            renderAll();
+        });
+        node.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                node.click();
+            }
+        });
+    }
+
+    function renderProbabilities() {
+        if (!state.sample || !el.probabilities) return;
+        const top = currentProbabilities().slice(0, state.topK);
+        el.probabilities.innerHTML = top.map((item, index) => {
+            const width = Math.max(3, Math.round(item.score * 100));
+            return `
+                <div class="human-probability-row ${index === 0 ? "is-top" : ""}">
+                    <span>${escapeHtml(item.label)}</span>
+                    <i style="width:${width}%"></i>
+                    <strong>${Number(item.score).toFixed(2)}</strong>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function updateReadout() {
+        if (!state.sample || !state.data) return;
+        const shape = state.data.inputShape || { height: 112, width: 112, channels: 3 };
+        const tensor = `${visibleFrames()} × ${shape.height} × ${shape.width} × ${shape.channels}`;
+        const step = activePipelineStep();
+        const probabilities = currentProbabilities();
+        const topItems = probabilities.slice(0, state.topK).map((item) => `${item.label} ${Number(item.score).toFixed(2)}`).join(" / ");
+        const top1 = probabilities[0] || { label: state.sample.className, score: 0 };
+
+        if (el.frameOutput) el.frameOutput.textContent = String(visibleFrames());
+        if (el.stageTitle) el.stageTitle.textContent = `${state.sample.label} · 帧序列到动作类别`;
+        if (el.statusChip) el.statusChip.textContent = state.actionModel ? "Real Inference · Local Action Model" : "Preset Fallback";
+        if (el.sampleLabel) el.sampleLabel.textContent = state.sample.label;
+        if (el.tensorChip) el.tensorChip.textContent = `T × H × W × C = ${tensor}`;
+        if (el.inputShape) el.inputShape.textContent = tensor;
+        if (el.convKernel) el.convKernel.textContent = `kernel ${state.data.conv3d?.kernel || "3 × 3 × 3"} · stride ${state.data.conv3d?.stride || "1 × 1 × 1"}`;
+        if (el.noteShape) el.noteShape.textContent = `T × H × W × C = ${tensor}`;
+        if (el.noteClass) el.noteClass.textContent = `${top1.label} · Top-1 ${Number(top1.score || 0).toFixed(2)}`;
+        if (el.noteTopk) el.noteTopk.textContent = topItems;
+        if (el.noteStep) el.noteStep.textContent = step.label || "--";
+        if (el.noteDescription) {
+            el.noteDescription.textContent = state.activeStep === 0
+                ? state.sample.description
+                : (step.summary || state.sample.description);
+        }
+        if (el.noteC3d) {
+            const modelLabel = state.actionModel ? `${state.actionPrediction?.modelId || "pose_sequence_classifier"} · ${state.actionModel.status}` : "preset fallback";
+            el.noteC3d.textContent = `Conv visual: ${state.data.conv3d?.kernel || "3 × 3 × 3"}; feature dim: ${state.data.conv3d?.featureDim || 512}; 分类输出：${modelLabel}`;
+        }
+
+        root.classList.toggle("hide-rgb", !state.showRgb);
+        root.classList.toggle("hide-skeleton", !state.showSkeleton);
+        root.classList.toggle("hide-window", !state.showWindow);
+        root.dataset.step = step.id || "video";
+    }
+
+    function renderAll() {
+        runActionInference();
+        updateReadout();
+        renderFrames();
+        renderConvWindow();
+        renderFeatureGrid();
+        renderPipeline();
+        renderProbabilities();
+    }
+
+    function selectSample(sampleId) {
+        const next = state.data.samples.find((sample) => sample.id === sampleId) || state.data.samples[0];
+        state.sample = next;
+        state.activeFrame = 0;
+        state.activeStep = 0;
+        stopPlayback();
+        renderControls();
+        renderAll();
+    }
+
+    function play() {
+        if (state.timer) {
+            stopPlayback();
+            return;
+        }
+
+        const speed = Number(el.speed?.value || 1);
+        const interval = Math.max(300, 480 / Math.max(0.5, speed));
+        state.activeFrame = 0;
+        state.activeStep = 0;
+        state.playTick = 0;
+        renderAll();
+        setPlaying(true);
+
+        const tick = () => {
+            const count = visibleFrames();
+            const stepCount = pipelineSteps().length;
+            state.playTick += 1;
+            state.activeFrame = (state.activeFrame + 1) % count;
+            state.activeStep = Math.min(stepCount - 1, state.playTick);
+            if (state.playTick > Math.max(count, stepCount + 1)) {
+                stopPlayback();
+                return;
+            }
+            renderAll();
+            state.timer = window.setTimeout(tick, interval);
+        };
+
+        state.timer = window.setTimeout(tick, interval);
+    }
+
+    function bindEvents() {
+        el.sampleSelect?.addEventListener("change", () => selectSample(el.sampleSelect.value));
+        el.frameSlider?.addEventListener("input", () => {
+            state.frameCount = Number(el.frameSlider.value);
+            state.activeFrame = Math.min(state.activeFrame, visibleFrames() - 1);
+            renderAll();
+        });
+        el.topk?.addEventListener("change", () => {
+            state.topK = Number(el.topk.value);
+            renderAll();
+        });
+        el.toggles.forEach((toggle) => {
+            toggle.addEventListener("change", () => {
+                const key = toggle.dataset.actionToggle;
+                if (key === "rgb") state.showRgb = toggle.checked;
+                if (key === "skeleton") state.showSkeleton = toggle.checked;
+                if (key === "window") state.showWindow = toggle.checked;
+                renderAll();
+            });
+        });
+        el.play?.addEventListener("click", play);
+        el.reset?.addEventListener("click", () => {
+            stopPlayback();
+            state.activeFrame = 0;
+            state.activeStep = 0;
+            renderAll();
+        });
+        window.addEventListener("beforeunload", stopPlayback);
+    }
+
+    function init() {
+        bindEvents();
+        Promise.all([
+            fetchJson(root.dataset.actionDataUrl),
+            fetchJson(root.dataset.actionModelUrl),
+        ])
+            .then(([data, model]) => {
+                state.data = data;
+                state.actionModel = model;
+                state.modelError = false;
+                state.frameCount = Number(data.inputShape?.defaultT || 8);
+                state.topK = Number(el.topk?.value || 5);
+                state.sample = data.samples.find((sample) => sample.id === data.defaultSample) || data.samples[0];
+                renderControls();
+                renderAll();
+            })
+            .catch((error) => {
+                console.warn("Failed to load local action model; using preset fallback.", error);
+                state.modelError = true;
+                fetchJson(root.dataset.actionDataUrl)
+                    .then((data) => {
+                        state.data = data;
+                        state.frameCount = Number(data.inputShape?.defaultT || 8);
+                        state.topK = Number(el.topk?.value || 5);
+                        state.sample = data.samples.find((sample) => sample.id === data.defaultSample) || data.samples[0];
+                        renderControls();
+                        renderAll();
+                    })
+                    .catch((dataError) => {
+                        console.error("Failed to load human action data", dataError);
+                        if (el.sampleLabel) el.sampleLabel.textContent = "动作识别数据加载失败，请检查 JSON 文件。";
+                    });
+            });
+    }
+
+    init();
+}());

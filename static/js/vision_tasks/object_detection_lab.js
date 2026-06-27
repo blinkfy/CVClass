@@ -1733,6 +1733,11 @@
     function renderRcnnFlowGlyph(type, proposal) {
         const score = Number(proposal.score || 0);
         const cls = proposal.class || "--";
+        if (type === "image") {
+            return `<div class="det-rcnn-glyph det-rcnn-glyph--image" aria-hidden="true">
+                <i class="is-frame"></i><i class="is-scan"></i>
+            </div>`;
+        }
         if (type === "decompose") {
             return `<div class="det-rcnn-glyph det-rcnn-glyph--decompose" aria-hidden="true">
                 <i></i><i></i><i></i><i></i><i></i>
@@ -1773,15 +1778,16 @@
         const proposals = demo.proposals || [];
         const stepIndexById = {
             image: 0,
-            proposals: 0,
-            crop: 1,
-            features: 2,
-            classifier: 3,
-            regression: 4,
-            nms: 5
+            proposals: 1,
+            crop: 2,
+            features: 3,
+            classifier: 4,
+            regression: 5,
+            nms: 6
         };
         const activeIndex = stepIndexById[step.id] ?? 0;
         const nodes = [
+            {id: "image", word: "输入", title: "原始图像", detail: "输入待检测图像", kind: "image"},
             {id: "proposals", word: "分解", title: "候选区域生成", detail: "图像被拆成多个 proposal", kind: "decompose"},
             {id: "crop", word: "伸展", title: "裁剪与归一化", detail: "当前框抽离成 patch", kind: "crop"},
             {id: "features", word: "分解", title: "CNN 特征", detail: "patch 展开为特征向量", kind: "feature"},
@@ -1796,15 +1802,15 @@
                 <b>${esc(p.id)}</b><em>${esc(p.class || "proposal")}</em><code>${Number(p.score || 0).toFixed(2)}</code>
             </span>`;
         }).join("");
-        const activeLeft = 7.8 + activeIndex * 16.6;
+        const activeLeft = 7.8 + activeIndex * 12.4;
         return `<div class="det-rcnn-algo-canvas det-rcnn-algo-canvas--${esc(step.id)}" data-det-related-id="${esc(activeProposal.id || "p1")}" style="--active-index:${activeIndex};--active-left:${activeLeft.toFixed(1)}%;">
             <div class="det-rcnn-algo-flow" style="--active-index:${activeIndex};">
-                ${nodes.map((node, index) => `<article class="${index < activeIndex ? "is-done" : ""} ${index === activeIndex ? "is-active" : ""}" style="--node-index:${index};">
+                ${nodes.map((node, index) => `<button type="button" data-rcnn-step="${esc(node.id)}" class="${index < activeIndex ? "is-done" : ""} ${index === activeIndex ? "is-active" : ""}" style="--node-index:${index};">
                     <small>${esc(node.word)}</small>
                     ${renderRcnnFlowGlyph(node.kind, activeProposal)}
                     <strong>${esc(node.title)}</strong>
                     <p>${esc(node.detail)}</p>
-                </article>`).join("")}
+                </button>`).join("")}
             </div>
             <div class="det-rcnn-proposal-stream" aria-label="proposal 数据流">
                 <strong>proposal 流</strong>
@@ -1831,8 +1837,10 @@
     function renderRcnnFocusHeader(step) {
         const meta = rcnnStepMeta(step);
         return `<header class="det-rcnn-focus-head">
-            <span>${esc(meta.label)}</span>
-            <h4>${esc(meta.title)}</h4>
+            <div class="det-rcnn-focus-head__row">
+                <h4>${esc(meta.title)}</h4>
+                <span>${esc(meta.label)}</span>
+            </div>
             <p>${esc(meta.goal)}</p>
         </header>`;
     }
@@ -1969,8 +1977,7 @@
 
     function renderRcnnFlow(demo, step) {
         const activeProposal = activeRcnnProposal(demo);
-        return `${renderRcnnStepRail(step)}
-            <section data-det-related-id="${esc(activeProposal.id || "p1")}" class="det-rcnn-focus-board det-rcnn-focus-board--${esc(step.id)} ${spotlightClassFor(activeProposal.id)}">
+        return `<section data-det-related-id="${esc(activeProposal.id || "p1")}" class="det-rcnn-focus-board det-rcnn-focus-board--${esc(step.id)} ${spotlightClassFor(activeProposal.id)}">
                 ${renderRcnnStepFocus(demo, step, activeProposal)}
             </section>`;
     }
@@ -2350,7 +2357,7 @@
                     data: [
                         ["输入图像", `${demoImageSample().width} × ${demoImageSample().height}`],
                         ["第一阶段", "生成候选区域建议框"],
-                        ["第二阶段", "独立特征提取/分类器/公式偏移回归"],
+                        ["第二阶段", "特征提取/分类器/公式偏移回归"],
                         ["当前步骤活跃检测候选框", p.id || "--"]
                     ]
                 },

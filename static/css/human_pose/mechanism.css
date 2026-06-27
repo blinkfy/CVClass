@@ -1,0 +1,441 @@
+﻿/* Pose estimation mechanism styles. */
+
+.human-mechanism-workbench {
+    grid-template-columns: minmax(230px, 0.68fr) minmax(460px, 1.42fr) minmax(270px, 0.82fr);
+}
+
+.human-mechanism-controls {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+}
+
+.human-mode-switch {
+    display: grid;
+    gap: 8px;
+}
+
+.human-mode-switch button.is-active,
+.human-mechanism-step-list button.is-active {
+    border-color: var(--pose-blue);
+    color: #ffffff;
+    background: var(--pose-blue);
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.16);
+}
+
+.human-mechanism-step-list {
+    display: grid;
+    gap: 8px;
+}
+
+.human-mechanism-step-list button {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 8px;
+    text-align: left;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 240ms var(--pose-motion), box-shadow 240ms var(--pose-motion), transform 240ms var(--pose-motion);
+}
+
+.human-mechanism-step-list button:hover {
+    transform: translateY(-1px);
+    border-color: #93c5fd;
+}
+
+.human-mechanism-step-list button span {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.human-mechanism-step-list button.is-active span {
+    color: #1d4ed8;
+    background: #ffffff;
+}
+
+.human-mechanism-step-list strong,
+.human-mechanism-step-list small {
+    grid-column: 2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.human-mechanism-step-list strong {
+    color: #172554;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.human-mechanism-step-list small {
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.human-mechanism-step-list button.is-active strong,
+.human-mechanism-step-list button.is-active small {
+    color: #ffffff;
+}
+
+.human-mechanism-stage {
+    min-height: 560px;
+}
+
+.human-mechanism-canvas {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(250px, 0.92fr);
+    gap: 14px;
+    padding: 14px;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 28px 28px;
+}
+
+.human-mechanism-image-frame {
+    --pose-aspect: 640 / 427;
+    position: relative;
+    align-self: start;
+    width: 100%;
+    aspect-ratio: var(--pose-aspect);
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: #e2e8f0;
+    box-shadow: 0 18px 38px rgba(37, 99, 235, 0.12);
+}
+
+.human-mechanism-image-frame img,
+.human-mechanism-image-frame svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.human-mechanism-image-frame img {
+    object-fit: fill;
+}
+
+.human-mechanism-image-frame svg {
+    pointer-events: none;
+}
+
+.human-mechanism-image-frame.is-loaded .human-pose-loading {
+    display: none;
+}
+
+.human-mechanism-side {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mechanism-crop-dim {
+    fill: rgba(15, 23, 42, 0.34);
+    opacity: 0;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.human-mechanism-canvas[data-step="crop"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="feature"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="regress"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="absolute"] .mechanism-crop-dim {
+    opacity: 1;
+}
+
+.mechanism-bbox {
+    fill: rgba(245, 158, 11, 0.08);
+    stroke: var(--pose-orange);
+    stroke-width: 2.4;
+    stroke-dasharray: 8 6;
+    filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.16));
+}
+
+.mechanism-feature-cell {
+    fill: rgba(37, 99, 235, 0.08);
+    stroke: rgba(147, 197, 253, 0.72);
+    stroke-width: 1;
+    opacity: 0.74;
+}
+
+.mechanism-feature-cell.is-active {
+    fill: rgba(18, 181, 208, 0.25);
+    stroke: rgba(18, 181, 208, 0.92);
+}
+
+.mechanism-skeleton-line {
+    stroke: var(--pose-cyan);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.95;
+    stroke-dasharray: var(--line-length, 1);
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 2px 5px rgba(14, 165, 233, 0.2));
+    animation: mechanismLineExtend 620ms var(--pose-motion) both;
+}
+
+.mechanism-keypoint {
+    animation: mechanismPointIn 360ms var(--pose-motion) both;
+}
+
+.mechanism-keypoint circle {
+    fill: #ffffff;
+    stroke: var(--pose-blue);
+    stroke-width: 3.5;
+    filter: drop-shadow(0 3px 8px rgba(37, 99, 235, 0.24));
+}
+
+.mechanism-keypoint text {
+    paint-order: stroke;
+    stroke: #ffffff;
+    stroke-width: 3px;
+    fill: #1d4ed8;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.mechanism-keypoint.is-vector-point circle {
+    stroke: var(--pose-orange);
+}
+
+.mechanism-keypoint.is-selected circle {
+    stroke: var(--pose-orange);
+    animation: posePulse 900ms var(--pose-motion) infinite;
+}
+
+.mechanism-heat-blob {
+    fill: var(--heat-color, var(--pose-cyan));
+    opacity: 0.2;
+    filter: blur(1px);
+    transform-origin: center;
+    animation: heatBlobPulse 900ms var(--pose-motion) infinite;
+}
+
+.mechanism-heat-blob.is-selected {
+    opacity: 0.36;
+}
+
+.human-feature-tiles {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 10px;
+    background: #ffffff;
+    opacity: 0.45;
+    transition: opacity 360ms var(--pose-motion), border-color 300ms var(--pose-motion);
+}
+
+.human-feature-tiles.is-active {
+    border-color: #93c5fd;
+    opacity: 1;
+}
+
+.human-feature-tiles i {
+    aspect-ratio: 1;
+    border-radius: 7px;
+    background: linear-gradient(145deg, #eff6ff, #dbeafe);
+    transform: scale(0.94);
+    transition: transform 360ms var(--pose-motion), background 360ms var(--pose-motion);
+}
+
+.human-feature-tiles i.is-active {
+    background: linear-gradient(145deg, rgba(18, 181, 208, 0.28), rgba(37, 99, 235, 0.24));
+    transform: scale(1);
+}
+
+.human-mechanism-vector {
+    margin-top: 0;
+    opacity: 0.5;
+}
+
+.human-mechanism-vector.is-active {
+    opacity: 1;
+}
+
+.human-coordinate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    opacity: 0.45;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.human-coordinate-grid.is-active {
+    opacity: 1;
+}
+
+.human-coordinate-grid article {
+    display: grid;
+    gap: 3px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 9px;
+    background: #ffffff;
+}
+
+.human-coordinate-grid span {
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.human-coordinate-grid strong {
+    color: #172554;
+    font-size: 11px;
+}
+
+.human-coordinate-grid small {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.human-heatmap-strip {
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.human-heatmap-strip.is-active {
+    display: grid;
+}
+
+.human-heatmap-strip button {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 8px;
+    text-align: left;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.human-heatmap-strip button.is-active {
+    border-color: var(--pose-orange);
+    box-shadow: 0 10px 20px rgba(245, 158, 11, 0.14);
+}
+
+.human-heatmap-strip i {
+    grid-row: 1 / span 2;
+    aspect-ratio: 1;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at var(--peak-x, 50%) var(--peak-y, 50%), var(--heat-color, #12b5d0) 0 8%, color-mix(in srgb, var(--heat-color, #12b5d0) 38%, transparent) 9% 24%, transparent 25%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.18), transparent 62%),
+        #f8fafc;
+}
+
+.human-heatmap-strip span,
+.human-heatmap-strip strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.human-heatmap-strip strong {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.human-mechanism-workbench[data-mode="heatmap"] .human-mechanism-vector,
+.human-mechanism-workbench[data-mode="heatmap"] .human-coordinate-grid {
+    display: none;
+}
+
+.human-mechanism-workbench[data-mode="deeppose"] .human-heatmap-strip {
+    display: none;
+}
+
+.human-mechanism-flow {
+    grid-template-columns: 1fr 14px 1fr 14px 1fr 14px 1fr 14px 1fr;
+    align-items: stretch;
+    padding: 0 14px 14px;
+}
+
+.human-process-chain b,
+.human-action-pipeline b {
+    align-self: center;
+    height: 2px;
+    border-radius: 999px;
+    background: #93c5fd;
+}
+
+.human-mechanism-flow article {
+    min-height: 104px;
+    transition: border-color 240ms var(--pose-motion), box-shadow 240ms var(--pose-motion), transform 240ms var(--pose-motion);
+}
+
+.human-mechanism-flow article.is-active {
+    border-color: var(--pose-blue);
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
+    animation: poseMerge 520ms var(--pose-motion) both;
+}
+
+.human-mechanism-flow article.is-done {
+    border-color: #bae6fd;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.human-vector-demo code,
+.vision-output-schema code,
+.vision-formula-card strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@keyframes mechanismPointIn {
+    from {
+        opacity: 0;
+        transform: scale(0.72);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes mechanismLineExtend {
+    from {
+        stroke-dashoffset: var(--line-length, 1);
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes heatBlobPulse {
+    0%, 100% {
+        transform: scale(0.92);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+

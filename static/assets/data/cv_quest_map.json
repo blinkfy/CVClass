@@ -373,7 +373,7 @@
           "number": "21",
           "title": "人体姿态估计",
           "subtitle": "关键点与骨架结构",
-          "status": "planned",
+          "status": "mechanism",
           "type": "pose",
           "difficulty": 4,
           "keywords": ["Keypoint", "Heatmap", "Skeleton", "OKS"],
@@ -383,14 +383,14 @@
           "output": "人体关键点、置信度和骨架图。",
           "metrics": ["OKS", "PCK", "AP"],
           "prerequisites": ["实例分割"],
-          "route": null
+          "route": "/human-pose/skeleton"
         },
         {
           "id": "level-22-action",
           "number": "22",
           "title": "动作识别",
           "subtitle": "视频时序行为理解",
-          "status": "planned",
+          "status": "mechanism",
           "type": "video",
           "difficulty": 5,
           "keywords": ["Video", "Temporal", "Action", "Sequence"],
@@ -400,7 +400,7 @@
           "output": "动作类别、时间片段和置信度。",
           "metrics": ["Top-1", "Top-5", "mAP"],
           "prerequisites": ["人体姿态估计"],
-          "route": null
+          "route": "/human-pose/action"
         }
       ]
     },

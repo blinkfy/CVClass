@@ -1,0 +1,123 @@
+{% extends "human_pose/base.html" %}
+
+{% block human_pose_content %}
+<section
+    class="vision-workbench human-action-workbench"
+    data-human-action
+    data-action-data-url="{{ url_for('static', filename='assets/data/human_pose/action_samples.json') }}?v=20260627-localmodel2"
+    data-action-model-url="{{ url_for('static', filename='assets/models/human_pose/action/pose_sequence_classifier.json') }}?v=20260627-localmodel2"
+    aria-label="动作识别工作台"
+>
+    <aside class="vision-panel vision-control-panel human-control-panel human-action-controls">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>ACTION INPUT</h3><p>视频片段与显示参数</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>示例动作选择</span>
+            <select data-action-sample></select>
+        </label>
+        <label class="vision-field">
+            <span>帧数 T <output data-action-frames-output>8</output></span>
+            <input type="range" min="4" max="16" step="1" value="8" data-action-frames>
+        </label>
+        <label class="vision-field">
+            <span>播放速度</span>
+            <select data-action-speed>
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.5">1.5x</option>
+            </select>
+        </label>
+        <label class="vision-toggle-row"><span>显示 RGB 帧</span><input type="checkbox" data-action-toggle="rgb" checked></label>
+        <label class="vision-toggle-row"><span>显示骨架序列</span><input type="checkbox" data-action-toggle="skeleton" checked></label>
+        <label class="vision-toggle-row"><span>显示 3D Conv 窗口</span><input type="checkbox" data-action-toggle="window" checked></label>
+        <label class="vision-field">
+            <span>Top-K 数量</span>
+            <select data-action-topk>
+                <option value="3">Top-3</option>
+                <option value="5" selected>Top-5</option>
+            </select>
+        </label>
+        <div class="human-button-row">
+            <button type="button" data-action-play>播放流程</button>
+            <button type="button" data-action-reset>重置</button>
+        </div>
+        <div class="vision-shape-card">
+            <span>当前版本</span>
+            <strong data-action-version>真实推理准备中 · 本地动作分类器</strong>
+            <small>帧序列作为输入样例；概率条由本地姿态序列分类器加载权重后真实前向计算。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel human-action-stage">
+        <div class="vision-stage-header">
+            <div><span>ACTION STAGE</span><h3 data-action-stage-title>视频帧序列到动作类别</h3></div>
+            <span class="vision-status-chip" data-action-status-chip>Loading Local Action Model</span>
+        </div>
+
+        <div class="human-action-stage-body">
+            <div class="human-action-toolbar" aria-live="polite">
+                <span data-action-sample-label>加载动作推理输入...</span>
+                <span data-action-tensor-chip>T × H × W × C</span>
+                <span data-action-window-chip>3D window</span>
+            </div>
+
+            <div class="human-action-clip" data-action-clip>
+                <div class="human-frame-strip" data-action-frames-strip aria-label="视频帧序列"></div>
+                <div class="human-conv-window" data-action-conv-window aria-hidden="true"></div>
+            </div>
+
+            <div class="human-action-feature-row">
+                <article class="human-action-tensor-card">
+                    <span>Input Tensor</span>
+                    <strong data-action-input-shape>8 × 112 × 112 × 3</strong>
+                    <small>视频 clip 被整理为四维张量，时间维 T 保留动作顺序。</small>
+                </article>
+                <article class="human-action-cube-card" data-action-cube>
+                    <span>3D Conv</span>
+                    <div class="human-action-cube" aria-hidden="true">
+                        <i></i><i></i><i></i>
+                    </div>
+                    <small data-action-conv-kernel>kernel 3 × 3 × 3</small>
+                </article>
+                <article class="human-action-feature-card">
+                    <span>Feature Merge</span>
+                    <div class="human-action-feature-grid" data-action-feature-grid aria-hidden="true"></div>
+                    <small data-action-feature-note>多帧局部响应合并为时空特征。</small>
+                </article>
+            </div>
+
+            <div class="human-action-pipeline" data-action-pipeline aria-label="动作识别流程"></div>
+
+            <div class="human-probability-list" data-action-probabilities aria-label="动作类别概率"></div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel human-notes-panel human-action-notes">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>ACTION NOTES</h3><p>时空特征说明</p></div>
+        </div>
+        <dl class="human-summary-list">
+            <div><dt>输入尺寸</dt><dd data-action-note-shape>T × H × W × C = 8 × 112 × 112 × 3</dd></div>
+            <div><dt>当前类别</dt><dd data-action-note-class>--</dd></div>
+            <div><dt>Top-K</dt><dd data-action-note-topk>--</dd></div>
+            <div><dt>Accuracy</dt><dd>样本级 Top-1 预测是否命中标签。</dd></div>
+            <div><dt>hit@k</dt><dd>真实类别是否出现在 Top-K 候选中。</dd></div>
+        </dl>
+        <div class="human-limb-readout">
+            <span>当前 clip</span>
+            <strong data-action-note-step>Video Clip</strong>
+            <p data-action-note-description>选择示例动作后，观察帧序列、3D 卷积窗口与类别概率如何联动。</p>
+        </div>
+        <div class="vision-output-schema">
+            <span>C3D / 3D Conv</span>
+            <code data-action-note-c3d>Conv kernel: T_window × kH × kW</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper human-pose-stepper human-action-stepper" aria-label="动作识别处理流程" data-action-stepper></ol>
+{% endblock %}

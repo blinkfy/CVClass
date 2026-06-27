@@ -1,0 +1,144 @@
+{% extends "human_pose/base.html" %}
+
+{% block human_pose_content %}
+<section
+    class="vision-workbench human-pose-workbench"
+    data-human-pose-skeleton
+    data-pose-samples-url="{{ url_for('static', filename='assets/data/human_pose/pose_samples.json') }}?v=20260627-multipose1"
+    data-pose-skeletons-url="{{ url_for('static', filename='assets/data/human_pose/pose_skeletons.json') }}?v=20260627-localmodel1"
+    data-pose-model-url="{{ url_for('static', filename='assets/models/human_pose/movenet/singlepose-thunder/model.json') }}"
+    data-pose-model-url-thunder="{{ url_for('static', filename='assets/models/human_pose/movenet/singlepose-thunder/model.json') }}"
+    data-pose-model-url-lightning="{{ url_for('static', filename='assets/models/human_pose/movenet/singlepose-lightning/model.json') }}"
+    data-pose-model-url-multipose="{{ url_for('static', filename='assets/models/human_pose/movenet/multipose-lightning/model.json') }}"
+    data-pose-worker-url="{{ url_for('static', filename='js/human_pose/pose_worker.js') }}?v=20260627-worker1"
+    aria-label="关键点与骨架工作台"
+>
+    <aside class="vision-panel vision-control-panel human-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>INPUT & PARAMS</h3><p>姿态输入与显示参数</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>示例图选择</span>
+            <select data-pose-sample></select>
+        </label>
+        <label class="vision-field">
+            <span>上传图片</span>
+            <span class="human-file-picker">
+                <input type="file" accept="image/*" data-pose-upload>
+                <span class="human-file-button">选择图片</span>
+                <span class="human-file-name" data-pose-upload-name>未选择图片</span>
+            </span>
+            <small class="human-field-note" data-pose-upload-note>默认自动加载本地 MoveNet MultiPose 多人模型并真实推理，最多返回 6 个人；单人高精度可切换 Thunder。</small>
+        </label>
+        <label class="vision-field">
+            <span>推理模式</span>
+            <select data-pose-inference-mode>
+                <option value="movenet_multi" selected>多人 MoveNet MultiPose</option>
+                <option value="movenet">单人 MoveNet Thunder</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>骨架模板</span>
+            <select data-pose-template></select>
+        </label>
+        <label class="vision-field">
+            <span>置信度阈值 <output data-pose-threshold-output>0.50</output></span>
+            <input type="range" min="0" max="1" step="0.05" value="0.50" data-pose-threshold>
+        </label>
+        <label class="vision-toggle-row"><span>显示关键点</span><input type="checkbox" data-pose-toggle="keypoints" checked></label>
+        <label class="vision-toggle-row"><span>显示骨架</span><input type="checkbox" data-pose-toggle="skeleton" checked></label>
+        <label class="vision-toggle-row"><span>显示编号</span><input type="checkbox" data-pose-toggle="labels"></label>
+        <label class="vision-toggle-row"><span>显示坐标</span><input type="checkbox" data-pose-toggle="coords"></label>
+        <div class="human-button-row">
+            <button type="button" data-pose-play>动画播放</button>
+            <button type="button" data-pose-run-model>重新运行真实推理</button>
+            <button type="button" data-pose-reset>重置</button>
+        </div>
+        <div class="vision-shape-card">
+            <span>当前版本</span>
+            <strong data-pose-version>真实推理准备中 · 本地 MoveNet MultiPose</strong>
+            <small data-pose-version-note>页面会优先从本地静态模型路由加载 MoveNet MultiPose；单人模式使用 Thunder，失败时才显示预设 fallback。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel human-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>POSE STAGE</span><h3 data-pose-stage-title>人体关键点与骨架结构</h3></div>
+            <span class="vision-status-chip" data-pose-status-chip>Local MoveNet MultiPose</span>
+        </div>
+        <div class="human-pose-stage">
+            <div class="human-pose-stage-toolbar" aria-live="polite">
+                <span data-pose-sample-label>加载真实推理输入中...</span>
+                <span data-pose-template-label>COCO-17</span>
+                <span data-pose-visible-count>0 / 17 keypoints</span>
+            </div>
+            <div class="human-pose-image-frame" data-pose-image-frame>
+                <img data-pose-image alt="人体姿态估计预设样例图">
+                <svg data-pose-overlay aria-label="姿态关键点与骨架覆盖层">
+                    <g data-pose-bbox-layer class="pose-bbox-layer"></g>
+                    <g data-pose-skeleton-layer class="pose-skeleton-layer"></g>
+                    <g data-pose-keypoint-layer class="pose-keypoint-layer"></g>
+                    <g data-pose-label-layer class="pose-label-layer"></g>
+                </svg>
+                <div class="human-pose-loading" data-pose-loading>正在加载本地 MoveNet MultiPose 输入...</div>
+            </div>
+            <div class="human-stage-caption">
+                <strong data-pose-stage-note-title>Person Crop → Keypoints → Skeleton</strong>
+                <span data-pose-stage-note>本页默认自动执行本地 MoveNet MultiPose 多人真实推理；点击任意人的关键点查看输出结构。</span>
+            </div>
+            <div class="human-pose-vector-card" data-pose-vector-card>
+                <div class="human-vector-head">
+                    <span>Pose Vector</span>
+                    <strong data-pose-vector-shape>17 × 3</strong>
+                </div>
+                <div class="human-vector-stats" data-pose-vector-stats>
+                    <span>1 person</span>
+                    <span>51 values</span>
+                    <span>x, y, score</span>
+                </div>
+                <div class="human-vector-preview" data-pose-vector>[x0, y0, s0, ...]</div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel human-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>PROCESS NOTES</h3><p>关键点信息联动区域</p></div>
+        </div>
+        <div class="human-keypoint-readout">
+            <span>当前选中关键点</span>
+            <strong data-kp-title>nose · id 0</strong>
+            <dl>
+                <div><dt>id</dt><dd data-kp-id>--</dd></div>
+                <div><dt>name</dt><dd data-kp-name>--</dd></div>
+                <div><dt>x</dt><dd data-kp-x>--</dd></div>
+                <div><dt>y</dt><dd data-kp-y>--</dd></div>
+                <div><dt>score</dt><dd data-kp-score>--</dd></div>
+                <div><dt>visible</dt><dd data-kp-visible>--</dd></div>
+                <div><dt>connected limbs</dt><dd data-kp-limbs>--</dd></div>
+                <div><dt>pose vector index</dt><dd data-kp-vector-index>--</dd></div>
+            </dl>
+        </div>
+        <div class="human-limb-readout" data-pose-limb-readout>
+            <span>骨架模板</span>
+            <strong>COCO-17</strong>
+            <p>当前模板包含 17 个关键点与 19 条 limb 连接。</p>
+        </div>
+        <div class="vision-output-schema">
+            <span>Pose Vector</span>
+            <code data-pose-output-schema>[x0, y0, s0, x1, y1, s1, ... x16, y16, s16]</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper human-pose-stepper" aria-label="姿态估计处理流程" data-pose-stepper>
+    <li class="is-active"><span>1</span><div><strong>Person Crop</strong><small>人体区域</small></div></li>
+    <li><span>2</span><div><strong>Keypoint Prediction</strong><small>关键点预测</small></div></li>
+    <li><span>3</span><div><strong>Confidence Filter</strong><small>置信度过滤</small></div></li>
+    <li><span>4</span><div><strong>Skeleton Link</strong><small>骨架连接</small></div></li>
+    <li><span>5</span><div><strong>Pose Vector</strong><small>向量输出</small></div></li>
+</ol>
+{% endblock %}

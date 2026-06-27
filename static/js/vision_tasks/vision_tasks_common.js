@@ -678,7 +678,7 @@
         },
         semantic: {
             title: "语义分割",
-            subtitle: "Semantic Segmentation",
+            subtitle: "语义分割",
             principle: "为每个像素预测类别标签，获得与输入等分辨率的稠密类别图。",
             image: "/static/assets/img/semantic-segment.webp",
             figure: `
@@ -733,7 +733,7 @@
         },
         instance: {
             title: "实例分割",
-            subtitle: "Instance Segmentation",
+            subtitle: "实例分割",
             principle: "同时为每个目标实例生成检测框和像素级掩码，并赋予独立身份。",
             image: "/static/assets/img/instance-segment.webp",
             figure: `
