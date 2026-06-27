@@ -52,7 +52,8 @@
         heatmapType: "auto",
         heatmapClass: "all",
         heatmapAlpha: 0.55,
-        imageRect: {left: 0, top: 0, width: 100, height: 100}
+        imageRect: {left: 0, top: 0, width: 100, height: 100},
+        imageSampler: {src: "", canvas: null, ctx: null, width: 0, height: 0, ready: false}
     };
     const els = {
         sample: $("[data-det-sample-picker]"),
@@ -1174,7 +1175,155 @@
         } else {
             boxes = step.phase === "confidence" ? [...(result.candidates || []), ...(result.low || [])] : (result.candidates || result.boxes || []);
         }
-        return boxes.filter((box) => cls === "all" || box.class === cls).slice(0, 18);
+        const limit = {
+            center: 120,
+            objectness: 120,
+            class: 90,
+            suppression: 70
+        }[mode] || 100;
+        return boxes.filter((box) => cls === "all" || box.class === cls).slice(0, limit);
+    }
+
+    function seededRandom(seed) {
+        let hash = 2166136261;
+        const text = String(seed);
+        for (let i = 0; i < text.length; i += 1) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        hash += hash << 13;
+        hash ^= hash >>> 7;
+        hash += hash << 3;
+        hash ^= hash >>> 17;
+        hash += hash << 5;
+        return ((hash >>> 0) % 10000) / 10000;
+    }
+
+    function ensureImageSampler(sample) {
+        const img = els.image;
+        if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return null;
+        const src = img.currentSrc || img.src || sample.image || "";
+        const sampler = state.imageSampler;
+        if (sampler.ready && sampler.src === src && sampler.width === img.naturalWidth && sampler.height === img.naturalHeight) {
+            return sampler;
+        }
+        try {
+            const canvas = sampler.canvas || document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext("2d", {willReadFrequently: true});
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            state.imageSampler = {src, canvas, ctx, width: canvas.width, height: canvas.height, ready: true};
+            return state.imageSampler;
+        } catch (_) {
+            state.imageSampler = {src, canvas: null, ctx: null, width: 0, height: 0, ready: false};
+            return null;
+        }
+    }
+
+    function sampleImageColor(sample, x, y, radius = 2) {
+        const sampler = ensureImageSampler(sample);
+        if (!sampler?.ctx) return {r: 34, g: 211, b: 238, luma: 0.68, chroma: 0.35, contrast: 0};
+        const px = Math.max(0, Math.min(sampler.width - 1, Math.round((x / Math.max(1, sample.width)) * sampler.width)));
+        const py = Math.max(0, Math.min(sampler.height - 1, Math.round((y / Math.max(1, sample.height)) * sampler.height)));
+        const size = radius * 2 + 1;
+        try {
+            const data = sampler.ctx.getImageData(Math.max(0, px - radius), Math.max(0, py - radius), Math.min(size, sampler.width - px + radius), Math.min(size, sampler.height - py + radius)).data;
+            let r = 0;
+            let g = 0;
+            let b = 0;
+            let count = 0;
+            let minLuma = 1;
+            let maxLuma = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                const rr = data[i];
+                const gg = data[i + 1];
+                const bb = data[i + 2];
+                const luma = (0.2126 * rr + 0.7152 * gg + 0.0722 * bb) / 255;
+                r += rr;
+                g += gg;
+                b += bb;
+                count += 1;
+                minLuma = Math.min(minLuma, luma);
+                maxLuma = Math.max(maxLuma, luma);
+            }
+            r = Math.round(r / Math.max(1, count));
+            g = Math.round(g / Math.max(1, count));
+            b = Math.round(b / Math.max(1, count));
+            const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+            const chroma = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+            return {r, g, b, luma, chroma, contrast: Math.max(0, maxLuma - minLuma)};
+        } catch (_) {
+            return {r: 34, g: 211, b: 238, luma: 0.68, chroma: 0.35, contrast: 0};
+        }
+    }
+
+    function heatmapCellStyle(cell) {
+        return [
+            `left:${cell.x.toFixed(2)}%`,
+            `top:${cell.y.toFixed(2)}%`,
+            `--hm-w:${cell.w.toFixed(2)}%`,
+            `--hm-h:${cell.h.toFixed(2)}%`,
+            `--heat-rgb:${cell.rgb}`,
+            `--part-alpha:${cell.alpha.toFixed(3)}`,
+            `--part-alpha-mid:${cell.alphaMid.toFixed(3)}`,
+            `--cell-rot:${cell.rotate.toFixed(2)}deg`,
+            `--cell-scale:${cell.scale.toFixed(2)}`,
+            `--delay:${cell.delay}ms`
+        ].join(";");
+    }
+
+    function featureMapPercent(sample, x, y, w, h) {
+        return {
+            x: (x / Math.max(1, sample.width)) * 100,
+            y: (y / Math.max(1, sample.height)) * 100,
+            w: (w / Math.max(1, sample.width)) * 100,
+            h: (h / Math.max(1, sample.height)) * 100
+        };
+    }
+
+    function heatmapCellsForBox(box, sample, mode, boxIndex) {
+        const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = box.bbox || [];
+        const bw = Math.max(1, x2 - x1);
+        const bh = Math.max(1, y2 - y1);
+        const score = Math.max(0.12, Math.min(1, Number(box.score) || 0.2));
+        const cols = Math.max(2, Math.min(8, Math.round(bw / Math.max(14, sample.width / 28))));
+        const rows = Math.max(2, Math.min(7, Math.round(bh / Math.max(14, sample.height / 30))));
+        const candidates = [];
+        for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < cols; col += 1) {
+                const seed = `${sample.id || sample.image}:${box.id}:${mode}:${row}:${col}`;
+                const rx = seededRandom(`${seed}:x`) - 0.5;
+                const ry = seededRandom(`${seed}:y`) - 0.5;
+                const cx = x1 + bw * Math.max(0.03, Math.min(0.97, (col + 0.5 + rx * 0.42) / cols));
+                const cy = y1 + bh * Math.max(0.03, Math.min(0.97, (row + 0.5 + ry * 0.42) / rows));
+                const color = sampleImageColor(sample, cx, cy, Math.max(1, Math.round(Math.min(bw / cols, bh / rows) / 2.8)));
+                const noise = seededRandom(`${seed}:n`);
+                const edge = Math.min(1, color.contrast * 2.4);
+                const colorfulness = Math.min(1, color.chroma * 1.9);
+                const midTone = 1 - Math.min(1, Math.abs(color.luma - 0.52) * 1.45);
+                const saliency = Math.max(0, Math.min(1, score * 0.52 + edge * 0.30 + colorfulness * 0.16 + midTone * 0.10 + noise * 0.20));
+                const cellW = (bw / cols) * (1.02 + seededRandom(`${seed}:w`) * 0.58);
+                const cellH = (bh / rows) * (0.98 + seededRandom(`${seed}:h`) * 0.55);
+                const mapped = featureMapPercent(sample, cx, cy, cellW, cellH);
+                candidates.push({
+                    x: Math.max(0, Math.min(100, mapped.x)),
+                    y: Math.max(0, Math.min(100, mapped.y)),
+                    w: Math.max(1.85, mapped.w),
+                    h: Math.max(1.55, mapped.h),
+                    rgb: `${Math.round(color.r * 0.38 + 34 * 0.62)}, ${Math.round(color.g * 0.34 + 211 * 0.66)}, ${Math.round(color.b * 0.34 + 238 * 0.66)}`,
+                    alpha: 0.18 + saliency * 0.50,
+                    alphaMid: 0.11 + saliency * 0.36,
+                    rotate: (seededRandom(`${seed}:r`) - 0.5) * 8,
+                    scale: 0.86 + seededRandom(`${seed}:scale`) * 0.28,
+                    delay: boxIndex * 12 + row * 18 + col * 10,
+                    saliency
+                });
+            }
+        }
+        const density = mode === "center" ? 0.48 : mode === "suppression" ? 0.58 : 0.74;
+        const take = Math.max(4, Math.min(24, Math.round(candidates.length * density + score * 3)));
+        return candidates.sort((a, b) => b.saliency - a.saliency).slice(0, take);
     }
 
     function renderHeatmapSpots(result, step, sample, mode, activeBox) {
@@ -1184,19 +1333,22 @@
         }
         return `<div class="det-yolo-heatmap-layer det-yolo-heatmap-layer--${esc(mode)}" style="--hm-alpha:${state.heatmapAlpha};">
             ${boxes.map((box, index) => {
-                const p = pointPercent(boxCenter(box), sample);
                 const score = Math.max(0.12, Math.min(1, Number(box.score) || 0.2));
                 const suppressed = step.suppressedIds?.has?.(box.id);
                 const active = activeBox && idText(activeBox.id) === idText(box.id);
-                return `<i data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="${active ? "is-active" : ""} ${suppressed ? "is-suppressed" : ""} ${spotlightClassFor(box.id)}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;--score:${score};--delay:${index * 42}ms;"></i>`;
+                return heatmapCellsForBox(box, sample, mode, index).map((cell) => {
+                    return `<i data-det-hover-id="${esc(box.id)}" data-det-related-id="${esc(box.id)}" class="det-yolo-heat-cell ${active ? "is-active" : ""} ${suppressed ? "is-suppressed" : ""} ${spotlightClassFor(box.id)}" style="${heatmapCellStyle(cell)};--score:${score};"></i>`;
+                }).join("");
             }).join("")}
         </div>`;
     }
 
     function renderFeatureMiniImage(result, step, sample, mode, activeBox) {
         const src = sample.image ? (sample.image.startsWith("blob:") ? sample.image : window.cvclassUrl(sample.image)) : "";
-        const active = activeBox ? pointPercent(boxCenter(activeBox), sample) : {x: 50, y: 50};
-        return `<div class="det-yolo-feature-map">
+        const activeCenter = activeBox ? boxCenter(activeBox) : {x: sample.width / 2, y: sample.height / 2};
+        const active = featureMapPercent(sample, activeCenter.x, activeCenter.y, 0, 0);
+        const ratio = Math.max(0.7, Math.min(2.2, Math.max(1, sample.width) / Math.max(1, sample.height)));
+        return `<div class="det-yolo-feature-map" style="--feature-aspect-ratio:${ratio.toFixed(3)};">
             ${src ? `<img src="${esc(src)}" alt="">` : ""}
             <div class="det-yolo-feature-gridlines" aria-hidden="true"></div>
             ${renderHeatmapSpots(result, step, sample, mode, activeBox)}
@@ -1338,7 +1490,7 @@
             <div><dt>bbox</dt><dd>${activeBox ? `[${esc(activeBox.bbox.join(", "))}]` : "--"}</dd></div>
             <div><dt>NMS 状态</dt><dd>${esc(status)}</dd></div>
         </dl>
-        <p class="det-yolo-heatmap-note">当前热力图基于 decoded candidates 的位置、置信度、类别和 NMS 状态聚合生成，用于解释后处理候选分布，不等同于真实中间层 feature map。</p>`;
+        <p class="det-yolo-heatmap-note">当前热力图基于 decoded candidates 的 bbox、类别、置信度、局部颜色值和纹理差异聚合生成；每个框都会投影响应，车辆会按车身、车窗、车轮等局部展开，用于解释候选分布，不等同于真实中间层 feature map。</p>`;
     }
 
     function renderNotes(step, result) {
