@@ -2,13 +2,13 @@
 {% block title %}CV 学习路径 - 计算机视觉实验平台{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260627-map-width-fit">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260627-learning-progress-label">
 {% endblock %}
 
 {% block content %}
 <div
     class="cv-quest-page"
-    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260627-map-width-fit"
+    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260627-learning-progress-label"
 >
     <section class="cv-quest-hero" aria-labelledby="questHeroTitle">
         <div class="cv-quest-hero-copy">
@@ -119,5 +119,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260627-map-width-fit"></script>
+<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260627-learning-progress-label"></script>
 {% endblock %}

@@ -68,6 +68,7 @@
         selectedLevelId: "",
         focusedWorldId: "",
         renderedOnce: false,
+        mapViewportWidths: {},
     };
 
     const el = {
@@ -181,21 +182,58 @@
         }).join("");
     }
 
+    function estimateMapViewportWidth() {
+        const listWidth = el.worldList?.clientWidth || root.clientWidth || window.innerWidth;
+        const compact = window.matchMedia("(max-width: 820px)").matches;
+        const medium = window.matchMedia("(max-width: 1440px)").matches;
+
+        if (compact) return Math.max(0, Math.floor(listWidth - 32));
+
+        const metaWidth = medium ? 188 : 196;
+        const gap = 14;
+        const cardPaddingX = 36;
+        return Math.max(0, Math.floor(listWidth - metaWidth - gap - cardPaddingX));
+    }
+
     function getWorldMapSize(world) {
+        const viewportWidth = state.mapViewportWidths[world.id] || estimateMapViewportWidth();
+        const minWidth = Math.max(720, world.levels.length * 70 + 84);
+        const maxWidth = Math.min(1500, Math.max(1180, world.levels.length * 132 + 220));
+        const overflowReserve = window.matchMedia("(max-width: 820px)").matches ? 14 : 32;
+        const fittedWidth = Math.min(maxWidth, Math.max(minWidth, viewportWidth - overflowReserve));
+
         return {
-            width: Math.max(1040, world.levels.length * 90 + 100),
-            height: 330,
+            width: Math.round(fittedWidth),
+            height: 278,
         };
     }
 
+    function updateMeasuredMapWidths() {
+        let changed = false;
+
+        el.worldList.querySelectorAll(".cv-world-card").forEach((card) => {
+            const map = card.querySelector(".cv-world-map");
+            if (!map || !card.id) return;
+
+            const width = Math.floor(map.clientWidth);
+            const previous = state.mapViewportWidths[card.id] || 0;
+            if (width && Math.abs(previous - width) > 2) {
+                state.mapViewportWidths[card.id] = width;
+                changed = true;
+            }
+        });
+
+        return changed;
+    }
+
     function getLevelPoint(index, count, size) {
-        const startX = 70;
-        const endX = size.width - 74;
+        const startX = 64;
+        const endX = size.width - 88;
         const span = Math.max(endX - startX, 1);
         const baseX = startX + (span * index) / Math.max(count - 1, 1);
         const drift = [0, -8, 12, -14, 14, -6, 12, -10, 8, -8, 10, 0];
         const x = Math.min(endX, Math.max(startX, baseX + drift[index % drift.length]));
-        const wave = [174, 108, 186, 132, 92, 178, 124, 214, 152, 102, 194, 142];
+        const wave = [142, 86, 154, 110, 76, 146, 104, 174, 126, 82, 158, 116];
         return { x, y: wave[index % wave.length] };
     }
 
@@ -311,9 +349,9 @@
                             <strong>${escapeHtml(world.title)}</strong>
                         </button>
                         <p>${escapeHtml(world.subtitle)}</p>
-                        <div class="cv-world-progress" aria-label="${escapeHtml(world.title)} 完成度">
+                        <div class="cv-world-progress" aria-label="${escapeHtml(world.title)} 学习进度">
                             <div>
-                                <span>完成度</span>
+                                <span>学习进度</span>
                                 <strong>${completed}/${world.levels.length}</strong>
                             </div>
                             <i><b style="width:${progress}%"></b></i>
@@ -346,8 +384,13 @@
             button.addEventListener("click", () => focusWorld(button.dataset.worldFocus));
         });
 
-        if (!state.renderedOnce) {
-            window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            if (updateMeasuredMapWidths()) {
+                renderWorlds();
+                return;
+            }
+
+            if (!state.renderedOnce) {
                 el.worldList.querySelectorAll(".world-level-node").forEach((button, index) => {
                     window.setTimeout(() => button.classList.add("is-revealed"), Math.min(index * 24, 760));
                 });
@@ -355,8 +398,8 @@
                     window.setTimeout(() => card.classList.add("is-revealed"), index * 80);
                 });
                 state.renderedOnce = true;
-            });
-        }
+            }
+        });
     }
 
     function renderPanel() {
@@ -421,8 +464,18 @@
     }
 
     function bindGlobalEvents() {
+        let resizeTimer = 0;
+
         el.enterButton.addEventListener("click", (event) => {
             if (el.enterButton.getAttribute("aria-disabled") === "true") event.preventDefault();
+        });
+
+        window.addEventListener("resize", () => {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(() => {
+                state.mapViewportWidths = {};
+                renderWorlds();
+            }, 120);
         });
 
         window.addEventListener("storage", (event) => {

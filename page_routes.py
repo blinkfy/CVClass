@@ -180,6 +180,10 @@ def register_page_routes(app, get_model_status):
     def knowledge_graph_page():
         return render_template("pages/knowledge_graph.html", active_page="knowledge_graph")
 
+    @app.route("/about-author", methods=["GET"])
+    def author_page():
+        return render_template("pages/author.html", active_page="author")
+
     @app.route("/grayscale", methods=["GET"])
     def grayscale_page():
         return render_template("pages/grayscale.html", active_page="grayscale")

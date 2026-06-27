@@ -11,7 +11,18 @@
     margin: 0 auto;
     padding: 16px 10px 26px;
     color: var(--quest-text);
-    overflow-x: hidden;
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+body.home-page-shell {
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+body.home-page-shell .main-content,
+body.home-page-shell .content-shell {
+    overflow: visible;
 }
 
 .cv-quest-hero,
@@ -456,12 +467,13 @@
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 6px 0 10px;
+    padding: 0px 0 0px;
     scrollbar-width: thin;
 }
 
 .cv-world-track {
     position: relative;
+    box-sizing: border-box;
     max-width: none;
     border-radius: 18px;
 }
@@ -774,13 +786,15 @@
 
 .cv-level-panel {
     position: sticky;
-    top: 88px;
+    top: 76px;
+    align-self: start;
     display: grid;
-    gap: 14px;
-    max-height: calc(100vh - 108px);
+    gap: 10px;
+    height: fit-content;
+    max-height: none;
     min-width: 0;
-    overflow-y: auto;
-    padding: 22px;
+    overflow: visible;
+    padding: 18px;
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
@@ -791,7 +805,7 @@
 
 .cv-level-panel-head {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .cv-level-panel-head > span {
@@ -805,14 +819,14 @@
 .cv-level-panel h2 {
     margin: 0;
     color: #07173c;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 900;
     line-height: 1.18;
 }
 
 .cv-level-status {
     width: fit-content;
-    padding: 6px 10px;
+    padding: 5px 9px;
     border-radius: 999px;
     color: var(--panel-status, var(--quest-blue));
     font-size: 12px;
@@ -830,7 +844,7 @@
     display: flex;
     gap: 4px;
     color: #cbd5e1;
-    font-size: 17px;
+    font-size: 16px;
 }
 
 .cv-level-stars span.is-active {
@@ -839,31 +853,31 @@
 
 .cv-level-task {
     margin: 0;
-    padding: 12px 13px;
+    padding: 9px 11px;
     border-left: 3px solid var(--quest-blue);
     border-radius: 0 12px 12px 0;
     color: #2b4567;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1.65;
+    line-height: 1.5;
     background: #f5f9ff;
 }
 
 .cv-level-detail-list {
     display: grid;
-    gap: 9px;
+    gap: 7px;
     margin: 0;
 }
 
 .cv-level-detail-list div {
-    padding: 10px 11px;
+    padding: 8px 10px;
     border: 1px solid #dbe8fb;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.76);
 }
 
 .cv-level-detail-list dt {
-    margin: 0 0 5px;
+    margin: 0 0 4px;
     color: #64748b;
     font-size: 12px;
     font-weight: 900;
@@ -874,7 +888,7 @@
     color: #102246;
     font-size: 13px;
     font-weight: 760;
-    line-height: 1.6;
+    line-height: 1.45;
 }
 
 .cv-level-tags {
