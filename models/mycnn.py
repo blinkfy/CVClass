@@ -5,7 +5,7 @@ def pad_input(x,padding):
         return x
     return np.pad(x,((0,0),(0,0),(padding,padding), (padding,padding)),mode='constant')
 
-@njit(parallel=True)
+@njit(parallel=True)#前面这里并行计算是AI写的，后面串行的是我的
 def conv_forward_numba(x_padded, weights, bias, stride, H_out, W_out, out):
     N, C, H_p, W_p = x_padded.shape
     Co, _, ks, _ = weights.shape

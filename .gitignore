@@ -4,3 +4,4 @@ compute_config.json
 review-stage/
 models/data/
 output/
+tmp/

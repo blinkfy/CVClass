@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import argparse
 import json
 import math
 import re
@@ -12,331 +10,259 @@ import numpy as np
 from PIL import Image
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, top_k_accuracy_score
+from sklearn.metrics import accuracy_score,top_k_accuracy_score
 
-
-LABELS = [
-    "daffodil",
-    "snowdrop",
-    "lily_of_the_valley",
-    "bluebell",
-    "crocus",
-    "iris",
-    "tigerlily",
-    "tulip",
-    "fritillary",
-    "sunflower",
-    "daisy",
-    "coltsfoot",
-    "dandelion",
-    "cowslip",
-    "buttercup",
-    "windflower",
-    "pansy",
-]
-
+lb = ["daffodil","snowdrop","lily_of_the_valley","bluebell","crocus","iris","tigerlily",
+    "tulip","fritillary","sunflower","daisy","coltsfoot","dandelion","cowslip",
+    "buttercup","windflower","pansy"]
 
 @dataclass(frozen=True)
-class FlowerImage:
-    path: Path
-    index: int
-    label_index: int
-    label: str
-    within_class_index: int
+class Im:
+    p: Path
+    idx: int
+    li: int
+    l: str
+    wi: int
 
+def huoqumulu(d):
+    # 取图片目录
+    j=d/"jpg"
+    return j if j.exists() else d
 
-def parse_args() -> argparse.Namespace:
-    root = Path(__file__).resolve().parents[1]
-    parser = argparse.ArgumentParser(description="Train a frontend-compatible BoVW classifier on Oxford 17 Flowers.")
-    parser.add_argument("--data-dir", type=Path, default=root / "models" / "data" / "17flowers")
-    parser.add_argument("--model-out", type=Path, default=root / "static" / "assets" / "data" / "vision_tasks" / "classification_lab" / "bovw_flowers17_model.json")
-    parser.add_argument("--samples-out", type=Path, default=root / "static" / "assets" / "data" / "vision_tasks" / "classification_lab" / "flowers17_samples.json")
-    parser.add_argument("--sample-img-dir", type=Path, default=root / "static" / "assets" / "img" / "flowers17")
-    parser.add_argument("--vocab-size", type=int, default=128)
-    parser.add_argument("--max-side", type=int, default=320)
-    parser.add_argument("--patches-per-image", type=int, default=128)
-    parser.add_argument("--random-state", type=int, default=42)
-    return parser.parse_args()
+def ld(d):
+    dr=huoqumulu(d)
+    fs=sorted(dr.glob("image_*.jpg"))
+    # DEBUG-01: found images count
+    # print("[DEBUG] found",len(fs),"images in",dr)
+    if len(fs)!=1360:
+        raise RuntimeError(f"Expected 1360 images,found {len(fs)}")
+    rs=[]
+    pt=re.compile(r"image_(\d{4})\.jpg$",re.I)
+    for p in fs:
+        m=pt.search(p.name)
+        if not m: continue
+        ix=int(m.group(1))
+        if not 1<=ix<=1360:
+            raise RuntimeError(f"Bad index: {p.name}")
+        li=(ix-1)//80
+        wi=(ix-1)%80
+        # if ix <= 3: print(f"[标记-A] {p.name} -> 标签 {li}")
+        rs.append(Im(p=p,idx=ix,li=li,l=lb[li],wi=wi))
+    if len(rs)!=1360:
+        raise RuntimeError(f"Expected 1360,got {len(rs)}")
+    return sorted(rs,key=lambda x:x.idx)
 
+def fenge(e):
+    tr=[x for x in e if x.wi<60]
+    test=[x for x in e if x.wi>=60]
+    # print(f"[调试-SPLIT] 训练={len(tr)} 测试={len(test)}")
+    return tr,test
 
-def image_dir(data_dir: Path) -> Path:
-    jpg_dir = data_dir / "jpg"
-    return jpg_dir if jpg_dir.exists() else data_dir
+def rgb(p,ms):
+    with Image.open(p) as img:
+        img=img.convert("RGB")
+        sc=min(1.0,ms/max(img.size))
+        if sc<1.0:
+            w=max(1,round(img.width*sc))
+            h=max(1,round(img.height*sc))
+            img=img.resize((w,h),Image.Resampling.BILINEAR)
+        a=np.asarray(img,dtype=np.float32)/255.0
+    return a
 
+def px(a,x,y):
+    H,W,_=a.shape
+    px=int(np.clip(round(x),0,W-1))
+    py=int(np.clip(round(y),0,H-1))
+    r,g,b=a[py,px]
+    lu=0.299*r+0.587*g+0.114*b
+    return float(r),float(g),float(b),float(lu)
 
-def load_index(data_dir: Path) -> list[FlowerImage]:
-    directory = image_dir(data_dir)
-    files = sorted(directory.glob("image_*.jpg"))
-    if len(files) != 1360:
-        raise RuntimeError(f"Expected 1360 Oxford 17 Flowers images, found {len(files)} in {directory}")
+def patch_desc(a,x,y,pr):
+    #补丁描述
+    H,W,_=a.shape
+    st=max(1,round(pr/3))
+    off=np.arange(-pr,pr+1,st,dtype=np.float32)
+    gx,gy=np.meshgrid(off,off)
+    xs=np.clip(np.rint(x+gx.ravel()).astype(np.int32),0,W-1)
+    ys=np.clip(np.rint(y+gy.ravel()).astype(np.int32),0,H-1)
+    ps=a[ys,xs]
+    rv=ps[:,0]
+    gv=ps[:,1]
+    bv=ps[:,2]
+    lv=0.299*rv+0.587*gv+0.114*bv
+    lx=np.clip(xs-1,0,W-1)
+    rx=np.clip(xs+1,0,W-1)
+    uy=np.clip(ys-1,0,H-1)
+    dy=np.clip(ys+1,0,H-1)
+    L=0.299*a[ys,lx,0]+0.587*a[ys,lx,1]+0.114*a[ys,lx,2]
+    R=0.299*a[ys,rx,0]+0.587*a[ys,rx,1]+0.114*a[ys,rx,2]
+    U=0.299*a[uy,xs,0]+0.587*a[uy,xs,1]+0.114*a[uy,xs,2]
+    D=0.299*a[dy,xs,0]+0.587*a[dy,xs,1]+0.114*a[dy,xs,2]
+    gx2=R-L
+    gy2=D-U
+    n=max(1,len(lv))
+    m=float(lv.mean())
+    v=float(((lv-m)**2).mean())
+    rs=float(rv.sum())
+    gs=float(gv.sum())
+    bs=float(bv.sum())
+    gr=float(np.sqrt(gx2*gx2+gy2*gy2).sum())
+    vx=float(np.abs(gx2).sum())
+    vy=float(np.abs(gy2).sum())
+    cf=(max(rs,gs,bs)-min(rs,gs,bs))/n
+    return np.array([
+        np.clip(m,0,1),
+        np.clip(math.sqrt(v)*2.4,0,1),
+        np.clip((gr/n)*3.2,0,1),
+        np.clip(vx/max(0.001,vx+vy),0,1),
+        np.clip(rs/n,0,1),
+        np.clip(gs/n,0,1),
+        np.clip(bs/n,0,1),
+        np.clip(cf*2.2,0,1),
+    ],dtype=np.float32)
 
-    entries: list[FlowerImage] = []
-    pattern = re.compile(r"image_(\d{4})\.jpg$", re.IGNORECASE)
-    for path in files:
-        match = pattern.search(path.name)
-        if not match:
-            continue
-        image_index = int(match.group(1))
-        if not 1 <= image_index <= 1360:
-            raise RuntimeError(f"Image index out of range: {path.name}")
-        label_index = (image_index - 1) // 80
-        within_class_index = (image_index - 1) % 80
-        entries.append(
-            FlowerImage(
-                path=path,
-                index=image_index,
-                label_index=label_index,
-                label=LABELS[label_index],
-                within_class_index=within_class_index,
-            )
-        )
-    if len(entries) != 1360:
-        raise RuntimeError(f"Expected 1360 parseable image_####.jpg files, found {len(entries)}")
-    return sorted(entries, key=lambda item: item.index)
+def liangdu(a):
+    return 0.299*a[:,:,0]+0.587*a[:,:,1]+0.114*a[:,:,2]
 
-
-def split_entries(entries: list[FlowerImage]) -> tuple[list[FlowerImage], list[FlowerImage]]:
-    train = [item for item in entries if item.within_class_index < 60]
-    test = [item for item in entries if item.within_class_index >= 60]
-    return train, test
-
-
-def load_rgb(path: Path, max_side: int) -> np.ndarray:
-    with Image.open(path) as image:
-        image = image.convert("RGB")
-        scale = min(1.0, max_side / max(image.size))
-        if scale < 1.0:
-            width = max(1, round(image.width * scale))
-            height = max(1, round(image.height * scale))
-            image = image.resize((width, height), Image.Resampling.BILINEAR)
-        array = np.asarray(image, dtype=np.float32) / 255.0
-    return array
-
-
-def read_pixel(rgb: np.ndarray, x: float, y: float) -> tuple[float, float, float, float]:
-    height, width, _ = rgb.shape
-    px = int(np.clip(round(x), 0, width - 1))
-    py = int(np.clip(round(y), 0, height - 1))
-    r, g, b = rgb[py, px]
-    luma = (0.299 * r) + (0.587 * g) + (0.114 * b)
-    return float(r), float(g), float(b), float(luma)
-
-
-def patch_descriptor(rgb: np.ndarray, px: float, py: float, patch_radius: int) -> np.ndarray:
-    height, width, _ = rgb.shape
-    step = max(1, round(patch_radius / 3))
-    offsets = np.arange(-patch_radius, patch_radius + 1, step, dtype=np.float32)
-    grid_x, grid_y = np.meshgrid(offsets, offsets)
-    xs = np.clip(np.rint(px + grid_x.ravel()).astype(np.int32), 0, width - 1)
-    ys = np.clip(np.rint(py + grid_y.ravel()).astype(np.int32), 0, height - 1)
-
-    pixels = rgb[ys, xs]
-    r_values = pixels[:, 0]
-    g_values = pixels[:, 1]
-    b_values = pixels[:, 2]
-    luma_values = (0.299 * r_values) + (0.587 * g_values) + (0.114 * b_values)
-
-    left_xs = np.clip(xs - 1, 0, width - 1)
-    right_xs = np.clip(xs + 1, 0, width - 1)
-    up_ys = np.clip(ys - 1, 0, height - 1)
-    down_ys = np.clip(ys + 1, 0, height - 1)
-    left = (0.299 * rgb[ys, left_xs, 0]) + (0.587 * rgb[ys, left_xs, 1]) + (0.114 * rgb[ys, left_xs, 2])
-    right = (0.299 * rgb[ys, right_xs, 0]) + (0.587 * rgb[ys, right_xs, 1]) + (0.114 * rgb[ys, right_xs, 2])
-    up = (0.299 * rgb[up_ys, xs, 0]) + (0.587 * rgb[up_ys, xs, 1]) + (0.114 * rgb[up_ys, xs, 2])
-    down = (0.299 * rgb[down_ys, xs, 0]) + (0.587 * rgb[down_ys, xs, 1]) + (0.114 * rgb[down_ys, xs, 2])
-    gx = right - left
-    gy = down - up
-
-    sample_count = max(1, len(luma_values))
-    mean = float(luma_values.mean())
-    variance = float(((luma_values - mean) ** 2).mean())
-    r_sum = float(r_values.sum())
-    g_sum = float(g_values.sum())
-    b_sum = float(b_values.sum())
-    grad_sum = float(np.sqrt((gx * gx) + (gy * gy)).sum())
-    vertical_sum = float(np.abs(gx).sum())
-    horizontal_sum = float(np.abs(gy).sum())
-    colorfulness = (max(r_sum, g_sum, b_sum) - min(r_sum, g_sum, b_sum)) / sample_count
-    descriptor = np.array(
-        [
-            np.clip(mean, 0, 1),
-            np.clip(math.sqrt(variance) * 2.4, 0, 1),
-            np.clip((grad_sum / sample_count) * 3.2, 0, 1),
-            np.clip(vertical_sum / max(0.001, vertical_sum + horizontal_sum), 0, 1),
-            np.clip(r_sum / sample_count, 0, 1),
-            np.clip(g_sum / sample_count, 0, 1),
-            np.clip(b_sum / sample_count, 0, 1),
-            np.clip(colorfulness * 2.2, 0, 1),
-        ],
-        dtype=np.float32,
-    )
-    return descriptor
-
-
-def luma_image(rgb: np.ndarray) -> np.ndarray:
-    return (0.299 * rgb[:, :, 0]) + (0.587 * rgb[:, :, 1]) + (0.114 * rgb[:, :, 2])
-
-
-def sample_patch_points(rgb: np.ndarray, count: int, rng: np.random.Generator) -> list[tuple[float, float]]:
-    height, width, _ = rgb.shape
-    radius = max(4, round(min(width, height) * 0.018))
-    stride = max(8, round(min(width, height) / 16))
-    luma = luma_image(rgb)
-    gy, gx = np.gradient(luma)
-    magnitude = np.sqrt((gx * gx) + (gy * gy))
-
-    candidates: list[tuple[float, float, float]] = []
-    for y in range(radius, max(radius + 1, height - radius), stride):
-        for x in range(radius, max(radius + 1, width - radius), stride):
-            y0 = max(0, y - radius)
-            y1 = min(height, y + radius + 1)
-            x0 = max(0, x - radius)
-            x1 = min(width, x + radius + 1)
-            candidates.append((float(magnitude[y0:y1, x0:x1].mean()), float(x), float(y)))
-    candidates.sort(reverse=True, key=lambda item: item[0])
-
-    strong_count = min(len(candidates), round(count * 0.72))
-    points = [(x, y) for _, x, y in candidates[:strong_count]]
-    remaining = count - len(points)
-    if remaining > 0:
-        if candidates:
-            pool = np.array([(x, y) for _, x, y in candidates], dtype=np.float32)
-            choices = rng.choice(len(pool), size=remaining, replace=len(pool) < remaining)
-            points.extend((float(pool[i, 0]), float(pool[i, 1])) for i in choices)
+def sample_points(a,c,rng):
+    H,W,_=a.shape
+    r=max(4,round(min(W,H)*0.018))
+    st=max(8,round(min(W,H)/16))
+    l=liangdu(a)
+    gy,gx=np.gradient(l)
+    mg=np.sqrt(gx*gx+gy*gy)
+    cd=[]
+    for y in range(r,max(r+1,H-r),st):
+        for x in range(r,max(r+1,W-r),st):
+            y0=max(0,y-r)
+            y1=min(H,y+r+1)
+            x0=max(0,x-r)
+            x1=min(W,x+r+1)
+            cd.append((float(mg[y0:y1,x0:x1].mean()),float(x),float(y)))
+    cd.sort(reverse=True,key=lambda x:x[0])
+    sc=min(len(cd),round(c*0.72))
+    rs=[(x,y) for _,x,y in cd[:sc]]
+    rm=c-len(rs)
+    if rm>0:
+        if cd:
+            pl=np.array([(x,y) for _,x,y in cd],dtype=np.float32)
+            ch=rng.choice(len(pl),size=rm,replace=len(pl)<rm)
+            rs.extend((float(pl[i,0]),float(pl[i,1])) for i in ch)
         else:
-            points.extend(
-                (
-                    float(rng.integers(radius, max(radius + 1, width - radius))),
-                    float(rng.integers(radius, max(radius + 1, height - radius))),
-                )
-                for _ in range(remaining)
-            )
-    return points[:count]
+            rs.extend((float(rng.integers(r,max(r+1,W-r))),float(rng.integers(r,max(r+1,H-r)))) for _ in range(rm))
+    return rs[:c]
 
+def get_fd(e,ms,ppi,rng):
+    a=rgb(e.p,ms)
+    H,W,_=a.shape
+    r=max(4,round(min(W,H)*0.018))
+    ps=sample_points(a,ppi,rng)
+    return np.vstack([patch_desc(a,x,y,r) for x,y in ps])
 
-def image_descriptors(entry: FlowerImage, max_side: int, patches_per_image: int, rng: np.random.Generator) -> np.ndarray:
-    rgb = load_rgb(entry.path, max_side)
-    height, width, _ = rgb.shape
-    radius = max(4, round(min(width, height) * 0.018))
-    points = sample_patch_points(rgb, patches_per_image, rng)
-    return np.vstack([patch_descriptor(rgb, x, y, radius) for x, y in points])
+def hst(km,ds,vs):
+    w=km.predict(ds)
+    h=np.bincount(w,minlength=vs).astype(np.float32)
+    s=h.sum()
+    if s>0: h/=s
+    return np.sqrt(h)
 
+def jisuangeshu(e,km,ms,ppi,rs):
+    hs=[]
+    labels=[]
+    for x in e:
+        rng=np.random.default_rng(rs+x.idx)
+        ds=get_fd(x,ms,ppi,rng)
+        hs.append(hst(km,ds,len(km.cluster_centers_)))
+        labels.append(x.li)
+    return np.vstack(hs),np.asarray(labels,dtype=np.int64)
 
-def histogram_for_descriptors(kmeans: MiniBatchKMeans, descriptors: np.ndarray, vocab_size: int) -> np.ndarray:
-    words = kmeans.predict(descriptors)
-    hist = np.bincount(words, minlength=vocab_size).astype(np.float32)
-    total = hist.sum()
-    if total > 0:
-        hist /= total
-    return np.sqrt(hist)
+def rnd(v,d=6):
+    return np.round(v.astype(np.float64),d).tolist()
 
+def copy_samples(e,sd,so):
+    sd.mkdir(parents=True,exist_ok=True)
+    si=[]
+    for i,l in enumerate(lb):
+        le=[x for x in e if x.li==i][:2]
+        for j,x in enumerate(le,start=1):
+            fn=f"{l}_{j:02d}.jpg"
+            tg=sd/fn
+            shutil.copy2(x.p,tg)
+            with Image.open(x.p) as img:
+                W,H=img.size
+            si.append({
+                "id": f"flower_{l}_{j:02d}",
+                "name": f"{l.replace('_',' ').title()} · sample {j:02d}",
+                "image": f"/static/assets/img/flowers17/{fn}",
+                "label": l,
+                "width": W,
+                "height": H,
+                "source": "Oxford 17 Category Flower Dataset",
+            })
+    so.parent.mkdir(parents=True,exist_ok=True)
+    so.write_text(json.dumps({
+        "defaultSample": "flower_daffodil_01",
+        "task": "flowers17_bovw_classification",
+        "engine": "trained_frontend_bovw",
+        "samples": si,
+    },ensure_ascii=False,indent=2),encoding="utf-8")
 
-def build_histograms(
-    entries: list[FlowerImage],
-    kmeans: MiniBatchKMeans,
-    max_side: int,
-    patches_per_image: int,
-    random_state: int,
-) -> tuple[np.ndarray, np.ndarray]:
-    histograms = []
-    labels = []
-    for entry in entries:
-        rng = np.random.default_rng(random_state + entry.index)
-        descriptors = image_descriptors(entry, max_side, patches_per_image, rng)
-        histograms.append(histogram_for_descriptors(kmeans, descriptors, len(kmeans.cluster_centers_)))
-        labels.append(entry.label_index)
-    return np.vstack(histograms), np.asarray(labels, dtype=np.int64)
+def main():
+    rt=Path(r"F:\projects\CVClass")
+    data_dir=rt/"models"/"data"/"17flowers"
+    model_out=rt/"static"/"assets"/"data"/"vision_tasks"/"classification_lab"/"bovw_flowers17_model.json"
+    samples_out=rt/"static"/"assets"/"data"/"vision_tasks"/"classification_lab"/"flowers17_samples.json"
+    sample_img_dir=rt/"static"/"assets"/"img"/"flowers17"
+    vocab_size=128
+    max_side=320
+    ppi=128
+    rs=42
 
+    e=ld(data_dir)
+    tr,te=fenge(e)
+    print(f"Loaded {len(e)} images: {len(tr)} train,{len(te)} test")
 
-def round_nested(values: np.ndarray, digits: int = 6) -> list:
-    return np.round(values.astype(np.float64), digits).tolist()
+    rng=np.random.default_rng(rs)
+    db=[]
+    for x in tr:
+        db.append(get_fd(x,max_side,ppi,rng))
+    td=np.vstack(db)
+    print(f"Training codebook on {len(td)} descriptors")
 
-
-def copy_samples(entries: list[FlowerImage], sample_img_dir: Path, samples_out: Path) -> None:
-    sample_img_dir.mkdir(parents=True, exist_ok=True)
-    sample_items = []
-    for label_index, label in enumerate(LABELS):
-        label_entries = [item for item in entries if item.label_index == label_index][:2]
-        for sample_index, entry in enumerate(label_entries, start=1):
-            filename = f"{label}_{sample_index:02d}.jpg"
-            target = sample_img_dir / filename
-            shutil.copy2(entry.path, target)
-            with Image.open(entry.path) as image:
-                width, height = image.size
-            sample_items.append(
-                {
-                    "id": f"flower_{label}_{sample_index:02d}",
-                    "name": f"{label.replace('_', ' ').title()} · sample {sample_index:02d}",
-                    "image": f"/static/assets/img/flowers17/{filename}",
-                    "label": label,
-                    "width": width,
-                    "height": height,
-                    "source": "Oxford 17 Category Flower Dataset",
-                }
-            )
-
-    samples_out.parent.mkdir(parents=True, exist_ok=True)
-    samples_out.write_text(
-        json.dumps(
-            {
-                "defaultSample": "flower_daffodil_01",
-                "task": "flowers17_bovw_classification",
-                "engine": "trained_frontend_bovw",
-                "samples": sample_items,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
-
-def main() -> None:
-    args = parse_args()
-    entries = load_index(args.data_dir)
-    train_entries, test_entries = split_entries(entries)
-    print(f"Loaded {len(entries)} images: {len(train_entries)} train, {len(test_entries)} test")
-
-    rng = np.random.default_rng(args.random_state)
-    descriptor_batches = []
-    for entry in train_entries:
-        descriptor_batches.append(image_descriptors(entry, args.max_side, args.patches_per_image, rng))
-    train_descriptors = np.vstack(descriptor_batches)
-    print(f"Training codebook on {len(train_descriptors)} patch descriptors")
-
-    kmeans = MiniBatchKMeans(
-        n_clusters=args.vocab_size,
-        random_state=args.random_state,
+    km=MiniBatchKMeans(
+        n_clusters=vocab_size,
+        random_state=rs,
         batch_size=4096,
         n_init=3,
         max_iter=240,
         reassignment_ratio=0.01,
         verbose=0,
     )
-    kmeans.fit(train_descriptors)
+    km.fit(td)
+    # print("KMEANS聚类完成")
 
-    x_train, y_train = build_histograms(train_entries, kmeans, args.max_side, args.patches_per_image, args.random_state)
-    x_test, y_test = build_histograms(test_entries, kmeans, args.max_side, args.patches_per_image, args.random_state)
+    xt,yt=jisuangeshu(tr,km,max_side,ppi,rs)
+    xe,ye=jisuangeshu(te,km,max_side,ppi,rs)
 
-    classifier = LogisticRegression(
+    clf=LogisticRegression(
         multi_class="auto",
         max_iter=1500,
         class_weight="balanced",
         solver="lbfgs",
         C=3.0,
-        random_state=args.random_state,
+        random_state=rs,
     )
-    classifier.fit(x_train, y_train)
+    clf.fit(xt,yt)
 
-    train_pred = classifier.predict(x_train)
-    test_pred = classifier.predict(x_test)
-    test_scores = classifier.predict_proba(x_test)
-    train_accuracy = float(accuracy_score(y_train, train_pred))
-    test_accuracy = float(accuracy_score(y_test, test_pred))
-    top3_accuracy = float(top_k_accuracy_score(y_test, test_scores, k=3, labels=np.arange(len(LABELS))))
+    ptr=clf.predict(xt)
+    pte=clf.predict(xe)
+    sc=clf.predict_proba(xe)
+    atr=float(accuracy_score(yt,ptr))
+    ate=float(accuracy_score(ye,pte))
+    t3=float(top_k_accuracy_score(ye,sc,k=3,labels=np.arange(len(lb))))
 
-    args.model_out.parent.mkdir(parents=True, exist_ok=True)
-    model = {
+    model_out.parent.mkdir(parents=True,exist_ok=True)
+    md={
         "model_type": "frontend_bovw_patch",
         "dataset": "Oxford 17 Category Flower Dataset",
         "descriptor": {
@@ -344,35 +270,36 @@ def main() -> None:
             "dimension": 8,
             "compatible_with": "classification_lab.patchDescriptor",
         },
-        "vocab_size": args.vocab_size,
-        "codebook": round_nested(kmeans.cluster_centers_),
+        "vocab_size": vocab_size,
+        "codebook": rnd(km.cluster_centers_),
         "histogram": {"normalization": "l1_sqrt"},
-        "labels": LABELS,
+        "labels": lb,
         "classifier": {
             "type": "logistic_regression",
-            "weights": round_nested(classifier.coef_),
-            "bias": round_nested(classifier.intercept_),
+            "weights": rnd(clf.coef_),
+            "bias": rnd(clf.intercept_),
         },
         "metrics": {
-            "train_accuracy": round(train_accuracy, 6),
-            "test_accuracy": round(test_accuracy, 6),
-            "top3_accuracy": round(top3_accuracy, 6),
-            "train_count": len(train_entries),
-            "test_count": len(test_entries),
-            "patches_per_image": args.patches_per_image,
+            "train_accuracy": round(atr,6),
+            "test_accuracy": round(ate,6),
+            "top3_accuracy": round(t3,6),
+            "train_count": len(tr),
+            "test_count": len(te),
+            "patches_per_image": ppi,
             "split": "per_class_first_60_train_last_20_test",
-            "random_state": args.random_state,
+            "random_state": rs,
         },
     }
-    args.model_out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    copy_samples(entries, args.sample_img_dir, args.samples_out)
+    model_out.write_text(json.dumps(md,ensure_ascii=False,indent=2),encoding="utf-8")
+    copy_samples(e,sample_img_dir,samples_out)
+    #print(f"ok")
 
-    print(f"Saved model: {args.model_out}")
-    print(f"Saved samples: {args.samples_out}")
-    print(f"Copied sample images: {args.sample_img_dir}")
-    print(f"train_accuracy={train_accuracy:.4f}")
-    print(f"test_accuracy={test_accuracy:.4f}")
-    print(f"top3_accuracy={top3_accuracy:.4f}")
+    print(f"Saved model: {model_out}")
+    print(f"Saved samples: {samples_out}")
+    print(f"Copied sample images: {sample_img_dir}")
+    print(f"train_accuracy={atr:.4f}")
+    print(f"test_accuracy={ate:.4f}")
+    print(f"top3_accuracy={t3:.4f}")
 
 
 if __name__ == "__main__":
