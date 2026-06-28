@@ -9,9 +9,9 @@
 {% if active_sub_page == 'skeleton' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/skeleton.css') }}?v=20260627-vector1">
 {% elif active_sub_page == 'mechanism' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/mechanism.css') }}?v=20260627-csssplit1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/mechanism.css') }}?v=20260628-mechanism-cn1">
 {% elif active_sub_page == 'action' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/action.css') }}?v=20260627-csssplit1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/action.css') }}?v=20260628-video1">
 {% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/responsive.css') }}?v=20260627-csssplit1">
 {% endblock %}
@@ -21,8 +21,8 @@
     <header class="vision-hero station-hero human-pose-hero">
         <div>
             <span class="section-label station-eyebrow">{{ human_pose_eyebrow }}</span>
-            <h1 class="station-title">{{ human_pose_title }}</h1>
-            <p class="station-summary">{{ human_pose_subtitle }}</p>
+            <h1 class="station-title">{{ human_pose_title }} · {{ human_pose_page_title }}</h1>
+            <p class="station-summary">{{ human_pose_page_subtitle }}</p>
         </div>
         <div class="station-hero-actions human-pose-hero-actions">
             <span class="human-pose-state">{{ human_pose_status }}</span>
@@ -36,14 +36,6 @@
         {% endfor %}
     </nav>
 
-    <section class="human-pose-page-title" aria-labelledby="humanPosePageTitle">
-        <div>
-            <span>Human Visual Understanding</span>
-            <h2 id="humanPosePageTitle">{{ human_pose_page_title }}</h2>
-        </div>
-        <p>{{ human_pose_page_subtitle }}</p>
-    </section>
-
     {% block human_pose_content %}{% endblock %}
 </div>
 {% endblock %}
@@ -53,8 +45,8 @@
 {% if active_sub_page == 'skeleton' %}
 <script src="{{ url_for('static', filename='js/human_pose/skeleton.js') }}?v=20260627-worker6"></script>
 {% elif active_sub_page == 'mechanism' %}
-<script src="{{ url_for('static', filename='js/human_pose/mechanism.js') }}?v=20260627-keypoint2"></script>
+<script src="{{ url_for('static', filename='js/human_pose/mechanism.js') }}?v=20260628-mechanism-cn1"></script>
 {% elif active_sub_page == 'action' %}
-<script src="{{ url_for('static', filename='js/human_pose/action.js') }}?v=20260627-keypoint2"></script>
+<script src="{{ url_for('static', filename='js/human_pose/action.js') }}?v=20260628-video1"></script>
 {% endif %}
 {% endblock %}

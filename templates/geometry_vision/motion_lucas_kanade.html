@@ -1,0 +1,196 @@
+{% extends "geometry_vision/motion_base.html" %}
+
+{% block motion_content %}
+<section class="vision-workbench motion-workbench motion-lk-workbench" data-motion-lk aria-label="Lucas-Kanade 光流工作台">
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>局部窗口参数</h3><p>Lucas-Kanade</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-motion-lk-input="sample">
+                <option value="corner" selected>角点追踪</option>
+                <option value="edge">边缘区域</option>
+                <option value="flat">平坦区域</option>
+                <option value="texture">纹理区域</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>窗口大小</span>
+            <select data-motion-lk-input="windowSize">
+                <option value="3">3x3</option>
+                <option value="5" selected>5x5</option>
+                <option value="7">7x7</option>
+                <option value="9">9x9</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>迭代次数 <output data-motion-lk-output="iterations">3</output></span>
+            <input type="range" min="1" max="6" step="1" value="3" data-motion-lk-input="iterations">
+        </label>
+        <label class="vision-field">
+            <span>特征点选择</span>
+            <select data-motion-lk-input="featureMode">
+                <option value="manual" selected>手动点</option>
+                <option value="auto">自动角点</option>
+            </select>
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示窗口</span><input type="checkbox" data-motion-lk-input="showWindow" checked></label>
+            <label class="vision-toggle-row"><span>显示梯度矩阵 A</span><input type="checkbox" data-motion-lk-input="showA" checked></label>
+            <label class="vision-toggle-row"><span>显示 b 向量</span><input type="checkbox" data-motion-lk-input="showB" checked></label>
+            <label class="vision-toggle-row"><span>显示最小二乘解</span><input type="checkbox" data-motion-lk-input="showSolution" checked></label>
+            <label class="vision-toggle-row"><span>显示置信度 / 可跟踪性</span><input type="checkbox" data-motion-lk-input="showConfidence" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-motion-step-select="lk">
+                <option value="feature">特征点 / Select Feature</option>
+                <option value="window">局部窗口 / Local Window</option>
+                <option value="gradients">矩阵构建 / Gradients</option>
+                <option value="leastSquares">最小二乘 / Least Squares</option>
+                <option value="vector">光流向量 / Flow Vector</option>
+                <option value="confidence">可跟踪性 / Confidence</option>
+            </select>
+        </label>
+
+        <div class="motion-button-row">
+            <button type="button" data-motion-prev="lk">上一步</button>
+            <button type="button" data-motion-next="lk">下一步</button>
+            <button type="button" data-motion-play="lk">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>窗口像素</span><strong data-motion-lk-summary="pixels">25</strong></div>
+            <div><span>方程数量</span><strong data-motion-lk-summary="rows">25 rows</strong></div>
+            <div><span>估计光流</span><strong data-motion-lk-summary="flow">--</strong></div>
+            <div><span>可跟踪性</span><strong data-motion-lk-summary="quality">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>LUCAS-KANADE FLOW PLAYGROUND</span>
+                <h3 data-motion-lk-title>局部窗口约束合并为光流向量</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-lk-chip="step">特征点 / Select Feature</span>
+                <span data-motion-lk-chip="window">5x5 window</span>
+                <span data-motion-lk-chip="condition">stable corner</span>
+            </div>
+        </div>
+
+        <div class="motion-lk-stage-grid">
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>局部窗口与两帧匹配</strong>
+                    <span>feature point + patch</span>
+                </div>
+                <div class="motion-svg-frame motion-lk-image-stage" data-motion-lk-frames></div>
+            </section>
+
+            <section class="motion-solve-panel">
+                <div class="geometry-section-head">
+                    <strong>矩阵求解</strong>
+                    <span>\(\mathbf A\mathbf v=\mathbf b,\ \mathbf A^\mathsf{T}\mathbf A\mathbf v=\mathbf A^\mathsf{T}\mathbf b\)</span>
+                </div>
+                <div class="motion-equation-grid">
+                    <article class="motion-matrix-card" data-motion-lk-matrix-card="a">
+                        <span>A matrix</span>
+                        <code data-motion-lk-matrix="a">--</code>
+                    </article>
+                    <article class="motion-matrix-card" data-motion-lk-matrix-card="b">
+                        <span>b vector</span>
+                        <code data-motion-lk-matrix="b">--</code>
+                    </article>
+                    <article class="motion-matrix-card" data-motion-lk-matrix-card="normal">
+                        <span>Normal Equation</span>
+                        <div class="motion-math-output motion-math-output--matrix" data-motion-lk-matrix="normal">\(\mathbf A^\mathsf{T}\mathbf A\mathbf v=\mathbf A^\mathsf{T}\mathbf b\)</div>
+                    </article>
+                    <article class="motion-matrix-card motion-row-card" data-motion-lk-matrix-card="row">
+                        <span>Active Row</span>
+                        <div class="motion-math-output" data-motion-lk-active-row>\(\text{row --}: [I_x,I_y]\mathbf v=-I_t\)</div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="motion-result-panel">
+                <div class="geometry-section-head">
+                    <strong>结果向量与可跟踪性</strong>
+                    <span>flow + confidence</span>
+                </div>
+                <div class="motion-svg-frame motion-lk-result" data-motion-lk-result></div>
+            </section>
+        </div>
+
+        <div class="motion-flow-preview motion-lk-flow-preview" data-motion-lk-preview aria-label="Lucas-Kanade 步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-motion-lk-notes-title>Local Window</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>局部窗口 / Local Window</span>
+            <strong>\(I_xu + I_yv = -I_t\)</strong>
+            <small data-motion-lk-single-equation>\(0.00u + 0.00v = 0.00\)</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>最小二乘 / Least Squares</span>
+            <strong>\(\mathbf A^\mathsf{T}\mathbf A\mathbf v=\mathbf A^\mathsf{T}\mathbf b\)</strong>
+            <small data-motion-lk-formula-note>角点区域让 A^T A 在两个方向都有足够约束。</small>
+        </div>
+
+        <div class="motion-trackability-card" data-motion-lk-trackability>
+            <span>可跟踪性 / Confidence</span>
+            <div class="motion-eigen-row"><strong>λ1</strong><div><i data-motion-lk-eigen-fill="l1"></i></div><em data-motion-lk-eigen="l1">--</em></div>
+            <div class="motion-eigen-row"><strong>λ2</strong><div><i data-motion-lk-eigen-fill="l2"></i></div><em data-motion-lk-eigen="l2">--</em></div>
+            <div class="motion-confidence-readout">
+                <strong data-motion-lk-confidence-label>stable corner</strong>
+                <small data-motion-lk-confidence-note>两个方向梯度都明显，稳定可跟踪。</small>
+            </div>
+        </div>
+
+        <div class="motion-reference-card motion-assumption-card">
+            <span>Lucas-Kanade 假设</span>
+            <article><strong>亮度恒定</strong><small>同一物理点在相邻帧中亮度近似不变。</small></article>
+            <article><strong>两帧小运动</strong><small>位移足够小，一阶泰勒展开才有效。</small></article>
+            <article><strong>邻域流相似</strong><small>一个窗口内的相邻像素共享同一运动向量。</small></article>
+        </div>
+
+        <div class="motion-code-card">
+            <span>OpenCV 对照</span>
+            <code>cv2.calcOpticalFlowPyrLK(
+    prevImg, nextImg, prevPts, None,
+    winSize=(15,15), maxLevel=2,
+    criteria=(EPS | COUNT, 10, 0.03)
+)</code>
+            <small>goodFeaturesToTrack 常用于先找角点，PyrLK 再输出 nextPts、status 和 err。</small>
+        </div>
+
+        <div class="motion-notes-body" data-motion-lk-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前解</span>
+            <div class="motion-math-output" data-motion-lk-solution>\(\mathbf v=[--,--]^\mathsf{T}\)</div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper motion-stepper motion-stepper--6" aria-label="Lucas-Kanade 光流流程" data-motion-stepper="lk">
+    <li class="is-active" data-motion-phase="feature"><span>1</span><div><strong>特征点</strong><small>Select Feature</small></div></li>
+    <li data-motion-phase="window"><span>2</span><div><strong>局部窗口</strong><small>Local Window</small></div></li>
+    <li data-motion-phase="gradients"><span>3</span><div><strong>矩阵构建</strong><small>A and b rows</small></div></li>
+    <li data-motion-phase="leastSquares"><span>4</span><div><strong>最小二乘</strong><small>Least Squares</small></div></li>
+    <li data-motion-phase="vector"><span>5</span><div><strong>光流向量</strong><small>Flow Vector</small></div></li>
+    <li data-motion-phase="confidence"><span>6</span><div><strong>可跟踪性</strong><small>Confidence</small></div></li>
+</ol>
+{% endblock %}

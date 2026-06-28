@@ -59,7 +59,6 @@
             <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
             <a class="{{ 'active' if active_page == 'learning_path' else '' }}" href="{{ url_for('learning_path_page') }}">完整学习路径</a>
             <a class="{{ 'active' if active_page == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">CV 算法知识图谱</a>
-            <a class="{{ 'active' if active_page == 'author' else '' }}" href="{{ url_for('author_page') }}">关于作者</a>
 
             <div class="sidebar-category">基础视觉</div>
             <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础</a>
@@ -129,9 +128,38 @@
                 <a class="{{ 'active' if active_page == 'human_pose' and active_sub_page|default('') == 'action' else '' }}" href="{{ url_for('human_pose_action_page') }}">动作识别</a>
             </div>
 
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="{{ 'active' if active_page == 'geometry_vision' else '' }}" href="{{ url_for('camera_geometry_page') }}">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="{{ 'active' if active_page == 'geometry_vision' and active_sub_page|default('') == 'model' else '' }}" href="{{ url_for('camera_geometry_model_page') }}">相机成像模型</a>
+                <a class="{{ 'active' if active_page == 'geometry_vision' and active_sub_page|default('') == 'projection' else '' }}" href="{{ url_for('camera_projection_matrix_page') }}">内外参与投影矩阵</a>
+                <a class="{{ 'active' if active_page == 'geometry_vision' and active_sub_page|default('') == 'calibration' else '' }}" href="{{ url_for('camera_calibration_page') }}">棋盘格标定实验</a>
+            </div>
+            <a class="{{ 'active' if active_page == 'motion_estimation' else '' }}" href="{{ url_for('motion_estimation_page') }}">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="{{ 'active' if active_page == 'motion_estimation' and active_sub_page|default('') == 'constraint' else '' }}" href="{{ url_for('motion_flow_constraint_page') }}">运动场与光流约束</a>
+                <a class="{{ 'active' if active_page == 'motion_estimation' and active_sub_page|default('') == 'lucas_kanade' else '' }}" href="{{ url_for('motion_lucas_kanade_page') }}">Lucas-Kanade 光流</a>
+                <a class="{{ 'active' if active_page == 'motion_estimation' and active_sub_page|default('') == 'pyramid' else '' }}" href="{{ url_for('motion_pyramid_tracking_page') }}">金字塔光流与运动追踪</a>
+                <a class="{{ 'active' if active_page == 'motion_estimation' and active_sub_page|default('') == 'real_flow' else '' }}" href="{{ url_for('motion_real_flow_page') }}">真实视频光流</a>
+            </div>
+            <a class="{{ 'active' if active_page == 'stereo_depth' else '' }}" href="{{ url_for('stereo_depth_page') }}">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="{{ 'active' if active_page == 'stereo_depth' and active_sub_page|default('') == 'parallel' else '' }}" href="{{ url_for('stereo_depth_parallel_page') }}">平行双目与极线约束</a>
+                <a class="{{ 'active' if active_page == 'stereo_depth' and active_sub_page|default('') == 'disparity' else '' }}" href="{{ url_for('stereo_depth_disparity_page') }}">视差与深度三角关系</a>
+                <a class="{{ 'active' if active_page == 'stereo_depth' and active_sub_page|default('') == 'block_matching' else '' }}" href="{{ url_for('stereo_depth_block_matching_page') }}">块匹配与视差图</a>
+            </div>
+            <a class="{{ 'active' if active_page == 'multiview_reconstruction' else '' }}" href="{{ url_for('multiview_reconstruction_page') }}">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="{{ 'active' if active_page == 'multiview_reconstruction' and active_sub_page|default('') == 'epipolar' else '' }}" href="{{ url_for('multiview_epipolar_geometry_page') }}">对极几何与基础矩阵</a>
+                <a class="{{ 'active' if active_page == 'multiview_reconstruction' and active_sub_page|default('') == 'pose' else '' }}" href="{{ url_for('multiview_essential_pose_page') }}">本质矩阵与相机位姿</a>
+                <a class="{{ 'active' if active_page == 'multiview_reconstruction' and active_sub_page|default('') == 'triangulation' else '' }}" href="{{ url_for('multiview_triangulation_page') }}">三角测量与稀疏点云</a>
+            </div>
+
             <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
                 <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">前沿总览</a>
+                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'vit' else '' }}" href="{{ url_for('frontier_vit_page') }}">ViT / Transformer</a>
+                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'dino' else '' }}" href="{{ url_for('frontier_dino_page') }}">DINO 自监督表征</a>
                 <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'vision_banana' else '' }}" href="{{ url_for('vision_banana_page') }}">Vision Banana 案例</a>
             </div>
         </nav>

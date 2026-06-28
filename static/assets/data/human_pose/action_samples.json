@@ -1,6 +1,6 @@
 {
   "pageStatus": "真实推理 · 本地姿态序列分类器",
-  "modelStatus": "Action page loads /static/assets/models/human_pose/action/pose_sequence_classifier.json and runs a real local softmax forward pass over pose-sequence features; sample probabilities are fallback only.",
+  "modelStatus": "Action page can extract uploaded or preset video frames, run local MoveNet Lightning keypoint inference in a Worker, then load /static/assets/models/human_pose/action/pose_sequence_classifier.json for a real local softmax forward pass over pose-sequence features; sample probabilities are fallback only.",
   "inputShape": {
     "height": 112,
     "width": 112,
@@ -18,27 +18,27 @@
   "pipeline": [
     {
       "id": "video",
-      "label": "Video Clip",
-      "summary": "输入短视频片段或连续帧。"
+      "label": "视频输入",
+      "summary": "上传视频或选择预置动作片段。"
     },
     {
       "id": "frames",
-      "label": "Frame Sequence",
+      "label": "抽取帧序列",
       "summary": "展开为 T 张 RGB 帧并保留时间顺序。"
     },
     {
-      "id": "conv3d",
-      "label": "3D Convolution",
-      "summary": "卷积核同时覆盖时间、高度与宽度。"
+      "id": "pose",
+      "label": "关键点与骨架",
+      "summary": "逐帧识别人体关键点并连接骨架。"
     },
     {
       "id": "feature",
-      "label": "Spatiotemporal Feature",
-      "summary": "多帧姿态变化被抽取为时序特征向量。"
+      "label": "姿态时序特征",
+      "summary": "多帧骨架变化被抽取为动作特征向量。"
     },
     {
       "id": "class",
-      "label": "Action Class",
+      "label": "动作类别",
       "summary": "本地 softmax 分类器输出动作类别概率。"
     }
   ],
@@ -160,6 +160,7 @@
       "id": "standing",
       "label": "Standing · 站立",
       "className": "standing",
+      "video": "/static/assets/examples/human_pose/action_standing_preset.webm",
       "description": "人体中心和四肢位移很小，时序特征接近静止基线。",
       "motion": {
         "type": "standing",

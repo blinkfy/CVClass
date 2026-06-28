@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ multiview_page_title }} - 多视图几何与三维重建{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/multiview_reconstruction.css') }}?v=20260628-mv6">
+{% endblock %}
+
+{% block content %}
+<div class="vision-lab multiview-lab" data-multiview-page="{{ active_sub_page }}">
+    <header class="vision-hero station-hero multiview-hero">
+        <div>
+            <span class="section-label station-eyebrow">{{ multiview_eyebrow }}</span>
+            <h1 class="station-title">{{ multiview_page_title }}</h1>
+            <p class="station-summary">{{ multiview_subtitle }}</p>
+        </div>
+        <div class="station-hero-actions multiview-hero-actions">
+            <span class="multiview-state">{{ multiview_status }}</span>
+            <span class="multiview-state">机制拆解 · 多视图几何</span>
+            <span class="multiview-state">公式推导 · F / E / Triangulation</span>
+            <strong class="station-badge">{{ multiview_badge }}</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs multiview-tabs" aria-label="多视图几何与三维重建内部导航">
+        {% for item in multiview_nav %}
+        <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
+    </nav>
+
+    {% block multiview_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/geometry_vision/multiview_reconstruction.js') }}?v=20260628-mv5"></script>
+{% endblock %}

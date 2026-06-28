@@ -1,0 +1,147 @@
+{% extends "geometry_vision/stereo_base.html" %}
+
+{% block stereo_content %}
+<section class="vision-workbench stereo-workbench stereo-parallel-workbench" data-stereo-parallel aria-label="平行双目与极线约束工作台">
+    <aside class="vision-panel vision-control-panel stereo-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>双目几何参数</h3><p>Parallel Stereo</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>场景选择</span>
+            <select data-stereo-parallel-input="scene">
+                <option value="single" selected>单个空间点</option>
+                <option value="two">前后两个物体</option>
+                <option value="grid">三维点阵</option>
+                <option value="street">简化街景</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>基线 b <output data-stereo-parallel-output="baseline">0.18 m</output></span>
+            <input type="range" min="0.08" max="0.36" step="0.01" value="0.18" data-stereo-parallel-input="baseline">
+        </label>
+        <label class="vision-field">
+            <span>焦距 f <output data-stereo-parallel-output="focal">720 px</output></span>
+            <input type="range" min="420" max="1080" step="20" value="720" data-stereo-parallel-input="focal">
+        </label>
+        <label class="vision-field">
+            <span>物体深度 Z <output data-stereo-parallel-output="depth">3.2 m</output></span>
+            <input type="range" min="1.4" max="8" step="0.1" value="3.2" data-stereo-parallel-input="depth">
+        </label>
+        <label class="vision-field">
+            <span>横向位置 X <output data-stereo-parallel-output="lateral">0.2 m</output></span>
+            <input type="range" min="-1.2" max="1.2" step="0.1" value="0.2" data-stereo-parallel-input="lateral">
+        </label>
+
+        <div class="stereo-toggle-grid">
+            <label class="vision-toggle-row"><span>显示左右相机</span><input type="checkbox" data-stereo-parallel-input="showCameras" checked></label>
+            <label class="vision-toggle-row"><span>显示基线</span><input type="checkbox" data-stereo-parallel-input="showBaseline" checked></label>
+            <label class="vision-toggle-row"><span>显示投影射线</span><input type="checkbox" data-stereo-parallel-input="showRays" checked></label>
+            <label class="vision-toggle-row"><span>显示左右成像平面</span><input type="checkbox" data-stereo-parallel-input="showPlanes" checked></label>
+            <label class="vision-toggle-row"><span>显示水平极线</span><input type="checkbox" data-stereo-parallel-input="showEpipolar" checked></label>
+            <label class="vision-toggle-row"><span>显示同名点连线</span><input type="checkbox" data-stereo-parallel-input="showMatch" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-stereo-step-select="parallel">
+                <option value="point">选中空间点</option>
+                <option value="cameras">左右相机与基线</option>
+                <option value="rays">投影射线</option>
+                <option value="planes">左右成像平面</option>
+                <option value="epipolar">水平极线</option>
+                <option value="search">一维扫描线搜索</option>
+            </select>
+        </label>
+
+        <div class="stereo-button-row">
+            <button type="button" data-stereo-prev="parallel">上一步</button>
+            <button type="button" data-stereo-next="parallel">下一步</button>
+            <button type="button" data-stereo-play="parallel">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前点 P</span><strong data-stereo-parallel-summary="point">--</strong></div>
+            <div><span>xL / xR</span><strong data-stereo-parallel-summary="x">--</strong></div>
+            <div><span>水平约束</span><strong data-stereo-parallel-summary="line">same row</strong></div>
+            <div><span>观察结论</span><strong data-stereo-parallel-summary="note">搜索从二维降为一维</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel stereo-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>平行双目几何 · PARALLEL STEREO</span>
+                <h3 data-stereo-parallel-title>校正后双目图像的水平搜索</h3>
+            </div>
+            <div class="stereo-stage-chips">
+                <span data-stereo-parallel-chip="step">选中空间点</span>
+                <span data-stereo-parallel-chip="baseline">b = --</span>
+                <span data-stereo-parallel-chip="disparity">d = --</span>
+            </div>
+        </div>
+
+        <div class="stereo-parallel-stage-grid">
+            <section class="stereo-view-card">
+                <div class="stereo-section-head">
+                    <strong>双目几何示意</strong>
+                    <span>光心 · 基线 · 投影射线</span>
+                </div>
+                <div class="stereo-svg-frame stereo-parallel-geometry-frame" data-stereo-parallel-geometry></div>
+            </section>
+            <section class="stereo-view-card">
+                <div class="stereo-section-head">
+                    <strong>校正后左右图像</strong>
+                    <span>同一水平扫描线</span>
+                </div>
+                <div class="stereo-svg-frame stereo-parallel-image-frame" data-stereo-parallel-images></div>
+            </section>
+            <section class="stereo-status-card" data-stereo-parallel-status aria-label="平行双目当前状态"></section>
+        </div>
+
+        <div class="stereo-flow-preview" data-stereo-parallel-preview aria-label="平行双目步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel stereo-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-stereo-parallel-notes-title>空间点 P</h3><p>当前概念解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>平行双目系统</span>
+            <strong>OL / OR 光轴平行，基线 b 已知</strong>
+            <small>左右相机基线 b 已知，校正后同名点位于同一行。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>水平极线约束</span>
+            <strong>yL = yR</strong>
+            <small data-stereo-parallel-formula-note>二维匹配搜索被压缩成沿水平扫描线的一维搜索。</small>
+        </div>
+
+        <div class="stereo-notes-body" data-stereo-parallel-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前观测</span>
+            <code data-stereo-parallel-substitution>P(X,Y,Z) -> xL=--, xR=--, 同一水平行</code>
+        </div>
+
+        <div class="stereo-observation-list">
+            <article><strong>同一个三维点</strong><span>会在左右图像中形成一对同名投影点。</span></article>
+            <article><strong>校正后双目图像</strong><span>对应点落在同一水平行，匹配搜索更稳定。</span></article>
+            <article><strong>基线越大</strong><span>同一深度下 xL 与 xR 的水平位置差更明显。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper stereo-stepper stereo-stepper--6" aria-label="平行双目与极线约束流程" data-stereo-stepper="parallel">
+    <li class="is-active" data-stereo-phase="point"><span>1</span><div><strong>空间点 P</strong><small>同一三维目标</small></div></li>
+    <li data-stereo-phase="cameras"><span>2</span><div><strong>双相机</strong><small>OL / OR 与基线</small></div></li>
+    <li data-stereo-phase="rays"><span>3</span><div><strong>投影射线</strong><small>连接光心与 P</small></div></li>
+    <li data-stereo-phase="planes"><span>4</span><div><strong>成像平面</strong><small>xL 与 xR</small></div></li>
+    <li data-stereo-phase="epipolar"><span>5</span><div><strong>水平极线</strong><small>yL = yR</small></div></li>
+    <li data-stereo-phase="search"><span>6</span><div><strong>扫描线搜索</strong><small>二维降为一维</small></div></li>
+</ol>
+{% endblock %}

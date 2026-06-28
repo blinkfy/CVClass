@@ -1,0 +1,152 @@
+{% extends "geometry_vision/multiview_base.html" %}
+
+{% block multiview_content %}
+<section class="vision-workbench multiview-workbench multiview-epipolar-workbench" data-mv-epipolar aria-label="对极几何与基础矩阵工作台">
+    <aside class="vision-panel vision-control-panel multiview-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>匹配与对极约束</h3><p>Feature Matches</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-mv-epipolar-input="sample">
+                <option value="facade" selected>建筑立面</option>
+                <option value="indoor">室内角点</option>
+                <option value="street">街景两视图</option>
+                <option value="noisy">噪声匹配</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>匹配点数量 <output data-mv-epipolar-output="matchCount">32</output></span>
+            <input type="range" min="12" max="64" step="2" value="32" data-mv-epipolar-input="matchCount">
+        </label>
+        <label class="vision-field">
+            <span>外点比例 <output data-mv-epipolar-output="outlierRatio">22%</output></span>
+            <input type="range" min="0" max="45" step="1" value="22" data-mv-epipolar-input="outlierRatio">
+        </label>
+        <label class="vision-field">
+            <span>RANSAC 阈值 <output data-mv-epipolar-output="ransacThreshold">2.0 px</output></span>
+            <input type="range" min="0.6" max="4.5" step="0.1" value="2.0" data-mv-epipolar-input="ransacThreshold">
+        </label>
+        <label class="vision-field">
+            <span>当前匹配点 <output data-mv-epipolar-output="currentMatch">08</output></span>
+            <input type="range" min="1" max="32" step="1" value="8" data-mv-epipolar-input="currentMatch">
+        </label>
+
+        <div class="multiview-toggle-grid">
+            <label class="vision-toggle-row"><span>显示极点</span><input type="checkbox" data-mv-epipolar-input="showEpipoles" checked></label>
+            <label class="vision-toggle-row"><span>显示极线</span><input type="checkbox" data-mv-epipolar-input="showLines" checked></label>
+            <label class="vision-toggle-row"><span>显示极平面</span><input type="checkbox" data-mv-epipolar-input="showPlane" checked></label>
+            <label class="vision-toggle-row"><span>显示匹配连线</span><input type="checkbox" data-mv-epipolar-input="showLinks" checked></label>
+            <label class="vision-toggle-row"><span>显示外点剔除</span><input type="checkbox" data-mv-epipolar-input="showRejected" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-mv-step-select="epipolar">
+                <option value="matches">特征匹配 / Feature Matches</option>
+                <option value="estimateF">估计基础矩阵 / Estimate F</option>
+                <option value="epiline">点到极线 / Point to Line</option>
+                <option value="error">对极误差 / Epipolar Error</option>
+                <option value="ransac">RANSAC 内点 / RANSAC Inliers</option>
+            </select>
+        </label>
+
+        <div class="multiview-button-row">
+            <button type="button" data-mv-prev="epipolar">上一步</button>
+            <button type="button" data-mv-next="epipolar">下一步</button>
+            <button type="button" data-mv-play="epipolar">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前点</span><strong data-mv-epipolar-summary="point">--</strong></div>
+            <div><span>对极误差</span><strong data-mv-epipolar-summary="error">--</strong></div>
+            <div><span>内点 / 外点</span><strong data-mv-epipolar-summary="inliers">--</strong></div>
+            <div><span>几何结论</span><strong data-mv-epipolar-summary="note">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel multiview-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>EPIPOLAR GEOMETRY PLAYGROUND</span>
+                <h3 data-mv-epipolar-title>从匹配点生成另一幅图像中的极线</h3>
+            </div>
+            <div class="multiview-stage-chips">
+                <span data-mv-epipolar-chip="step">特征匹配 / Feature Matches</span>
+                <span data-mv-epipolar-chip="constraint">x'^T F x = 0</span>
+                <span data-mv-epipolar-chip="quality">inliers --</span>
+            </div>
+        </div>
+
+        <div class="multiview-epipolar-stage-grid">
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>图像 1 <small>Image 1</small></strong>
+                    <span>特征点 x / current point</span>
+                </div>
+                <div class="multiview-svg-frame multiview-image-frame" data-mv-epipolar-image="left"></div>
+            </section>
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>对极几何 <small>Epipolar Geometry</small></strong>
+                    <span>C1 / C2 · F mapping</span>
+                </div>
+                <div class="multiview-svg-frame multiview-geometry-frame" data-mv-epipolar-geometry></div>
+            </section>
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>图像 2 <small>Image 2</small></strong>
+                    <span>极线 l' 与候选 x'</span>
+                </div>
+                <div class="multiview-svg-frame multiview-image-frame" data-mv-epipolar-image="right"></div>
+            </section>
+        </div>
+
+        <div class="multiview-matrix-strip" data-mv-epipolar-matrix></div>
+        <div class="multiview-lab-strip" data-mv-epipolar-status aria-label="对极几何当前计算状态"></div>
+        <div class="multiview-microscope-card" data-mv-epipolar-microscope aria-label="当前匹配显微镜"></div>
+        <div class="multiview-flow-preview" data-mv-epipolar-preview aria-label="对极几何步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel multiview-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-mv-epipolar-notes-title>特征匹配 / Feature Matches</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>对极约束</span>
+            <strong>x'^T F x = 0</strong>
+            <small>基础矩阵 F 把左图点 x 映射为右图极线 l'。</small>
+        </div>
+        <div class="vision-formula-card">
+            <span>点到极线</span>
+            <strong>l' = F x</strong>
+            <small>正确匹配点 x' 应落在 l' 附近，而不是在整张图像中盲搜。</small>
+        </div>
+
+        <div class="multiview-notes-body" data-mv-epipolar-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前状态</span>
+            <code data-mv-epipolar-substitution>x=(--,--), x'=(--,--), |x'^T F x|=--</code>
+        </div>
+
+        <div class="multiview-observation-list">
+            <article><strong>单幅图像</strong><span>缺少视线交会，不能直接恢复绝对深度。</span></article>
+            <article><strong>极点与极线</strong><span>极点是另一相机中心的投影，所有对应极线都穿过它。</span></article>
+            <article><strong>RANSAC</strong><span>用多数匹配的一致 F 剔除偏离极线的错误匹配。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper multiview-stepper multiview-stepper--5" aria-label="对极几何与基础矩阵流程" data-mv-stepper="epipolar">
+    <li class="is-active" data-mv-phase="matches"><span>1</span><div><strong>特征匹配</strong><small>Feature Matches</small></div></li>
+    <li data-mv-phase="estimateF"><span>2</span><div><strong>估计基础矩阵</strong><small>Estimate F</small></div></li>
+    <li data-mv-phase="epiline"><span>3</span><div><strong>点到极线</strong><small>l' = F x</small></div></li>
+    <li data-mv-phase="error"><span>4</span><div><strong>对极误差</strong><small>Epipolar Error</small></div></li>
+    <li data-mv-phase="ransac"><span>5</span><div><strong>RANSAC 内点</strong><small>RANSAC Inliers</small></div></li>
+</ol>
+{% endblock %}

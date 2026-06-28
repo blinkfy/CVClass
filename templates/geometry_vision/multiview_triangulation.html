@@ -1,0 +1,161 @@
+{% extends "geometry_vision/multiview_base.html" %}
+
+{% block multiview_content %}
+<section class="vision-workbench multiview-workbench multiview-triangulation-workbench" data-mv-triangulation aria-label="三角测量与稀疏点云工作台">
+    <aside class="vision-panel vision-control-panel multiview-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>三角测量输入</h3><p>Triangulation</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-mv-tri-input="sample">
+                <option value="facade" selected>建筑角点</option>
+                <option value="room">房间角点</option>
+                <option value="object">物体多视图</option>
+                <option value="noisy">噪声匹配</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>匹配点数量 <output data-mv-tri-output="matchCount">36</output></span>
+            <input type="range" min="8" max="72" step="2" value="36" data-mv-tri-input="matchCount">
+        </label>
+        <label class="vision-field">
+            <span>相机基线 <output data-mv-tri-output="baseline">0.42</output></span>
+            <input type="range" min="0.12" max="0.9" step="0.02" value="0.42" data-mv-tri-input="baseline">
+        </label>
+        <label class="vision-field">
+            <span>视角夹角 <output data-mv-tri-output="angle">18°</output></span>
+            <input type="range" min="4" max="42" step="1" value="18" data-mv-tri-input="angle">
+        </label>
+        <label class="vision-field">
+            <span>像素噪声 <output data-mv-tri-output="noise">0.7 px</output></span>
+            <input type="range" min="0" max="3.5" step="0.1" value="0.7" data-mv-tri-input="noise">
+        </label>
+        <label class="vision-field">
+            <span>当前 3D 点 <output data-mv-tri-output="currentPoint">06</output></span>
+            <input type="range" min="1" max="36" step="1" value="6" data-mv-tri-input="currentPoint">
+        </label>
+
+        <div class="multiview-toggle-grid">
+            <label class="vision-toggle-row"><span>显示反投影射线</span><input type="checkbox" data-mv-tri-input="showRays" checked></label>
+            <label class="vision-toggle-row"><span>显示三维点</span><input type="checkbox" data-mv-tri-input="showPoint" checked></label>
+            <label class="vision-toggle-row"><span>显示重投影点</span><input type="checkbox" data-mv-tri-input="showReprojection" checked></label>
+            <label class="vision-toggle-row"><span>显示误差向量</span><input type="checkbox" data-mv-tri-input="showErrors" checked></label>
+            <label class="vision-toggle-row"><span>显示点云</span><input type="checkbox" data-mv-tri-input="showCloud" checked></label>
+            <label class="vision-toggle-row"><span>显示外点 / 低置信点</span><input type="checkbox" data-mv-tri-input="showOutliers" checked></label>
+            <label class="vision-toggle-row"><span>点云旋转</span><input type="checkbox" data-mv-tri-input="rotateCloud" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-mv-step-select="triangulation">
+                <option value="matched">匹配点 / Matched Points</option>
+                <option value="pose">相机位姿 / Camera Pose</option>
+                <option value="rays">反投影射线 / Back-project Rays</option>
+                <option value="triangulate">三角化 3D 点 / Triangulate 3D Point</option>
+                <option value="reproject">重投影 / Reproject</option>
+                <option value="error">误差检查 / Error Check</option>
+                <option value="cloud">稀疏点云 / Sparse Cloud</option>
+            </select>
+        </label>
+
+        <div class="multiview-button-row">
+            <button type="button" data-mv-prev="triangulation">上一步</button>
+            <button type="button" data-mv-next="triangulation">下一步</button>
+            <button type="button" data-mv-play="triangulation">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前 X</span><strong data-mv-tri-summary="point">--</strong></div>
+            <div><span>平均误差</span><strong data-mv-tri-summary="error">--</strong></div>
+            <div><span>点云规模</span><strong data-mv-tri-summary="cloud">--</strong></div>
+            <div><span>置信状态</span><strong data-mv-tri-summary="confidence">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel multiview-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>TRIANGULATION & SPARSE POINT CLOUD PLAYGROUND</span>
+                <h3 data-mv-tri-title>从两条反投影射线恢复稀疏三维点</h3>
+            </div>
+            <div class="multiview-stage-chips">
+                <span data-mv-tri-chip="step">匹配点 / Matched Points</span>
+                <span data-mv-tri-chip="equation">x ≈ P X</span>
+                <span data-mv-tri-chip="error">error --</span>
+            </div>
+        </div>
+
+        <div class="multiview-tri-stage-grid">
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>两视图匹配 <small>Matched Points</small></strong>
+                    <span>x / x' correspondence</span>
+                </div>
+                <div class="multiview-svg-frame multiview-tri-image-frame" data-mv-tri-images></div>
+            </section>
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>三角测量几何 <small>Triangulation</small></strong>
+                    <span>P1 / P2 · back-projected rays</span>
+                </div>
+                <div class="multiview-svg-frame multiview-tri-geometry-frame" data-mv-tri-geometry></div>
+            </section>
+            <section class="multiview-view-card">
+                <div class="multiview-section-head">
+                    <strong>稀疏点云 <small>Sparse Point Cloud</small></strong>
+                    <span>重投影误差 / Reprojection Error</span>
+                </div>
+                <div class="multiview-svg-frame multiview-tri-cloud-frame" data-mv-tri-cloud></div>
+            </section>
+        </div>
+
+        <div class="multiview-lab-strip" data-mv-tri-status aria-label="三角测量当前计算状态"></div>
+        <div class="multiview-verification-card" data-mv-tri-verification aria-label="重投影验证"></div>
+        <div class="multiview-flow-preview" data-mv-tri-preview aria-label="三角测量步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel multiview-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-mv-tri-notes-title>匹配点 / Matched Points</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>投影关系</span>
+            <strong>x ≈ P X, x' ≈ P' X</strong>
+            <small>二维观测由三维点 X 经过投影矩阵 P 产生。</small>
+        </div>
+        <div class="vision-formula-card">
+            <span>重投影误差</span>
+            <strong>Σ ||x - project(PX)||²</strong>
+            <small>有噪声时两条射线通常不完全相交，需要用误差评价重建质量。</small>
+        </div>
+
+        <div class="multiview-notes-body" data-mv-tri-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前代入</span>
+            <code data-mv-tri-substitution>P1/P2 ready, X=(--,--,--), reprojection=--</code>
+        </div>
+
+        <div class="multiview-observation-list">
+            <article><strong>射线交会</strong><span>两个视图的同名点分别定义反投影射线，空间点位于两射线最接近处。</span></article>
+            <article><strong>点云生成</strong><span>对多个匹配点重复三角测量，得到稀疏三维结构。</span></article>
+            <article><strong>Bundle Adjustment</strong><span>后续可联合优化相机位姿和三维点，进一步降低重投影误差。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper multiview-stepper multiview-stepper--7" aria-label="三角测量与稀疏点云流程" data-mv-stepper="triangulation">
+    <li class="is-active" data-mv-phase="matched"><span>1</span><div><strong>匹配点</strong><small>Matched Points</small></div></li>
+    <li data-mv-phase="pose"><span>2</span><div><strong>相机位姿</strong><small>Camera Pose</small></div></li>
+    <li data-mv-phase="rays"><span>3</span><div><strong>反投影射线</strong><small>Back-project Rays</small></div></li>
+    <li data-mv-phase="triangulate"><span>4</span><div><strong>三角化 3D 点</strong><small>Triangulate X</small></div></li>
+    <li data-mv-phase="reproject"><span>5</span><div><strong>重投影</strong><small>Reproject</small></div></li>
+    <li data-mv-phase="error"><span>6</span><div><strong>误差检查</strong><small>Error Check</small></div></li>
+    <li data-mv-phase="cloud"><span>7</span><div><strong>稀疏点云</strong><small>Sparse Cloud</small></div></li>
+</ol>
+{% endblock %}

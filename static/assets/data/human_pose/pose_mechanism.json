@@ -7,41 +7,41 @@
     "steps": [
       {
         "id": "crop",
-        "label": "Image Crop",
-        "input": "原图 + person bbox",
+        "label": "人体裁剪",
+        "input": "原图 + 人体检测框 bbox",
         "output": "人体区域 crop",
         "formula": "crop = image[bbox_y : bbox_y + bbox_h, bbox_x : bbox_x + bbox_w]",
         "note": "检测框把人体从复杂背景中裁出，后续网络只看人体区域。"
       },
       {
         "id": "feature",
-        "label": "CNN Feature",
-        "input": "crop image",
-        "output": "deep feature vector",
+        "label": "CNN 特征提取",
+        "input": "人体 crop 图像",
+        "output": "深度特征向量",
         "formula": "f = CNN(crop)",
         "note": "卷积网络把纹理、边缘和身体结构聚合成紧凑特征。"
       },
       {
         "id": "regress",
-        "label": "Pose Vector Regression",
-        "input": "feature vector",
-        "output": "normalized pose vector",
+        "label": "姿态向量回归",
+        "input": "特征向量",
+        "output": "归一化姿态向量",
         "formula": "p_norm = W f + b",
         "note": "回归头一次性输出所有关节点的归一化坐标。"
       },
       {
         "id": "absolute",
-        "label": "Absolute Coordinates",
-        "input": "normalized pose vector + bbox",
-        "output": "image coordinates",
+        "label": "原图坐标映射",
+        "input": "归一化姿态向量 + bbox",
+        "output": "原图关键点坐标",
         "formula": "x = bbox_x + normalized_x * bbox_w; y = bbox_y + normalized_y * bbox_h",
         "note": "归一化坐标需要映射回原图坐标，才能绘制关键点和骨架。"
       },
       {
         "id": "refine",
-        "label": "Refine Stage",
-        "input": "initial keypoints",
-        "output": "refined skeleton",
+        "label": "姿态精修",
+        "input": "初始关键点",
+        "output": "精修骨架",
         "formula": "p_t = refine(p_{t-1}, image_feature)",
         "note": "多阶段修正会利用图像上下文修正偏移明显的关节点。"
       }
@@ -60,41 +60,41 @@
     "steps": [
       {
         "id": "image",
-        "label": "Image",
+        "label": "输入图像",
         "input": "原图或人体 crop",
-        "output": "network input tensor",
+        "output": "网络输入张量",
         "formula": "I ∈ R^{H × W × 3}",
         "note": "输入保留空间布局，为后续 heatmap 预测提供定位基础。"
       },
       {
         "id": "feature_map",
-        "label": "Feature Map",
-        "input": "image tensor",
-        "output": "spatial feature map",
+        "label": "空间特征图",
+        "input": "图像张量",
+        "output": "空间特征图",
         "formula": "F = Backbone(I)",
         "note": "特征图保留低分辨率空间结构，编码身体部位响应。"
       },
       {
         "id": "heatmaps",
-        "label": "Joint Heatmaps",
-        "input": "feature map",
-        "output": "K joint heatmaps",
+        "label": "关节点热力图",
+        "input": "特征图",
+        "output": "K 张关节点 heatmap",
         "formula": "H_k = Conv_k(F)",
         "note": "每个关节点都有独立响应图，亮点表示该关节点更可能出现的位置。"
       },
       {
         "id": "peak",
-        "label": "Peak / Argmax",
-        "input": "joint heatmaps",
-        "output": "peak coordinates",
+        "label": "峰值检测",
+        "input": "关节点 heatmap",
+        "output": "峰值坐标",
         "formula": "joint_k = argmax Heatmap_k(x, y)",
         "note": "对每张 heatmap 取最大响应位置，得到关节点坐标。"
       },
       {
         "id": "skeleton",
-        "label": "Skeleton",
-        "input": "decoded keypoints",
-        "output": "linked pose graph",
+        "label": "骨架组装",
+        "input": "解码后的关键点",
+        "output": "人体骨架图",
         "formula": "limb_ij = connect(joint_i, joint_j)",
         "note": "按 COCO 骨架模板连接关键点，形成可解释的人体结构。"
       }

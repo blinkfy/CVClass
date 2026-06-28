@@ -1,0 +1,173 @@
+{% extends "geometry_vision/motion_base.html" %}
+
+{% block motion_content %}
+<section class="vision-workbench motion-workbench motion-pyramid-workbench" data-motion-pyramid aria-label="金字塔光流与运动追踪工作台">
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>金字塔参数</h3><p>Coarse-to-Fine</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-motion-pyramid-input="sample">
+                <option value="small" selected>小位移</option>
+                <option value="large">大位移</option>
+                <option value="fast">快速运动</option>
+                <option value="rotate">旋转运动</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>金字塔层数</span>
+            <select data-motion-pyramid-input="levels">
+                <option value="1">1 层</option>
+                <option value="2">2 层</option>
+                <option value="3" selected>3 层</option>
+                <option value="4">4 层</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>每层迭代次数 <output data-motion-pyramid-output="iterations">3</output></span>
+            <input type="range" min="1" max="6" step="1" value="3" data-motion-pyramid-input="iterations">
+        </label>
+        <label class="vision-field">
+            <span>窗口大小</span>
+            <select data-motion-pyramid-input="windowSize">
+                <option value="5">5x5</option>
+                <option value="7" selected>7x7</option>
+                <option value="9">9x9</option>
+            </select>
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示金字塔</span><input type="checkbox" data-motion-pyramid-input="showPyramid" checked></label>
+            <label class="vision-toggle-row"><span>显示粗到细路径</span><input type="checkbox" data-motion-pyramid-input="showPath" checked></label>
+            <label class="vision-toggle-row"><span>显示累计位移</span><input type="checkbox" data-motion-pyramid-input="showAccumulated" checked></label>
+            <label class="vision-toggle-row"><span>显示跟踪轨迹</span><input type="checkbox" data-motion-pyramid-input="showTrack" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-motion-step-select="pyramid">
+                <option value="build">图像金字塔 / Pyramid</option>
+                <option value="coarse">粗层估计 / Coarse Estimate</option>
+                <option value="upsample">位移上采样 / Upsample Flow</option>
+                <option value="refine">细层修正 / Refine</option>
+                <option value="final">最终轨迹 / Final Track</option>
+            </select>
+        </label>
+
+        <div class="motion-button-row">
+            <button type="button" data-motion-prev="pyramid">上一步</button>
+            <button type="button" data-motion-next="pyramid">下一步</button>
+            <button type="button" data-motion-play="pyramid">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>最高层位移</span><strong data-motion-pyramid-summary="coarse">--</strong></div>
+            <div><span>累计位移</span><strong data-motion-pyramid-summary="accumulated">--</strong></div>
+            <div><span>最终残差</span><strong data-motion-pyramid-summary="residual">--</strong></div>
+            <div><span>跟踪状态</span><strong data-motion-pyramid-summary="status">等待估计</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>PYRAMIDAL OPTICAL FLOW PLAYGROUND</span>
+                <h3 data-motion-pyramid-title>从粗到细估计大位移</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-pyramid-chip="step">图像金字塔 / Pyramid</span>
+                <span data-motion-pyramid-chip="levels">3 levels</span>
+                <span data-motion-pyramid-chip="flow">coarse-to-fine</span>
+            </div>
+        </div>
+
+        <div class="motion-pyramid-stage-grid">
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>原始两帧与最终轨迹</strong>
+                    <span>selected feature + track</span>
+                </div>
+                <div class="motion-svg-frame motion-pyramid-original" data-motion-pyramid-original></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>图像金字塔层级</strong>
+                    <span>L3 / L2 / L1 / L0</span>
+                </div>
+                <div class="motion-pyramid-stack" data-motion-pyramid-stack></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>累计位移与残差</strong>
+                    <span>flow accumulation</span>
+                </div>
+                <div class="motion-svg-frame motion-pyramid-result" data-motion-pyramid-result></div>
+            </section>
+        </div>
+
+        <div class="motion-flow-preview motion-pyramid-flow-preview" data-motion-pyramid-preview aria-label="金字塔光流步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-motion-pyramid-notes-title>Build Pyramid</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>小位移假设 / Small Motion</span>
+            <strong>\(\text{apparent motion}(L)=\frac{\text{large motion}}{2^L}\)</strong>
+            <small data-motion-pyramid-apparent-note>降采样后 apparent motion 变小，LK 更容易在局部窗口内收敛。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>粗到细传递 / Coarse-to-Fine</span>
+            <strong>\(\mathbf g_{L-1}=2\cdot(\mathbf g_L+\mathbf d_L)\)</strong>
+            <small data-motion-pyramid-formula-note>上一层估计放大后作为下一层初值，再做局部修正。</small>
+        </div>
+
+        <div class="motion-failure-card">
+            <span>失败对比 / Failure Check</span>
+            <article><strong>单层 LK</strong><small data-motion-pyramid-single-fail>直接估计大位移，residual --</small></article>
+            <article><strong>金字塔 LK</strong><small data-motion-pyramid-success>粗到细修正，residual --</small></article>
+        </div>
+
+        <div class="motion-reference-card">
+            <span>稀疏 vs 稠密</span>
+            <div class="motion-reference-grid">
+                <article><strong>PyrLK 稀疏追踪</strong><small>只追踪角点等少量特征，输出轨迹点和误差。</small></article>
+                <article><strong>Farneback 稠密光流</strong><small>为每个像素估计 flow[...,0]=u、flow[...,1]=v。</small></article>
+            </div>
+        </div>
+
+        <div class="motion-code-card">
+            <span>OpenCV 稠密光流</span>
+            <code>flow = cv2.calcOpticalFlowFarneback(
+    prev, next, None,
+    pyr_scale=0.5, levels=3,
+    winsize=15, iterations=3,
+    poly_n=5, poly_sigma=1.2, flags=0
+)</code>
+            <small>常用 cartToPolar 把 u/v 转成幅值和方向，再映射到 HSV 可视化。</small>
+        </div>
+
+        <div class="motion-notes-body" data-motion-pyramid-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前层状态</span>
+            <div class="motion-math-output" data-motion-pyramid-layer-state>\(L_2 \rightarrow L_1 \rightarrow L_0\)</div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper motion-stepper motion-stepper--5" aria-label="金字塔光流处理流程" data-motion-stepper="pyramid">
+    <li class="is-active" data-motion-phase="build"><span>1</span><div><strong>图像金字塔</strong><small>Pyramid</small></div></li>
+    <li data-motion-phase="coarse"><span>2</span><div><strong>粗层估计</strong><small>Coarse Estimate</small></div></li>
+    <li data-motion-phase="upsample"><span>3</span><div><strong>位移上采样</strong><small>Upsample Flow</small></div></li>
+    <li data-motion-phase="refine"><span>4</span><div><strong>细层修正</strong><small>Refine</small></div></li>
+    <li data-motion-phase="final"><span>5</span><div><strong>最终轨迹</strong><small>Final Track</small></div></li>
+</ol>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "geometry_vision/stereo_base.html" %}
+
+{% block stereo_content %}
+<section class="vision-workbench stereo-workbench stereo-disparity-workbench" data-stereo-disparity aria-label="视差与深度三角关系工作台">
+    <aside class="vision-panel vision-control-panel stereo-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>视差参数</h3><p>Disparity Input</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-stereo-disparity-input="sample">
+                <option value="near" selected>近处物体</option>
+                <option value="middle">中距离物体</option>
+                <option value="far">远处物体</option>
+                <option value="multi">多物体深度</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>基线 b <output data-stereo-disparity-output="baseline">0.18 m</output></span>
+            <input type="range" min="0.08" max="0.36" step="0.01" value="0.18" data-stereo-disparity-input="baseline">
+        </label>
+        <label class="vision-field">
+            <span>焦距 f <output data-stereo-disparity-output="focal">720 px</output></span>
+            <input type="range" min="420" max="1120" step="20" value="720" data-stereo-disparity-input="focal">
+        </label>
+        <label class="vision-field">
+            <span>视差 d <output data-stereo-disparity-output="disparity">36 px</output></span>
+            <input type="range" min="8" max="84" step="1" value="36" data-stereo-disparity-input="disparity">
+        </label>
+        <label class="vision-field">
+            <span>视差噪声 Δd <output data-stereo-disparity-output="noise">0.8 px</output></span>
+            <input type="range" min="0" max="3" step="0.1" value="0.8" data-stereo-disparity-input="noise">
+        </label>
+        <label class="vision-field">
+            <span>单位选择</span>
+            <select data-stereo-disparity-input="unit">
+                <option value="m" selected>m / px</option>
+                <option value="mm">mm / px</option>
+                <option value="px">像素观察</option>
+            </select>
+        </label>
+
+        <div class="stereo-toggle-grid">
+            <label class="vision-toggle-row"><span>显示三角测量射线</span><input type="checkbox" data-stereo-disparity-input="showRays" checked></label>
+            <label class="vision-toggle-row"><span>显示视差括号</span><input type="checkbox" data-stereo-disparity-input="showBracket" checked></label>
+            <label class="vision-toggle-row"><span>显示深度曲线</span><input type="checkbox" data-stereo-disparity-input="showCurve" checked></label>
+            <label class="vision-toggle-row"><span>显示误差带</span><input type="checkbox" data-stereo-disparity-input="showError" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-stereo-step-select="disparity">
+                <option value="pick">选中同名点</option>
+                <option value="measure">测量 xL / xR</option>
+                <option value="disparity">计算视差 d</option>
+                <option value="rays">三角测量射线</option>
+                <option value="depth">求解深度 Z</option>
+                <option value="error">误差敏感性</option>
+            </select>
+        </label>
+
+        <div class="stereo-button-row">
+            <button type="button" data-stereo-prev="disparity">上一步</button>
+            <button type="button" data-stereo-next="disparity">下一步</button>
+            <button type="button" data-stereo-play="disparity">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>xL / xR</span><strong data-stereo-disparity-summary="x">--</strong></div>
+            <div><span>视差 d</span><strong data-stereo-disparity-summary="d">--</strong></div>
+            <div><span>深度 Z</span><strong data-stereo-disparity-summary="z">--</strong></div>
+            <div><span>误差区间</span><strong data-stereo-disparity-summary="error">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel stereo-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>视差到深度 · DISPARITY TO DEPTH</span>
+                <h3 data-stereo-disparity-title>从水平视差推回深度</h3>
+            </div>
+            <div class="stereo-stage-chips">
+                <span data-stereo-disparity-chip="step">选中同名点</span>
+                <span data-stereo-disparity-chip="formula">Z = bf / d</span>
+                <span data-stereo-disparity-chip="depth">Z = --</span>
+            </div>
+        </div>
+
+        <div class="stereo-disparity-stage-grid">
+            <section class="stereo-view-card stereo-view-card--images">
+                <div class="stereo-section-head">
+                    <strong>左右图像视差观察</strong>
+                    <span>xL - xR = d</span>
+                </div>
+                <div class="stereo-svg-frame stereo-image-pair-frame" data-stereo-disparity-images></div>
+            </section>
+            <section class="stereo-view-card">
+                <div class="stereo-section-head">
+                    <strong>三角测量几何图</strong>
+                    <span>基线 b · 焦距 f · 交点 P</span>
+                </div>
+                <div class="stereo-svg-frame stereo-geometry-frame" data-stereo-disparity-geometry></div>
+            </section>
+            <section class="stereo-view-card">
+                <div class="stereo-section-head">
+                    <strong>数值与曲线</strong>
+                    <span>d-Z 反比曲线与误差带</span>
+                </div>
+                <div class="stereo-svg-frame stereo-curve-frame" data-stereo-disparity-curve></div>
+                <div class="stereo-calculator-card" data-stereo-disparity-calculator aria-label="视差深度计算卡"></div>
+            </section>
+        </div>
+
+        <div class="stereo-flow-preview" data-stereo-disparity-preview aria-label="视差与深度步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel stereo-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-stereo-disparity-notes-title>选中同名点</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>视差定义</span>
+            <strong>d = xL - xR</strong>
+            <small>校正后的左右图像只需要沿同一水平扫描线比较位置。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>深度公式</span>
+            <strong>Z = bf / d</strong>
+            <small data-stereo-disparity-formula-note>d 增大时 Z 减小，远处目标对 Δd 更敏感。</small>
+        </div>
+
+        <div class="stereo-notes-body" data-stereo-disparity-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前代入</span>
+            <code data-stereo-disparity-substitution>b=--, f=--, d=-- -> Z=--</code>
+        </div>
+
+        <div class="stereo-observation-list">
+            <article><strong>视差越大</strong><span>左右投影点错开更明显，物体距离越近。</span></article>
+            <article><strong>基线 / 焦距越大</strong><span>同一深度下会产生更大的可测视差。</span></article>
+            <article><strong>远处目标</strong><span>d 很小时，1 px 视差误差会放大成明显深度误差。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper stereo-stepper stereo-stepper--6" aria-label="视差与深度流程" data-stereo-stepper="disparity">
+    <li class="is-active" data-stereo-phase="pick"><span>1</span><div><strong>同名点</strong><small>same 3D point</small></div></li>
+    <li data-stereo-phase="measure"><span>2</span><div><strong>测量坐标</strong><small>xL / xR</small></div></li>
+    <li data-stereo-phase="disparity"><span>3</span><div><strong>计算视差</strong><small>d = xL - xR</small></div></li>
+    <li data-stereo-phase="rays"><span>4</span><div><strong>三角射线</strong><small>两光心相交</small></div></li>
+    <li data-stereo-phase="depth"><span>5</span><div><strong>深度 Z</strong><small>Z = bf / d</small></div></li>
+    <li data-stereo-phase="error"><span>6</span><div><strong>误差带</strong><small>Δd 放大</small></div></li>
+</ol>
+{% endblock %}

@@ -2,15 +2,22 @@
     const root = document.querySelector("[data-human-action]");
     if (!root) return;
 
+    const basePath = window.CVCLASS_BASE_PATH || "";
+
     const el = {
         sampleSelect: root.querySelector("[data-action-sample]"),
+        videoUpload: root.querySelector("[data-action-video-upload]"),
+        videoName: root.querySelector("[data-action-video-name]"),
+        videoNote: root.querySelector("[data-action-video-note]"),
         frameSlider: root.querySelector("[data-action-frames]"),
         frameOutput: root.querySelector("[data-action-frames-output]"),
         speed: root.querySelector("[data-action-speed]"),
         toggles: Array.from(root.querySelectorAll("[data-action-toggle]")),
         topk: root.querySelector("[data-action-topk]"),
+        runVideo: root.querySelector("[data-action-run-video]"),
         play: root.querySelector("[data-action-play]"),
         reset: root.querySelector("[data-action-reset]"),
+        videoSource: root.querySelector("[data-action-video-source]"),
         version: root.querySelector("[data-action-version]"),
         stageTitle: root.querySelector("[data-action-stage-title]"),
         statusChip: root.querySelector("[data-action-status-chip]"),
@@ -51,6 +58,17 @@
         actionPrediction: null,
         actionFeatures: [],
         modelError: false,
+        videoFile: null,
+        videoObjectUrl: "",
+        videoFrames: [],
+        videoPoseSequence: null,
+        videoMode: "preset",
+        videoBusy: false,
+        videoStatus: "",
+        videoRunId: 0,
+        poseWorker: null,
+        poseWorkerRequestId: 0,
+        poseWorkerRequests: new Map(),
     };
 
     const skeletonPairs = [
@@ -100,6 +118,15 @@
         });
     }
 
+    function cvUrl(path) {
+        if (!path || /^(https?:|data:|blob:)/i.test(path)) return path;
+        return `${basePath}${path}`;
+    }
+
+    function nextFrame() {
+        return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+    }
+
     function visibleFrames() {
         return Math.max(4, Math.min(Number(state.frameCount) || 8, state.data?.inputShape?.maxT || 16));
     }
@@ -110,6 +137,31 @@
 
     function activePipelineStep() {
         return pipelineSteps()[state.activeStep] || pipelineSteps()[0] || {};
+    }
+
+    function currentClipLabel() {
+        if (state.videoMode === "uploaded") return `上传视频 · ${state.videoFile?.name || "本地视频"}`;
+        if (state.videoMode === "preset_video") return `预置视频 · ${state.sample?.label || "--"}`;
+        return state.sample?.label || "--";
+    }
+
+    function defaultVideoNote() {
+        return "上传后抽取 T 帧，优先在后台 Worker 中用本地 MoveNet Lightning 识别单人关键点与骨架，再送入动作分类器。";
+    }
+
+    function setVideoStatus(text) {
+        state.videoStatus = text || "";
+        if (el.videoNote) el.videoNote.textContent = text || defaultVideoNote();
+    }
+
+    function setVideoBusy(isBusy) {
+        state.videoBusy = Boolean(isBusy);
+        root.classList.toggle("is-video-busy", state.videoBusy);
+        if (el.runVideo) {
+            el.runVideo.disabled = state.videoBusy;
+            el.runVideo.textContent = state.videoBusy ? "识别中..." : "识别关键点与骨架";
+        }
+        if (el.videoUpload) el.videoUpload.disabled = state.videoBusy;
     }
 
     function generatePose(frameIndex, total) {
@@ -198,8 +250,32 @@
         return { x, y };
     }
 
+    function poseForFrame(frameIndex, total) {
+        const realPose = state.videoPoseSequence?.[frameIndex];
+        return realPose || generatePose(frameIndex, total);
+    }
+
+    function poseBBox(pose) {
+        const points = Object.values(pose || {}).filter((point) => Array.isArray(point));
+        if (!points.length) return { x: 14, y: 9, width: 72, height: 84 };
+        const xs = points.map((point) => Math.max(0, Math.min(100, point[0] * 100)));
+        const ys = points.map((point) => Math.max(0, Math.min(100, point[1] * 100)));
+        const minX = Math.max(0, Math.min(...xs) - 5);
+        const minY = Math.max(0, Math.min(...ys) - 6);
+        const maxX = Math.min(100, Math.max(...xs) + 5);
+        const maxY = Math.min(100, Math.max(...ys) + 6);
+        return {
+            x: minX,
+            y: minY,
+            width: Math.max(1, maxX - minX),
+            height: Math.max(1, maxY - minY),
+        };
+    }
+
     function renderPoseSvg(frameIndex, total) {
-        const pose = generatePose(frameIndex, total);
+        const pose = poseForFrame(frameIndex, total);
+        const bbox = poseBBox(pose);
+        const box = `<rect class="human-action-pose-bbox" x="${bbox.x.toFixed(1)}" y="${bbox.y.toFixed(1)}" width="${bbox.width.toFixed(1)}" height="${bbox.height.toFixed(1)}" rx="2.4"></rect>`;
         const lines = skeletonPairs.map(([from, to]) => {
             const p1 = pointAttr(pose[from]);
             const p2 = pointAttr(pose[to]);
@@ -210,12 +286,318 @@
             const r = name === "head" ? 4.8 : 3.1;
             return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"></circle>`;
         }).join("");
-        return `<svg viewBox="0 0 100 100" aria-hidden="true">${lines}${joints}</svg>`;
+        return `<svg viewBox="0 0 100 100" aria-hidden="true">${box}${lines}${joints}</svg>`;
     }
 
     function buildPoseSequence() {
         const total = visibleFrames();
+        if (state.videoPoseSequence?.length) {
+            return Array.from({ length: total }, (_, index) => poseForFrame(index, total));
+        }
         return Array.from({ length: total }, (_, index) => generatePose(index, total));
+    }
+
+    function selectedPresetVideoUrl() {
+        return state.sample?.video ? cvUrl(state.sample.video) : "";
+    }
+
+    function poseRuntimeAvailable() {
+        return Boolean(window.Worker && root.dataset.poseWorkerUrl && root.dataset.poseModelUrlLightning);
+    }
+
+    function workerModelUrls() {
+        return {
+            lightning: cvUrl(root.dataset.poseModelUrlLightning),
+        };
+    }
+
+    function ensurePoseWorker() {
+        if (state.poseWorker) return state.poseWorker;
+        if (!poseRuntimeAvailable()) {
+            throw new Error("浏览器无法创建姿态推理 Worker，或本地 MoveNet Lightning 模型路由未配置。");
+        }
+
+        state.poseWorker = new Worker(cvUrl(root.dataset.poseWorkerUrl));
+        state.poseWorker.onmessage = (event) => {
+            const payload = event.data || {};
+            const request = state.poseWorkerRequests.get(payload.id);
+            if (!request) return;
+
+            if (payload.type === "status") {
+                setVideoStatus(`关键点识别 ${request.index + 1}/${request.total}：${payload.detail || "Worker running"}`);
+                return;
+            }
+
+            state.poseWorkerRequests.delete(payload.id);
+            if (payload.type === "result") {
+                request.resolve(payload);
+                return;
+            }
+
+            request.reject(new Error(payload.message || "MoveNet Worker 推理失败"));
+        };
+        state.poseWorker.onerror = (event) => {
+            const error = new Error(event.message || "MoveNet Worker 运行失败");
+            state.poseWorkerRequests.forEach((request) => request.reject(error));
+            state.poseWorkerRequests.clear();
+        };
+        return state.poseWorker;
+    }
+
+    function inferPoseFrame(frame, index, total) {
+        return new Promise((resolve, reject) => {
+            const requestId = state.poseWorkerRequestId + 1;
+            state.poseWorkerRequestId = requestId;
+            state.poseWorkerRequests.set(requestId, { resolve, reject, index, total });
+            ensurePoseWorker().postMessage({
+                type: "infer",
+                id: requestId,
+                image: {
+                    width: frame.width,
+                    height: frame.height,
+                    pixels: frame.imageData.data.buffer,
+                },
+                variants: ["lightning"],
+                modelUrls: workerModelUrls(),
+                maxPeople: 1,
+            }, [frame.imageData.data.buffer]);
+        });
+    }
+
+    function waitForVideoEvent(video, eventName) {
+        return new Promise((resolve, reject) => {
+            const cleanup = () => {
+                video.removeEventListener(eventName, done);
+                video.removeEventListener("error", fail);
+            };
+            const done = () => {
+                cleanup();
+                resolve();
+            };
+            const fail = () => {
+                cleanup();
+                reject(new Error("视频无法加载或解码。"));
+            };
+            video.addEventListener(eventName, done, { once: true });
+            video.addEventListener("error", fail, { once: true });
+        });
+    }
+
+    function seekVideo(video, time) {
+        return new Promise((resolve, reject) => {
+            const cleanup = () => {
+                video.removeEventListener("seeked", done);
+                video.removeEventListener("error", fail);
+            };
+            const done = () => {
+                cleanup();
+                resolve();
+            };
+            const fail = () => {
+                cleanup();
+                reject(new Error("视频帧定位失败。"));
+            };
+            video.addEventListener("seeked", done, { once: true });
+            video.addEventListener("error", fail, { once: true });
+            video.currentTime = time;
+            if (Math.abs(video.currentTime - time) < 0.015) {
+                window.setTimeout(done, 40);
+            }
+        });
+    }
+
+    async function captureVideoFrames(videoUrl, count) {
+        if (!el.videoSource) throw new Error("页面缺少视频抽帧节点。");
+
+        const video = el.videoSource;
+        video.pause();
+        video.muted = true;
+        video.playsInline = true;
+        if (/^blob:/i.test(videoUrl)) {
+            video.removeAttribute("crossorigin");
+        } else {
+            video.crossOrigin = "anonymous";
+        }
+        if (video.src !== videoUrl) {
+            video.src = videoUrl;
+            video.load();
+        }
+        if (!video.videoWidth || !video.videoHeight) {
+            await waitForVideoEvent(video, "loadedmetadata");
+        }
+
+        const sourceWidth = Math.max(1, video.videoWidth || 320);
+        const sourceHeight = Math.max(1, video.videoHeight || 240);
+        const maxSide = 384;
+        const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+        const width = Math.max(64, Math.round(sourceWidth * scale));
+        const height = Math.max(64, Math.round(sourceHeight * scale));
+        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+        const safeStart = duration > 0.6 ? 0.12 : 0;
+        const safeEnd = duration > 0.6 ? duration - 0.12 : duration;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Canvas 2D 上下文不可用，无法抽取视频帧。");
+
+        const frames = [];
+        for (let index = 0; index < count; index += 1) {
+            const progress = count <= 1 ? 0.5 : index / (count - 1);
+            const time = Math.max(0, Math.min(duration, safeStart + (safeEnd - safeStart) * progress));
+            await seekVideo(video, time);
+            context.clearRect(0, 0, width, height);
+            context.drawImage(video, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+            const imageData = context.getImageData(0, 0, width, height);
+            frames.push({ index, time, width, height, dataUrl, imageData });
+            await nextFrame();
+        }
+        return frames;
+    }
+
+    function keypointLookup(pose) {
+        const lookup = new Map();
+        (pose?.keypoints || []).forEach((point, index) => {
+            const name = point.name || point.part || String(index);
+            lookup.set(name, point);
+            lookup.set(String(index), point);
+        });
+        return lookup;
+    }
+
+    function clampPoseValue(value) {
+        return Math.max(0.03, Math.min(0.97, Number(value) || 0));
+    }
+
+    function posePointFromKeypoint(lookup, name, width, height, fallbackPoint) {
+        const point = lookup.get(name);
+        if (!point || Number(point.score || 0) < 0.05) return fallbackPoint;
+        return [
+            clampPoseValue(Number(point.x) / Math.max(1, width)),
+            clampPoseValue(Number(point.y) / Math.max(1, height)),
+        ];
+    }
+
+    function averagedPosePoint(lookup, leftName, rightName, width, height, fallbackPoint) {
+        const left = lookup.get(leftName);
+        const right = lookup.get(rightName);
+        if (!left || !right || Number(left.score || 0) < 0.05 || Number(right.score || 0) < 0.05) return fallbackPoint;
+        return [
+            clampPoseValue((Number(left.x) + Number(right.x)) / 2 / Math.max(1, width)),
+            clampPoseValue((Number(left.y) + Number(right.y)) / 2 / Math.max(1, height)),
+        ];
+    }
+
+    function primaryPose(poses) {
+        return (poses || [])
+            .filter((pose) => pose?.keypoints?.length)
+            .sort((left, right) => Number(right.score || 0) - Number(left.score || 0))[0] || null;
+    }
+
+    function poseDetectionToActionPose(pose, frameIndex, total, width, height) {
+        const fallback = generatePose(frameIndex, total);
+        if (!pose) return fallback;
+        const lookup = keypointLookup(pose);
+        return {
+            head: posePointFromKeypoint(lookup, "nose", width, height, fallback.head),
+            neck: averagedPosePoint(lookup, "left_shoulder", "right_shoulder", width, height, fallback.neck),
+            leftShoulder: posePointFromKeypoint(lookup, "left_shoulder", width, height, fallback.leftShoulder),
+            rightShoulder: posePointFromKeypoint(lookup, "right_shoulder", width, height, fallback.rightShoulder),
+            leftElbow: posePointFromKeypoint(lookup, "left_elbow", width, height, fallback.leftElbow),
+            rightElbow: posePointFromKeypoint(lookup, "right_elbow", width, height, fallback.rightElbow),
+            leftWrist: posePointFromKeypoint(lookup, "left_wrist", width, height, fallback.leftWrist),
+            rightWrist: posePointFromKeypoint(lookup, "right_wrist", width, height, fallback.rightWrist),
+            hip: averagedPosePoint(lookup, "left_hip", "right_hip", width, height, fallback.hip),
+            leftKnee: posePointFromKeypoint(lookup, "left_knee", width, height, fallback.leftKnee),
+            rightKnee: posePointFromKeypoint(lookup, "right_knee", width, height, fallback.rightKnee),
+            leftAnkle: posePointFromKeypoint(lookup, "left_ankle", width, height, fallback.leftAnkle),
+            rightAnkle: posePointFromKeypoint(lookup, "right_ankle", width, height, fallback.rightAnkle),
+        };
+    }
+
+    function usePresetPoseSequence(message) {
+        const total = visibleFrames();
+        state.videoFrames = [];
+        state.videoPoseSequence = Array.from({ length: total }, (_, index) => generatePose(index, total));
+        state.videoMode = "preset";
+        state.activeFrame = 0;
+        state.activeStep = Math.max(2, state.activeStep);
+        setVideoStatus(message || "当前预置动作片段没有绑定真实视频文件，已使用预置骨架序列做机制拆解；上传视频后会执行 MoveNet 关键点识别。");
+        renderAll();
+    }
+
+    async function analyzeCurrentVideo() {
+        if (!state.sample) return;
+        stopPlayback();
+        const runId = state.videoRunId + 1;
+        state.videoRunId = runId;
+
+        const presetVideoUrl = selectedPresetVideoUrl();
+        const videoUrl = state.videoObjectUrl || presetVideoUrl;
+        if (!videoUrl) {
+            usePresetPoseSequence();
+            return;
+        }
+
+        setVideoBusy(true);
+        state.videoMode = state.videoObjectUrl ? "uploaded" : "preset_video";
+        state.videoFrames = [];
+        state.videoPoseSequence = null;
+        state.activeFrame = 0;
+        state.activeStep = 1;
+        setVideoStatus("正在从视频中抽取帧序列...");
+        renderAll();
+
+        try {
+            const count = visibleFrames();
+            const frames = await captureVideoFrames(videoUrl, count);
+            if (runId !== state.videoRunId) return;
+            state.videoFrames = frames.map(({ dataUrl, width, height, time }) => ({ dataUrl, width, height, time }));
+            state.activeStep = 2;
+            setVideoStatus(`已抽取 ${frames.length} 帧，开始在 Worker 中识别关键点与骨架...`);
+            renderAll();
+
+            if (!poseRuntimeAvailable()) {
+                throw new Error("MoveNet Worker 或本地 Lightning 模型路由不可用。");
+            }
+
+            const sequence = [];
+            for (const frame of frames) {
+                if (runId !== state.videoRunId) return;
+                state.activeFrame = frame.index;
+                setVideoStatus(`正在识别第 ${frame.index + 1}/${frames.length} 帧关键点与骨架...`);
+                const result = await inferPoseFrame(frame, frame.index, frames.length);
+                if (runId !== state.videoRunId) return;
+                sequence[frame.index] = poseDetectionToActionPose(
+                    primaryPose(result.poses),
+                    frame.index,
+                    frames.length,
+                    frame.width,
+                    frame.height
+                );
+                state.videoPoseSequence = sequence;
+                renderAll();
+                await nextFrame();
+            }
+
+            if (runId !== state.videoRunId) return;
+            state.videoPoseSequence = Array.from({ length: frames.length }, (_, index) => sequence[index] || generatePose(index, frames.length));
+            state.activeFrame = Math.max(0, Math.min(visibleFrames() - 1, frames.length - 1));
+            state.activeStep = 3;
+            setVideoStatus(`已完成 ${frames.length} 帧关键点与骨架识别，动作分类器已基于姿态序列重新计算。`);
+            renderAll();
+        } catch (error) {
+            console.warn("Video pose inference failed; using preset pose sequence fallback.", error);
+            if (runId === state.videoRunId) {
+                usePresetPoseSequence(`视频关键点识别失败，已切换为预置骨架 fallback：${error.message || error}`);
+            }
+        } finally {
+            if (runId === state.videoRunId) {
+                setVideoBusy(false);
+                updateReadout();
+            }
+        }
     }
 
     function range(values) {
@@ -323,7 +705,13 @@
             featureNames: state.actionModel.featureNames || [],
             modelId: state.actionModel.id || "pose_sequence_action_classifier",
         };
-        setPageStatus("真实推理 · 本地动作分类器");
+        if (state.videoMode === "uploaded" && state.videoPoseSequence?.length) {
+            setPageStatus("真实推理 · MoveNet 骨架 + 本地动作分类器");
+        } else if (state.videoMode === "preset_video" && state.videoPoseSequence?.length) {
+            setPageStatus("真实推理 · 预置视频骨架 + 本地动作分类器");
+        } else {
+            setPageStatus("真实推理 · 本地动作分类器");
+        }
     }
 
     function setPlaying(isPlaying) {
@@ -354,6 +742,10 @@
             el.frameSlider.max = String(state.data.inputShape?.maxT || 16);
             el.frameSlider.value = String(state.frameCount);
         }
+        if (el.videoName && !state.videoFile) {
+            el.videoName.textContent = selectedPresetVideoUrl() ? "使用当前预置视频" : "未选择视频";
+        }
+        setVideoBusy(state.videoBusy);
     }
 
     function renderFrames() {
@@ -365,18 +757,22 @@
             const active = index === state.activeFrame;
             const clipStart = Math.max(0, Math.min(state.activeFrame, count - (state.data.conv3d?.windowSize || 4)));
             const inWindow = index >= clipStart && index < clipStart + (state.data.conv3d?.windowSize || 4);
+            const videoFrame = state.videoFrames[index];
+            const frameStyle = videoFrame?.dataUrl
+                ? `background-image:url('${escapeHtml(videoFrame.dataUrl)}')`
+                : "";
             return `
                 <article
-                    class="${active ? "is-active" : ""} ${inWindow ? "is-in-window" : ""}"
+                    class="${active ? "is-active" : ""} ${inWindow ? "is-in-window" : ""} ${videoFrame ? "has-video-frame" : ""}"
                     data-action-frame="${index}"
                     style="--frame-hue:${hue + index * 1.8};--motion-shift:${(index / Math.max(1, count - 1)).toFixed(3)}"
                     tabindex="0"
                     role="button"
-                    aria-label="frame ${index + 1}"
+                    aria-label="第 ${index + 1} 帧"
                 >
                     <span>t${index + 1}</span>
                     <div class="human-frame-visual">
-                        <i class="human-frame-rgb"></i>
+                        <i class="human-frame-rgb" style="${frameStyle}"></i>
                         <div class="human-frame-skeleton">${renderPoseSvg(index, count)}</div>
                     </div>
                 </article>
@@ -407,7 +803,7 @@
         el.convWindow.style.setProperty("--window-start", start);
         el.convWindow.style.setProperty("--window-size", windowSize);
         el.convWindow.style.setProperty("--frame-count", count);
-        el.convWindow.hidden = !state.showWindow || state.activeStep < 2;
+        el.convWindow.hidden = !state.showWindow || state.activeStep < 3;
         if (el.windowChip) {
             el.windowChip.textContent = `3D window: t${start + 1} - t${start + windowSize}`;
         }
@@ -415,7 +811,7 @@
 
     function renderFeatureGrid() {
         if (!el.featureGrid) return;
-        const active = state.activeStep >= 2;
+        const active = state.activeStep >= 3;
         el.featureGrid.innerHTML = Array.from({ length: 32 }, (_, index) => {
             const hot = active && (index + state.activeFrame + state.activeStep) % 5 === 0;
             return `<i class="${hot ? "is-active" : ""}" style="transition-delay:${index * 10}ms"></i>`;
@@ -501,11 +897,19 @@
         const probabilities = currentProbabilities();
         const topItems = probabilities.slice(0, state.topK).map((item) => `${item.label} ${Number(item.score).toFixed(2)}`).join(" / ");
         const top1 = probabilities[0] || { label: state.sample.className, score: 0 };
+        const clipLabel = currentClipLabel();
+        const statusText = state.videoBusy
+            ? "视频关键点识别中"
+            : (state.videoMode === "uploaded" && state.videoPoseSequence?.length
+                ? "MoveNet 骨架 · 本地动作分类"
+                : (state.videoMode === "preset_video" && state.videoPoseSequence?.length
+                    ? "预置视频骨架 · 本地动作分类"
+                    : (state.actionModel ? "本地动作分类器" : "预置 fallback")));
 
         if (el.frameOutput) el.frameOutput.textContent = String(visibleFrames());
-        if (el.stageTitle) el.stageTitle.textContent = `${state.sample.label} · 帧序列到动作类别`;
-        if (el.statusChip) el.statusChip.textContent = state.actionModel ? "Real Inference · Local Action Model" : "Preset Fallback";
-        if (el.sampleLabel) el.sampleLabel.textContent = state.sample.label;
+        if (el.stageTitle) el.stageTitle.textContent = `${clipLabel} · 关键点骨架到动作类别`;
+        if (el.statusChip) el.statusChip.textContent = statusText;
+        if (el.sampleLabel) el.sampleLabel.textContent = clipLabel;
         if (el.tensorChip) el.tensorChip.textContent = `T × H × W × C = ${tensor}`;
         if (el.inputShape) el.inputShape.textContent = tensor;
         if (el.convKernel) el.convKernel.textContent = `kernel ${state.data.conv3d?.kernel || "3 × 3 × 3"} · stride ${state.data.conv3d?.stride || "1 × 1 × 1"}`;
@@ -515,17 +919,23 @@
         if (el.noteStep) el.noteStep.textContent = step.label || "--";
         if (el.noteDescription) {
             el.noteDescription.textContent = state.activeStep === 0
-                ? state.sample.description
+                ? (state.videoMode === "uploaded"
+                    ? "上传视频会先抽取帧序列，再逐帧识别关键点和骨架，最后把姿态时序特征送入本地动作分类器。"
+                    : state.sample.description)
                 : (step.summary || state.sample.description);
         }
         if (el.noteC3d) {
             const modelLabel = state.actionModel ? `${state.actionPrediction?.modelId || "pose_sequence_classifier"} · ${state.actionModel.status}` : "preset fallback";
-            el.noteC3d.textContent = `Conv visual: ${state.data.conv3d?.kernel || "3 × 3 × 3"}; feature dim: ${state.data.conv3d?.featureDim || 512}; 分类输出：${modelLabel}`;
+            const keypointSource = state.videoMode === "uploaded"
+                ? "上传视频 MoveNet"
+                : (state.videoMode === "preset_video" ? "预置视频 MoveNet" : "预置姿态序列");
+            el.noteC3d.textContent = `关键点来源：${keypointSource}；特征维度：${state.data.conv3d?.featureDim || 512}；分类输出：${modelLabel}`;
         }
 
         root.classList.toggle("hide-rgb", !state.showRgb);
         root.classList.toggle("hide-skeleton", !state.showSkeleton);
         root.classList.toggle("hide-window", !state.showWindow);
+        root.dataset.videoMode = state.videoMode;
         root.dataset.step = step.id || "video";
     }
 
@@ -539,12 +949,41 @@
         renderProbabilities();
     }
 
+    function clearUploadedVideo() {
+        state.videoRunId += 1;
+        if (state.videoObjectUrl) URL.revokeObjectURL(state.videoObjectUrl);
+        state.videoFile = null;
+        state.videoObjectUrl = "";
+        state.videoFrames = [];
+        state.videoPoseSequence = null;
+        state.videoMode = "preset";
+        setVideoBusy(false);
+        setVideoStatus("");
+        if (el.videoUpload) el.videoUpload.value = "";
+        if (el.videoName) el.videoName.textContent = selectedPresetVideoUrl() ? "使用当前预置视频" : "未选择视频";
+    }
+
+    function selectUploadedVideo(file) {
+        state.videoRunId += 1;
+        if (state.videoObjectUrl) URL.revokeObjectURL(state.videoObjectUrl);
+        state.videoFile = file;
+        state.videoObjectUrl = URL.createObjectURL(file);
+        state.videoFrames = [];
+        state.videoPoseSequence = null;
+        state.videoMode = "uploaded";
+        if (el.videoName) el.videoName.textContent = file.name;
+        setVideoStatus(`已选择 ${file.name}，开始抽帧并识别关键点与骨架...`);
+        renderAll();
+        analyzeCurrentVideo();
+    }
+
     function selectSample(sampleId) {
         const next = state.data.samples.find((sample) => sample.id === sampleId) || state.data.samples[0];
         state.sample = next;
         state.activeFrame = 0;
         state.activeStep = 0;
         stopPlayback();
+        clearUploadedVideo();
         renderControls();
         renderAll();
     }
@@ -582,9 +1021,26 @@
 
     function bindEvents() {
         el.sampleSelect?.addEventListener("change", () => selectSample(el.sampleSelect.value));
+        el.videoUpload?.addEventListener("change", () => {
+            const file = el.videoUpload.files?.[0];
+            if (!file) {
+                clearUploadedVideo();
+                renderAll();
+                return;
+            }
+            selectUploadedVideo(file);
+        });
         el.frameSlider?.addEventListener("input", () => {
             state.frameCount = Number(el.frameSlider.value);
             state.activeFrame = Math.min(state.activeFrame, visibleFrames() - 1);
+            if (state.videoMode !== "preset" && (state.videoFrames.length || state.videoPoseSequence?.length)) {
+                state.videoFrames = [];
+                state.videoPoseSequence = null;
+                state.activeStep = 0;
+                setVideoStatus("帧数 T 已变化，请重新点击“识别关键点与骨架”生成对应长度的帧序列。");
+            } else if (state.videoPoseSequence?.length) {
+                state.videoPoseSequence = Array.from({ length: visibleFrames() }, (_, index) => generatePose(index, visibleFrames()));
+            }
             renderAll();
         });
         el.topk?.addEventListener("change", () => {
@@ -601,13 +1057,18 @@
             });
         });
         el.play?.addEventListener("click", play);
+        el.runVideo?.addEventListener("click", analyzeCurrentVideo);
         el.reset?.addEventListener("click", () => {
             stopPlayback();
             state.activeFrame = 0;
             state.activeStep = 0;
             renderAll();
         });
-        window.addEventListener("beforeunload", stopPlayback);
+        window.addEventListener("beforeunload", () => {
+            stopPlayback();
+            if (state.videoObjectUrl) URL.revokeObjectURL(state.videoObjectUrl);
+            state.poseWorker?.terminate();
+        });
     }
 
     function init() {

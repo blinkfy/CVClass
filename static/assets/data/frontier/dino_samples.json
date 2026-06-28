@@ -1,0 +1,110 @@
+{
+  "status": "机制拆解 · 教学动画；预设样例 · 非真实推理",
+  "defaultSample": "animal",
+  "samples": [
+    {
+      "id": "animal",
+      "label": "动物主体",
+      "scene": "animal",
+      "summary": "同一主体在多种 crop 中保持语义一致，适合观察 DINO 的主体 attention。",
+      "crops": [
+        {"id": "gA", "label": "Global View A", "type": "global", "x": 8, "y": 8, "w": 82, "h": 82},
+        {"id": "gB", "label": "Global View B", "type": "global", "x": 16, "y": 13, "w": 76, "h": 76},
+        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 38, "y": 26, "w": 34, "h": 34},
+        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 24, "y": 42, "w": 32, "h": 32},
+        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 50, "y": 48, "w": 28, "h": 28},
+        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 18, "y": 62, "w": 30, "h": 30}
+      ],
+      "distribution": {
+        "labels": ["proto 07", "proto 18", "proto 24", "proto 31", "proto 42"],
+        "teacher": [0.34, 0.23, 0.18, 0.14, 0.11],
+        "studentStart": [0.14, 0.33, 0.16, 0.26, 0.11],
+        "studentAligned": [0.31, 0.24, 0.19, 0.15, 0.11]
+      },
+      "attention": {
+        "head1": {"x": 58, "y": 42, "x2": 42, "y2": 58, "label": "头部和身体轮廓"},
+        "head2": {"x": 43, "y": 58, "x2": 31, "y2": 68, "label": "主体躯干"},
+        "head3": {"x": 29, "y": 75, "x2": 72, "y2": 28, "label": "背景上下文"},
+        "average": {"x": 48, "y": 54, "x2": 57, "y2": 42, "label": "主体区域"}
+      }
+    },
+    {
+      "id": "person",
+      "label": "人物动作",
+      "scene": "person",
+      "summary": "人物局部 crop 包含头部、躯干和肢体，student 需要对齐 teacher 的整体语义。",
+      "crops": [
+        {"id": "gA", "label": "Global View A", "type": "global", "x": 10, "y": 6, "w": 80, "h": 86},
+        {"id": "gB", "label": "Global View B", "type": "global", "x": 20, "y": 8, "w": 70, "h": 82},
+        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 42, "y": 22, "w": 28, "h": 32},
+        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 40, "y": 48, "w": 30, "h": 34},
+        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 28, "y": 50, "w": 24, "h": 30},
+        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 58, "y": 55, "w": 25, "h": 30}
+      ],
+      "distribution": {
+        "labels": ["proto 05", "proto 16", "proto 29", "proto 35", "proto 48"],
+        "teacher": [0.28, 0.25, 0.19, 0.17, 0.11],
+        "studentStart": [0.18, 0.16, 0.34, 0.19, 0.13],
+        "studentAligned": [0.27, 0.23, 0.21, 0.18, 0.11]
+      },
+      "attention": {
+        "head1": {"x": 52, "y": 30, "x2": 52, "y2": 54, "label": "头部到躯干"},
+        "head2": {"x": 47, "y": 58, "x2": 35, "y2": 72, "label": "肢体结构"},
+        "head3": {"x": 70, "y": 52, "x2": 36, "y2": 36, "label": "场景上下文"},
+        "average": {"x": 51, "y": 49, "x2": 47, "y2": 66, "label": "人物主体"}
+      }
+    },
+    {
+      "id": "object",
+      "label": "桌面物体",
+      "scene": "object",
+      "summary": "单一物体的不同局部 crop 被拉近到同一特征簇。",
+      "crops": [
+        {"id": "gA", "label": "Global View A", "type": "global", "x": 9, "y": 9, "w": 82, "h": 82},
+        {"id": "gB", "label": "Global View B", "type": "global", "x": 15, "y": 15, "w": 72, "h": 72},
+        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 38, "y": 30, "w": 28, "h": 28},
+        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 42, "y": 48, "w": 30, "h": 30},
+        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 30, "y": 50, "w": 27, "h": 30},
+        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 52, "y": 58, "w": 25, "h": 26}
+      ],
+      "distribution": {
+        "labels": ["proto 04", "proto 11", "proto 21", "proto 33", "proto 45"],
+        "teacher": [0.31, 0.27, 0.18, 0.13, 0.11],
+        "studentStart": [0.12, 0.21, 0.30, 0.25, 0.12],
+        "studentAligned": [0.29, 0.25, 0.19, 0.15, 0.12]
+      },
+      "attention": {
+        "head1": {"x": 50, "y": 34, "x2": 53, "y2": 52, "label": "物体上沿"},
+        "head2": {"x": 50, "y": 56, "x2": 38, "y2": 58, "label": "主体边界"},
+        "head3": {"x": 50, "y": 80, "x2": 58, "y2": 40, "label": "桌面背景"},
+        "average": {"x": 50, "y": 52, "x2": 50, "y2": 36, "label": "物体主体"}
+      }
+    },
+    {
+      "id": "street",
+      "label": "街景交通",
+      "scene": "street",
+      "summary": "街景包含前景车辆和远处结构，展示无标签 attention 对主体区域的涌现关注。",
+      "crops": [
+        {"id": "gA", "label": "Global View A", "type": "global", "x": 6, "y": 8, "w": 86, "h": 82},
+        {"id": "gB", "label": "Global View B", "type": "global", "x": 13, "y": 12, "w": 78, "h": 78},
+        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 58, "y": 51, "w": 30, "h": 26},
+        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 30, "y": 48, "w": 34, "h": 32},
+        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 14, "y": 30, "w": 28, "h": 32},
+        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 68, "y": 26, "w": 26, "h": 31}
+      ],
+      "distribution": {
+        "labels": ["proto 02", "proto 19", "proto 26", "proto 37", "proto 51"],
+        "teacher": [0.26, 0.25, 0.22, 0.16, 0.11],
+        "studentStart": [0.15, 0.31, 0.13, 0.28, 0.13],
+        "studentAligned": [0.25, 0.24, 0.21, 0.18, 0.12]
+      },
+      "attention": {
+        "head1": {"x": 70, "y": 58, "x2": 42, "y2": 64, "label": "车辆主体"},
+        "head2": {"x": 34, "y": 62, "x2": 52, "y2": 78, "label": "道路结构"},
+        "head3": {"x": 20, "y": 32, "x2": 76, "y2": 28, "label": "建筑上下文"},
+        "average": {"x": 63, "y": 58, "x2": 39, "y2": 63, "label": "交通主体"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ stereo_page_title }} - 双目视觉与深度{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/stereo_depth.css') }}?v=20260628-stereo2">
+{% endblock %}
+
+{% block content %}
+<div class="vision-lab stereo-lab" data-stereo-page="{{ active_sub_page }}">
+    <header class="vision-hero station-hero stereo-hero">
+        <div>
+            <span class="section-label station-eyebrow">{{ stereo_eyebrow }}</span>
+            <h1 class="station-title">{{ stereo_page_title }}</h1>
+            <p class="station-summary">{{ stereo_subtitle }}</p>
+        </div>
+        <div class="station-hero-actions stereo-hero-actions">
+            <span class="stereo-state">{{ stereo_status }}</span>
+            <strong class="station-badge">{{ stereo_badge }}</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs stereo-tabs" aria-label="双目视觉与深度内部导航">
+        {% for item in stereo_nav %}
+        <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
+    </nav>
+
+    {% block stereo_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/geometry_vision/stereo_depth.js') }}?v=20260628-stereo2"></script>
+{% endblock %}

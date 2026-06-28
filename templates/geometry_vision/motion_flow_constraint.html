@@ -1,0 +1,178 @@
+{% extends "geometry_vision/motion_base.html" %}
+
+{% block motion_content %}
+<section class="vision-workbench motion-workbench motion-constraint-workbench" data-motion-flow aria-label="运动场与光流约束工作台">
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>两帧运动输入</h3><p>Frame Pair</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-motion-flow-input="sample">
+                <option value="block" selected>平移方块</option>
+                <option value="texture">旋转纹理</option>
+                <option value="object">前景物体移动</option>
+                <option value="camera">相机平移</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>帧间位移 dx <output data-motion-flow-output="dx">6</output></span>
+            <input type="range" min="-12" max="12" step="1" value="6" data-motion-flow-input="dx">
+        </label>
+        <label class="vision-field">
+            <span>帧间位移 dy <output data-motion-flow-output="dy">3</output></span>
+            <input type="range" min="-10" max="10" step="1" value="3" data-motion-flow-input="dy">
+        </label>
+        <label class="vision-field">
+            <span>噪声强度 <output data-motion-flow-output="noise">0.2</output></span>
+            <input type="range" min="0" max="1" step="0.1" value="0.2" data-motion-flow-input="noise">
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示亮度差分</span><input type="checkbox" data-motion-flow-input="showDiff" checked></label>
+            <label class="vision-toggle-row"><span>显示空间梯度 Ix / Iy</span><input type="checkbox" data-motion-flow-input="showSpatial" checked></label>
+            <label class="vision-toggle-row"><span>显示时间梯度 It</span><input type="checkbox" data-motion-flow-input="showTemporal" checked></label>
+            <label class="vision-toggle-row"><span>显示光流约束线</span><input type="checkbox" data-motion-flow-input="showLine" checked></label>
+            <label class="vision-toggle-row"><span>显示真实位移向量</span><input type="checkbox" data-motion-flow-input="showTruth" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-motion-step-select="constraint">
+                <option value="pair">双帧输入 / Frame Pair</option>
+                <option value="brightness">亮度恒定 / Brightness Constancy</option>
+                <option value="gradients">梯度计算 / Gradients</option>
+                <option value="constraint">光流约束 / Flow Constraint</option>
+                <option value="aperture">孔径问题 / Aperture Problem</option>
+            </select>
+        </label>
+
+        <div class="motion-button-row">
+            <button type="button" data-motion-prev="constraint">上一步</button>
+            <button type="button" data-motion-next="constraint">下一步</button>
+            <button type="button" data-motion-play="constraint">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前像素</span><strong data-motion-flow-summary="pixel">--</strong></div>
+            <div><span>真实位移</span><strong data-motion-flow-summary="truth">--</strong></div>
+            <div><span>约束方程</span><strong data-motion-flow-summary="equation">--</strong></div>
+            <div><span>观察结论</span><strong data-motion-flow-summary="note">单像素约束不足</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>MOTION FIELD & OPTICAL FLOW PLAYGROUND</span>
+                <h3 data-motion-flow-title>两帧亮度变化到光流约束</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-flow-chip="step">双帧输入 / Frame Pair</span>
+                <span data-motion-flow-chip="vector">u=6, v=3</span>
+                <span data-motion-flow-chip="gradient">Ix / Iy / It</span>
+            </div>
+        </div>
+
+        <div class="motion-frame-grid">
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>Frame t</strong>
+                    <span>局部 patch 高亮</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-frame="t"></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>Frame t+1</strong>
+                    <span>patch 随位移移动</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-frame="t1"></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>光流约束可视化</strong>
+                    <span>\(I_xu + I_yv + I_t = 0\)</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-constraint></div>
+            </section>
+        </div>
+
+        <div class="motion-detail-grid">
+            <section class="motion-patch-card">
+                <div class="geometry-section-head">
+                    <strong>5x5 局部窗口</strong>
+                    <span data-motion-flow-patch-caption>当前像素与邻域</span>
+                </div>
+                <div class="motion-patch-grid" data-motion-flow-patch></div>
+                <div class="motion-mini-card motion-gradient-microscope">
+                    <span>梯度计算 / Gradients</span>
+                    <div class="motion-math-output" data-motion-flow-gradient-micro>\(I_x=--,\ I_y=--,\ I_t=--\)</div>
+                </div>
+            </section>
+            <section class="motion-flow-preview" data-motion-flow-preview aria-label="光流约束步骤预览"></section>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-motion-flow-notes-title>Frame Pair</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>亮度恒定 / Brightness Constancy</span>
+            <strong data-motion-flow-brightness>\(I(x,y,t) \approx I(x+u,y+v,t+1)\)</strong>
+            <small data-motion-flow-formula-note>同一个物理点在相邻帧中亮度近似不变。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>光流约束 / Flow Constraint</span>
+            <strong data-motion-flow-formula>\(I_xu + I_yv + I_t = 0\)</strong>
+            <small data-motion-flow-current-equation>\(0.00u + 0.00v + 0.00 = 0\)</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>孔径问题 / Aperture Problem</span>
+            <strong>\(1\ \text{equation},\ 2\ \text{unknowns}\)</strong>
+            <small data-motion-flow-aperture-note>单像素只能给出一条 u-v 约束线，需要局部窗口补充更多方程。</small>
+        </div>
+
+        <div class="motion-reference-card">
+            <span>光流估计分类</span>
+            <div class="motion-reference-grid">
+                <article><strong>稀疏光流</strong><small>选择角点、纹理点等少量可跟踪特征进行估计。</small></article>
+                <article><strong>稠密光流</strong><small>对图像中尽量多的像素估计二维运动向量。</small></article>
+            </div>
+        </div>
+
+        <div class="motion-code-card motion-derivation-card">
+            <span>一阶近似</span>
+            <div class="motion-math-output motion-math-output--block">\[
+\begin{aligned}
+I(x+\Delta x,y+\Delta y,t+\Delta t) &\approx I + I_x\Delta x + I_y\Delta y + I_t\Delta t\\
+0 &= I_x\Delta x + I_y\Delta y + I_t\Delta t\\
+\Delta t=1 &\Rightarrow I_xu + I_yv = -I_t
+\end{aligned}
+\]</div>
+        </div>
+
+        <div class="motion-notes-body" data-motion-flow-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前梯度代入</span>
+            <div class="motion-math-output" data-motion-flow-substitution>\(I_x=--,\ I_y=--,\ I_t=--\)</div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper motion-stepper motion-stepper--5" aria-label="运动场与光流约束流程" data-motion-stepper="constraint">
+    <li class="is-active" data-motion-phase="pair"><span>1</span><div><strong>双帧输入</strong><small>Frame Pair</small></div></li>
+    <li data-motion-phase="brightness"><span>2</span><div><strong>亮度恒定</strong><small>Brightness Constancy</small></div></li>
+    <li data-motion-phase="gradients"><span>3</span><div><strong>梯度计算</strong><small>Gradients</small></div></li>
+    <li data-motion-phase="constraint"><span>4</span><div><strong>光流约束</strong><small>Flow Constraint</small></div></li>
+    <li data-motion-phase="aperture"><span>5</span><div><strong>孔径问题</strong><small>Aperture Problem</small></div></li>
+</ol>
+{% endblock %}

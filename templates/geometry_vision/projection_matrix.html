@@ -1,0 +1,156 @@
+{% extends "geometry_vision/base.html" %}
+
+{% block geometry_content %}
+<section class="vision-workbench geometry-workbench geometry-projection-workbench" data-geometry-projection aria-label="内外参与投影矩阵工作台">
+    <aside class="vision-panel vision-control-panel geometry-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>参数控制</h3><p>World → Pixel</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>点集选择</span>
+            <select data-geo-proj-input="pointSet">
+                <option value="point">单点</option>
+                <option value="cube" selected>立方体</option>
+                <option value="chessboard">棋盘格</option>
+                <option value="axes">坐标轴</option>
+            </select>
+        </label>
+
+        <div class="geometry-control-group">
+            <strong>外参 R, t</strong>
+            <label class="vision-field"><span>yaw <output data-geo-output="yaw">12°</output></span><input type="range" min="-45" max="45" step="1" value="12" data-geo-proj-input="yaw"></label>
+            <label class="vision-field"><span>pitch <output data-geo-output="pitch">-10°</output></span><input type="range" min="-35" max="35" step="1" value="-10" data-geo-proj-input="pitch"></label>
+            <label class="vision-field"><span>roll <output data-geo-output="roll">4°</output></span><input type="range" min="-30" max="30" step="1" value="4" data-geo-proj-input="roll"></label>
+            <label class="vision-field"><span>tx <output data-geo-output="tx">0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.05" value="0.10" data-geo-proj-input="tx"></label>
+            <label class="vision-field"><span>ty <output data-geo-output="ty">0.00</output></span><input type="range" min="-1.0" max="1.0" step="0.05" value="0" data-geo-proj-input="ty"></label>
+            <label class="vision-field"><span>tz <output data-geo-output="tz">4.00</output></span><input type="range" min="2.2" max="7.0" step="0.1" value="4.0" data-geo-proj-input="tz"></label>
+        </div>
+
+        <div class="geometry-control-group">
+            <strong>内参 K</strong>
+            <label class="vision-field"><span>fx <output data-geo-output="fx">680</output></span><input type="range" min="360" max="1100" step="10" value="680" data-geo-proj-input="fx"></label>
+            <label class="vision-field"><span>fy <output data-geo-output="fy">650</output></span><input type="range" min="360" max="1100" step="10" value="650" data-geo-proj-input="fy"></label>
+            <label class="vision-field"><span>cx <output data-geo-output="cx">320</output></span><input type="range" min="220" max="420" step="5" value="320" data-geo-proj-input="cx"></label>
+            <label class="vision-field"><span>cy <output data-geo-output="cy">210</output></span><input type="range" min="130" max="290" step="5" value="210" data-geo-proj-input="cy"></label>
+            <label class="vision-toggle-row"><span>skew 非正交像素轴</span><input type="checkbox" data-geo-proj-input="skew"></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-geo-step-select="projection">
+                <option value="world">世界坐标 / World Coordinate</option>
+                <option value="extrinsic">外参变换 / Extrinsic Transform</option>
+                <option value="camera">相机坐标 / Camera Coordinate</option>
+                <option value="intrinsic">内参投影 / Intrinsic Projection</option>
+                <option value="pixel">像素坐标 / Pixel Coordinate</option>
+            </select>
+        </label>
+
+        <div class="geometry-button-row">
+            <button type="button" data-geo-prev="projection">上一步</button>
+            <button type="button" data-geo-next="projection">下一步</button>
+            <button type="button" data-geo-play="projection">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前点</span><strong data-geo-proj-summary="point">--</strong></div>
+            <div><span>相机坐标</span><strong data-geo-proj-summary="camera">--</strong></div>
+            <div><span>像素坐标</span><strong data-geo-proj-summary="pixel">--</strong></div>
+            <div><span>投影状态</span><strong data-geo-proj-summary="status">等待计算</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel geometry-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>PROJECTION MATRIX PLAYGROUND</span>
+                <h3 data-geo-stage-title>坐标变换流水线</h3>
+            </div>
+            <div class="geometry-stage-chips">
+                <span data-geo-chip="projection-step">世界坐标 / World Coordinate</span>
+                <span data-geo-chip="projection-count">8 points</span>
+                <span>P = K[R|t]</span>
+            </div>
+        </div>
+
+        <div class="geometry-pipeline" data-geo-pipeline aria-label="世界坐标到像素坐标矩阵流水线">
+            <article class="geo-matrix-card" data-geo-stage="world">
+                <span>World Coordinate</span>
+                <strong>世界坐标</strong>
+                <code data-geo-matrix="world">[X, Y, Z, 1]^T</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="extrinsic">
+                <span>Extrinsic Transform</span>
+                <strong>外参变换</strong>
+                <code data-geo-matrix="extrinsic">R = I, t = 0</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="camera">
+                <span>Camera Coordinate</span>
+                <strong>相机坐标</strong>
+                <code data-geo-matrix="camera">Xc = R Xw + t</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="normalized">
+                <span>Normalized Plane</span>
+                <strong>归一化平面</strong>
+                <code data-geo-matrix="normalized">x = Xc/Zc</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="intrinsic">
+                <span>Intrinsic Projection</span>
+                <strong>内参投影</strong>
+                <code data-geo-matrix="intrinsic">K maps to pixels</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="pixel">
+                <span>Pixel Coordinate</span>
+                <strong>像素坐标</strong>
+                <code data-geo-matrix="pixel">s[u,v,1]^T</code>
+            </article>
+        </div>
+
+        <div class="geometry-projection-lower">
+            <section class="geometry-projection-window">
+                <div class="geometry-section-head">
+                    <strong>像素坐标</strong>
+                    <span data-geo-proj-caption>Pixel Coordinate · ghost/current/principal</span>
+                </div>
+                <div class="geometry-svg-frame" data-geo-projection-window></div>
+            </section>
+            <section class="geometry-flow-preview" data-geo-flow-preview aria-label="当前计算状态条"></section>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel geometry-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-geo-notes-title>世界坐标</h3><p>当前阶段解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>核心公式</span>
+            <strong data-geo-notes-formula>s [u, v, 1]^T = K [R|t] Xw</strong>
+            <small data-geo-notes-formula-note>外参先把世界点转入相机坐标，内参再把归一化点映射到像素网格。</small>
+        </div>
+
+        <div class="geometry-notes-body" data-geo-notes-body></div>
+
+        <div class="vision-output-schema">
+            <span>当前点代入</span>
+            <code data-geo-substitution>Xw = [--]</code>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>参数影响</span><strong data-geo-param-impact>调整 fx 会改变水平方向放大倍率。</strong></div>
+            <div><span>当前像素</span><strong data-geo-current-pixel>u=--, v=--</strong></div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper geometry-stepper geometry-stepper--5" aria-label="投影矩阵处理流程" data-geo-stepper="projection">
+    <li class="is-active" data-geo-phase="world"><span>1</span><div><strong>世界坐标</strong><small>World Coordinate · Xw</small></div></li>
+    <li data-geo-phase="extrinsic"><span>2</span><div><strong>外参变换</strong><small>Extrinsic Transform · R,t</small></div></li>
+    <li data-geo-phase="camera"><span>3</span><div><strong>相机坐标</strong><small>Camera Coordinate · Xc</small></div></li>
+    <li data-geo-phase="intrinsic"><span>4</span><div><strong>内参投影</strong><small>Intrinsic Projection · K</small></div></li>
+    <li data-geo-phase="pixel"><span>5</span><div><strong>像素坐标</strong><small>Pixel Coordinate · u,v</small></div></li>
+</ol>
+{% endblock %}

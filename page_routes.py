@@ -215,6 +215,168 @@ def register_page_routes(app, get_model_status):
             "human_pose_nav": nav,
         }
 
+    def build_geometry_context(active_sub_page):
+        subpage_configs = {
+            "model": {
+                "page_title": "相机成像模型",
+                "subtitle": "从光心、光轴、焦距和成像平面出发，观察三维点如何通过针孔投影落到二维图像平面。",
+                "status": "机制拆解 · 教学动画",
+            },
+            "projection": {
+                "page_title": "内外参与投影矩阵",
+                "subtitle": "观察世界坐标如何经过外参变换、归一化投影和内参映射，最终得到像素坐标。",
+                "status": "公式推导 · K[R|t]",
+            },
+            "calibration": {
+                "page_title": "棋盘格标定实验",
+                "subtitle": "通过棋盘格角点建立 3D 世界点与 2D 图像点对应，观察相机参数求解和重投影误差。",
+                "status": "预设样例 · 可解释演示",
+            },
+        }
+        nav = [
+            {"key": "model", "label": "相机成像模型", "href": url_for("camera_geometry_model_page")},
+            {"key": "projection", "label": "内外参与投影矩阵", "href": url_for("camera_projection_matrix_page")},
+            {"key": "calibration", "label": "棋盘格标定实验", "href": url_for("camera_calibration_page")},
+        ]
+        for item in nav:
+            item["active"] = item["key"] == active_sub_page
+
+        config = subpage_configs[active_sub_page]
+        return {
+            "active_page": "geometry_vision",
+            "active_sub_page": active_sub_page,
+            "geometry_eyebrow": "STATION 12 · WORLD 03 CAMERA GEOMETRY",
+            "geometry_title": "相机几何与标定",
+            "geometry_page_title": config["page_title"],
+            "geometry_subtitle": config["subtitle"],
+            "geometry_badge": "K · [R|t] · REPROJECTION",
+            "geometry_status": config["status"],
+            "geometry_nav": nav,
+        }
+
+    def build_motion_context(active_sub_page):
+        subpage_configs = {
+            "constraint": {
+                "page_title": "运动场与光流约束",
+                "subtitle": "从两帧图像的亮度变化出发，观察像素运动如何被近似为二维光流向量。",
+                "status": "机制拆解 · 教学动画",
+            },
+            "lucas_kanade": {
+                "page_title": "Lucas-Kanade 光流",
+                "subtitle": "用一个局部窗口内的多个像素约束，最小二乘求解当前 patch 的二维运动向量。",
+                "status": "预设样例 · 可解释演示",
+            },
+            "pyramid": {
+                "page_title": "金字塔光流与运动追踪",
+                "subtitle": "通过图像金字塔从粗到细估计大位移，让 Lucas-Kanade 适用于更明显的运动。",
+                "status": "公式推导 · Optical Flow",
+            },
+            "real_flow": {
+                "page_title": "真实视频光流可视化",
+                "subtitle": "从本地交通视频逐帧读取像素，在浏览器中实时计算稠密采样光流和稀疏特征轨迹。",
+                "status": "真实视频帧 · 浏览器端计算",
+            },
+        }
+        nav = [
+            {"key": "constraint", "label": "运动场与光流约束", "href": url_for("motion_flow_constraint_page")},
+            {"key": "lucas_kanade", "label": "Lucas-Kanade 光流", "href": url_for("motion_lucas_kanade_page")},
+            {"key": "pyramid", "label": "金字塔光流与运动追踪", "href": url_for("motion_pyramid_tracking_page")},
+            {"key": "real_flow", "label": "真实视频光流", "href": url_for("motion_real_flow_page")},
+        ]
+        for item in nav:
+            item["active"] = item["key"] == active_sub_page
+
+        config = subpage_configs[active_sub_page]
+        return {
+            "active_page": "motion_estimation",
+            "active_sub_page": active_sub_page,
+            "motion_eyebrow": "MODULE 02 · WORLD 03 MOTION ESTIMATION",
+            "motion_title": "运动估计与光流",
+            "motion_page_title": config["page_title"],
+            "motion_subtitle": config["subtitle"],
+            "motion_badge": "Ix u + Iy v + It = 0 · LK · PYRAMID",
+            "motion_status": config["status"],
+            "motion_nav": nav,
+        }
+
+    def build_stereo_context(active_sub_page):
+        subpage_configs = {
+            "parallel": {
+                "page_title": "平行双目与极线约束",
+                "subtitle": "观察同一个三维点如何分别投影到左右相机，并理解校正后双目图像为什么可以沿水平扫描线寻找匹配。",
+                "status": "PARALLEL STEREO · RECTIFIED PAIR",
+            },
+            "disparity": {
+                "page_title": "视差与深度三角关系",
+                "subtitle": "通过 d = xL - xR 和 Z = bf / d，观察视差、基线、焦距如何共同决定深度。",
+                "status": "DISPARITY TO DEPTH · Z = bf / d",
+            },
+            "block_matching": {
+                "page_title": "块匹配与视差图",
+                "subtitle": "从单点视差扩展到整张图像，用局部块匹配计算每个像素或 patch 的视差，生成视差图与深度图。",
+                "status": "BLOCK MATCHING · COST VOLUME",
+            },
+        }
+        nav = [
+            {"key": "parallel", "label": "平行双目与极线约束", "href": url_for("stereo_depth_parallel_page")},
+            {"key": "disparity", "label": "视差与深度三角关系", "href": url_for("stereo_depth_disparity_page")},
+            {"key": "block_matching", "label": "块匹配与视差图", "href": url_for("stereo_depth_block_matching_page")},
+        ]
+        for item in nav:
+            item["active"] = item["key"] == active_sub_page
+
+        config = subpage_configs[active_sub_page]
+        return {
+            "active_page": "stereo_depth",
+            "active_sub_page": active_sub_page,
+            "stereo_eyebrow": "STATION 14 · WORLD 03 STEREO DEPTH",
+            "stereo_title": "双目视觉与深度",
+            "stereo_page_title": config["page_title"],
+            "stereo_subtitle": config["subtitle"],
+            "stereo_badge": "b · f · d · Z",
+            "stereo_status": config["status"],
+            "stereo_nav": nav,
+        }
+
+    def build_multiview_context(active_sub_page):
+        subpage_configs = {
+            "epipolar": {
+                "page_title": "对极几何与基础矩阵",
+                "subtitle": "从两张非平行视图中的匹配点出发，观察一个点如何在另一张图像中生成一条极线，并理解对极约束 x'^T F x = 0。",
+                "status": "预设样例 · 可解释演示",
+            },
+            "pose": {
+                "page_title": "本质矩阵与相机位姿",
+                "subtitle": "在已知相机内参后，把基础矩阵转换为本质矩阵，并通过分解 E 恢复两台相机之间的旋转 R 和平移 t。",
+                "status": "F → E · R,t · CHEIRALITY",
+            },
+            "triangulation": {
+                "page_title": "三角测量与稀疏点云",
+                "subtitle": "已知相机位姿和二维匹配点后，通过反投影射线求空间点，并将多个匹配点重建为稀疏三维点云。",
+                "status": "TRIANGULATION · REPROJECTION ERROR",
+            },
+        }
+        nav = [
+            {"key": "epipolar", "label": "对极几何与基础矩阵", "href": url_for("multiview_epipolar_geometry_page")},
+            {"key": "pose", "label": "本质矩阵与相机位姿", "href": url_for("multiview_essential_pose_page")},
+            {"key": "triangulation", "label": "三角测量与稀疏点云", "href": url_for("multiview_triangulation_page")},
+        ]
+        for item in nav:
+            item["active"] = item["key"] == active_sub_page
+
+        config = subpage_configs[active_sub_page]
+        return {
+            "active_page": "multiview_reconstruction",
+            "active_sub_page": active_sub_page,
+            "multiview_eyebrow": "STATION 15 · WORLD 03 MULTIVIEW RECONSTRUCTION",
+            "multiview_title": "多视图几何与三维重建",
+            "multiview_page_title": config["page_title"],
+            "multiview_subtitle": config["subtitle"],
+            "multiview_badge": "F · E · R,t · X",
+            "multiview_status": config["status"],
+            "multiview_nav": nav,
+        }
+
     @app.route("/")
     def home():
         return render_template("pages/home.html", active_page="home")
@@ -414,9 +576,124 @@ def register_page_routes(app, get_model_status):
             **build_human_pose_context("action"),
         )
 
+    @app.route("/camera-geometry", methods=["GET"])
+    def camera_geometry_page():
+        return redirect(url_for("camera_geometry_model_page"))
+
+    @app.route("/camera-geometry/model", methods=["GET"])
+    def camera_geometry_model_page():
+        return render_template(
+            "geometry_vision/camera_model.html",
+            **build_geometry_context("model"),
+        )
+
+    @app.route("/camera-geometry/projection-matrix", methods=["GET"])
+    def camera_projection_matrix_page():
+        return render_template(
+            "geometry_vision/projection_matrix.html",
+            **build_geometry_context("projection"),
+        )
+
+    @app.route("/camera-geometry/calibration", methods=["GET"])
+    def camera_calibration_page():
+        return render_template(
+            "geometry_vision/calibration.html",
+            **build_geometry_context("calibration"),
+        )
+
+    @app.route("/motion-estimation", methods=["GET"])
+    def motion_estimation_page():
+        return redirect(url_for("motion_flow_constraint_page"))
+
+    @app.route("/motion-estimation/flow-constraint", methods=["GET"])
+    def motion_flow_constraint_page():
+        return render_template(
+            "geometry_vision/motion_flow_constraint.html",
+            **build_motion_context("constraint"),
+        )
+
+    @app.route("/motion-estimation/lucas-kanade", methods=["GET"])
+    def motion_lucas_kanade_page():
+        return render_template(
+            "geometry_vision/motion_lucas_kanade.html",
+            **build_motion_context("lucas_kanade"),
+        )
+
+    @app.route("/motion-estimation/pyramid-tracking", methods=["GET"])
+    def motion_pyramid_tracking_page():
+        return render_template(
+            "geometry_vision/motion_pyramid_tracking.html",
+            **build_motion_context("pyramid"),
+        )
+
+    @app.route("/motion-estimation/real-flow", methods=["GET"])
+    def motion_real_flow_page():
+        return render_template(
+            "geometry_vision/motion_real_flow.html",
+            **build_motion_context("real_flow"),
+        )
+
+    @app.route("/stereo-depth", methods=["GET"])
+    def stereo_depth_page():
+        return redirect(url_for("stereo_depth_disparity_page"))
+
+    @app.route("/stereo-depth/parallel", methods=["GET"])
+    def stereo_depth_parallel_page():
+        return render_template(
+            "geometry_vision/stereo_parallel.html",
+            **build_stereo_context("parallel"),
+        )
+
+    @app.route("/stereo-depth/disparity", methods=["GET"])
+    def stereo_depth_disparity_page():
+        return render_template(
+            "geometry_vision/stereo_disparity.html",
+            **build_stereo_context("disparity"),
+        )
+
+    @app.route("/stereo-depth/block-matching", methods=["GET"])
+    def stereo_depth_block_matching_page():
+        return render_template(
+            "geometry_vision/stereo_block_matching.html",
+            **build_stereo_context("block_matching"),
+        )
+
+    @app.route("/multiview-reconstruction", methods=["GET"])
+    def multiview_reconstruction_page():
+        return redirect(url_for("multiview_epipolar_geometry_page"))
+
+    @app.route("/multiview-reconstruction/epipolar-geometry", methods=["GET"])
+    def multiview_epipolar_geometry_page():
+        return render_template(
+            "geometry_vision/multiview_epipolar.html",
+            **build_multiview_context("epipolar"),
+        )
+
+    @app.route("/multiview-reconstruction/essential-pose", methods=["GET"])
+    def multiview_essential_pose_page():
+        return render_template(
+            "geometry_vision/multiview_pose.html",
+            **build_multiview_context("pose"),
+        )
+
+    @app.route("/multiview-reconstruction/triangulation", methods=["GET"])
+    def multiview_triangulation_page():
+        return render_template(
+            "geometry_vision/multiview_triangulation.html",
+            **build_multiview_context("triangulation"),
+        )
+
     @app.route("/frontier", methods=["GET"])
     def frontier_page():
         return render_template("frontier.html", active_page="frontier", active_sub_page="overview")
+
+    @app.route("/frontier/vit", methods=["GET"])
+    def frontier_vit_page():
+        return render_template("frontier_vit.html", active_page="frontier", active_sub_page="vit")
+
+    @app.route("/frontier/dino", methods=["GET"])
+    def frontier_dino_page():
+        return render_template("frontier_dino.html", active_page="frontier", active_sub_page="dino")
 
     @app.route("/frontier/vision-banana", methods=["GET"])
     def vision_banana_page():

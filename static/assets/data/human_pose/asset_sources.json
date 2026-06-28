@@ -1,13 +1,13 @@
 {
   "pageStatus": "骨架页：真实推理 · 本地 MoveNet MultiPose / Thunder；动作页：真实推理 · 本地姿态序列分类器；机制页：预设样例 · 机制拆解",
-  "modelStatus": "Skeleton page defaults to local MoveNet MultiPose for multi-person pose inference. It keeps local MoveNet Thunder as a single-person high-accuracy mode and local MoveNet Lightning as the final single-pose fallback. Action page defaults to a local pose-sequence softmax classifier over generated frame keypoints. Preset samples are fallback only; mechanism page remains preset teaching data.",
+  "modelStatus": "Skeleton page defaults to local MoveNet MultiPose for multi-person pose inference. It keeps local MoveNet Thunder as a single-person high-accuracy mode and local MoveNet Lightning as the final single-pose fallback. Action page can extract uploaded or preset video frames, run local MoveNet Lightning keypoint inference in a Worker, then feed the pose sequence into the local softmax action classifier. Preset motion parameters are fallback only; mechanism page remains preset teaching data.",
   "modelResearch": "/static/assets/data/human_pose/model_research.json",
   "runtimeModels": [
     {
       "id": "tensorflow_js_movenet_multipose_lightning_local",
       "label": "TensorFlow.js MoveNet MultiPose Lightning",
       "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
-      "usedFor": ["/human-pose/skeleton"],
+      "usedFor": ["/human-pose/skeleton", "/human-pose/action"],
       "status": "default_real_inference_local_model",
       "localModelRoute": "/static/assets/models/human_pose/movenet/multipose-lightning/model.json",
       "localFiles": [
@@ -81,6 +81,15 @@
       "license": "CC BY-SA 4.0; recorded source, not used as a classroom-assignment blocker",
       "usedFor": ["pose_sample_standing", "movenet_real_inference_test"],
       "note": "Clear single-person standing image. The default overlay is a hand-authored teaching annotation; MoveNet mode can run real browser inference on the same image for comparison."
+    },
+    {
+      "id": "standing_person_preset_video",
+      "file": "/static/assets/examples/human_pose/action_standing_preset.webm",
+      "source": "Generated locally from /static/assets/examples/human_pose/pose_sample_standing.jpg",
+      "author": "Project-generated derivative",
+      "license": "Classroom assignment asset; source image record kept above",
+      "usedFor": ["action_sample_standing_preset_video"],
+      "note": "Short WebM clip used by /human-pose/action as a preset video. MoveNet keypoints are inferred from extracted frames; the clip itself is not a pretrained action dataset sample."
     },
     {
       "id": "volleyball_player_jumping",

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ geometry_page_title }} - 相机几何与标定{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/camera_geometry.css') }}?v=20260628-geometry10">
+{% endblock %}
+
+{% block content %}
+<div class="vision-lab geometry-lab" data-geometry-page="{{ active_sub_page }}">
+    <header class="vision-hero station-hero geometry-hero">
+        <div>
+            <span class="section-label station-eyebrow">{{ geometry_eyebrow }}</span>
+            <h1 class="station-title">{{ geometry_page_title }}</h1>
+            <p class="station-summary">{{ geometry_subtitle }}</p>
+        </div>
+        <div class="station-hero-actions geometry-hero-actions">
+            <span class="geometry-state">{{ geometry_status }}</span>
+            <strong class="station-badge">{{ geometry_badge }}</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="相机几何与标定内部导航">
+        {% for item in geometry_nav %}
+        <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
+    </nav>
+
+    {% block geometry_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/geometry_vision/camera_geometry.js') }}?v=20260628-geometry9"></script>
+{% endblock %}

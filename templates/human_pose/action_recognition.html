@@ -4,20 +4,28 @@
 <section
     class="vision-workbench human-action-workbench"
     data-human-action
-    data-action-data-url="{{ url_for('static', filename='assets/data/human_pose/action_samples.json') }}?v=20260627-localmodel2"
+    data-action-data-url="{{ url_for('static', filename='assets/data/human_pose/action_samples.json') }}?v=20260628-video1"
     data-action-model-url="{{ url_for('static', filename='assets/models/human_pose/action/pose_sequence_classifier.json') }}?v=20260627-localmodel2"
+    data-pose-worker-url="{{ url_for('static', filename='js/human_pose/pose_worker.js') }}?v=20260627-worker1"
+    data-pose-model-url-lightning="{{ url_for('static', filename='assets/models/human_pose/movenet/singlepose-lightning/model.json') }}"
     aria-label="动作识别工作台"
 >
     <aside class="vision-panel vision-control-panel human-control-panel human-action-controls">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>ACTION INPUT</h3><p>视频片段与显示参数</p></div>
+            <div><h3>动作输入</h3><p>视频、关键点与显示参数</p></div>
         </div>
 
         <label class="vision-field">
-            <span>示例动作选择</span>
+            <span>预置视频 / 动作片段</span>
             <select data-action-sample></select>
         </label>
+        <label class="human-file-picker human-action-video-picker">
+            <input type="file" accept="video/*" data-action-video-upload>
+            <span class="human-file-button">上传视频</span>
+            <span class="human-file-name" data-action-video-name>未选择视频</span>
+        </label>
+        <small class="human-field-note" data-action-video-note>上传后抽取 T 帧，优先在后台 Worker 中用本地 MoveNet Lightning 识别单人关键点与骨架，再送入动作分类器。</small>
         <label class="vision-field">
             <span>帧数 T <output data-action-frames-output>8</output></span>
             <input type="range" min="4" max="16" step="1" value="8" data-action-frames>
@@ -41,6 +49,7 @@
             </select>
         </label>
         <div class="human-button-row">
+            <button type="button" data-action-run-video>识别关键点与骨架</button>
             <button type="button" data-action-play>播放流程</button>
             <button type="button" data-action-reset>重置</button>
         </div>
@@ -53,8 +62,8 @@
 
     <div class="vision-stage-panel human-action-stage">
         <div class="vision-stage-header">
-            <div><span>ACTION STAGE</span><h3 data-action-stage-title>视频帧序列到动作类别</h3></div>
-            <span class="vision-status-chip" data-action-status-chip>Loading Local Action Model</span>
+            <div><span>动作识别舞台</span><h3 data-action-stage-title>视频帧序列到动作类别</h3></div>
+            <span class="vision-status-chip" data-action-status-chip>加载本地动作模型</span>
         </div>
 
         <div class="human-action-stage-body">
@@ -68,10 +77,11 @@
                 <div class="human-frame-strip" data-action-frames-strip aria-label="视频帧序列"></div>
                 <div class="human-conv-window" data-action-conv-window aria-hidden="true"></div>
             </div>
+            <video class="human-action-video-source" data-action-video-source muted playsinline preload="metadata"></video>
 
             <div class="human-action-feature-row">
                 <article class="human-action-tensor-card">
-                    <span>Input Tensor</span>
+                    <span>输入张量</span>
                     <strong data-action-input-shape>8 × 112 × 112 × 3</strong>
                     <small>视频 clip 被整理为四维张量，时间维 T 保留动作顺序。</small>
                 </article>
@@ -83,7 +93,7 @@
                     <small data-action-conv-kernel>kernel 3 × 3 × 3</small>
                 </article>
                 <article class="human-action-feature-card">
-                    <span>Feature Merge</span>
+                    <span>特征合并</span>
                     <div class="human-action-feature-grid" data-action-feature-grid aria-hidden="true"></div>
                     <small data-action-feature-note>多帧局部响应合并为时空特征。</small>
                 </article>
@@ -98,7 +108,7 @@
     <aside class="vision-panel vision-notes-panel human-notes-panel human-action-notes">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>ACTION NOTES</h3><p>时空特征说明</p></div>
+            <div><h3>动作说明</h3><p>关键点、骨架与时序特征</p></div>
         </div>
         <dl class="human-summary-list">
             <div><dt>输入尺寸</dt><dd data-action-note-shape>T × H × W × C = 8 × 112 × 112 × 3</dd></div>

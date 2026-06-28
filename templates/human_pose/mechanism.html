@@ -4,7 +4,7 @@
 <section
     class="vision-workbench human-mechanism-workbench"
     data-human-pose-mechanism
-    data-mechanism-data-url="{{ url_for('static', filename='assets/data/human_pose/pose_mechanism.json') }}?v=20260627-round6"
+    data-mechanism-data-url="{{ url_for('static', filename='assets/data/human_pose/pose_mechanism.json') }}?v=20260628-cn1"
     data-pose-samples-url="{{ url_for('static', filename='assets/data/human_pose/pose_samples.json') }}?v=20260627-round6"
     data-pose-skeletons-url="{{ url_for('static', filename='assets/data/human_pose/pose_skeletons.json') }}?v=20260627-round6"
     aria-label="姿态估计机制工作台"
@@ -12,7 +12,7 @@
     <aside class="vision-panel vision-control-panel human-control-panel human-mechanism-controls">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">01</span>
-            <div><h3>MECHANISM MODE</h3><p>DeepPose / Heatmap</p></div>
+            <div><h3>机制模式</h3><p>DeepPose / Heatmap</p></div>
         </div>
 
         <div class="human-mode-switch" role="tablist" aria-label="姿态估计机制模式">
@@ -24,8 +24,20 @@
 
         <div class="human-button-row">
             <button type="button" data-mechanism-play>播放流程</button>
+            <button type="button" data-mechanism-prev>上一步</button>
+            <button type="button" data-mechanism-next>下一步</button>
             <button type="button" data-mechanism-reset>重置</button>
         </div>
+
+        <label class="mechanism-speed-control">
+            <span>播放速度</span>
+            <select data-mechanism-speed aria-label="播放速度">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+        </label>
 
         <div class="vision-shape-card">
             <span>当前版本</span>
@@ -37,7 +49,7 @@
     <div class="vision-stage-panel human-mechanism-stage">
         <div class="vision-stage-header">
             <div>
-                <span>MECHANISM STAGE</span>
+                <span>机制演示</span>
                 <h3 data-mechanism-title>DeepPose 坐标回归</h3>
             </div>
             <span class="vision-status-chip" data-mechanism-chip>DeepPose</span>
@@ -59,25 +71,63 @@
                     <g data-mechanism-point-layer></g>
                     <g data-mechanism-heat-layer></g>
                 </svg>
+                <div class="mechanism-operation-layer" data-mechanism-operation-layer aria-hidden="true"></div>
                 <div class="human-pose-loading" data-mechanism-loading>正在加载姿态机制样例...</div>
             </div>
 
             <div class="human-mechanism-side">
                 <div class="human-stage-caption">
-                    <strong data-mechanism-stage-label>Image Crop</strong>
+                    <strong data-mechanism-stage-label>人体裁剪</strong>
                     <span data-mechanism-stage-note>检测框裁出人体区域，后续网络只处理人体 crop。</span>
                 </div>
 
-                <div class="human-feature-tiles" data-mechanism-feature-grid aria-label="CNN feature map 预设示意"></div>
+                <div class="mechanism-compute-board" data-mechanism-compute-board aria-label="姿态估计计算过程可视化">
+                    <div class="mechanism-data-node mechanism-source-node" data-compute-node="crop">
+                        <div class="mechanism-node-head">
+                            <span>01</span>
+                            <strong>裁剪张量</strong>
+                        </div>
+                        <div class="mechanism-crop-preview" data-mechanism-crop-preview>
+                            <span>人体 crop</span>
+                        </div>
+                        <div class="mechanism-channel-split" aria-label="RGB 通道分解">
+                            <i></i><i></i><i></i>
+                        </div>
+                    </div>
 
-                <div class="human-pose-vector-card human-mechanism-vector" data-mechanism-vector-card>
-                    <span>Pose Vector Regression</span>
-                    <code data-mechanism-vector>[nx0, ny0, nx5, ny5, ...]</code>
+                    <i class="mechanism-transfer-line" data-line="crop-feature"></i>
+
+                    <div class="mechanism-data-node mechanism-feature-node" data-compute-node="feature">
+                        <div class="mechanism-node-head">
+                            <span>02</span>
+                            <strong>CNN 特征图</strong>
+                        </div>
+                        <div class="human-feature-tiles" data-mechanism-feature-grid aria-label="CNN 特征图预设示意"></div>
+                        <div class="mechanism-feature-caption" data-mechanism-feature-caption>边缘 / 肢体 / 纹理响应</div>
+                    </div>
+
+                    <i class="mechanism-transfer-line" data-line="feature-output"></i>
+
+                    <div class="mechanism-data-node mechanism-output-node" data-compute-node="output">
+                        <div class="mechanism-node-head">
+                            <span>03</span>
+                            <strong data-mechanism-output-head>回归头</strong>
+                        </div>
+
+                        <div class="mechanism-deeppose-output" data-mechanism-deeppose-output>
+                            <div class="mechanism-vector-machine" data-mechanism-vector-card>
+                                <span>姿态向量回归</span>
+                                <div class="mechanism-vector-stream" data-mechanism-vector>[nx0, ny0, nx5, ny5, ...]</div>
+                            </div>
+                            <div class="human-coordinate-grid" data-mechanism-coordinate-grid aria-label="归一化坐标到原图坐标"></div>
+                        </div>
+
+                        <div class="mechanism-heatmap-output" data-mechanism-heatmap-output>
+                            <div class="human-heatmap-strip" data-mechanism-heatmap-list aria-label="关节点 heatmap 预设响应"></div>
+                            <div class="mechanism-argmax-panel" data-mechanism-argmax aria-label="Argmax 峰值竞争"></div>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="human-coordinate-grid" data-mechanism-coordinate-grid aria-label="归一化坐标到原图坐标"></div>
-
-                <div class="human-heatmap-strip" data-mechanism-heatmap-list aria-label="Joint heatmaps 预设响应"></div>
             </div>
         </div>
 
@@ -87,17 +137,17 @@
     <aside class="vision-panel vision-notes-panel human-notes-panel human-mechanism-notes">
         <div class="vision-panel-heading">
             <span class="vision-panel-index">02</span>
-            <div><h3>PROCESS NOTES</h3><p>当前阶段输入输出</p></div>
+            <div><h3>过程说明</h3><p>当前阶段输入输出</p></div>
         </div>
 
         <div class="human-keypoint-readout human-mechanism-readout">
             <span data-mechanism-readout-kind>DeepPose</span>
-            <strong data-mechanism-readout-title>Image Crop</strong>
+            <strong data-mechanism-readout-title>人体裁剪</strong>
             <dl>
-                <div><dt>input</dt><dd data-mechanism-input>原图 + person bbox</dd></div>
-                <div><dt>output</dt><dd data-mechanism-output>人体区域 crop</dd></div>
-                <div><dt>mode</dt><dd data-mechanism-mode-label>坐标回归</dd></div>
-                <div><dt>sample</dt><dd data-mechanism-sample>pose_sample_01</dd></div>
+                <div><dt>输入</dt><dd data-mechanism-input>原图 + 人体检测框 bbox</dd></div>
+                <div><dt>输出</dt><dd data-mechanism-output>人体区域 crop</dd></div>
+                <div><dt>模式</dt><dd data-mechanism-mode-label>坐标回归</dd></div>
+                <div><dt>样例</dt><dd data-mechanism-sample>pose_sample_01</dd></div>
             </dl>
         </div>
 

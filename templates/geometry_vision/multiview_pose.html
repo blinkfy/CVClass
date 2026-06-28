@@ -1,0 +1,145 @@
+{% extends "geometry_vision/multiview_base.html" %}
+
+{% block multiview_content %}
+<section class="vision-workbench multiview-workbench multiview-pose-workbench" data-mv-pose aria-label="本质矩阵与相机位姿工作台">
+    <aside class="vision-panel vision-control-panel multiview-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>矩阵与位姿参数</h3><p>Essential Matrix</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-mv-pose-input="sample">
+                <option value="small" selected>小基线</option>
+                <option value="large">大基线</option>
+                <option value="rotation">旋转为主</option>
+                <option value="translation">平移为主</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>内参模式</span>
+            <select data-mv-pose-input="intrinsics">
+                <option value="known" selected>已知 K</option>
+                <option value="normalized">归一化相机</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>噪声强度 <output data-mv-pose-output="noise">0.8 px</output></span>
+            <input type="range" min="0" max="2.8" step="0.1" value="0.8" data-mv-pose-input="noise">
+        </label>
+        <label class="vision-field">
+            <span>匹配点数量 <output data-mv-pose-output="matchCount">42</output></span>
+            <input type="range" min="12" max="90" step="3" value="42" data-mv-pose-input="matchCount">
+        </label>
+
+        <div class="multiview-toggle-grid">
+            <label class="vision-toggle-row"><span>显示 F → E 转换</span><input type="checkbox" data-mv-pose-input="showFE" checked></label>
+            <label class="vision-toggle-row"><span>显示 SVD 分解</span><input type="checkbox" data-mv-pose-input="showSVD" checked></label>
+            <label class="vision-toggle-row"><span>显示四组位姿候选</span><input type="checkbox" data-mv-pose-input="showCandidates" checked></label>
+            <label class="vision-toggle-row"><span>显示正深度检查</span><input type="checkbox" data-mv-pose-input="showCheirality" checked></label>
+            <label class="vision-toggle-row"><span>显示正确位姿</span><input type="checkbox" data-mv-pose-input="showCorrect" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-mv-step-select="pose">
+                <option value="matches">特征匹配 / Matches</option>
+                <option value="f">基础矩阵 / F Matrix</option>
+                <option value="normalize">内参归一化 / Normalize with K</option>
+                <option value="e">本质矩阵 / Essential Matrix E</option>
+                <option value="decompose">分解 E / Decompose E</option>
+                <option value="cheirality">正深度检查 / Cheirality Check</option>
+                <option value="pose">相机位姿 / Camera Pose</option>
+            </select>
+        </label>
+
+        <div class="multiview-button-row">
+            <button type="button" data-mv-prev="pose">上一步</button>
+            <button type="button" data-mv-next="pose">下一步</button>
+            <button type="button" data-mv-play="pose">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>E 奇异值</span><strong data-mv-pose-summary="singular">--</strong></div>
+            <div><span>位姿候选</span><strong data-mv-pose-summary="candidates">4 组</strong></div>
+            <div><span>正深度胜出</span><strong data-mv-pose-summary="winner">--</strong></div>
+            <div><span>尺度状态</span><strong data-mv-pose-summary="scale">t 方向有尺度不定性</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel multiview-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>ESSENTIAL MATRIX & CAMERA POSE PLAYGROUND</span>
+                <h3 data-mv-pose-title>从 F 与内参恢复相机相对位姿</h3>
+            </div>
+            <div class="multiview-stage-chips">
+                <span data-mv-pose-chip="step">特征匹配 / Matches</span>
+                <span data-mv-pose-chip="formula">E = K'^T F K</span>
+                <span data-mv-pose-chip="pose">R,t pending</span>
+            </div>
+        </div>
+
+        <section class="multiview-view-card multiview-pipeline-card">
+            <div class="multiview-section-head">
+                <strong>矩阵流水线 <small>Matrix Pipeline</small></strong>
+                <span>特征匹配 → F → K,K' → E → SVD → 位姿候选</span>
+            </div>
+            <div class="multiview-pipeline" data-mv-pose-pipeline></div>
+        </section>
+
+        <section class="multiview-view-card multiview-candidates-card">
+            <div class="multiview-section-head">
+                <strong>位姿候选 <small>Pose Candidates</small></strong>
+                <span>R1,+t / R1,-t / R2,+t / R2,-t</span>
+            </div>
+            <div class="multiview-candidate-grid" data-mv-pose-candidates></div>
+        </section>
+
+        <div class="multiview-lab-strip" data-mv-pose-status aria-label="本质矩阵与位姿当前计算状态"></div>
+        <div class="multiview-flow-preview" data-mv-pose-preview aria-label="本质矩阵与相机位姿步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel multiview-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-mv-pose-notes-title>特征匹配 / Matches</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>本质矩阵</span>
+            <strong>E = K'^T F K</strong>
+            <small>F 在像素坐标中工作，E 在归一化相机坐标中表达两相机的相对运动。</small>
+        </div>
+        <div class="vision-formula-card">
+            <span>位姿候选</span>
+            <strong>E = [t]x R</strong>
+            <small>E 的分解会产生 4 组 R,t，需要用正深度检查选择。</small>
+        </div>
+
+        <div class="multiview-notes-body" data-mv-pose-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前分解</span>
+            <code data-mv-pose-substitution>R=--, t=--, positive depth=--</code>
+        </div>
+
+        <div class="multiview-observation-list">
+            <article><strong>内参已知</strong><span>可以把像素匹配归一化，去除相机焦距和主点影响。</span></article>
+            <article><strong>四组候选</strong><span>代数分解不唯一，几何上的点必须位于两台相机前方。</span></article>
+            <article><strong>尺度不定</strong><span>两视图 E 只能恢复平移方向，不能单独恢复绝对距离尺度。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper multiview-stepper multiview-stepper--7" aria-label="本质矩阵与相机位姿流程" data-mv-stepper="pose">
+    <li class="is-active" data-mv-phase="matches"><span>1</span><div><strong>特征匹配</strong><small>Matches</small></div></li>
+    <li data-mv-phase="f"><span>2</span><div><strong>基础矩阵</strong><small>F Matrix</small></div></li>
+    <li data-mv-phase="normalize"><span>3</span><div><strong>内参归一化</strong><small>Normalize with K</small></div></li>
+    <li data-mv-phase="e"><span>4</span><div><strong>本质矩阵</strong><small>Essential E</small></div></li>
+    <li data-mv-phase="decompose"><span>5</span><div><strong>分解 E</strong><small>Decompose E</small></div></li>
+    <li data-mv-phase="cheirality"><span>6</span><div><strong>正深度检查</strong><small>Cheirality Check</small></div></li>
+    <li data-mv-phase="pose"><span>7</span><div><strong>相机位姿</strong><small>Camera Pose</small></div></li>
+</ol>
+{% endblock %}

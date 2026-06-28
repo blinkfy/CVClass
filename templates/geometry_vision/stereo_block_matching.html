@@ -1,0 +1,173 @@
+{% extends "geometry_vision/stereo_base.html" %}
+
+{% block stereo_content %}
+<section class="vision-workbench stereo-workbench stereo-block-workbench" data-stereo-block aria-label="块匹配与视差图工作台">
+    <aside class="vision-panel vision-control-panel stereo-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>块匹配参数</h3><p>Block Matching</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-stereo-block-input="sample">
+                <option value="blocks" selected>几何方块</option>
+                <option value="street">简化街景</option>
+                <option value="occlusion">前景遮挡</option>
+                <option value="textureless">低纹理区域</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>匹配代价</span>
+            <select data-stereo-block-input="cost">
+                <option value="sad" selected>SAD</option>
+                <option value="ssd">SSD</option>
+                <option value="ncc">NCC</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>窗口大小</span>
+            <select data-stereo-block-input="windowSize">
+                <option value="3">3x3</option>
+                <option value="5" selected>5x5</option>
+                <option value="7">7x7</option>
+                <option value="9">9x9</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>最小视差 <output data-stereo-block-output="minD">4</output></span>
+            <input type="range" min="0" max="16" step="1" value="4" data-stereo-block-input="minD">
+        </label>
+        <label class="vision-field">
+            <span>最大视差 <output data-stereo-block-output="maxD">44</output></span>
+            <input type="range" min="18" max="72" step="1" value="44" data-stereo-block-input="maxD">
+        </label>
+        <label class="vision-field">
+            <span>搜索步长 <output data-stereo-block-output="stepD">4 px</output></span>
+            <input type="range" min="2" max="8" step="1" value="4" data-stereo-block-input="stepD">
+        </label>
+        <label class="vision-field">
+            <span>噪声强度 <output data-stereo-block-output="noise">0.4</output></span>
+            <input type="range" min="0" max="1.2" step="0.1" value="0.4" data-stereo-block-input="noise">
+        </label>
+
+        <div class="stereo-toggle-grid">
+            <label class="vision-toggle-row"><span>显示搜索带</span><input type="checkbox" data-stereo-block-input="showSearch" checked></label>
+            <label class="vision-toggle-row"><span>显示代价曲线</span><input type="checkbox" data-stereo-block-input="showCurve" checked></label>
+            <label class="vision-toggle-row"><span>显示 disparity map</span><input type="checkbox" data-stereo-block-input="showDisparity" checked></label>
+            <label class="vision-toggle-row"><span>显示 depth map</span><input type="checkbox" data-stereo-block-input="showDepth" checked></label>
+            <label class="vision-toggle-row"><span>显示遮挡 / 低置信区域</span><input type="checkbox" data-stereo-block-input="showConfidence" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-stereo-step-select="block">
+                <option value="rectified">校正图像对</option>
+                <option value="patch">选择左图 patch</option>
+                <option value="search">沿扫描线搜索</option>
+                <option value="cost">计算匹配代价</option>
+                <option value="wta">WTA 选择视差</option>
+                <option value="disparityMap">写入视差图</option>
+                <option value="depthMap">转换深度图</option>
+            </select>
+        </label>
+
+        <div class="stereo-button-row">
+            <button type="button" data-stereo-prev="block">上一步</button>
+            <button type="button" data-stereo-next="block">下一步</button>
+            <button type="button" data-stereo-play="block">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>候选数量</span><strong data-stereo-block-summary="candidates">--</strong></div>
+            <div><span>最佳视差</span><strong data-stereo-block-summary="best">--</strong></div>
+            <div><span>匹配代价</span><strong data-stereo-block-summary="cost">--</strong></div>
+            <div><span>置信状态</span><strong data-stereo-block-summary="confidence">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel stereo-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>块匹配与视差图 · BLOCK MATCHING</span>
+                <h3 data-stereo-block-title>沿水平扫描线生成视差图</h3>
+            </div>
+            <div class="stereo-stage-chips">
+                <span data-stereo-block-chip="step">校正图像对</span>
+                <span data-stereo-block-chip="cost">SAD</span>
+                <span data-stereo-block-chip="best">d = --</span>
+            </div>
+        </div>
+
+        <div class="stereo-block-stage-grid">
+            <section class="stereo-view-card stereo-view-card--wide stereo-block-pair-card">
+                <div class="stereo-section-head">
+                    <strong>左右校正图像与搜索带</strong>
+                    <span>左 patch · 右图同一扫描线</span>
+                </div>
+                <div class="stereo-svg-frame stereo-block-pair-frame" data-stereo-block-pair></div>
+            </section>
+            <section class="stereo-view-card stereo-block-cost-card">
+                <div class="stereo-section-head">
+                    <strong>匹配代价计算</strong>
+                    <span>SAD / SSD 取低谷，NCC 取峰值</span>
+                </div>
+                <div class="stereo-cost-stage" data-stereo-block-cost></div>
+            </section>
+            <section class="stereo-view-card stereo-block-output-card">
+                <div class="stereo-section-head">
+                    <strong>输出图</strong>
+                    <span>视差图 -> 深度图</span>
+                </div>
+                <div class="stereo-map-stage" data-stereo-block-maps></div>
+            </section>
+        </div>
+
+        <div class="stereo-status-card stereo-status-card--inline" data-stereo-block-status aria-label="块匹配当前状态"></div>
+
+        <div class="stereo-flow-preview" data-stereo-block-preview aria-label="块匹配步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel stereo-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-stereo-block-notes-title>校正图像对</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>SAD / SSD</span>
+            <strong data-stereo-block-formula>SAD = Σ |IL - IR|</strong>
+            <small>对每个候选视差计算窗口差异，代价越小越匹配。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>Winner-Take-All</span>
+            <strong data-stereo-block-wta-rule>d* = argmin C(d)</strong>
+            <small data-stereo-block-formula-note>NCC 使用最大相关性，其余代价函数选择最小值。</small>
+        </div>
+
+        <div class="stereo-notes-body" data-stereo-block-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前候选代价</span>
+            <code data-stereo-block-substitution>d=--, cost=--</code>
+        </div>
+
+        <div class="stereo-observation-list">
+            <article><strong>搜索空间</strong><span>校正后只沿同一水平扫描线移动候选窗口。</span></article>
+            <article><strong>代价曲线</strong><span>最小谷值对应当前 patch 的最佳视差。</span></article>
+            <article><strong>低置信区域</strong><span>遮挡或低纹理会让代价曲线变平，匹配不可靠。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper stereo-stepper stereo-stepper--7" aria-label="块匹配与视差图流程" data-stereo-stepper="block">
+    <li class="is-active" data-stereo-phase="rectified"><span>1</span><div><strong>校正图像</strong><small>same rows</small></div></li>
+    <li data-stereo-phase="patch"><span>2</span><div><strong>左图 patch</strong><small>local window</small></div></li>
+    <li data-stereo-phase="search"><span>3</span><div><strong>扫描线搜索</strong><small>candidate d</small></div></li>
+    <li data-stereo-phase="cost"><span>4</span><div><strong>代价计算</strong><small>SAD / SSD / NCC</small></div></li>
+    <li data-stereo-phase="wta"><span>5</span><div><strong>WTA 选择</strong><small>argmin / argmax</small></div></li>
+    <li data-stereo-phase="disparityMap"><span>6</span><div><strong>视差图</strong><small>dense d</small></div></li>
+    <li data-stereo-phase="depthMap"><span>7</span><div><strong>深度图</strong><small>Z = bf / d</small></div></li>
+</ol>
+{% endblock %}

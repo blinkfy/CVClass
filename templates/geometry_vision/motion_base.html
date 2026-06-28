@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ motion_page_title }} - 运动估计与光流{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/motion_estimation.css') }}?v=20260628-motion-lab2">
+{% endblock %}
+
+{% block content %}
+<div class="vision-lab geometry-lab motion-lab" data-motion-page="{{ active_sub_page }}">
+    <header class="vision-hero station-hero motion-hero">
+        <div>
+            <span class="section-label station-eyebrow">{{ motion_eyebrow }}</span>
+            <h1 class="station-title">{{ motion_page_title }}</h1>
+            <p class="station-summary">{{ motion_subtitle }}</p>
+        </div>
+        <div class="station-hero-actions motion-hero-actions">
+            <span class="motion-state">{{ motion_status }}</span>
+            <strong class="station-badge">{{ motion_badge }}</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs motion-tabs" aria-label="运动估计与光流内部导航">
+        {% for item in motion_nav %}
+        <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
+        {% endfor %}
+    </nav>
+
+    {% block motion_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/motion_estimation.js') }}?v=20260628-motion-lab2"></script>
+{% endblock %}

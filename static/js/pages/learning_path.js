@@ -59,7 +59,10 @@
         "level-21-pose",
         "level-22-action",
         "level-23-camera-calibration",
+        "level-24-optical-flow",
+        "level-25-lucas-kanade",
         "level-26-stereo",
+        "level-27-disparity-depth",
         "level-29-3d-reconstruction",
         "level-31-vit-transformer",
         "level-34-sam",
@@ -86,8 +89,17 @@
         "level-20-instance-segmentation": ["instance-segmentation"],
         "level-21-pose": ["human-pose"],
         "level-22-action": ["human-pose"],
+        "level-23-camera-calibration": ["camera-geometry"],
+        "level-24-optical-flow": ["motion-estimation"],
+        "level-25-lucas-kanade": ["motion-estimation"],
+        "level-26-stereo": ["stereo-depth"],
+        "level-27-disparity-depth": ["stereo-depth"],
+        "level-28-epipolar": ["multiview-reconstruction"],
+        "level-29-3d-reconstruction": ["multiview-reconstruction"],
+        "level-30-triangulation": ["multiview-reconstruction"],
         "level-31-vit-transformer": ["frontier"],
         "level-32-clip": ["frontier"],
+        "level-33-dino": ["frontier"],
         "level-34-sam": ["frontier"],
         "level-39-vision-banana": ["frontier"],
         "level-40-unified-vision": ["frontier"],
@@ -350,7 +362,12 @@
             const progress = Number.isFinite(world.progress) ? world.progress : Math.round((implemented / world.levels.length) * 100);
 
             const mapSize = getWorldMapSize(world);
-            const points = world.levels.map((_level, index) => getLevelPoint(index, world.levels.length, mapSize));
+            const points = world.levels.map((level, index) => {
+                const point = getLevelPoint(index, world.levels.length, mapSize);
+                if (world.id === "world-04" && level.id === "level-33-dino") point.y += 54;
+                if (world.id === "world-04" && level.id === "level-34-sam") point.y -= 26;
+                return point;
+            });
             const levelHtml = world.levels.map((level, index) => {
                 const status = effectiveStatus(level, learnedModules);
                 const meta = getStatusMeta(status);

@@ -1,0 +1,180 @@
+{% extends "geometry_vision/base.html" %}
+
+{% block geometry_content %}
+<section class="vision-workbench geometry-workbench geometry-calibration-workbench" data-geometry-calibration aria-label="棋盘格标定实验工作台">
+    <aside class="vision-panel vision-control-panel geometry-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>标定输入</h3><p>Chessboard Pairs</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-geo-calib-input="sample">
+                <option value="front" selected>正视棋盘格</option>
+                <option value="tilted">倾斜棋盘格</option>
+                <option value="perspective">远近透视棋盘格</option>
+                <option value="multi">多视角棋盘格</option>
+                <option value="noise">噪声 / 模糊角点样例</option>
+            </select>
+        </label>
+
+        <label class="vision-field"><span>内角点行数 <output data-geo-calib-output="rows">4</output></span><input type="range" min="3" max="9" step="1" value="4" data-geo-calib-input="rows"></label>
+        <label class="vision-field"><span>内角点列数 <output data-geo-calib-output="cols">4</output></span><input type="range" min="3" max="9" step="1" value="4" data-geo-calib-input="cols"></label>
+        <label class="vision-field"><span>square size <output data-geo-calib-output="square">24 mm</output></span><input type="range" min="12" max="40" step="2" value="24" data-geo-calib-input="square"></label>
+        <label class="vision-field"><span>角点噪声 <output data-geo-calib-output="noise">0.0 px</output></span><input type="range" min="0" max="3.5" step="0.1" value="0" data-geo-calib-input="noise"></label>
+        <label class="vision-field"><span>图像数量 <output data-geo-calib-output="images">8</output></span><input type="range" min="1" max="16" step="1" value="8" data-geo-calib-input="images"></label>
+
+        <div class="geometry-toggle-grid">
+            <label class="vision-toggle-row"><span>显示检测角点</span><input type="checkbox" data-geo-calib-input="showDetected" checked></label>
+            <label class="vision-toggle-row"><span>显示重投影点</span><input type="checkbox" data-geo-calib-input="showReprojected" checked></label>
+            <label class="vision-toggle-row"><span>显示误差向量</span><input type="checkbox" data-geo-calib-input="showErrors" checked></label>
+            <label class="vision-toggle-row"><span>显示相机位姿</span><input type="checkbox" data-geo-calib-input="showPose" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-geo-step-select="calibration">
+                <option value="chessboard">棋盘格标定板 / Chessboard</option>
+                <option value="corners">角点检测 / Corner Detection</option>
+                <option value="pairs">3D-2D 对应 / 3D-2D Pairs</option>
+                <option value="solve">参数求解 / Solve Params</option>
+                <option value="reproject">重投影 / Reprojection</option>
+                <option value="error">误差分析 / Error Analysis</option>
+            </select>
+        </label>
+
+        <div class="geometry-button-row">
+            <button type="button" data-geo-prev="calibration">上一步</button>
+            <button type="button" data-geo-next="calibration">下一步</button>
+            <button type="button" data-geo-play="calibration">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>有效角点</span><strong data-geo-calib-summary="corners">--</strong></div>
+            <div><span>平均误差</span><strong data-geo-calib-summary="meanError">--</strong></div>
+            <div><span>当前图像</span><strong data-geo-calib-summary="imageError">--</strong></div>
+            <div><span>求解状态</span><strong data-geo-calib-summary="status">等待角点</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel geometry-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>CAMERA CALIBRATION PLAYGROUND</span>
+                <h3 data-geo-calib-title>棋盘格 3D-2D 对应与误差分析</h3>
+            </div>
+            <div class="geometry-stage-chips">
+                <span data-geo-calib-chip="step">Chessboard</span>
+                <span data-geo-calib-chip="corners">16 corners</span>
+                <span data-geo-calib-chip="images">8 images</span>
+            </div>
+        </div>
+
+        <div class="calibration-stage-grid">
+            <section class="calibration-card calibration-card--image">
+                <div class="geometry-section-head">
+                    <strong>棋盘格标定板</strong>
+                    <span>Chessboard · imagePoints</span>
+                </div>
+                <div class="geometry-svg-frame" data-geo-calib-image></div>
+            </section>
+            <section class="calibration-card calibration-card--world">
+                <div class="geometry-section-head">
+                    <strong>世界角点平面</strong>
+                    <span>Object Points · Z = 0</span>
+                </div>
+                <div class="geometry-svg-frame" data-geo-calib-world></div>
+            </section>
+            <section class="calibration-card calibration-card--reprojection">
+                <div class="geometry-section-head">
+                    <strong>重投影误差</strong>
+                    <span>Reprojection Error · detected vs reprojected</span>
+                </div>
+                <div class="geometry-svg-frame" data-geo-calib-reprojection></div>
+            </section>
+        </div>
+
+        <div class="calibration-results-panel">
+            <section>
+                <span>K 内参矩阵</span>
+                <code data-geo-calib-result="k">--</code>
+            </section>
+            <section>
+                <span>dist 畸变参数</span>
+                <code data-geo-calib-result="dist">--</code>
+            </section>
+            <section>
+                <span>平均重投影误差</span>
+                <strong data-geo-calib-result="meanError">--</strong>
+            </section>
+            <section>
+                <span>当前图像误差</span>
+                <strong data-geo-calib-result="imageError">--</strong>
+            </section>
+            <section>
+                <span>有效角点数</span>
+                <strong data-geo-calib-result="cornerCount">--</strong>
+            </section>
+            <section>
+                <span>最大误差角点</span>
+                <strong data-geo-calib-result="maxError">--</strong>
+            </section>
+            <section class="calib-residual-section">
+                <span>误差残差条</span>
+                <div class="calib-residual-bars" data-geo-calib-result="residualBars"></div>
+            </section>
+        </div>
+
+        <div class="geometry-flow-preview calibration-flow-preview" data-geo-calib-flow aria-label="当前计算状态条"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel geometry-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-geo-calib-notes-title>检测棋盘格角点</h3><p>标定步骤说明</p></div>
+        </div>
+
+        <div class="calibration-step-list" data-geo-calib-step-list>
+            <article data-geo-calib-note-step="chessboard"><span>1</span><strong>检测棋盘格角点</strong></article>
+            <article data-geo-calib-note-step="pairs"><span>2</span><strong>建立 3D-2D 对应</strong></article>
+            <article data-geo-calib-note-step="solve"><span>3</span><strong>求解初始参数</strong></article>
+            <article data-geo-calib-note-step="solve"><span>4</span><strong>估计 K, R, t</strong></article>
+            <article data-geo-calib-note-step="reproject"><span>5</span><strong>计算重投影误差</strong></article>
+            <article data-geo-calib-note-step="error"><span>6</span><strong>多图优化</strong></article>
+        </div>
+
+        <div class="geometry-notes-body" data-geo-calib-notes></div>
+
+        <div class="calibration-known-grid">
+            <section>
+                <span>已知</span>
+                <strong>棋盘格角点世界坐标、图像角点坐标</strong>
+            </section>
+            <section>
+                <span>未知</span>
+                <strong>K, R, t, dist</strong>
+            </section>
+            <section>
+                <span>求解目标</span>
+                <strong>最小化重投影误差</strong>
+            </section>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>重投影误差</span>
+            <strong>e = || p_detected - project(K,R,t,Xw) ||</strong>
+            <small>标定通过多张图像的角点约束共同优化参数，而不是直接从单张图像读出参数。</small>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper geometry-stepper geometry-stepper--6" aria-label="棋盘格标定流程" data-geo-stepper="calibration">
+    <li class="is-active" data-geo-phase="chessboard"><span>1</span><div><strong>棋盘格标定板</strong><small>Chessboard · known target</small></div></li>
+    <li data-geo-phase="corners"><span>2</span><div><strong>角点检测</strong><small>Corner Detection · imagePoints</small></div></li>
+    <li data-geo-phase="pairs"><span>3</span><div><strong>3D-2D 对应</strong><small>3D-2D Pairs · object ↔ image</small></div></li>
+    <li data-geo-phase="solve"><span>4</span><div><strong>参数求解</strong><small>Solve Params · K,R,t,dist</small></div></li>
+    <li data-geo-phase="reproject"><span>5</span><div><strong>重投影</strong><small>Reprojection · project back</small></div></li>
+    <li data-geo-phase="error"><span>6</span><div><strong>误差分析</strong><small>Error Analysis · residuals</small></div></li>
+</ol>
+{% endblock %}
