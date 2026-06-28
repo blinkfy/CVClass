@@ -1,310 +1,138 @@
-# 计算机视觉课程实验系统
+# 计算机视觉教学实验系统
 
-这是一个用于计算机视觉课程实验展示的 Web 系统。项目包含多个清晰分页：
+这是一个面向计算机视觉课程教学的交互式 Web 实验平台，覆盖从经典图像处理、CNN 学习与分类、检测与分割，到几何运动、三维视觉和多模态前沿的完整 CV 知识体系。系统以"逐步可视化"为核心设计理念，将算法原理、计算过程和真实推理结果以可交互、可动画、可调试的方式呈现。
 
-- 第一节：图像灰度化与基础图像处理实验
-- 第二节：卷积计算过程可视化实验
-- 第三节：CNN 前向传播与反向传播可视化实验
-- 第四节：图像边缘检测过程可视化实验
-- 第五节：图像特征提取与匹配实验
-- 第六节：高级视觉任务与前沿模型应用实验（基于 ONNX Runtime Web）
+## 系统定位
 
-前端使用原生 HTML、CSS、JavaScript，后端使用 Python Flask。图像处理部分使用 NumPy 手动计算，不使用 OpenCV/cv2；卷积可视化部分在前端使用 JavaScript 完成矩阵卷积计算和逐步演示。
+- **完整课程体系**：从像素级操作到前沿多模态模型，形成 4 大学习世界、40+ 交互页面。
+- **前端为主的重推理体验**：目标检测、语义分割、实例分割等视觉任务基于 ONNX Runtime Web 在浏览器端完成真实推理，不依赖后端 GPU。
+- **NumPy 手动实现**：传统图像处理、卷积、特征提取等核心计算不使用 OpenCV/cv2，而是用 NumPy 逐步完成，便于教学讲解。
+- **可视化优先**：每个算法都配备步骤拆解、公式展示、中间结果可视化和参数实时调节。
 
-## 功能
+## 四大学习世界
 
-- 上传图片并预览原图
-- 选择灰度化方法
-- 显示原图与灰度图对比结果
-- 使用 Before/After 滑块交互对比原图和灰度图
-- 下载灰度化结果图
-- 展示文件名、文件大小、图片宽度和高度、图片格式
-- 展示后端处理耗时
-- 使用 ECharts 绘制 256 级灰度直方图
-- 鼠标悬停图片时展示像素 RGB 值和对应灰度计算示例
-- 在当前页面记录每次成功处理的文件名、尺寸、算法、耗时和处理时间
-- 扩展基础图像处理功能：RGB 通道分离、二值化、颜色反转、翻转、90 度旋转、灰度直方图均衡化
-- 新增卷积可视化实验：随机输入矩阵、卷积核、多通道、多卷积核、padding、stride、dilation、1×1 卷积、空洞卷积、蛇形卷积
-- 新增 CNN 前向与反向传播可视化实验：固定 6×6 小 CNN，前端逐步演示 Conv、ReLU、MaxPool、Flatten、FC、Softmax、Loss、梯度回传和参数更新
-- 新增边缘检测可视化实验：方法对比、卷积核算子、Canny 多阶段流水线、TEED 深度边缘检测拓展、边缘检测应用实践
-- 基本异常处理：未选择文件、非图片文件、文件过大、非法灰度化方法、后端处理失败
+### World 01 · 基础算法主线
 
-## 项目结构
+- **图像基础** (`/grayscale`)：灰度化、二值化、通道分离、颜色反转、翻转旋转、直方图均衡化。
+- **卷积与滤波** (`/convolution`)：卷积核、padding、stride、dilation、1×1 卷积、空洞卷积、蛇形卷积。
+- **图像卷积应用** (`/image-convolution`)：将卷积操作应用于真实图像。
+- **边缘、轮廓与形态学** (`/edge-detection`)：Sobel、Prewitt、Roberts、Laplacian、LoG、Canny、TEED 及应用实践。
+- **角点、特征与图像拼接** (`/feature-detection`)：Harris、FAST、SIFT、ORB、特征匹配、全景拼接。
 
-```text
-CVClass/
-├─ app.py
-├─ README.md
-├─ docs/
-│  ├─ 技术说明_关键技术.md
-│  └─ diagrams/
-│     ├─ pic.mmd
-│     └─ pic.puml
-├─ templates/
-│  ├─ base.html
-│  ├─ feature_base.html
-│  ├─ vision_tasks_base.html
-│  ├─ pages/
-│  ├─ convolution/
-│  ├─ cnn/
-│  ├─ edge/
-│  ├─ feature/
-│  ├─ vision_tasks/
-│  └─ legacy/
-├─ static/
-│  ├─ css/
-│  │  ├─ core/
-│  │  ├─ pages/
-│  │  ├─ convolution/
-│  │  ├─ cnn/
-│  │  ├─ edge/
-│  │  ├─ feature/
-│  │  ├─ vision_tasks/
-│  │  └─ legacy/
-│  ├─ js/
-│  │  ├─ core/
-│  │  ├─ pages/
-│  │  ├─ convolution/
-│  │  ├─ cnn/
-│  │  ├─ edge/
-│  │  ├─ feature/
-│  │  ├─ vision_tasks/
-│  │  ├─ legacy/
-│  │  └─ inference/
-│  └─ assets/
-│     ├─ data/
-│     │  ├─ common/
-│     │  ├─ cnn/
-│     │  ├─ cnn_explainer/
-│     │  ├─ edge/
-│     │  ├─ detection/
-│     │  └─ segformer_b0_ade/
-│     ├─ img/
-│     └─ vision_tasks/
-│        ├─ data/
-│        ├─ images/
-│        ├─ masks/
-│        └─ ASSET_CREDITS.md
-├─ models/
-│  ├─ data/
-│  ├─ artifacts/
-│  ├─ digit_infer_numpy.py
-│  ├─ edge_visualization.py
-│  ├─ feature_utils.py
-│  ├─ image_utils.py
-│  └─ mycnn.py
-├─ reference/
-└─ tools/
-```
+### World 02 · CNN 学习与分类
+
+- **CNN 如何学习 / 图像分类** (`/cnn-visualization`)：6×6 教学 CNN 的前向传播、反向传播和参数更新。
+- **CNN 数据传播细节** (`/cnn-explainer`)：更细粒度的数据流展示。
+- **卷积梯度显微镜** (`/conv-gradient-lab`)：卷积层梯度计算可视化。
+- **手写数字识别** (`/digit-recognition`)：基于 NumPy CNN 的 MNIST 在线推理。
+- **图像分类实验** (`/vision-tasks/classification`)：BoVW、CNN Top-K 等分类任务。
+
+### World 03 · 几何运动与三维视觉
+
+- **相机几何与标定** (`/camera-geometry`)：针孔模型、内外参、投影矩阵、棋盘格标定。
+- **运动估计与光流** (`/motion-estimation`)：光流约束、Lucas-Kanade、金字塔追踪、真实视频光流。
+- **双目视觉与深度** (`/stereo-depth`)：平行双目、极线约束、视差三角关系、块匹配。
+- **多视图几何与三维重建** (`/multiview-reconstruction`)：对极几何、本质矩阵、相机位姿、三角测量。
+- **人体姿态估计** (`/human-pose`)：关键点骨架、姿态估计机制、动作识别。
+
+### World 04 · 生成式与多模态前沿
+
+- **Vision Transformer** (`/vision-transformer`)：ViT、DINO 自监督蒸馏。
+- **CLIP 图文对齐** (`/frontier/clip`)
+- **VLM 视觉语言模型** (`/frontier/vlm`)
+- **多模态理解** (`/frontier/multimodal`)
+- **生成式多模态** (`/generative-multimodal`)：SAM、GAN、Diffusion
+- **Vision Banana 案例** (`/frontier/vision-banana`)：统一视觉任务接口
+
+### 视觉任务实验台
+
+- **目标检测** (`/object-detection`)：YOLO 真实推理、R-CNN 机制拆解。
+- **语义分割** (`/semantic-segmentation`)：基于 SegFormer 的全景像素级分类。
+- **实例分割** (`/instance-segmentation`)：YOLO-seg / Mask R-CNN 机制、Prototype Blender。
+- **语义 vs 实例对比** (`/segmentation-lab`)
+- **传统分割与区域提取** (`/segmentation-basic`)：K-means、Graph Cut、Watershed、区域属性分析。
+
+## 技术栈
+
+- **前端**：原生 HTML、CSS、JavaScript
+- **后端**：Python Flask
+- **核心计算**：NumPy（手动实现，不依赖 OpenCV）
+- **深度学习推理**：ONNX Runtime Web（浏览器端 WASM/WebGL/WebGPU）
+- **可视化**：ECharts、Three.js、自定义 Canvas/SVG 动画
+- **公式渲染**：KaTeX
 
 ## 运行方式
 
 1. 安装依赖：
 
 ```bash
-pip install -r requirements.txt
+pip install flask numpy pillow numba
 ```
 
-2. 启动服务：
+1. 启动服务：
 
 ```bash
 python app.py
 ```
 
-3. 在浏览器中访问：
+1. 在浏览器中访问：
 
 ```text
 http://127.0.0.1:5000/
 ```
 
-进入页面后，可通过顶部分页切换：
-
-- “第一节 图像处理实验”：上传图片并执行灰度化、二值化、通道分离等操作。
-- “第二节 卷积可视化实验”：调整卷积参数，点击单步计算或自动播放查看卷积过程。
-
-## 实现原理
-
-后端读取上传图片，并统一转为 RGB 三通道数据。随后使用 NumPy 将图片转为数组，分别取出 R、G、B 三个通道，按用户选择的方法计算灰度值。
-
-支持的灰度化方法：
+## 项目结构
 
 ```text
-weighted = 0.299 * R + 0.587 * G + 0.114 * B
-average  = (R + G + B) / 3
-max      = max(R, G, B)
-min      = min(R, G, B)
+CVClass/
+├─ app.py                          # Flask 应用入口
+├─ page_routes.py                  # 页面路由注册
+├─ ai_routes.py                    # AI 助手导航目录与 API
+├─ README.md                       # 本文件
+├─ templates/                      # Jinja2 模板
+│  ├─ base.html                    # 站点基础布局
+│  ├─ pages/                       # 首页、学习路径、知识图谱等
+│  ├─ vision_tasks/                # 视觉任务实验台页面
+│  ├─ frontier/                    # 前沿模型页面
+│  ├─ human_pose/                  # 姿态估计页面
+│  ├─ camera_geometry/             # 相机几何页面
+│  ├─ motion_estimation/           # 光流页面
+│  ├─ stereo_depth/                # 双目深度页面
+│  ├─ multiview_reconstruction/    # 多视图重建页面
+│  ├─ cnn/                         # CNN 可视化页面
+│  ├─ edge/                        # 边缘检测页面
+│  ├─ feature/                     # 特征检测页面
+│  └─ convolution/                 # 卷积可视化页面
+├─ static/
+│  ├─ css/                         # 样式文件
+│  ├─ js/                          # 前端脚本
+│  │  ├─ pages/                    # 页面级脚本
+│  │  ├─ vision_tasks/             # 视觉任务脚本
+│  │  ├─ inference/                # ONNX 推理封装
+│  │  └─ ...                       # 其他模块脚本
+│  └─ assets/                      # 图片、数据、模型配置
+├─ models/                         # 后端 NumPy 算法实现
+│  ├─ image_utils.py               # 图像处理核心
+│  ├─ edge_visualization.py        # 边缘检测
+│  ├─ feature_utils.py             # 特征提取与匹配
+│  ├─ digit_infer_numpy.py         # MNIST 推理
+│  ├─ multiview_real.py            # 多视图重建
+│  └─ mycnn.py                     # NumPy CNN 实现
+└─ reference/                      # 参考资料与工具
 ```
 
-灰度数组会被限制在 0 到 255，并转换为 uint8 类型，然后保存为 PNG 图片。系统还使用 NumPy 的 bincount 统计 0-255 每个灰度级的像素数量，并返回给前端绘制直方图。
+## 主要功能特性
 
-前端在图片对比区域使用隐藏 canvas 读取鼠标所在位置的原图像素，实时展示该像素的 R、G、B 值，并根据当前选择的灰度化方法显示计算公式。处理记录只保存在当前页面内，不写入数据库。
+- **闯关式学习路径** (`/learning-path`)：以 World/Level 地图形式串联所有知识点。
+- **知识图谱** (`/knowledge-graph`)：展示模块间的前置与演进关系。
+- **AI 学习助手**：每个页面内置算法解释、参数分析和结果诊断能力。
+- **真实模型推理**：YOLO11n、SegFormer、YOLO11n-seg 等模型在浏览器端运行。
+- **教学动画**：NMS、ROI Align、Mask Prototype、光流约束、对极几何等均配备分步动画。
+- **参数实时调节**：几乎所有可视化都支持滑块、下拉、开关等交互控制。
 
-项目没有使用 OpenCV/cv2，也没有使用 Pillow 的 convert("L") 直接完成灰度化，灰度化核心计算过程由 NumPy 明确完成。
+## 浏览器要求
 
-## 扩展功能说明
+- 推荐 Chrome / Edge / Firefox 最新版
+- 视觉任务真实推理需要支持 WebAssembly，WebGPU 后端可获得最佳性能
+- 部分 Three.js 可视化需要 WebGL 支持
 
-这些功能是在灰度化实验基础上的扩展，结合之前数字图像处理的基础，这里仍然使用 Flask 接收请求，使用 NumPy 手动完成像素计算。
-
-- RGB 通道分离：将 RGBA 数组中指定的 R、G、B 通道保留，其余颜色通道置 0，alpha 通道保持不变。
-- 图像二值化：先按灰度化方法得到灰度图，再使用 `np.where(gray >= threshold, 255, 0)` 得到黑白二值图。
-- 颜色反转：对 RGB 三个颜色通道执行 `255 - image`，透明度通道不参与反色。
-- 图像翻转：水平翻转使用 `array[:, ::-1, :]`，垂直翻转使用 `array[::-1, :, :]`。
-- 90 度旋转：使用 `np.rot90(array, k=1)` 实现逆时针旋转。
-- 灰度直方图均衡化：先统计灰度直方图，再计算 CDF，最后使用 CDF 映射增强灰度对比度。
-
-更详细的扩展功能说明见 `extra_features.md`。
-
-## 卷积可视化实验说明
-
-第二节实验用于展示卷积神经网络中的基础卷积计算过程。页面默认生成 7×7 输入矩阵和 3×3 卷积核，并支持：
-
-- 输入矩阵大小：5、7、9、10
-- 卷积核大小：1、3、5
-- stride：1、2
-- padding：0、1、2
-- dilation：1、2、3
-- 输入通道数：1、3
-- 卷积核数量：1、2、3、4
-- 卷积类型：标准卷积、1×1 卷积、空洞卷积、蛇形卷积
-
-页面会实时显示输出尺寸公式：
-
-```text
-effectiveK = dilation × (K - 1) + 1
-outH = floor((H + 2P - effectiveK) / S) + 1
-outW = floor((W + 2P - effectiveK) / S) + 1
-```
-
-单步计算时，输入窗口、实际采样点、当前卷积核、当前输出位置和乘加过程都会高亮显示。输入矩阵随机值范围为 0-255，单通道以灰度深浅显示，三通道分别以 R/G/B 通道颜色显示。多通道输入时，各通道先分别计算 partial sum，最后相加得到一个输出值；多卷积核时，一个卷积核对应一个 Feature Map。
-
-dilation 参数仅在“空洞卷积”模式下显示和启用。蛇形卷积采用教学版“弯曲路径采样”，只对路径上的点进行加权求和，非路径位置会以淡色显示但不参与计算。
-## 在线手写数字识别模块
-
-系统新增“卷积的模型应用”页面，用于展示卷积神经网络在真实分类任务中的应用。该模块不重新训练模型，而是直接加载已经训练好的 NumPy CNN 参数文件：
-
-```text
-models/numpy_mnist_cnn.npz
-```
-
-访问地址：
-
-```text
-http://127.0.0.1:5000/digit-recognition
-```
-
-推理流程：
-
-```text
-canvas 手写输入 -> base64 PNG 上传 -> 后端图像预处理 -> NumPy CNN 前向推理 -> 返回预测类别与 0~9 概率分布
-```
-
-后端预处理步骤包括：base64 解码、灰度化、自动判断是否需要反色、裁剪有效数字区域、保持比例缩放到最大边 20、居中填充到 28×28、归一化到 0~1，并 reshape 为模型需要的 NCHW 格式 `(1, 1, 28, 28)`。页面会同时展示 28×28 预处理图，方便课程录屏时说明模型实际输入。
-
-模型结构与训练代码保持一致：
-
-```text
-Input 1×28×28 -> Conv -> ReLU -> Pool -> Conv -> ReLU -> Pool -> FC -> Softmax
-```
-
-如果参数文件不存在，接口会返回 `success=false` 和友好提示，不会导致 Flask 服务崩溃。
-
-## 第三节 CNN 前向与反向传播可视化实验
-
-访问地址：
-
-```text
-http://127.0.0.1:5000/cnn-visualization
-```
-
-第三节用于解释 CNN 训练时的一次完整前向传播、反向传播和参数更新。该页面优先在前端完成教学计算，不新增复杂后端 API，避免影响第一节、第二节和卷积模型应用模块。
-
-教学 CNN 结构固定为：
-
-```text
-Input 6×6
-→ Conv 3×3, stride=1, padding=0, 1 个卷积核
-→ ReLU
-→ MaxPool 2×2, stride=2
-→ Flatten 4维向量
-→ FC 4→3
-→ Softmax
-→ Cross Entropy Loss
-```
-
-尺寸变化：
-
-```text
-6×6 → 4×4 → 4×4 → 2×2 → 4 → 3
-```
-
-页面包含四个 Tab：
-
-- 模型总览：展示 Input、Conv、ReLU、MaxPool、Flatten、FC、Softmax、Loss 的层级关系、输入输出尺寸、作用和主要公式。
-- 前向传播：逐步展示输入初始化、卷积滑窗、ReLU 截断、MaxPool 取最大值、Flatten、FC、Softmax 和 Cross Entropy Loss。
-- 反向传播：逐步展示 `dlogits = probs - y`、FC 梯度、Flatten reshape、MaxPool 梯度路由、ReLU mask、卷积核梯度 `dK` 累加、bias 梯度和参数更新。
-
-参数更新展示公式：
-
-```text
-K_new = K_old - lr × dK
-Wfc_new = Wfc_old - lr × dWfc
-b_new = b_old - lr × db
-```
-
-第三节页面采用接近单屏的布局：左侧控制区、中间矩阵/流程可视化区、右侧公式区和底部计算详情区。学习率和真实标签可以在左侧修改，并影响后续 loss、梯度和参数更新计算。
-
-## 第四节 图像边缘检测过程可视化实验
-
-第四节用于系统展示经典边缘检测与深度边缘检测的教学过程。页面左侧提供图片上传、示例图切换和参数控制，右侧展示算法说明、步骤公式和统计信息。顶部导航可在五个模式之间切换：
-
-- 方法对比：并排对比 Original、Sobel、Prewitt、Roberts、Kirsch、Laplacian、LoG、Canny、TEED 等结果。
-- 卷积核算子：展示 Sobel、Prewitt、Roberts、Laplacian、Scharr、Kirsch、LoG / Marr 的响应图、幅值图和阈值边缘图。
-- Canny 算法：逐步展示灰度化、高斯平滑、梯度计算、方向估计、非极大值抑制、双阈值和滞后连接。
-- TEED 拓展：展示深度边缘检测网络的主干特征提取、三个 Side Output 和 Fusion 汇聚结构，并配合步骤图说明推理流程。
-- 应用实践：展示边缘检测在实际图像场景中的应用说明，便于课程讲解和拓展讨论。
-
-该页面支持：
-
-- 上传自定义图片或切换示例图
-- 使用滑块和下拉框调整边缘检测参数
-- 在方法对比模式中使用 Before/After 风格对照结果
-- 在卷积核算子模式中查看局部卷积探针和响应强度
-- 在 Canny 模式中按步骤查看中间结果和阈值逻辑
-- 在 TEED 模式中查看深度边缘检测结构示意与输出说明
-
-## 第五节 图像特征提取与匹配实验
-
-访问地址：
-
-```text
-http://127.0.0.1:5000/feature-detection
-```
-
-第五节用于展示特征提取算法和特征匹配技术。提供多个子模块全方位解析：
-
-- 特征检测 (Feature Detection)：并排展示 Harris角点、FAST、ORB、SIFT 等特征点检测算法。通过调整参数(如 Harris block size / k，FAST 阈值，SIFT 对比度阈值等)直接观察特征分布的变化。
-- SIFT尺度空间 (Scale Space)：可视化 DoG (高斯差分金字塔) 生成过程，帮助直观理解 SIFT 如何在多尺度下搜索极值点以获得尺度不变性。
-- SIFT特征描述 (Descriptor)：展示 128 维方向梯度直方图计算方式，说明如何将邻域的梯度信息编码为对光照、旋转具备强鲁棒性的特征向量。
-- 特征匹配 (Feature Matching)：提供基于多种度量方法的匹配演示（Brute-Force、FLANN）。提供交互界面筛选优秀匹配对并过滤噪声。
-- 图像全景拼接 (Panorama)：展示基于特征点匹配求解单应性/仿射变换矩阵，进一步完成视角映射与图像拼接的过程。
-
-## 第六节 高级视觉任务与前沿模型应用实验（基于 ONNX Runtime Web）
-
-访问地址：
-
-```text
-http://127.0.0.1:5000/vision-tasks
-```
-
-该模块完全运行在前端浏览器中，借助 WebAssembly (WASM) / WebGL 加速，不依赖后端的 GPU 与重度环境依赖。系统以教学体验为核心，将“黑盒推理”过程白盒化。
-
-涵盖三大模块：
-
-- 目标检测 (Object Detection)
-  集成先进的 YOLOv8 模型结构。不仅输出最终预测框，还可以分步了解推理全流程结构——从基础图片解码、预处理 (长宽比缩放填白、RGB/标准化)，到模型 Inference，再到边界框解码 (BBox Decoding) ，以及基于 Score 和 IoU 阈值交互控制的纯手写非极大值抑制 (NMS, Non-Maximum Suppression) 计算流程。
-
-- 语义分割 (Semantic Segmentation)
-  引入基于 Transformer 的 SegFormer 模型作为教学载体。演示如何对图像进行全景视角的像素级分类，包含张量预处理以及网络前向传播后得到的通道激活，结合 ArgMax 将分类结果叠加还原映射为彩色的分割 Mask 图层。支持透明度滑动交互以便印证底图与色块贴合。
-
-- 实例分割 (Instance Segmentation)
-  基于 YOLOv8-Seg 等结构概念，演示比语义分割更高阶的要求——既需要区分“是什么类”，还要区分“是同类里的哪一个个体”。讲解分割掩码和 Bounding Box 联合输出机制，并在前端解析渲染独立实例的彩色 Mask，帮助理解实例级特征隔离的实质。

@@ -197,6 +197,25 @@
         return `${basePath}${route}`;
     }
 
+    function isInferenceLevel(level) {
+        const inferenceTypes = new Set([
+            "classify",
+            "digit",
+            "detect",
+            "segment",
+            "pose",
+            "video",
+            "stereo",
+            "depth",
+            "reconstruct",
+            "foundation",
+            "generate",
+            "multimodal",
+        ]);
+        return level.status === "real_inference"
+            || (Boolean(level.route) && level.status !== "planned" && inferenceTypes.has(level.type));
+    }
+
     function renderStats() {
         const learnedModules = readLearnedModules();
         const levels = allLevels().map((item) => item.level);
@@ -205,11 +224,12 @@
             return acc;
         }, {});
         const completedCount = levels.filter((level) => effectiveStatus(level, learnedModules) === "completed").length;
+        const inferenceCount = levels.filter(isInferenceLevel).length;
 
         el.total.textContent = levels.length;
         el.completed.textContent = completedCount;
         el.mechanism.textContent = rawStatusCounts.mechanism || 0;
-        el.inference.textContent = rawStatusCounts.real_inference || 0;
+        el.inference.textContent = inferenceCount;
         el.frontier.textContent = rawStatusCounts.frontier_case || 0;
         el.planned.textContent = rawStatusCounts.planned || 0;
         el.worlds.textContent = state.data.worlds.length;
@@ -299,11 +319,11 @@
         const startX = 64;
         const endX = size.width - 88;
         const span = Math.max(endX - startX, 1);
-        const x = startX + (span * index) / Math.max(count - 1, 1);
-        return {
-            x,
-            y: index % 2 === 0 ? 188 : 76,
-        };
+        const baseX = startX + (span * index) / Math.max(count - 1, 1);
+        const drift = [0, 10, -6, 14, -10, 8, -12, 6, -8, 12, -4, 0];
+        const x = Math.min(endX, Math.max(startX, baseX + drift[index % drift.length]));
+        const wave = [178, 92, 164, 74, 142, 110, 188, 82, 150, 98, 170, 122];
+        return { x, y: wave[index % wave.length] };
     }
 
     function applyInitialDeepLink() {
