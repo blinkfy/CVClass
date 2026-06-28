@@ -1574,6 +1574,7 @@ ${rows.map((row) => `L_${row.level}:\\ \\mathbf g=[${fmt(row.g[0], 2)},${fmt(row
             const src = stage.dataset.videoSrc || "";
             video.src = window.cvclassUrl ? window.cvclassUrl(src) : src;
         }
+        typesetMath(stage);
         state.raf = window.requestAnimationFrame(loop);
     }
 
