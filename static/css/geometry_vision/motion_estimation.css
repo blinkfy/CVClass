@@ -13,6 +13,32 @@
     --motion-ease: cubic-bezier(.22,.61,.36,1);
 }
 
+.motion-lab mjx-container {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.motion-math-output {
+    min-width: 0;
+    overflow-x: auto;
+    color: #172554;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.motion-math-output mjx-container {
+    margin: 0;
+}
+
+.motion-math-output--block,
+.motion-math-output--matrix {
+    border: 1px solid #dbeafe;
+    border-radius: 9px;
+    padding: 8px;
+    background: #eff6ff;
+}
+
 .motion-hero {
     border: 1px solid rgba(191, 219, 254, 0.78);
     box-shadow: 0 16px 34px rgba(8, 145, 178, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.94);
