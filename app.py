@@ -3,9 +3,11 @@ import mimetypes
 from io import BytesIO
 import base64
 import json
+from waitress import serve
 from time import perf_counter
 from flask import Flask, jsonify, request
 from PIL import Image, UnidentifiedImageError
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.edge_visualization import build_edge_response

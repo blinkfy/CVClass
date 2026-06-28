@@ -165,7 +165,7 @@
         else if (['vision_tasks', 'classification_lab', 'segmentation_basic', 'object_detection', 'segmentation_lab'].includes(ap)) ctx = buildVisionTasksContext();
         else {
             // 通用 Fallback：尽力抓取页面上的信息
-            const pageTitle = document.title.replace(' - 计算机视觉实验平台', '').trim();
+            const pageTitle = document.title.replace(' - 计算机视觉教学平台', '').trim();
             const h1 = document.querySelector('h1')?.textContent?.replace(/\s+/g, ' ') || '';
             const h2 = document.querySelector('h2')?.textContent?.replace(/\s+/g, ' ') || '';
             const params = {};
@@ -240,15 +240,24 @@
     /* ---- 辅助功能 ---- */
     async function captureScreenshot() {
         if (!window.html2canvas) return '';
+        const opts = {
+            useCORS: true,
+            scale: window.devicePixelRatio > 1 ? 1 : 1 // restrict scale to save bandwidth
+        };
         try {
-            const canvas = await html2canvas(document.body, {
-                useCORS: true,
-                scale: window.devicePixelRatio > 1 ? 1 : 1 // restrict scale to save bandwidth
-            });
-
-            // Using jpeg to keep size small
+            const canvas = await html2canvas(document.body, opts);
             return canvas.toDataURL('image/jpeg', 0.6);
         } catch (e) {
+            //某些页用了 color-mix / color() 等新颜色函数，标准路径解析会抛错；换 SVG foreignObject 方式再试一次
+            if (String(e && e.message).includes('unsupported color function')) {
+                try {
+                    const canvas = await html2canvas(document.body, { ...opts, foreignObjectRendering: true });
+                    return canvas.toDataURL('image/jpeg', 0.6);
+                } catch (e2) {
+                    console.warn('Screenshot capture skipped (foreignObject fallback)', e2);
+                    return '';
+                }
+            }
             console.warn('Screenshot capture skipped', e);
             return '';
         }

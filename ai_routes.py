@@ -157,7 +157,7 @@ def register_ai_routes(app, get_ai_config):
         return scored[:limit]
 
     def get_dynamic_system_prompt():
-        return """你是计算机视觉实验系统中的 AI 技术助理。
+        return """你是计算机视觉教学系统中的 AI 技术助理。
 你需要结合当前页面上下文，解释算法、分析参数、诊断结果、生成简短讲解稿或报告描述。
 
 【页面主动控制权】

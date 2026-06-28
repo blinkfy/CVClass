@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}CV 学习路径 - 计算机视觉实验平台{% endblock %}
+{% block title %}CV 学习路径 - 计算机视觉教学平台{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260628-frontier-deeplink">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/learning_path.css') }}?v=20260628-removeplanned">
 {% endblock %}
 
 {% block content %}
 <div
     class="cv-quest-page"
-    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260628-frontier-deeplink"
+    data-quest-map-url="{{ url_for('static', filename='assets/data/cv_quest_map.json') }}?v=20260628-world04-order"
 >
     <section class="cv-quest-hero" aria-labelledby="questHeroTitle">
         <div class="cv-quest-hero-copy">
@@ -34,10 +34,6 @@
                 <article class="cv-quest-stat cv-quest-stat--frontier">
                     <span id="questFrontierCount">--</span>
                     <strong>前沿案例</strong>
-                </article>
-                <article class="cv-quest-stat cv-quest-stat--planned">
-                    <span id="questPlannedCount">--</span>
-                    <strong>规划中</strong>
                 </article>
                 <article class="cv-quest-stat cv-quest-stat--worlds">
                     <span id="questWorldCount">--</span>
@@ -119,5 +115,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260628-world04wave1"></script>
+<script src="{{ url_for('static', filename='js/pages/learning_path.js') }}?v=20260628-removeplanned"></script>
 {% endblock %}

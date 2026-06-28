@@ -9,7 +9,7 @@
         mechanism: { label: "机制演示", className: "mechanism" },
         real_inference: { label: "真实推理", className: "inference" },
         frontier_case: { label: "前沿案例", className: "frontier" },
-        planned: { label: "规划中", className: "planned" },
+        planned: { label: "", className: "planned" },
     };
     const typeIcons = {
         matrix: "Px",
@@ -126,7 +126,6 @@
         mechanism: document.getElementById("questMechanismCount"),
         inference: document.getElementById("questInferenceCount"),
         frontier: document.getElementById("questFrontierCount"),
-        planned: document.getElementById("questPlannedCount"),
         worlds: document.getElementById("questWorldCount"),
         panel: document.querySelector(".cv-level-panel"),
         panelWorld: document.getElementById("levelPanelWorld"),
@@ -231,7 +230,6 @@
         el.mechanism.textContent = rawStatusCounts.mechanism || 0;
         el.inference.textContent = inferenceCount;
         el.frontier.textContent = rawStatusCounts.frontier_case || 0;
-        el.planned.textContent = rawStatusCounts.planned || 0;
         el.worlds.textContent = state.data.worlds.length;
     }
 
@@ -434,7 +432,7 @@
             const levels = orderedLevels(world);
             const completed = world.levels.filter((level) => effectiveStatus(level, learnedModules) === "completed").length;
             const implemented = world.levels.filter((level) => level.route).length;
-            const progress = Number.isFinite(world.progress) ? world.progress : Math.round((implemented / world.levels.length) * 100);
+            const progress = Math.round((completed / world.levels.length) * 100);
 
             const mapSize = getWorldMapSize(world);
             const points = levels.map((level, index) => (
@@ -494,7 +492,6 @@
                         <div class="cv-world-meta-grid">
                             <span><strong>${world.levels.length}</strong> 关卡</span>
                             <span><strong>${implemented}</strong> 已有入口</span>
-                            <span><strong>${world.levels.length - implemented}</strong> 规划中</span>
                         </div>
                     </div>
                     <div class="cv-world-map" tabindex="0" aria-label="${escapeHtml(world.title)} 关卡地图">

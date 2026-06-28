@@ -846,6 +846,11 @@ body.home-page-shell .content-shell {
     top: calc(100% + 50px);
 }
 
+.world-level-node em:empty,
+.cv-level-status:empty {
+    display: none;
+}
+
 .level-tooltip {
     position: absolute;
     z-index: 20;

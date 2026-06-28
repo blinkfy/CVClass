@@ -114,14 +114,6 @@
                     <img data-seg-sem-image alt="语义分割输入图">
                     <canvas data-seg-sem-canvas></canvas>
                     <div class="seg-lab-scanline" aria-hidden="true"></div>
-                    <div class="seg-lab-compare-overlay" data-seg-compare-sem aria-hidden="true">
-                        <div class="seg-lab-compare-grid">
-                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                        </div>
-                    </div>
                 </div>
                 <div class="seg-lab-mini-legend" data-seg-sem-legend></div>
                 <footer>
@@ -261,5 +253,5 @@
 
 {% block extra_js %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260626-titlescn1"></script>
+<script type="module" src="{{ url_for('static', filename='js/vision_tasks/segmentation_lab_compare.js') }}?v=20260628-remove-sem-grid"></script>
 {% endblock %}

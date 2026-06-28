@@ -1546,8 +1546,17 @@ ${rows.map((row) => `L_${row.level}:\\ \\mathbf g=[${fmt(row.g[0], 2)},${fmt(row
             resize(cfg.width, cfg.height);
             processFrame(true);
             chip("status", "视频就绪");
-            setStateText("视频已加载，可以播放或单步计算");
+            setStateText("视频已加载，自动开始播放");
             setActiveLog(1);
+            // 页面打开后自动播放
+            video.play().then(() => {
+                state.running = true;
+                if (actions.play) actions.play.textContent = "暂停";
+                chip("status", "实时计算中");
+                setActiveLog(3);
+            }).catch(() => {
+                setStateText("浏览器阻止自动播放，请手动点击播放");
+            });
         });
 
         video?.addEventListener("seeked", () => processFrame(true));

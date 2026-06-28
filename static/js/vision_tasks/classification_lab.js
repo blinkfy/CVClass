@@ -2192,7 +2192,7 @@
                     <div class="cls-notes-step-content">
                         <span class="cls-notes-step-title">特征描述子量化 (Quantization)</span>
                         <div class="cls-notes-step-formula" data-formula="k^* = \\arg\\min_{k} \\|\\mathbf{f}_{${active.featureId + 1}} - \\mathbf{c}_k\\|_2"></div>
-                        <span class="cls-notes-step-desc">计算当前特征点 <strong>f_{${active.featureId + 1}}</strong> 与词典中心的欧氏距离，最近邻为 <strong>w_{${active.wordId + 1}}</strong>，距离为 <strong>${active.distance.toFixed(3)}</strong>。</span>
+                        <span class="cls-notes-step-desc">计算当前特征点 <span data-formula="f_{${active.featureId + 1}}"></span> 与词典中心的欧氏距离，最近邻为 <span data-formula="w_{${active.wordId + 1}}"></span>，距离为 <strong>${active.distance.toFixed(3)}</strong>。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
@@ -2200,7 +2200,7 @@
                     <div class="cls-notes-step-content">
                         <span class="cls-notes-step-title">直方图频数投递 (Histogram Pooling)</span>
                         <div class="cls-notes-step-formula" data-formula="\\mathbf{h}[w_{${active.wordId + 1}}] \\leftarrow \\mathbf{h}[w_{${active.wordId + 1}}] + 1"></div>
-                        <span class="cls-notes-step-desc">将特征点投递到对应的直方图通道，通道 <strong>w_{${active.wordId + 1}}</strong> 的频数累加为 <strong>${active.count}</strong>。整图共投递了 <strong>${totalFeatures}</strong> 个特征点。</span>
+                        <span class="cls-notes-step-desc">将特征点投递到对应的直方图通道，通道 <span data-formula="w_{${active.wordId + 1}}"></span> 的频数累加为 <strong>${active.count}</strong>。整图共投递了 <strong>${totalFeatures}</strong> 个特征点。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">
@@ -2208,7 +2208,7 @@
                     <div class="cls-notes-step-content">
                         <span class="cls-notes-step-title">直方图归一化 (L1-sqrt Normalization)</span>
                         <div class="cls-notes-step-formula" data-formula="\\mathbf{h}' = \\sqrt{\\frac{\\mathbf{h}}{\\sum \\mathbf{h}}}"></div>
-                        <span class="cls-notes-step-desc">消除图像大小和特征点总数的影响。当前通道归一化后的特征值：<strong>\\sqrt{${active.count} / ${totalFeatures}} \\approx ${normVal}</strong>。</span>
+                        <span class="cls-notes-step-desc">消除图像大小和特征点总数的影响。当前通道归一化后的特征值：<span data-formula="\\sqrt{${active.count} / ${totalFeatures}} \\approx ${normVal}"></span>。</span>
                     </div>
                 </div>
                 <div class="cls-notes-step-item">

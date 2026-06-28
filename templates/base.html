@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}计算机视觉实验平台{% endblock %}</title>
-    <link rel="icon" href="{{ url_for('static', filename='assets/img/icon.png') }}">
+    <title>{% block title %}计算机视觉教学平台{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='assets/img/icon.webp') }}">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/base.css') }}?v=20260627-quest-map2">
     {% if active_page|default('') != 'object_detection' %}
@@ -23,12 +23,12 @@
     </script>
     {% if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] %}
     <header class="site-header" aria-label="主页导航">
-        <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉实验平台首页">
+        <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉教学平台首页">
             <span class="site-brand-icon" aria-hidden="true">
-                <img src="{{ url_for('static', filename='assets/img/icon.png') }}" alt="">
+                <img src="{{ url_for('static', filename='assets/img/icon.webp') }}" alt="">
             </span>
             <span class="site-brand-text">
-                <strong>计算机视觉实验平台</strong>
+                <strong>计算机视觉教学平台</strong>
                 <span>Computer Vision Lab</span>
             </span>
         </a>
@@ -52,7 +52,7 @@
     <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
         <div class="sidebar-brand">
             <span>CV Lab</span>
-            <strong>计算机视觉实验平台</strong>
+            <strong>计算机视觉教学平台</strong>
         </div>
         <nav class="sidebar-nav">
             <div class="sidebar-category">学习入口</div>
@@ -195,7 +195,7 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/core/base.js') }}?v=20260628-quest-learned-maps"></script>
-    <script src="{{ url_for('static', filename='js/core/ai_assistant.js') }}?v=20260628-frontier-ai1"></script>
+    <script src="{{ url_for('static', filename='js/core/ai_assistant.js') }}?v=20260628-screenshot-fallback"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -15,7 +15,7 @@
 {% elif active_sub_page == 'classification' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/classification_lab.css') }}?v=20260626-titlescn1">
 {% elif active_sub_page == 'segmentation_basic' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260627-regionpie2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260628-remove-sem-grid">
 {% elif active_sub_page == 'detection' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/object_detection_lab.css') }}?v=20260626-yolostep2">
 {% elif active_sub_page == 'semantic' %}
@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260626-titlescn1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260626-fontup4">
 {% elif active_sub_page == 'compare' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260627-regionpie2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/segmentation_basic.css') }}?v=20260628-remove-sem-grid">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/semantic_segmentation_lab.css') }}?v=20260626-titlescn1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/instance_segmentation_lab.css') }}?v=20260626-fontup4">
 {% endif %}
@@ -61,7 +61,7 @@
 {% endif %}
 <script src="{{ url_for('static', filename='js/vision_tasks/vision_tasks_common.js') }}?v=20260626-titlescn1"></script>
 {% if active_sub_page == 'classification' %}
-<script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260626-titlescn1"></script>
+<script src="{{ url_for('static', filename='js/vision_tasks/classification_lab.js') }}?v=20260628-formulafix"></script>
 {% elif active_sub_page == 'segmentation_basic' %}
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
 <script src="{{ url_for('static', filename='js/vision_tasks/segmentation_basic_lab.js') }}?v=20260627-regionpie2"></script>
