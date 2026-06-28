@@ -1,0 +1,57 @@
+{
+  "embeddingDim": 512,
+  "defaultSample": "dog",
+  "promptTemplates": [
+    "a photo of a {label}",
+    "an image of {label}",
+    "a close-up photo of {label}",
+    "a visual scene containing {label}"
+  ],
+  "samples": [
+    {
+      "id": "dog",
+      "label": "dog",
+      "title": "草地上的狗",
+      "scene": "animal",
+      "text": "a photo of a dog",
+      "position": [24, 66],
+      "summary": "动物主体和草地背景更接近 dog prompt。"
+    },
+    {
+      "id": "street",
+      "label": "street",
+      "title": "街道与车辆",
+      "scene": "street",
+      "text": "a photo of a street",
+      "position": [43, 38],
+      "summary": "道路、车辆和建筑使图像靠近 street prompt。"
+    },
+    {
+      "id": "flower",
+      "label": "flower",
+      "title": "花朵近景",
+      "scene": "flower",
+      "text": "a photo of a flower",
+      "position": [67, 72],
+      "summary": "主体颜色和近景形态使图像靠近 flower prompt。"
+    },
+    {
+      "id": "classroom",
+      "label": "classroom",
+      "title": "教室场景",
+      "scene": "classroom",
+      "text": "a classroom scene",
+      "position": [75, 30],
+      "summary": "桌椅、黑板和室内结构使图像靠近 classroom prompt。"
+    },
+    {
+      "id": "food",
+      "label": "food",
+      "title": "餐盘食物",
+      "scene": "food",
+      "text": "a plate of food",
+      "position": [34, 24],
+      "summary": "盘子和食物区域使图像靠近 food prompt。"
+    }
+  ]
+}

@@ -96,7 +96,7 @@
             <section class="motion-view-card motion-real-source-card" data-motion-real-view="source">
                 <div class="geometry-section-head">
                     <strong>原始交通视频</strong>
-                    <span>Pexels 2103099 · H.264</span>
+                    <span>Frame Pair · Pexels 2103099 · H.264</span>
                 </div>
                 <div class="motion-real-video-shell">
                     <video data-motion-real-video muted playsinline loop preload="auto"></video>
@@ -107,7 +107,7 @@
             <section class="motion-view-card" data-motion-real-view="dense">
                 <div class="geometry-section-head">
                     <strong>稠密采样光流</strong>
-                    <span>HSV magnitude + sampled vectors</span>
+                    <span>Dense Flow · HSV Magnitude + Vectors</span>
                 </div>
                 <canvas class="motion-real-canvas" data-motion-real-canvas="dense" aria-label="稠密采样光流"></canvas>
             </section>
@@ -115,7 +115,7 @@
             <section class="motion-view-card" data-motion-real-view="sparse">
                 <div class="geometry-section-head">
                     <strong>稀疏特征轨迹</strong>
-                    <span>Shi-Tomasi style corners + iterative LK</span>
+                    <span>Sparse Tracks · Shi-Tomasi + Iterative LK</span>
                 </div>
                 <canvas class="motion-real-canvas" data-motion-real-canvas="sparse" aria-label="稀疏光流轨迹"></canvas>
             </section>
@@ -152,19 +152,6 @@
             <article><strong>稠密采样</strong><small>在规则网格上做局部块匹配，得到方向、幅值和箭头。</small></article>
             <article><strong>稀疏追踪</strong><small>先检测角点，再在局部窗口中迭代求最小二乘位移。</small></article>
             <article><strong>质量门槛</strong><small>该视频已用 OpenCV 离线评估，车流方向和轨迹可视化清楚。</small></article>
-        </div>
-
-        <div class="motion-code-card">
-            <span>裁剪 OpenCV.js 的后续路径</span>
-            <code>python platforms/js/build_js.py build_wasm \
-  --build_wasm \
-  --config=/abs/path/motion_flow.config.py</code>
-            <small>配置只导出 core/imgproc/video 中的 cvtColor、goodFeaturesToTrack、calcOpticalFlowPyrLK、calcOpticalFlowFarneback 等必要接口。</small>
-        </div>
-
-        <div class="motion-notes-body motion-real-notes" data-motion-real-notes>
-            <article><span>1</span><div><strong>为什么不用远程视频</strong><p>同源本地资源能稳定读取 canvas 像素，避免 CORS 和网络波动。</p></div></article>
-            <article><span>2</span><div><strong>为什么不用全量 OpenCV.js</strong><p>全量文件约 11MB，和“只导出用到的地方”的要求冲突。</p></div></article>
         </div>
 
         <div class="vision-output-schema">

@@ -249,7 +249,7 @@
             // Using jpeg to keep size small
             return canvas.toDataURL('image/jpeg', 0.6);
         } catch (e) {
-            console.error('Screenshot capture failed', e);
+            console.warn('Screenshot capture skipped', e);
             return '';
         }
     }

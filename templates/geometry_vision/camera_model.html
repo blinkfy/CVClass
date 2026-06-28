@@ -71,8 +71,8 @@
             </div>
             <div class="geometry-stage-chips">
                 <span data-geo-camera-chip="step">3D Point</span>
-                <span data-geo-camera-chip="focal">f = 120</span>
-                <span data-geo-camera-chip="depth">Z = 4.0</span>
+                <span data-geo-camera-chip="focal">\(f=120\)</span>
+                <span data-geo-camera-chip="depth">\(Z=4.0\)</span>
             </div>
         </div>
 
@@ -87,7 +87,7 @@
             <section class="camera-view-card camera-view-card--image">
                 <div class="geometry-section-head">
                     <strong>成像平面</strong>
-                    <span>Image Plane · x = fX / Z, y = fY / Z</span>
+                    <span>Image Plane · \(x=\frac{fX}{Z},\ y=\frac{fY}{Z}\)</span>
                 </div>
                 <div class="geometry-svg-frame camera-plane-frame" data-geo-camera-plane></div>
             </section>
@@ -99,10 +99,10 @@
                 <span>Projection Microscope</span>
             </div>
             <div class="camera-micro-grid">
-                <section><span>当前 3D 点</span><strong data-geo-camera-micro="point">P = (--)</strong></section>
-                <section><span>归一化坐标</span><strong data-geo-camera-micro="normalized">xn = --, yn = --</strong></section>
-                <section><span>成像平面坐标</span><strong data-geo-camera-micro="image">x = --, y = --</strong></section>
-                <section><span>投影尺度</span><strong data-geo-camera-micro="scale">f / Z = --</strong></section>
+                <section><span>当前 3D 点</span><strong data-geo-camera-micro="point">\(P=(--)\)</strong></section>
+                <section><span>归一化坐标</span><strong data-geo-camera-micro="normalized">\(x_n=--,\ y_n=--\)</strong></section>
+                <section><span>成像平面坐标</span><strong data-geo-camera-micro="image">\(x=--,\ y=--\)</strong></section>
+                <section><span>投影尺度</span><strong data-geo-camera-micro="scale">\(\frac{f}{Z}=--\)</strong></section>
                 <section class="is-wide"><span>观察结论</span><strong data-geo-camera-micro="conclusion">Z 越大投影越靠近中心，f 越大图像越放大。</strong></section>
             </div>
         </div>
@@ -118,7 +118,7 @@
 
         <div class="vision-formula-card">
             <span>核心公式</span>
-            <strong>x = fX / Z, y = fY / Z</strong>
+            <strong>\(x=\frac{fX}{Z},\quad y=\frac{fY}{Z}\)</strong>
             <small data-geo-camera-formula-note>Z 越大，投影越靠近中心；f 越大，图像越放大。</small>
         </div>
 
@@ -126,7 +126,13 @@
 
         <div class="vision-output-schema">
             <span>当前投影</span>
-            <code data-geo-camera-substitution>P(X,Y,Z) → xn,yn → x,y</code>
+            <code data-geo-camera-substitution>\[
+\begin{aligned}
+P&=(X,Y,Z)\\
+(x_n,y_n)&=(X/Z,Y/Z)\\
+(x,y)&=(fX/Z,fY/Z)
+\end{aligned}
+\]</code>
         </div>
 
         <div class="geometry-observation-list">
@@ -141,7 +147,7 @@
     <li class="is-active" data-geo-phase="point"><span>1</span><div><strong>三维点</strong><small>3D Point · P(X,Y,Z)</small></div></li>
     <li data-geo-phase="center"><span>2</span><div><strong>光心</strong><small>Camera Center · O</small></div></li>
     <li data-geo-phase="ray"><span>3</span><div><strong>投影射线</strong><small>Projection Ray · through O</small></div></li>
-    <li data-geo-phase="plane"><span>4</span><div><strong>成像平面</strong><small>Image Plane · z = f</small></div></li>
+    <li data-geo-phase="plane"><span>4</span><div><strong>成像平面</strong><small>Image Plane · \(z=f\)</small></div></li>
     <li data-geo-phase="pixel"><span>5</span><div><strong>像平面点</strong><small>Image Point · p(x,y)</small></div></li>
 </ol>
 {% endblock %}

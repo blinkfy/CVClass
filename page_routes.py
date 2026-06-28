@@ -342,13 +342,13 @@ def register_page_routes(app, get_model_status):
         subpage_configs = {
             "epipolar": {
                 "page_title": "对极几何与基础矩阵",
-                "subtitle": "从两张非平行视图中的匹配点出发，观察一个点如何在另一张图像中生成一条极线，并理解对极约束 x'^T F x = 0。",
+                "subtitle": "从两张非平行视图中的匹配点出发，观察一个点如何在另一张图像中生成一条极线，并理解对极约束 \\( \\mathbf{x}'^{\\mathsf T}\\mathbf{F}\\mathbf{x}=0 \\)。",
                 "status": "预设样例 · 可解释演示",
             },
             "pose": {
                 "page_title": "本质矩阵与相机位姿",
-                "subtitle": "在已知相机内参后，把基础矩阵转换为本质矩阵，并通过分解 E 恢复两台相机之间的旋转 R 和平移 t。",
-                "status": "F → E · R,t · CHEIRALITY",
+                "subtitle": "在已知相机内参后，把基础矩阵转换为本质矩阵，并通过分解 \\( \\mathbf{E} \\) 恢复两台相机之间的旋转 \\( \\mathbf{R} \\) 和平移 \\( \\mathbf{t} \\)。",
+                "status": "\\( \\mathbf{F}\\rightarrow\\mathbf{E} \\) · \\( \\mathbf{R},\\mathbf{t} \\) · CHEIRALITY",
             },
             "triangulation": {
                 "page_title": "三角测量与稀疏点云",
@@ -372,7 +372,7 @@ def register_page_routes(app, get_model_status):
             "multiview_title": "多视图几何与三维重建",
             "multiview_page_title": config["page_title"],
             "multiview_subtitle": config["subtitle"],
-            "multiview_badge": "F · E · R,t · X",
+            "multiview_badge": "\\( \\mathbf{F} \\) · \\( \\mathbf{E} \\) · \\( \\mathbf{R},\\mathbf{t} \\) · \\( \\mathbf{X} \\)",
             "multiview_status": config["status"],
             "multiview_nav": nav,
         }
@@ -384,6 +384,10 @@ def register_page_routes(app, get_model_status):
     @app.route("/learning-path", methods=["GET"])
     def learning_path_page():
         return render_template("pages/learning_path.html", active_page="learning_path")
+
+    @app.route("/learning-path/frontier", methods=["GET"])
+    def learning_path_frontier_page():
+        return redirect("/learning-path#path-frontier")
 
     @app.route("/knowledge-graph", methods=["GET"])
     def knowledge_graph_page():
@@ -687,13 +691,57 @@ def register_page_routes(app, get_model_status):
     def frontier_page():
         return render_template("frontier.html", active_page="frontier", active_sub_page="overview")
 
+    @app.route("/vision-transformer", methods=["GET"])
+    def vision_transformer_page():
+        return redirect(url_for("vision_transformer_vit_page"))
+
+    @app.route("/vision-transformer/vit", methods=["GET"])
+    def vision_transformer_vit_page():
+        return render_template(
+            "frontier_vit.html",
+            active_page="vision_transformer",
+            active_sub_page="vit",
+        )
+
+    @app.route("/vision-transformer/dino", methods=["GET"])
+    def vision_transformer_dino_page():
+        return render_template(
+            "frontier_dino.html",
+            active_page="vision_transformer",
+            active_sub_page="dino",
+        )
+
     @app.route("/frontier/vit", methods=["GET"])
     def frontier_vit_page():
-        return render_template("frontier_vit.html", active_page="frontier", active_sub_page="vit")
+        return redirect(url_for("vision_transformer_vit_page"))
 
     @app.route("/frontier/dino", methods=["GET"])
     def frontier_dino_page():
-        return render_template("frontier_dino.html", active_page="frontier", active_sub_page="dino")
+        return redirect(url_for("vision_transformer_dino_page"))
+
+    @app.route("/frontier/clip", methods=["GET"])
+    def frontier_clip_page():
+        return render_template("frontier_clip.html", active_page="vision_language", active_sub_page="clip")
+
+    @app.route("/frontier/vlm", methods=["GET"])
+    def frontier_vlm_page():
+        return render_template("frontier_vlm.html", active_page="vision_language", active_sub_page="vlm")
+
+    @app.route("/frontier/multimodal", methods=["GET"])
+    def frontier_multimodal_page():
+        return render_template("frontier_multimodal.html", active_page="vision_language", active_sub_page="multimodal")
+
+    @app.route("/generative-multimodal/sam", methods=["GET"])
+    def generative_multimodal_sam_page():
+        return render_template("generative_multimodal_sam.html", active_page="vision_language", active_sub_page="sam")
+
+    @app.route("/generative-multimodal/gan", methods=["GET"])
+    def generative_multimodal_gan_page():
+        return render_template("generative_multimodal/gan.html", active_page="vision_language", active_sub_page="gan")
+
+    @app.route("/generative-multimodal/diffusion", methods=["GET"])
+    def generative_multimodal_diffusion_page():
+        return render_template("generative_multimodal/diffusion.html", active_page="vision_language", active_sub_page="diffusion")
 
     @app.route("/frontier/vision-banana", methods=["GET"])
     def vision_banana_page():

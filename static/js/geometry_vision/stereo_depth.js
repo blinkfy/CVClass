@@ -37,6 +37,106 @@
         ],
     };
 
+    const TRACE_MS = 520;
+    const tracePhases = {
+        parallel: {
+            point: ["input"],
+            cameras: ["input", "compute"],
+            rays: ["input", "compute"],
+            planes: ["compute", "write"],
+            epipolar: ["search", "compute"],
+            search: ["search", "candidate", "wta", "write"],
+        },
+        disparity: {
+            pick: ["input"],
+            measure: ["input", "compute"],
+            disparity: ["input", "compute", "write"],
+            rays: ["compute"],
+            depth: ["compute", "write"],
+            error: ["compute", "error"],
+        },
+        block: {
+            rectified: ["input"],
+            patch: ["input"],
+            search: ["search", "candidate"],
+            cost: ["candidate", "cost"],
+            wta: ["cost", "wta"],
+            disparityMap: ["wta", "write"],
+            depthMap: ["write"],
+        },
+    };
+
+    function getTracePhases(kind, step) {
+        return tracePhases[kind]?.[step] || ["input"];
+    }
+
+    function getTraceDuration(kind, step) {
+        return getTracePhases(kind, step).length * TRACE_MS + 280;
+    }
+
+    function clearAlgoTrace(state) {
+        (state.phaseTimers || []).forEach((timer) => window.clearTimeout(timer));
+        state.phaseTimers = [];
+        root.classList.remove("is-tracing");
+        delete root.dataset.algoPhase;
+        delete root.dataset.algoIteration;
+    }
+
+    function stopAlgoPlayback(state) {
+        clearAlgoTrace(state);
+        if (state.timer) window.clearTimeout(state.timer);
+        state.timer = 0;
+        state.isPlaying = false;
+        if (state.playButton) state.playButton.textContent = "播放流程";
+    }
+
+    function setTracePhase(kind, state, step, phase, iteration) {
+        if (state.traceIteration !== iteration) return;
+        root.dataset.algoStep = step;
+        root.dataset.algoPhase = phase;
+        root.dataset.algoIteration = String(iteration);
+        root.classList.remove("is-tracing");
+        void root.offsetWidth;
+        root.classList.add("is-tracing");
+    }
+
+    function runAlgoTrace(kind, state, step) {
+        clearAlgoTrace(state);
+        const phases = getTracePhases(kind, step);
+        state.traceIteration = (state.traceIteration || 0) + 1;
+        const iteration = state.traceIteration;
+        root.dataset.algoStep = step;
+        root.dataset.algoIteration = String(iteration);
+        setTracePhase(kind, state, step, phases[0], iteration);
+        phases.slice(1).forEach((phase, index) => {
+            const timer = window.setTimeout(() => setTracePhase(kind, state, step, phase, iteration), (index + 1) * TRACE_MS);
+            state.phaseTimers.push(timer);
+        });
+    }
+
+    function moveAlgoStep(kind, state, render, delta, auto = false) {
+        if (!auto) stopAlgoPlayback(state);
+        const steps = stepSets[kind] || [];
+        const current = Math.max(0, steps.findIndex((step) => step.id === state.step));
+        state.step = steps[(current + delta + steps.length) % steps.length].id;
+        render(true);
+    }
+
+    function startAlgoPlayback(kind, state, render) {
+        stopAlgoPlayback(state);
+        state.isPlaying = true;
+        if (state.playButton) state.playButton.textContent = "暂停播放";
+
+        const advance = () => {
+            if (!state.isPlaying) return;
+            moveAlgoStep(kind, state, render, 1, true);
+            state.timer = window.setTimeout(advance, getTraceDuration(kind, state.step));
+        };
+
+        render(true);
+        state.timer = window.setTimeout(advance, getTraceDuration(kind, state.step));
+    }
+
     function setText(selector, value, base = root) {
         const el = typeof selector === "string" ? $(selector, base) : selector;
         if (el) el.textContent = value;
@@ -79,39 +179,33 @@
     }
 
     function bindStepControls(kind, state, render) {
-        const steps = stepSets[kind] || [];
         const select = $(`[data-stereo-step-select="${kind}"]`);
         select?.addEventListener("change", () => {
+            stopAlgoPlayback(state);
             state.step = select.value;
             render(true);
         });
 
         $$(`[data-stereo-stepper="${kind}"] [data-stereo-phase]`).forEach((item) => {
             item.addEventListener("click", () => {
+                stopAlgoPlayback(state);
                 state.step = item.dataset.stereoPhase;
                 render(true);
             });
         });
 
-        const move = (delta) => {
-            const current = Math.max(0, steps.findIndex((step) => step.id === state.step));
-            state.step = steps[(current + delta + steps.length) % steps.length].id;
-            render(true);
-        };
+        const move = (delta, auto = false) => moveAlgoStep(kind, state, render, delta, auto);
 
         $(`[data-stereo-prev="${kind}"]`)?.addEventListener("click", () => move(-1));
         $(`[data-stereo-next="${kind}"]`)?.addEventListener("click", () => move(1));
         const play = $(`[data-stereo-play="${kind}"]`);
+        state.playButton = play;
         play?.addEventListener("click", () => {
-            if (state.timer) {
-                window.clearInterval(state.timer);
-                state.timer = 0;
-                play.textContent = "播放流程";
+            if (state.isPlaying) {
+                stopAlgoPlayback(state);
                 return;
             }
-            play.textContent = "暂停播放";
-            move(1);
-            state.timer = window.setInterval(() => move(1), 1180);
+            startAlgoPlayback(kind, state, render);
         });
     }
 
@@ -210,12 +304,15 @@
         }
 
         function stereoProjection(config) {
-            const disparity = config.baseline * config.focal / Math.max(config.depth, 0.2);
+            const idealDisparity = config.baseline * config.focal / Math.max(config.depth, 0.2);
             const center = 178 + config.lateral * config.focal / Math.max(config.depth, 0.2) * 0.18;
+            const xL = clamp(center, 70, 286);
+            const xR = clamp(center - idealDisparity, 62, 286);
             return {
-                disparity,
-                xL: clamp(center, 70, 286),
-                xR: clamp(center - disparity, 62, 286),
+                disparity: Math.max(0, xL - xR),
+                idealDisparity,
+                xL,
+                xR,
                 y: 128,
             };
         }
@@ -244,7 +341,7 @@
                     <circle class="stereo-scene-object" cx="${ox + 78}" cy="${oy + 58}" r="9"></circle>
                 `;
             }
-            return `<circle class="stereo-point" cx="${ox}" cy="${oy}" r="8"></circle>`;
+            return `<circle class="stereo-point" data-algo-role="input" data-algo-phase="input" cx="${ox}" cy="${oy}" r="8"></circle>`;
         }
 
         function renderGeometrySvg(config, projection) {
@@ -256,29 +353,29 @@
             const planeXL = left.x + (projection.xL - 178) * 0.32;
             const planeXR = right.x + (projection.xR - 178) * 0.32;
             const cameras = config.showCameras ? `
-                <path class="stereo-camera" d="M${left.x - 24} ${left.y + 18} L${left.x} ${left.y - 24} L${left.x + 24} ${left.y + 18} Z"></path>
-                <path class="stereo-camera" d="M${right.x - 24} ${right.y + 18} L${right.x} ${right.y - 24} L${right.x + 24} ${right.y + 18} Z"></path>
-                <circle class="stereo-camera-center" cx="${left.x}" cy="${left.y}" r="6"></circle>
-                <circle class="stereo-camera-center" cx="${right.x}" cy="${right.y}" r="6"></circle>
+                <path class="stereo-camera" data-algo-role="input" data-algo-phase="input compute" d="M${left.x - 24} ${left.y + 18} L${left.x} ${left.y - 24} L${left.x + 24} ${left.y + 18} Z"></path>
+                <path class="stereo-camera" data-algo-role="input" data-algo-phase="input compute" d="M${right.x - 24} ${right.y + 18} L${right.x} ${right.y - 24} L${right.x + 24} ${right.y + 18} Z"></path>
+                <circle class="stereo-camera-center" data-algo-role="input" data-algo-phase="input compute" cx="${left.x}" cy="${left.y}" r="6"></circle>
+                <circle class="stereo-camera-center" data-algo-role="input" data-algo-phase="input compute" cx="${right.x}" cy="${right.y}" r="6"></circle>
                 <text x="${left.x - 18}" y="${left.y + 42}" fill="#5b21b6" font-size="12" font-weight="900">OL</text>
                 <text x="${right.x - 18}" y="${right.y + 42}" fill="#5b21b6" font-size="12" font-weight="900">OR</text>
             ` : "";
             const baseline = config.showBaseline ? `
-                <line class="stereo-baseline" x1="${left.x}" y1="${left.y + 26}" x2="${right.x}" y2="${right.y + 26}"></line>
+                <line class="stereo-baseline" data-algo-role="compute" data-algo-phase="compute" x1="${left.x}" y1="${left.y + 26}" x2="${right.x}" y2="${right.y + 26}"></line>
                 <text x="${(left.x + right.x) / 2 - 46}" y="${left.y + 48}" fill="#0e7490" font-size="12" font-weight="900">基线 b = ${fmt(config.baseline, 2)} m</text>
             ` : "";
             const planes = config.showPlanes ? `
-                <line class="stereo-epipolar" x1="${left.x - 52}" y1="${planeY}" x2="${left.x + 52}" y2="${planeY}"></line>
-                <line class="stereo-epipolar" x1="${right.x - 52}" y1="${planeY}" x2="${right.x + 52}" y2="${planeY}"></line>
-                <circle class="stereo-image-point" cx="${planeXL}" cy="${planeY}" r="5"></circle>
-                <circle class="stereo-image-point" cx="${planeXR}" cy="${planeY}" r="5"></circle>
+                <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="compute write" x1="${left.x - 52}" y1="${planeY}" x2="${left.x + 52}" y2="${planeY}"></line>
+                <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="compute write" x1="${right.x - 52}" y1="${planeY}" x2="${right.x + 52}" y2="${planeY}"></line>
+                <circle class="stereo-image-point" data-algo-role="output" data-algo-phase="write" cx="${planeXL}" cy="${planeY}" r="5"></circle>
+                <circle class="stereo-image-point" data-algo-role="output" data-algo-phase="write" cx="${planeXR}" cy="${planeY}" r="5"></circle>
                 <text x="${left.x - 38}" y="${planeY - 13}" fill="#64748b" font-size="11" font-weight="850">左成像面</text>
                 <text x="${right.x - 38}" y="${planeY - 13}" fill="#64748b" font-size="11" font-weight="850">右成像面</text>
             ` : "";
             const rays = config.showRays ? `
-                <line class="stereo-ray" x1="${left.x}" y1="${left.y}" x2="${point.x}" y2="${point.y}"></line>
-                <line class="stereo-ray stereo-ray--right" x1="${right.x}" y1="${right.y}" x2="${point.x}" y2="${point.y}"></line>
-                ${config.showPlanes ? `<line class="stereo-ray" x1="${point.x}" y1="${point.y}" x2="${planeXL}" y2="${planeY}"></line><line class="stereo-ray stereo-ray--right" x1="${point.x}" y1="${point.y}" x2="${planeXR}" y2="${planeY}"></line>` : ""}
+                <line class="stereo-ray" data-algo-role="compute" data-algo-phase="compute" x1="${left.x}" y1="${left.y}" x2="${point.x}" y2="${point.y}"></line>
+                <line class="stereo-ray stereo-ray--right" data-algo-role="compute" data-algo-phase="compute" x1="${right.x}" y1="${right.y}" x2="${point.x}" y2="${point.y}"></line>
+                ${config.showPlanes ? `<line class="stereo-ray" data-algo-role="compute" data-algo-phase="compute" x1="${point.x}" y1="${point.y}" x2="${planeXL}" y2="${planeY}"></line><line class="stereo-ray stereo-ray--right" data-algo-role="compute" data-algo-phase="compute" x1="${point.x}" y1="${point.y}" x2="${planeXR}" y2="${planeY}"></line>` : ""}
             ` : "";
             return `
                 <svg viewBox="0 0 760 320" role="img" aria-label="平行双目几何示意">
@@ -289,7 +386,7 @@
                     ${planes}
                     ${rays}
                     ${sceneObjects(config, point.x, point.y, 86)}
-                    ${config.scene === "single" ? "" : `<circle class="stereo-point" cx="${point.x}" cy="${point.y}" r="6"></circle>`}
+                    ${config.scene === "single" ? "" : `<circle class="stereo-point" data-algo-role="input" data-algo-phase="input" cx="${point.x}" cy="${point.y}" r="6"></circle>`}
                     ${cameras}
                     ${baseline}
                     <text x="42" y="48" fill="#1d4ed8" font-size="13" font-weight="900">校正后光轴平行，极线水平对齐</text>
@@ -303,15 +400,23 @@
             const rightWindowX = rightOffset - 16;
             const sceneShift = clamp(projection.disparity * 0.72, 8, 72);
             const epipolar = config.showEpipolar ? `
-                <line class="stereo-epipolar" x1="44" y1="${projection.y}" x2="684" y2="${projection.y}"></line>
-                <text x="520" y="${projection.y - 12}" fill="#0e7490" font-size="11" font-weight="850">同一水平扫描线</text>
+                <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="search compute" x1="44" y1="${projection.y}" x2="684" y2="${projection.y}"></line>
+                <text x="506" y="${projection.y - 12}" fill="#0e7490" font-size="11" font-weight="850">水平扫描线 / scanline</text>
             ` : "";
             const match = config.showMatch ? `
-                <line class="stereo-bracket" x1="${projection.xL}" y1="${projection.y + 34}" x2="${rightOffset + projection.xR}" y2="${projection.y + 34}"></line>
-                <text x="288" y="${projection.y + 58}" fill="#b45309" font-size="12" font-weight="900">视差提示 d = xL - xR</text>
+                <line class="stereo-bracket" data-algo-role="output" data-algo-phase="write" x1="${projection.xL}" y1="${projection.y + 34}" x2="${rightOffset + projection.xR}" y2="${projection.y + 34}"></line>
+                <text data-algo-role="output" data-algo-phase="write" x="270" y="${projection.y + 58}" fill="#b45309" font-size="12" font-weight="900">d = xL - xR = ${fmt(projection.disparity, 1)} px</text>
+            ` : "";
+            const searchRegion = config.showEpipolar ? `
+                <rect class="stereo-search-region" data-algo-role="error" data-algo-phase="search" x="${rightWindowX + 34}" y="${projection.y - 72}" width="236" height="136" rx="14"></rect>
+                <text x="${rightWindowX + 52}" y="${projection.y - 50}" fill="#64748b" font-size="11" font-weight="850">未约束 2D 搜索区域</text>
+            ` : "";
+            const searchBand = config.showEpipolar ? `
+                <rect class="stereo-search-band" data-algo-role="compute" data-algo-phase="search compute" x="${rightOffset + 46}" y="${projection.y - 18}" width="210" height="36" rx="18"></rect>
+                <text x="${rightOffset + 68}" y="${projection.y + 6}" fill="#0e7490" font-size="11" font-weight="850">校正后只沿同一行搜索</text>
             ` : "";
             const candidateX = clamp(rightOffset + projection.xR + 48, rightWindowX + 42, rightWindowX + 282);
-            const candidate = config.showEpipolar ? `<circle class="stereo-candidate-point" cx="${candidateX}" cy="${projection.y}" r="5"></circle>` : "";
+            const candidate = config.showEpipolar ? `<circle class="stereo-candidate-point" data-algo-role="candidate" data-algo-phase="candidate search" cx="${candidateX}" cy="${projection.y}" r="5"></circle>` : "";
             return `
                 <svg viewBox="0 0 720 310" role="img" aria-label="校正后左右图像同一水平扫描线">
                     <rect class="stereo-image-window" x="28" y="42" width="304" height="205" rx="16"></rect>
@@ -319,31 +424,33 @@
                     ${gridLines(720, 310, 24)}
                     ${miniScene("parallel-left-scene", 28, 42, 304, 205, 0, {lowTexture: config.scene === "street"})}
                     ${miniScene("parallel-right-scene", rightWindowX, 42, 304, 205, sceneShift, {lowTexture: config.scene === "street"})}
+                    ${searchRegion}
+                    ${searchBand}
                     <text x="48" y="70" fill="#1d4ed8" font-size="13" font-weight="900">左图 Left</text>
                     <text x="${rightOffset + 4}" y="70" fill="#1d4ed8" font-size="13" font-weight="900">右图 Right</text>
                     ${epipolar}
-                    <circle class="stereo-image-point" cx="${projection.xL}" cy="${projection.y}" r="7"></circle>
-                    <circle class="stereo-image-point" cx="${rightOffset + projection.xR}" cy="${projection.y}" r="7"></circle>
+                    <circle class="stereo-image-point stereo-match-lock" data-algo-role="input" data-algo-phase="input write" cx="${projection.xL}" cy="${projection.y}" r="7"></circle>
+                    <circle class="stereo-image-point stereo-match-lock" data-algo-role="winner" data-algo-phase="wta write" cx="${rightOffset + projection.xR}" cy="${projection.y}" r="7"></circle>
                     ${candidate}
                     ${match}
                     <text x="${projection.xL - 18}" y="${projection.y - 14}" fill="#0e7490" font-size="12" font-weight="900">xL</text>
                     <text x="${rightOffset + projection.xR - 18}" y="${projection.y - 14}" fill="#0e7490" font-size="12" font-weight="900">xR</text>
-                    <rect class="stereo-search-band" x="${rightOffset + 54}" y="${projection.y - 18}" width="196" height="36" rx="18"></rect>
-                    <text x="${rightOffset + 76}" y="${projection.y + 6}" fill="#0e7490" font-size="11" font-weight="850">右图候选沿此行滑动</text>
+                    <text x="312" y="${projection.y - 12}" fill="#1d4ed8" font-size="11" font-weight="900">yL = yR</text>
                 </svg>
             `;
         }
 
         function renderParallelStatus(config, projection) {
-            const matchState = config.showEpipolar ? "yL = yR，二维搜索降为一维" : "极线隐藏，仅保留投影关系";
             const baselineNote = config.baseline > 0.24 ? "基线偏大，视差更明显" : "基线适中，视差稳定可见";
             return `
                 <header><strong>当前几何状态</strong><small>同一个 P 在左右图形成一对同名点</small></header>
                 <div class="stereo-status-grid">
-                    <span>空间点<b>X=${fmt(config.lateral, 1)}m / Z=${fmt(config.depth, 1)}m</b></span>
-                    <span>投影坐标<b>xL=${fmt(projection.xL, 1)} / xR=${fmt(projection.xR, 1)}</b></span>
-                    <span>水平约束<b>${matchState}</b></span>
-                    <span>基线观察<b>${baselineNote}</b></span>
+                    <span>空间点 P<b>(${fmt(config.lateral, 1)}, Y, ${fmt(config.depth, 1)})</b></span>
+                    <span>左图坐标<b>xL=${fmt(projection.xL, 1)} px</b></span>
+                    <span>右图坐标<b>xR=${fmt(projection.xR, 1)} px</b></span>
+                    <span>视差 disparity<b>d=xL-xR=${fmt(projection.disparity, 1)} px</b></span>
+                    <span>搜索维度<b>${config.showEpipolar ? "2D -> 1D" : "2D 区域搜索"}</b></span>
+                    <span>结论<b>${config.showEpipolar ? "只沿同一水平扫描线搜索" : baselineNote}</b></span>
                 </div>
             `;
         }
@@ -381,14 +488,21 @@
             `).join(""));
             renderPreview($("[data-stereo-parallel-preview]"), stepSets.parallel, state.step);
             updateStepper("parallel", state.step);
-            if (animated) pulse($(".stereo-notes-panel"));
+            if (animated) {
+                pulse($(".stereo-notes-panel"));
+                runAlgoTrace("parallel", state, state.step);
+            }
         }
 
         Object.values(inputs).forEach((input) => {
-            input.addEventListener(input.type === "range" ? "input" : "change", () => render(true));
+            input.addEventListener(input.type === "range" ? "input" : "change", () => {
+                stopAlgoPlayback(state);
+                render(true);
+            });
         });
         bindStepControls("parallel", state, render);
         render(false);
+        startAlgoPlayback("parallel", state, render);
     }
 
     function initDisparityPage() {
@@ -421,65 +535,85 @@
         function imagePairSvg(config, depth) {
             const xL = 190;
             const xR = xL - config.disparity;
-            const y = 132;
-            const offset = 390;
-            const rightWindowX = offset - 16;
+            const leftY = 116;
+            const rightY = 320;
+            const bracketY = 222;
             const sceneShift = clamp(config.disparity * 0.72, 10, 76);
             const bracket = config.showBracket ? `
-                <line class="stereo-bracket" x1="${xL}" y1="${y + 38}" x2="${offset + xR}" y2="${y + 38}"></line>
-                <text x="294" y="${y + 62}" fill="#b45309" font-size="12" font-weight="900">d = xL - xR = ${fmt(config.disparity, 1)} px</text>
+                <line class="stereo-bracket" data-algo-role="compute" data-algo-phase="compute" x1="${xR}" y1="${bracketY}" x2="${xL}" y2="${bracketY}"></line>
+                <circle class="stereo-image-point" data-algo-role="input" data-algo-phase="input compute" cx="${xL}" cy="${bracketY}" r="5"></circle>
+                <circle class="stereo-image-point" data-algo-role="input" data-algo-phase="input compute" cx="${xR}" cy="${bracketY}" r="5"></circle>
+                <text data-algo-role="compute" data-algo-phase="compute write" x="${Math.min(xR, xL) + 18}" y="${bracketY - 14}" fill="#b45309" font-size="14" font-weight="950">d = ${fmt(config.disparity, 1)} px</text>
+                <text x="${xL - 12}" y="${bracketY + 28}" fill="#0e7490" font-size="11" font-weight="900">xL</text>
+                <text x="${xR - 12}" y="${bracketY + 28}" fill="#0e7490" font-size="11" font-weight="900">xR</text>
             ` : "";
             const multi = config.sample === "multi" ? `
                 <circle class="stereo-image-point" cx="132" cy="174" r="5"></circle>
-                <circle class="stereo-image-point" cx="${offset + 106}" cy="174" r="5"></circle>
-                <circle class="stereo-image-point" cx="250" cy="96" r="5"></circle>
-                <circle class="stereo-image-point" cx="${offset + 224}" cy="96" r="5"></circle>
+                <circle class="stereo-image-point" cx="106" cy="360" r="5"></circle>
+                <circle class="stereo-image-point" cx="250" cy="90" r="5"></circle>
+                <circle class="stereo-image-point" cx="224" cy="294" r="5"></circle>
             ` : "";
             return `
-                <svg viewBox="0 0 720 300" role="img" aria-label="左右图像中的视差测量">
-                    <rect class="stereo-image-window" x="34" y="44" width="306" height="196" rx="16"></rect>
-                    <rect class="stereo-image-window" x="${rightWindowX}" y="44" width="306" height="196" rx="16"></rect>
-                    ${gridLines(720, 300, 24)}
-                    ${miniScene("disparity-left-scene", 34, 44, 306, 196, 0, {lowTexture: config.sample === "far"})}
-                    ${miniScene("disparity-right-scene", rightWindowX, 44, 306, 196, sceneShift, {lowTexture: config.sample === "far"})}
-                    <line class="stereo-epipolar" x1="48" y1="${y}" x2="684" y2="${y}"></line>
-                    <text x="54" y="72" fill="#1d4ed8" font-size="13" font-weight="900">左图 Left</text>
-                    <text x="${offset + 4}" y="72" fill="#1d4ed8" font-size="13" font-weight="900">右图 Right</text>
+                <svg viewBox="0 0 360 500" role="img" aria-label="左右图像中的视差测量">
+                    <rect class="stereo-image-window" x="28" y="44" width="304" height="148" rx="16"></rect>
+                    <rect class="stereo-image-window" x="28" y="248" width="304" height="148" rx="16"></rect>
+                    ${gridLines(360, 500, 24)}
+                    ${miniScene("disparity-left-scene", 28, 44, 304, 148, 0, {lowTexture: config.sample === "far"})}
+                    ${miniScene("disparity-right-scene", 28, 248, 304, 148, sceneShift, {lowTexture: config.sample === "far"})}
+                    <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="compute" x1="46" y1="${leftY}" x2="314" y2="${leftY}"></line>
+                    <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="compute" x1="46" y1="${rightY}" x2="314" y2="${rightY}"></line>
+                    <rect x="46" y="202" width="268" height="42" rx="18" fill="rgba(236,254,255,.86)" stroke="#a5f3fc"></rect>
+                    <text x="48" y="72" fill="#1d4ed8" font-size="13" font-weight="900">左图 / Left Image</text>
+                    <text x="48" y="276" fill="#1d4ed8" font-size="13" font-weight="900">右图 / Right Image</text>
                     ${multi}
-                    <circle class="stereo-image-point" cx="${xL}" cy="${y}" r="8"></circle>
-                    <circle class="stereo-image-point" cx="${offset + xR}" cy="${y}" r="8"></circle>
+                    <circle class="stereo-image-point stereo-match-lock" data-algo-role="input" data-algo-phase="input compute" cx="${xL}" cy="${leftY}" r="8"></circle>
+                    <circle class="stereo-image-point stereo-match-lock" data-algo-role="input" data-algo-phase="input compute" cx="${xR}" cy="${rightY}" r="8"></circle>
                     ${bracket}
-                    <text x="${xL - 18}" y="${y - 16}" fill="#0e7490" font-size="12" font-weight="900">xL=${fmtInt(xL)}</text>
-                    <text x="${offset + xR - 22}" y="${y - 16}" fill="#0e7490" font-size="12" font-weight="900">xR=${fmtInt(xR)}</text>
-                    <text x="46" y="266" fill="#64748b" font-size="11" font-weight="850">当前深度 ${formatDepth(depth, config.unit)}，视差越大物体越近</text>
+                    <text x="${xL - 18}" y="${leftY - 16}" fill="#0e7490" font-size="12" font-weight="900">xL=${fmtInt(xL)}</text>
+                    <text x="${xR - 22}" y="${rightY - 16}" fill="#0e7490" font-size="12" font-weight="900">xR=${fmtInt(xR)}</text>
+                    <text x="48" y="426" fill="#64748b" font-size="11" font-weight="850">同一 3D 点在两幅图中的水平错位形成 disparity。</text>
+                    <text x="48" y="452" fill="#172554" font-size="15" font-weight="950">当前深度 ${formatDepth(depth, config.unit)}</text>
+                    <text x="48" y="474" fill="#64748b" font-size="11" font-weight="850">d 越大，目标越近；d 越小，目标越远。</text>
                 </svg>
             `;
         }
 
         function geometrySvg(config, depth) {
-            const left = {x: 120, y: 248};
-            const right = {x: 420, y: 248};
-            const point = {x: 270, y: depthToY(depth, 42, 224)};
-            const zLineX = 492;
+            const left = {x: 130, y: 418};
+            const right = {x: 390, y: 418};
+            const point = {x: 260, y: depthToY(depth, 76, 328)};
+            const zLineX = 474;
             const rays = config.showRays ? `
-                <line class="stereo-ray" x1="${left.x}" y1="${left.y}" x2="${point.x}" y2="${point.y}"></line>
-                <line class="stereo-ray stereo-ray--right" x1="${right.x}" y1="${right.y}" x2="${point.x}" y2="${point.y}"></line>
+                <line class="stereo-ray" data-algo-role="compute" data-algo-phase="compute" x1="${left.x}" y1="${left.y}" x2="${point.x}" y2="${point.y}"></line>
+                <line class="stereo-ray stereo-ray--right" data-algo-role="compute" data-algo-phase="compute" x1="${right.x}" y1="${right.y}" x2="${point.x}" y2="${point.y}"></line>
             ` : "";
             const error = config.showError && config.noise > 0 ? `
-                <rect x="252" y="${clamp(point.y - config.noise * 18, 42, 230)}" width="36" height="${clamp(config.noise * 36, 6, 100)}" rx="18" fill="rgba(245,158,11,.16)" stroke="#f59e0b"></rect>
-                <text x="298" y="${clamp(point.y + 4, 54, 228)}" fill="#b45309" font-size="11" font-weight="900">Δd 误差带</text>
+                <rect data-algo-role="error" data-algo-phase="error" x="242" y="${clamp(point.y - config.noise * 24, 76, 338)}" width="40" height="${clamp(config.noise * 48, 8, 132)}" rx="20" fill="rgba(245,158,11,.16)" stroke="#f59e0b"></rect>
+                <text data-algo-role="error" data-algo-phase="error" x="292" y="${clamp(point.y + 4, 92, 330)}" fill="#b45309" font-size="11" font-weight="900">Δd 误差带</text>
             ` : "";
+            const depthRuler = `
+                <line class="stereo-axis" x1="54" y1="88" x2="54" y2="350"></line>
+                <line class="stereo-axis" x1="48" y1="88" x2="60" y2="88"></line>
+                <line class="stereo-axis" x1="48" y1="350" x2="60" y2="350"></line>
+                <circle class="stereo-image-point stereo-map-write" data-algo-role="output" data-algo-phase="write error" cx="54" cy="${point.y}" r="6"></circle>
+                <text x="68" y="92" fill="#64748b" font-size="10" font-weight="850">far</text>
+                <text x="68" y="353" fill="#64748b" font-size="10" font-weight="850">near</text>
+                <text x="68" y="${clamp(point.y + 4, 98, 338)}" fill="#0e7490" font-size="10" font-weight="900">Z=${formatDepth(depth, config.unit)}</text>
+            `;
             return `
-                <svg viewBox="0 0 540 300" role="img" aria-label="三角测量射线和深度平面">
+                <svg viewBox="0 0 520 500" role="img" aria-label="三角测量射线和深度平面">
                     ${markerDefs()}
-                    <rect class="stereo-image-window" x="26" y="26" width="488" height="246" rx="18"></rect>
-                    ${gridLines(540, 300, 27)}
-                    <line class="stereo-baseline" x1="${left.x}" y1="${left.y + 22}" x2="${right.x}" y2="${right.y + 22}"></line>
-                    <text x="244" y="${left.y + 43}" fill="#0e7490" font-size="12" font-weight="900">b = ${fmt(config.baseline, 2)} m</text>
+                    <rect class="stereo-image-window" x="20" y="26" width="480" height="430" rx="18"></rect>
+                    ${gridLines(520, 500, 28)}
+                    ${depthRuler}
+                    <line class="stereo-baseline" data-algo-role="input" data-algo-phase="input compute" x1="${left.x}" y1="${left.y + 22}" x2="${right.x}" y2="${right.y + 22}"></line>
+                    <text x="230" y="${left.y + 48}" fill="#0e7490" font-size="13" font-weight="900">b = ${fmt(config.baseline, 2)} m</text>
                     ${rays}
                     ${error}
-                    <line class="stereo-depth-plane" x1="64" y1="${point.y}" x2="476" y2="${point.y}"></line>
-                    <line class="stereo-bracket" x1="${zLineX}" y1="${point.y}" x2="${zLineX}" y2="${left.y}" marker-end="url(#stereo-arrow-cyan)"></line>
+                    <text x="152" y="${Math.max(point.y + 26, 112)}" fill="#7c3aed" font-size="11" font-weight="900">left ray</text>
+                    <text x="350" y="${Math.max(point.y + 26, 112)}" fill="#0891b2" font-size="11" font-weight="900">right ray</text>
+                    <line class="stereo-depth-plane" data-algo-role="output" data-algo-phase="write error" x1="74" y1="${point.y}" x2="454" y2="${point.y}"></line>
+                    <line class="stereo-bracket" data-algo-role="output" data-algo-phase="write" x1="${zLineX}" y1="${point.y}" x2="${zLineX}" y2="${left.y}" marker-end="url(#stereo-arrow-cyan)"></line>
                     <text x="${zLineX - 34}" y="${(point.y + left.y) / 2}" fill="#b45309" font-size="12" font-weight="900">Z</text>
                     <path class="stereo-camera" d="M${left.x - 24} ${left.y + 16} L${left.x} ${left.y - 24} L${left.x + 24} ${left.y + 16} Z"></path>
                     <path class="stereo-camera" d="M${right.x - 24} ${right.y + 16} L${right.x} ${right.y - 24} L${right.x + 24} ${right.y + 16} Z"></path>
@@ -487,9 +621,9 @@
                     <circle class="stereo-camera-center" cx="${right.x}" cy="${right.y}" r="6"></circle>
                     <text x="${left.x - 20}" y="${left.y + 40}" fill="#5b21b6" font-size="11" font-weight="900">OL</text>
                     <text x="${right.x - 20}" y="${right.y + 40}" fill="#5b21b6" font-size="11" font-weight="900">OR</text>
-                    <circle class="stereo-point" cx="${point.x}" cy="${point.y}" r="8"></circle>
-                    <text x="${point.x + 13}" y="${point.y - 8}" fill="#5b21b6" font-size="12" font-weight="900">P, Z=${formatDepth(depth, config.unit)}</text>
-                    <text x="44" y="52" fill="#1d4ed8" font-size="13" font-weight="900">两条射线相交得到深度</text>
+                    <circle class="stereo-point stereo-match-lock" data-algo-role="winner" data-algo-phase="compute write" cx="${point.x}" cy="${point.y}" r="8"></circle>
+                    <text data-algo-role="output" data-algo-phase="write" x="${point.x + 13}" y="${point.y - 10}" fill="#5b21b6" font-size="13" font-weight="900">P, Z=${formatDepth(depth, config.unit)}</text>
+                    <text x="44" y="58" fill="#1d4ed8" font-size="13" font-weight="900">两条射线相交得到深度</text>
                 </svg>
             `;
         }
@@ -510,12 +644,19 @@
             }
             const curX = mapX(config.disparity);
             const curY = mapY(depth);
+            const dMinus = clamp(config.disparity - config.noise, 8, 84);
+            const dPlus = clamp(config.disparity + config.noise, 8, 84);
             const zLow = depthFrom(config, config.disparity + config.noise);
             const zHigh = depthFrom(config, Math.max(1, config.disparity - config.noise));
             const band = config.showError && config.noise > 0 ? `
-                <rect x="${curX - 10}" y="${mapY(zHigh)}" width="20" height="${Math.max(4, mapY(zLow) - mapY(zHigh))}" rx="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b"></rect>
+                <rect data-algo-role="error" data-algo-phase="error" x="${mapX(dMinus)}" y="${mapY(zHigh)}" width="${Math.max(8, mapX(dPlus) - mapX(dMinus))}" height="${Math.max(4, mapY(zLow) - mapY(zHigh))}" rx="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b"></rect>
+                <line class="stereo-depth-plane" data-algo-role="error" data-algo-phase="error" x1="${mapX(dMinus)}" y1="${y0}" x2="${mapX(dMinus)}" y2="${mapY(zHigh)}"></line>
+                <line class="stereo-depth-plane" data-algo-role="error" data-algo-phase="error" x1="${mapX(dPlus)}" y1="${y0}" x2="${mapX(dPlus)}" y2="${mapY(zLow)}"></line>
+                <text x="${mapX(dMinus) - 20}" y="${y0 + 34}" fill="#b45309" font-size="9" font-weight="900">d-Δd</text>
+                <text x="${mapX(dPlus) - 20}" y="${y0 + 48}" fill="#b45309" font-size="9" font-weight="900">d+Δd</text>
+                <text x="188" y="126" fill="#b45309" font-size="10" font-weight="900">Zmin~Zmax: ${formatDepth(zLow, config.unit)} - ${formatDepth(zHigh, config.unit)}</text>
             ` : "";
-            const curve = config.showCurve ? `<polyline points="${points.join(" ")}" fill="none" stroke="#2563eb" stroke-width="3"></polyline>` : "";
+            const curve = config.showCurve ? `<polyline data-algo-role="compute" data-algo-phase="compute error" points="${points.join(" ")}" fill="none" stroke="#2563eb" stroke-width="3"></polyline>` : "";
             const sensitivity = Math.abs(config.baseline * config.focal / Math.max(config.disparity * config.disparity, 1));
             return `
                 <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="视差和深度的反比曲线">
@@ -525,7 +666,8 @@
                     <line class="stereo-axis" x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0 - h}"></line>
                     ${band}
                     ${curve}
-                    <circle class="stereo-point" cx="${curX}" cy="${curY}" r="6"></circle>
+                    <circle class="stereo-point stereo-match-lock" data-algo-role="output" data-algo-phase="write error" cx="${curX}" cy="${curY}" r="6"></circle>
+                    <text data-algo-role="output" data-algo-phase="write error" x="${curX + 8}" y="${curY - 8}" fill="#5b21b6" font-size="10" font-weight="900">d=${fmt(config.disparity, 1)}, Z</text>
                     <text x="${x0 + w - 22}" y="${y0 + 20}" fill="#64748b" font-size="11">d</text>
                     <text x="${x0 - 20}" y="${y0 - h + 4}" fill="#64748b" font-size="11">Z</text>
                     <text x="44" y="54" fill="#1d4ed8" font-size="13" font-weight="900">Z = bf / d</text>
@@ -592,14 +734,21 @@
             `).join(""));
             renderPreview($("[data-stereo-disparity-preview]"), stepSets.disparity, state.step);
             updateStepper("disparity", state.step);
-            if (animated) pulse($(".stereo-notes-panel"));
+            if (animated) {
+                pulse($(".stereo-notes-panel"));
+                runAlgoTrace("disparity", state, state.step);
+            }
         }
 
         Object.values(inputs).forEach((input) => {
-            input.addEventListener(input.type === "range" ? "input" : "change", () => render(true));
+            input.addEventListener(input.type === "range" ? "input" : "change", () => {
+                stopAlgoPlayback(state);
+                render(true);
+            });
         });
         bindStepControls("disparity", state, render);
         render(false);
+        startAlgoPlayback("disparity", state, render);
     }
 
     function patchValue(sample, row, col, size) {
@@ -629,7 +778,7 @@
             return left.reduce((sum, value, index) => {
                 const diff = value - right[index];
                 return sum + diff * diff;
-            }, 0) / Math.max(left.length, 1);
+            }, 0);
         }
         if (type === "ncc") {
             const meanL = left.reduce((sum, value) => sum + value, 0) / left.length;
@@ -712,30 +861,84 @@
             const offset = 390;
             const bestX = offset + patchX - data.best.d;
             const currentX = offset + patchX - data.current.d;
-            const search = config.showSearch ? `<rect class="stereo-search-band" x="${offset + patchX - config.maxD - 28}" y="${patchY - 26}" width="${config.maxD - config.minD + 56}" height="52" rx="18"></rect>` : "";
+            const laneX = 74;
+            const laneY = 378;
+            const laneW = 572;
+            const laneMap = (d) => laneX + ((d - config.minD) / Math.max(config.maxD - config.minD, 1)) * laneW;
+            const candidateDots = data.candidates.map((item) => {
+                const cx = laneMap(item.d);
+                const cls = item === data.best ? "stereo-best-box" : item === data.current ? "stereo-candidate-box" : "stereo-image-point";
+                const label = item === data.best ? `<text x="${cx - 18}" y="${laneY - 30}" fill="#0e7490" font-size="10" font-weight="950">best</text>` : "";
+                const role = item === data.best ? "winner" : item === data.current ? "candidate" : "compute";
+                const phase = item === data.best ? "wta write" : item === data.current ? "candidate cost" : "search cost";
+                return `${label}<circle class="${cls}" data-algo-role="${role}" data-algo-phase="${phase}" cx="${cx}" cy="${laneY}" r="${item === data.best ? 8 : 5}"></circle><text x="${cx - 8}" y="${laneY + 22}" fill="#64748b" font-size="9" font-weight="850">${item.d}</text>`;
+            }).join("");
+            const search = config.showSearch ? `<rect class="stereo-search-band" data-algo-role="compute" data-algo-phase="search candidate" x="${offset + patchX - config.maxD - 28}" y="${patchY - 26}" width="${config.maxD - config.minD + 56}" height="52" rx="18"></rect>` : "";
             const conf = config.sample === "occlusion" || config.sample === "textureless"
-                ? `<rect x="${offset + 58}" y="214" width="212" height="42" rx="14" fill="rgba(245,158,11,.12)" stroke="#f59e0b"></rect><text x="${offset + 78}" y="240" fill="#b45309" font-size="12" font-weight="900">低置信区域</text>`
+                ? `<rect data-algo-role="error" data-algo-phase="error write" x="${offset + 58}" y="214" width="212" height="42" rx="14" fill="rgba(245,158,11,.12)" stroke="#f59e0b"></rect><text data-algo-role="error" data-algo-phase="error write" x="${offset + 78}" y="240" fill="#b45309" font-size="12" font-weight="900">低置信区域</text>`
                 : "";
             return `
-                <svg viewBox="0 0 720 340" role="img" aria-label="块匹配左右校正图像和搜索带">
+                <svg viewBox="0 0 720 700" role="img" aria-label="块匹配左右校正图像和搜索带">
                     <rect class="stereo-image-window" x="34" y="42" width="306" height="244" rx="16"></rect>
                     <rect class="stereo-image-window" x="${offset - 16}" y="42" width="306" height="244" rx="16"></rect>
-                    ${gridLines(720, 340, 24)}
+                    ${gridLines(720, 700, 24)}
                     ${miniScene("block-left-scene", 34, 42, 306, 244, 0, {lowTexture: config.sample === "textureless", occlusion: config.sample === "occlusion"})}
                     ${miniScene("block-right-scene", offset - 16, 42, 306, 244, data.truth * 0.9, {lowTexture: config.sample === "textureless", occlusion: config.sample === "occlusion"})}
                     <text x="54" y="72" fill="#1d4ed8" font-size="13" font-weight="900">左图 Left</text>
                     <text x="${offset + 4}" y="72" fill="#1d4ed8" font-size="13" font-weight="900">右图 Right</text>
-                    <line class="stereo-epipolar" x1="50" y1="${patchY}" x2="682" y2="${patchY}"></line>
+                    <text x="70" y="116" fill="#0e7490" font-size="10" font-weight="900">远景 / far</text>
+                    <text x="242" y="142" fill="#2563eb" font-size="10" font-weight="900">中景 / mid</text>
+                    <text x="152" y="238" fill="#5b21b6" font-size="10" font-weight="900">前景 / near</text>
+                    <line class="stereo-epipolar" data-algo-role="compute" data-algo-phase="search candidate" x1="50" y1="${patchY}" x2="682" y2="${patchY}"></line>
                     ${search}
-                    <rect class="stereo-patch-box" x="${patchX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
-                    <rect class="stereo-candidate-box" x="${currentX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
-                    <rect class="stereo-best-box" x="${bestX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
+                    <rect class="stereo-patch-box is-current" data-algo-role="input" data-algo-phase="input search cost" x="${patchX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
+                    <rect class="stereo-candidate-box" data-algo-role="candidate" data-algo-phase="candidate search cost" x="${currentX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
+                    <rect class="stereo-best-box" data-algo-role="winner" data-algo-phase="wta write" x="${bestX - 26}" y="${patchY - 26}" width="52" height="52" rx="8"></rect>
                     ${conf}
                     <text x="${patchX - 42}" y="${patchY - 38}" fill="#5b21b6" font-size="12" font-weight="900">左图 patch</text>
                     <text x="${bestX - 42}" y="${patchY - 38}" fill="#0e7490" font-size="12" font-weight="900">最佳 d=${data.best.d}</text>
                     <text x="${currentX - 42}" y="${patchY + 48}" fill="#b45309" font-size="11" font-weight="900">当前候选</text>
                     <rect x="44" y="304" width="632" height="24" rx="12" fill="rgba(239,246,255,.92)" stroke="#dbeafe"></rect>
                     <text x="60" y="320" fill="#64748b" font-size="11" font-weight="850">同一扫描线搜索：左 patch 固定，右候选窗口按 d=${config.minD}...${config.maxD}px 滑动，逐个生成代价柱</text>
+                    <rect x="44" y="346" width="632" height="122" rx="18" fill="rgba(255,255,255,.78)" stroke="#dbeafe"></rect>
+                    <text x="64" y="368" fill="#172554" font-size="12" font-weight="950">候选视差滑动轨道 / candidate disparity lane</text>
+                    <line class="stereo-cost-link" data-algo-role="compute" data-algo-phase="search candidate" x1="${laneX}" y1="${laneY}" x2="${laneX + laneW}" y2="${laneY}"></line>
+                    ${candidateDots}
+                    <line class="stereo-fly-line" data-algo-role="output" data-algo-phase="write" x1="${laneMap(data.best.d)}" y1="${laneY + 12}" x2="514" y2="430"></line>
+                    <rect data-algo-role="input" data-algo-phase="input" x="62" y="416" width="128" height="32" rx="11" fill="#f5f3ff" stroke="#c4b5fd"></rect>
+                    <text x="78" y="437" fill="#5b21b6" font-size="11" font-weight="950">左 patch 固定</text>
+                    <rect data-algo-role="compute" data-algo-phase="search cost" x="210" y="416" width="128" height="32" rx="11" fill="#ecfeff" stroke="#a5f3fc"></rect>
+                    <text x="224" y="437" fill="#0e7490" font-size="11" font-weight="950">逐候选算 cost</text>
+                    <rect data-algo-role="winner" data-algo-phase="wta" x="358" y="416" width="128" height="32" rx="11" fill="#eff6ff" stroke="#bfdbfe"></rect>
+                    <text x="372" y="437" fill="#1d4ed8" font-size="11" font-weight="950">WTA 选 d=${data.best.d}</text>
+                    <rect data-algo-role="output" data-algo-phase="write" x="506" y="416" width="138" height="32" rx="11" fill="#ecfeff" stroke="#67e8f9"></rect>
+                    <text x="518" y="437" fill="#0e7490" font-size="11" font-weight="950">写入视差 / 深度图</text>
+                    <rect x="44" y="494" width="632" height="152" rx="18" fill="rgba(248,250,252,.9)" stroke="#dbeafe"></rect>
+                    <text x="64" y="520" fill="#172554" font-size="12" font-weight="950">当前 patch 的输出语义 / output semantics</text>
+                    <rect data-algo-role="input" data-algo-phase="input" x="64" y="540" width="138" height="74" rx="13" fill="#ffffff" stroke="#e2e8f0"></rect>
+                    <text x="80" y="565" fill="#5b21b6" font-size="12" font-weight="950">1 裁剪</text>
+                    <text x="80" y="588" fill="#64748b" font-size="10" font-weight="850">左图 patch</text>
+                    <rect data-algo-role="candidate" data-algo-phase="search candidate" x="218" y="540" width="138" height="74" rx="13" fill="#ffffff" stroke="#e2e8f0"></rect>
+                    <text x="234" y="565" fill="#0e7490" font-size="12" font-weight="950">2 搜索</text>
+                    <text x="234" y="588" fill="#64748b" font-size="10" font-weight="850">同一扫描线</text>
+                    <rect data-algo-role="winner" data-algo-phase="wta" x="372" y="540" width="138" height="74" rx="13" fill="#ffffff" stroke="#e2e8f0"></rect>
+                    <text x="388" y="565" fill="#1d4ed8" font-size="12" font-weight="950">3 选择</text>
+                    <text x="388" y="588" fill="#64748b" font-size="10" font-weight="850">best d=${data.best.d}px</text>
+                    <rect data-algo-role="output" data-algo-phase="write" x="526" y="540" width="126" height="74" rx="13" fill="#ffffff" stroke="#e2e8f0"></rect>
+                    <text x="542" y="565" fill="#0e7490" font-size="12" font-weight="950">4 转换</text>
+                    <text x="542" y="588" fill="#64748b" font-size="10" font-weight="850">Z = bf / d</text>
+                    <line class="stereo-cost-link" data-algo-role="compute" data-algo-phase="search" x1="202" y1="577" x2="218" y2="577"></line>
+                    <line class="stereo-cost-link" data-algo-role="compute" data-algo-phase="cost wta" x1="356" y1="577" x2="372" y2="577"></line>
+                    <line class="stereo-cost-link" data-algo-role="output" data-algo-phase="write" x1="510" y1="577" x2="526" y2="577"></line>
+                    <rect data-algo-role="output" data-algo-phase="write" x="64" y="626" width="588" height="14" rx="7" fill="url(#stereo-block-depth-grad)" stroke="#dbeafe"></rect>
+                    <defs>
+                        <linearGradient id="stereo-block-depth-grad" x1="0%" x2="100%" y1="0%" y2="0%">
+                            <stop offset="0%" stop-color="#7c3aed"></stop>
+                            <stop offset="45%" stop-color="#2563eb"></stop>
+                            <stop offset="100%" stop-color="#67e8f9"></stop>
+                        </linearGradient>
+                    </defs>
+                    <text x="64" y="666" fill="#64748b" font-size="10" font-weight="850">大视差 = 近；小视差 = 远；斜纹区域表示低纹理或遮挡。</text>
                 </svg>
             `;
         }
@@ -744,7 +947,7 @@
             const size = config.windowSize;
             const best = data.best;
             const current = data.current;
-            const right = best.right;
+            const right = current.right;
             const values = data.candidates.map((item) => item.value);
             const maxV = Math.max(...values);
             const minV = Math.min(...values);
@@ -754,7 +957,9 @@
                 const t = (item.value - minV) / Math.max(maxV - minV, 0.0001);
                 const h = 22 + t * 104;
                 const bestClass = item === best ? `is-best ${isNcc ? "is-peak" : "is-valley"}` : "";
-                return `<span class="stereo-cost-bar ${bestClass} ${item === current ? "is-current" : ""}" style="height:${h}px"><small>${item.d}</small>${item === best ? "<em>best</em>" : ""}</span>`;
+                const role = item === best ? "winner" : item === current ? "candidate" : "compute";
+                const phase = item === best ? "cost wta write" : item === current ? "candidate cost" : "cost";
+                return `<span class="stereo-cost-bar ${bestClass} ${item === current ? "is-current" : ""}" data-algo-role="${role}" data-algo-phase="${phase}" style="height:${h}px"><small>${item.d}</small>${item === best ? "<em>best</em>" : ""}</span>`;
             }).join("") : "<span>代价曲线已隐藏</span>";
             const formula = config.cost === "ssd" ? "SSD = Σ (IL - IR)^2" : config.cost === "ncc" ? "NCC = corr(IL, IR)" : "SAD = Σ |IL - IR|";
             const bestValue = isNcc ? fmt(best.value, 3) : fmt(best.value, 1);
@@ -767,15 +972,20 @@
                 <article class="stereo-cost-card stereo-cost-card--microscope">
                     <strong>${formula}</strong>
                     <div class="stereo-cost-summary">
-                        <span>窗口<b>${size}x${size}</b></span>
-                        <span>当前候选<b>d=${current.d}px / ${currentValue}</b></span>
-                        <span>最佳候选<b>d=${best.d}px / ${bestValue}</b></span>
-                        <span>区分度<b>${marginLabel}</b></span>
+                        <span data-algo-role="input" data-algo-phase="input cost">窗口<b>${size}x${size}</b></span>
+                        <span data-algo-role="candidate" data-algo-phase="candidate cost">当前候选<b>d=${current.d}px / ${currentValue}</b></span>
+                        <span data-algo-role="winner" data-algo-phase="wta write">最佳候选<b>d=${best.d}px / ${bestValue}</b></span>
+                        <span data-algo-role="compute" data-algo-phase="cost wta">区分度<b>${marginLabel}</b></span>
+                    </div>
+                    <div class="stereo-cost-link-panel" data-algo-role="compute" data-algo-phase="candidate cost">
+                        <span>候选窗口 d=${current.d}px</span>
+                        <i></i>
+                        <span>${isNcc ? "correlation" : "cost"} 柱 d=${current.d}</span>
                     </div>
                     <div class="stereo-matrix-triplet">
-                        <div><b>左 patch</b>${patchMatrix(data.left, size)}</div>
-                        <div><b>最佳右候选</b>${patchMatrix(right, size)}</div>
-                        <div><b>差分 |ΔI|</b>${patchMatrix(right, size, data.left)}</div>
+                        <div data-algo-role="input" data-algo-phase="input cost"><b>左 patch</b>${patchMatrix(data.left, size)}</div>
+                        <div data-algo-role="candidate" data-algo-phase="candidate cost"><b>当前右候选</b>${patchMatrix(right, size)}</div>
+                        <div data-algo-role="compute" data-algo-phase="cost"><b>差分 |ΔI|</b>${patchMatrix(right, size, data.left)}</div>
                     </div>
                 </article>
                 <article class="stereo-cost-card stereo-cost-card--curve">
@@ -808,7 +1018,9 @@
                 const value = depthMode ? 1 - near : near;
                 const low = config.showConfidence && ((config.sample === "textureless" && row > 2 && col < 5) || (config.sample === "occlusion" && col > 5));
                 const active = index === 27;
-                cells.push(`<span class="stereo-map-cell ${active ? "is-active" : ""} ${low ? "is-low-confidence" : ""}" style="--cell-color:${mapColor(value, depthMode)}"></span>`);
+                const role = low ? "error" : "output";
+                const phase = low ? "error write" : "write";
+                cells.push(`<span class="stereo-map-cell ${active ? "is-active stereo-map-write" : ""} ${low ? "is-low-confidence" : ""}" data-algo-role="${role}" data-algo-phase="${phase}" style="--cell-color:${mapColor(value, depthMode)}"></span>`);
             }
             return `<div class="stereo-map-grid">${cells.join("")}</div>`;
         }
@@ -817,7 +1029,7 @@
             const disparity = config.showDisparity ? mapGrid(config, data, false) : "<span>disparity map 已隐藏</span>";
             const depth = config.showDepth ? mapGrid(config, data, true) : "<span>depth map 已隐藏</span>";
             const depthValue = fmt(0.18 * 720 / Math.max(data.best.d, 1), 2);
-            const confidence = config.sample === "textureless" ? "低纹理" : config.sample === "occlusion" ? "遮挡风险" : "可靠";
+            const confidence = config.sample === "textureless" ? "低纹理 low texture" : config.sample === "occlusion" ? "遮挡 occluded" : "可靠 reliable";
             return `
                 <article class="stereo-map-card">
                     <strong>视差图 disparity map</strong>
@@ -836,6 +1048,8 @@
                         <span>best d<b>${data.best.d}px</b></span>
                         <span>深度 Z<b>${depthValue}m</b></span>
                         <span>置信<b>${confidence}</b></span>
+                        <span>语义<b>大视差=近 / 小视差=远</b></span>
+                        <span class="stereo-flying-badge" data-algo-role="output" data-algo-phase="write">best d -> disparity map -> depth map</span>
                     </div>
                 </article>
             `;
@@ -900,14 +1114,21 @@
             `).join(""));
             renderPreview($("[data-stereo-block-preview]"), stepSets.block, state.step);
             updateStepper("block", state.step);
-            if (animated) pulse($(".stereo-notes-panel"));
+            if (animated) {
+                pulse($(".stereo-notes-panel"));
+                runAlgoTrace("block", state, state.step);
+            }
         }
 
         Object.values(inputs).forEach((input) => {
-            input.addEventListener(input.type === "range" ? "input" : "change", () => render(true));
+            input.addEventListener(input.type === "range" ? "input" : "change", () => {
+                stopAlgoPlayback(state);
+                render(true);
+            });
         });
         bindStepControls("block", state, render);
         render(false);
+        startAlgoPlayback("block", state, render);
     }
 
     initParallelPage();

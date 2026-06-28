@@ -6,17 +6,18 @@
       "id": "animal",
       "label": "动物主体",
       "scene": "animal",
-      "summary": "同一主体在多种 crop 中保持语义一致，适合观察 DINO 的主体 attention。",
+      "image": "assets/frontier/vision-transformer/samples/dino-animal.webp",
+      "summary": "同一主体在多种裁剪中保持语义一致，适合观察 DINO 的主体 Attention。",
       "crops": [
-        {"id": "gA", "label": "Global View A", "type": "global", "x": 8, "y": 8, "w": 82, "h": 82},
-        {"id": "gB", "label": "Global View B", "type": "global", "x": 16, "y": 13, "w": 76, "h": 76},
-        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 38, "y": 26, "w": 34, "h": 34},
-        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 24, "y": 42, "w": 32, "h": 32},
-        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 50, "y": 48, "w": 28, "h": 28},
-        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 18, "y": 62, "w": 30, "h": 30}
+        {"id": "gA", "label": "全局视图 A", "type": "global", "x": 6, "y": 8, "w": 86, "h": 84},
+        {"id": "gB", "label": "全局视图 B", "type": "global", "x": 18, "y": 16, "w": 72, "h": 72},
+        {"id": "l1", "label": "局部裁剪 1", "type": "local", "x": 28, "y": 34, "w": 26, "h": 30},
+        {"id": "l2", "label": "局部裁剪 2", "type": "local", "x": 49, "y": 42, "w": 27, "h": 30},
+        {"id": "l3", "label": "局部裁剪 3", "type": "local", "x": 58, "y": 31, "w": 24, "h": 27},
+        {"id": "l4", "label": "局部裁剪 4", "type": "local", "x": 38, "y": 64, "w": 30, "h": 24}
       ],
       "distribution": {
-        "labels": ["proto 07", "proto 18", "proto 24", "proto 31", "proto 42"],
+        "labels": ["原型 07", "原型 18", "原型 24", "原型 31", "原型 42"],
         "teacher": [0.34, 0.23, 0.18, 0.14, 0.11],
         "studentStart": [0.14, 0.33, 0.16, 0.26, 0.11],
         "studentAligned": [0.31, 0.24, 0.19, 0.15, 0.11]
@@ -32,17 +33,18 @@
       "id": "person",
       "label": "人物动作",
       "scene": "person",
-      "summary": "人物局部 crop 包含头部、躯干和肢体，student 需要对齐 teacher 的整体语义。",
+      "image": "assets/frontier/vision-transformer/samples/dino-person.webp",
+      "summary": "人物局部裁剪包含头部、躯干和肢体，Student 需要对齐 Teacher 的整体语义。",
       "crops": [
-        {"id": "gA", "label": "Global View A", "type": "global", "x": 10, "y": 6, "w": 80, "h": 86},
-        {"id": "gB", "label": "Global View B", "type": "global", "x": 20, "y": 8, "w": 70, "h": 82},
-        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 42, "y": 22, "w": 28, "h": 32},
-        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 40, "y": 48, "w": 30, "h": 34},
-        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 28, "y": 50, "w": 24, "h": 30},
-        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 58, "y": 55, "w": 25, "h": 30}
+        {"id": "gA", "label": "全局视图 A", "type": "global", "x": 8, "y": 8, "w": 82, "h": 84},
+        {"id": "gB", "label": "全局视图 B", "type": "global", "x": 16, "y": 14, "w": 74, "h": 76},
+        {"id": "l1", "label": "局部裁剪 1", "type": "local", "x": 8, "y": 52, "w": 26, "h": 32},
+        {"id": "l2", "label": "局部裁剪 2", "type": "local", "x": 38, "y": 42, "w": 28, "h": 30},
+        {"id": "l3", "label": "局部裁剪 3", "type": "local", "x": 57, "y": 35, "w": 26, "h": 30},
+        {"id": "l4", "label": "局部裁剪 4", "type": "local", "x": 70, "y": 51, "w": 22, "h": 28}
       ],
       "distribution": {
-        "labels": ["proto 05", "proto 16", "proto 29", "proto 35", "proto 48"],
+        "labels": ["原型 05", "原型 16", "原型 29", "原型 35", "原型 48"],
         "teacher": [0.28, 0.25, 0.19, 0.17, 0.11],
         "studentStart": [0.18, 0.16, 0.34, 0.19, 0.13],
         "studentAligned": [0.27, 0.23, 0.21, 0.18, 0.11]
@@ -58,17 +60,18 @@
       "id": "object",
       "label": "桌面物体",
       "scene": "object",
-      "summary": "单一物体的不同局部 crop 被拉近到同一特征簇。",
+      "image": "assets/frontier/vision-transformer/samples/dino-object.webp",
+      "summary": "单一物体的不同局部裁剪被拉近到同一特征簇。",
       "crops": [
-        {"id": "gA", "label": "Global View A", "type": "global", "x": 9, "y": 9, "w": 82, "h": 82},
-        {"id": "gB", "label": "Global View B", "type": "global", "x": 15, "y": 15, "w": 72, "h": 72},
-        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 38, "y": 30, "w": 28, "h": 28},
-        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 42, "y": 48, "w": 30, "h": 30},
-        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 30, "y": 50, "w": 27, "h": 30},
-        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 52, "y": 58, "w": 25, "h": 26}
+        {"id": "gA", "label": "全局视图 A", "type": "global", "x": 7, "y": 8, "w": 86, "h": 84},
+        {"id": "gB", "label": "全局视图 B", "type": "global", "x": 18, "y": 14, "w": 72, "h": 72},
+        {"id": "l1", "label": "局部裁剪 1", "type": "local", "x": 42, "y": 26, "w": 24, "h": 26},
+        {"id": "l2", "label": "局部裁剪 2", "type": "local", "x": 24, "y": 60, "w": 28, "h": 28},
+        {"id": "l3", "label": "局部裁剪 3", "type": "local", "x": 54, "y": 62, "w": 28, "h": 26},
+        {"id": "l4", "label": "局部裁剪 4", "type": "local", "x": 68, "y": 28, "w": 25, "h": 28}
       ],
       "distribution": {
-        "labels": ["proto 04", "proto 11", "proto 21", "proto 33", "proto 45"],
+        "labels": ["原型 04", "原型 11", "原型 21", "原型 33", "原型 45"],
         "teacher": [0.31, 0.27, 0.18, 0.13, 0.11],
         "studentStart": [0.12, 0.21, 0.30, 0.25, 0.12],
         "studentAligned": [0.29, 0.25, 0.19, 0.15, 0.12]
@@ -84,17 +87,18 @@
       "id": "street",
       "label": "街景交通",
       "scene": "street",
-      "summary": "街景包含前景车辆和远处结构，展示无标签 attention 对主体区域的涌现关注。",
+      "image": "assets/frontier/vision-transformer/samples/dino-street.webp",
+      "summary": "街景包含前景车辆和远处结构，展示无标签 Attention 对主体区域的涌现关注。",
       "crops": [
-        {"id": "gA", "label": "Global View A", "type": "global", "x": 6, "y": 8, "w": 86, "h": 82},
-        {"id": "gB", "label": "Global View B", "type": "global", "x": 13, "y": 12, "w": 78, "h": 78},
-        {"id": "l1", "label": "Local Crop 1", "type": "local", "x": 58, "y": 51, "w": 30, "h": 26},
-        {"id": "l2", "label": "Local Crop 2", "type": "local", "x": 30, "y": 48, "w": 34, "h": 32},
-        {"id": "l3", "label": "Local Crop 3", "type": "local", "x": 14, "y": 30, "w": 28, "h": 32},
-        {"id": "l4", "label": "Local Crop 4", "type": "local", "x": 68, "y": 26, "w": 26, "h": 31}
+        {"id": "gA", "label": "全局视图 A", "type": "global", "x": 7, "y": 8, "w": 86, "h": 84},
+        {"id": "gB", "label": "全局视图 B", "type": "global", "x": 15, "y": 14, "w": 76, "h": 76},
+        {"id": "l1", "label": "局部裁剪 1", "type": "local", "x": 58, "y": 24, "w": 24, "h": 24},
+        {"id": "l2", "label": "局部裁剪 2", "type": "local", "x": 47, "y": 50, "w": 24, "h": 28},
+        {"id": "l3", "label": "局部裁剪 3", "type": "local", "x": 20, "y": 70, "w": 30, "h": 22},
+        {"id": "l4", "label": "局部裁剪 4", "type": "local", "x": 32, "y": 48, "w": 30, "h": 24}
       ],
       "distribution": {
-        "labels": ["proto 02", "proto 19", "proto 26", "proto 37", "proto 51"],
+        "labels": ["原型 02", "原型 19", "原型 26", "原型 37", "原型 51"],
         "teacher": [0.26, 0.25, 0.22, 0.16, 0.11],
         "studentStart": [0.15, 0.31, 0.13, 0.28, 0.13],
         "studentAligned": [0.25, 0.24, 0.21, 0.18, 0.12]

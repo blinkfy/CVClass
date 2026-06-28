@@ -17,6 +17,10 @@
     box-shadow: 0 16px 34px rgba(8, 145, 178, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.94);
 }
 
+.stereo-hero > div:first-child {
+    padding-left: 48px;
+}
+
 .stereo-hero-actions {
     flex-wrap: wrap;
 }
@@ -33,6 +37,27 @@
     font-size: 12px;
     font-weight: 900;
     white-space: nowrap;
+}
+
+.stereo-capability-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: -6px 0 10px;
+}
+
+.stereo-capability-row span {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0 10px;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.86);
+    font-size: 11px;
+    font-weight: 900;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
 }
 
 .stereo-workbench {
@@ -126,6 +151,16 @@
 
 .stereo-disparity-stage-grid {
     grid-template-columns: minmax(205px, 30fr) minmax(255px, 42fr) minmax(205px, 28fr);
+}
+
+.stereo-disparity-stage-grid > .stereo-view-card:not(:last-child) {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.stereo-disparity-workbench .stereo-image-pair-frame,
+.stereo-disparity-workbench .stereo-geometry-frame {
+    min-height: 430px;
 }
 
 .stereo-block-stage-grid {
@@ -313,30 +348,33 @@
 .stereo-flow-preview {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0 14px 14px;
+    gap: 6px;
+    margin: 0 14px 12px;
     border: 1px solid #dbeafe;
-    border-radius: 14px;
-    padding: 12px;
+    border-radius: 12px;
+    padding: 8px;
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.045);
 }
 
 .stereo-flow-preview article {
     display: grid;
-    gap: 5px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
     min-width: 0;
+    min-height: 44px;
     border: 1px solid #e2e8f0;
-    border-radius: 11px;
-    padding: 8px;
+    border-radius: 10px;
+    padding: 6px;
     background: #ffffff;
     transition: border-color 0.22s var(--stereo-ease), background 0.22s var(--stereo-ease), transform 0.22s var(--stereo-ease);
 }
 
 .stereo-flow-preview article span {
     display: grid;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     place-items: center;
     border-radius: 50%;
     color: #0e7490;
@@ -354,9 +392,13 @@
 }
 
 .stereo-flow-preview article small {
+    display: -webkit-box;
+    overflow: hidden;
     color: #64748b;
     font-size: 9px;
     line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .stereo-flow-preview article.is-active {
@@ -472,7 +514,6 @@
 
 .stereo-point {
     fill: #7c3aed;
-    animation: stereoNodePulse 1.2s var(--stereo-ease) infinite;
 }
 
 .stereo-image-point {
@@ -483,7 +524,6 @@
     fill: #f59e0b;
     stroke: #ffffff;
     stroke-width: 1.7;
-    animation: stereoCandidateSlide 1.9s var(--stereo-ease) infinite;
 }
 
 .stereo-baseline {
@@ -498,8 +538,7 @@
 .stereo-depth-plane,
 .stereo-search-path {
     stroke-dasharray: 260;
-    stroke-dashoffset: 260;
-    animation: stereoLineExtend 0.72s var(--stereo-ease) forwards;
+    stroke-dashoffset: 0;
 }
 
 .stereo-ray {
@@ -533,7 +572,6 @@
     fill: rgba(14, 165, 233, 0.12);
     stroke: #0891b2;
     stroke-width: 1.4;
-    animation: stereoBandPulse 1.3s var(--stereo-ease) infinite;
 }
 
 .stereo-patch-box,
@@ -545,15 +583,150 @@
     stroke-dasharray: 5 4;
 }
 
+.stereo-patch-box.is-current {
+    fill: rgba(124, 58, 237, 0.14);
+    stroke: #7c3aed;
+}
+
+.stereo-search-region {
+    fill: rgba(148, 163, 184, 0.08);
+    stroke: #94a3b8;
+    stroke-width: 1.3;
+    stroke-dasharray: 6 5;
+}
+
+.stereo-match-lock,
+.stereo-map-write {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.stereo-cost-link,
+.stereo-fly-line {
+    stroke: #0891b2;
+    stroke-width: 1.8;
+    stroke-dasharray: 7 5;
+    stroke-dashoffset: 0;
+}
+
+.stereo-flying-badge {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 8px;
+    color: #0e7490;
+    background: #ecfeff;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+@keyframes stereoValueFloat {
+    0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    55% { opacity: 1; transform: translateY(0) scale(1.02); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .stereo-candidate-box {
-    stroke: #f59e0b;
-    animation: stereoCandidateSlide 1.9s var(--stereo-ease) infinite;
+    fill: rgba(14, 165, 233, 0.16);
+    stroke: #0891b2;
 }
 
 .stereo-best-box {
+    fill: rgba(103, 232, 249, 0.28);
     stroke: #0891b2;
     stroke-dasharray: none;
     filter: drop-shadow(0 0 7px rgba(8, 145, 178, 0.35));
+}
+
+.stereo-point,
+.stereo-image-point,
+.stereo-candidate-point,
+.stereo-patch-box,
+.stereo-candidate-box,
+.stereo-best-box,
+.stereo-map-cell,
+.stereo-cost-bar {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.stereo-lab[data-algo-phase] [data-algo-role] {
+    opacity: 0.32;
+    filter: saturate(0.68);
+    transition: opacity 0.24s var(--stereo-ease), filter 0.24s var(--stereo-ease);
+}
+
+.stereo-lab[data-algo-phase="input"] [data-algo-phase~="input"],
+.stereo-lab[data-algo-phase="compute"] [data-algo-phase~="compute"],
+.stereo-lab[data-algo-phase="search"] [data-algo-phase~="search"],
+.stereo-lab[data-algo-phase="candidate"] [data-algo-phase~="candidate"],
+.stereo-lab[data-algo-phase="cost"] [data-algo-phase~="cost"],
+.stereo-lab[data-algo-phase="wta"] [data-algo-phase~="wta"],
+.stereo-lab[data-algo-phase="write"] [data-algo-phase~="write"],
+.stereo-lab[data-algo-phase="error"] [data-algo-phase~="error"] {
+    opacity: 1;
+    filter: none;
+}
+
+.stereo-lab[data-algo-phase] [data-algo-role="candidate"][data-algo-phase],
+.stereo-lab[data-algo-phase] .stereo-candidate-box {
+    stroke: #0891b2;
+}
+
+.stereo-lab[data-algo-phase] [data-algo-role="winner"][data-algo-phase] {
+    filter: drop-shadow(0 0 8px rgba(8, 145, 178, 0.35));
+}
+
+.stereo-lab[data-algo-phase] [data-algo-role="error"][data-algo-phase] {
+    filter: saturate(0.8);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="input"] [data-algo-phase~="input"]:is(.stereo-point, .stereo-image-point, .stereo-camera-center, .stereo-patch-box),
+.stereo-lab.is-tracing[data-algo-phase="compute"] [data-algo-phase~="compute"]:is(.stereo-point, .stereo-image-point, .stereo-camera-center),
+.stereo-lab.is-tracing[data-algo-phase="wta"] [data-algo-phase~="wta"]:is(.stereo-best-box, .stereo-image-point, .stereo-cost-bar),
+.stereo-lab.is-tracing[data-algo-phase="write"] [data-algo-phase~="write"]:is(.stereo-map-write, .stereo-image-point, .stereo-map-cell.is-active, .stereo-best-box),
+.stereo-lab.is-tracing[data-algo-phase="error"] [data-algo-phase~="error"]:is(.stereo-map-cell, .stereo-image-point) {
+    animation: stereoNodePulse 0.72s var(--stereo-ease);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="compute"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="compute"],
+.stereo-lab.is-tracing[data-algo-phase="search"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="search"],
+.stereo-lab.is-tracing[data-algo-phase="candidate"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="candidate"],
+.stereo-lab.is-tracing[data-algo-phase="cost"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="cost"],
+.stereo-lab.is-tracing[data-algo-phase="write"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="write"],
+.stereo-lab.is-tracing[data-algo-phase="error"] :is(.stereo-ray, .stereo-epipolar, .stereo-bracket, .stereo-depth-plane, .stereo-search-path, .stereo-cost-link, .stereo-fly-line)[data-algo-phase~="error"] {
+    stroke-dashoffset: 260;
+    animation: stereoLineExtend 0.72s var(--stereo-ease) forwards;
+}
+
+.stereo-lab.is-tracing[data-algo-phase="search"] .stereo-search-band[data-algo-phase~="search"],
+.stereo-lab.is-tracing[data-algo-phase="candidate"] .stereo-search-band[data-algo-phase~="candidate"],
+.stereo-lab.is-tracing[data-algo-phase="input"] .stereo-patch-box[data-algo-phase~="input"],
+.stereo-lab.is-tracing[data-algo-phase="search"] .stereo-patch-box[data-algo-phase~="search"],
+.stereo-lab.is-tracing[data-algo-phase="cost"] .stereo-patch-box[data-algo-phase~="cost"] {
+    animation: stereoBandPulse 0.78s var(--stereo-ease);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="candidate"] :is(.stereo-candidate-point, .stereo-candidate-box)[data-algo-phase~="candidate"],
+.stereo-lab.is-tracing[data-algo-phase="search"] :is(.stereo-candidate-point, .stereo-candidate-box)[data-algo-phase~="search"] {
+    animation: stereoCandidateSlide 0.86s var(--stereo-ease);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="candidate"] .stereo-cost-bar[data-algo-phase~="candidate"],
+.stereo-lab.is-tracing[data-algo-phase="cost"] .stereo-cost-bar[data-algo-phase~="cost"],
+.stereo-lab.is-tracing[data-algo-phase="wta"] .stereo-cost-bar[data-algo-phase~="wta"] {
+    animation: stereoCostFlash 0.68s var(--stereo-ease);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="candidate"] .stereo-cost-link-panel[data-algo-phase~="candidate"] i,
+.stereo-lab.is-tracing[data-algo-phase="cost"] .stereo-cost-link-panel[data-algo-phase~="cost"] i {
+    animation: stereoValueFloat 0.72s var(--stereo-ease);
+}
+
+.stereo-lab.is-tracing[data-algo-phase="write"] :is(.stereo-flying-badge, text[data-algo-phase~="write"], .stereo-bracket[data-algo-phase~="write"]) {
+    animation: stereoValueFloat 0.78s var(--stereo-ease) both;
 }
 
 @keyframes stereoLineExtend {
@@ -573,6 +746,12 @@
 @keyframes stereoCandidateSlide {
     0%, 100% { transform: translateX(-3px); }
     50% { transform: translateX(6px); }
+}
+
+@keyframes stereoCostFlash {
+    0% { transform: scaleY(0.92); filter: brightness(0.98); }
+    55% { transform: scaleY(1.08); filter: brightness(1.12); }
+    100% { transform: scaleY(1); filter: brightness(1); }
 }
 
 .stereo-grid-line {
@@ -752,7 +931,8 @@
 }
 
 .stereo-cost-bar.is-current {
-    background: linear-gradient(180deg, #fbbf24, #f59e0b);
+    background: linear-gradient(180deg, #a78bfa, #7c3aed);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.13);
 }
 
 .stereo-cost-bar.is-best.is-current {
@@ -845,7 +1025,7 @@
 }
 
 .stereo-block-workbench .stereo-block-pair-frame {
-    min-height: 312px;
+    min-height: 500px;
 }
 
 .stereo-block-workbench .stereo-cost-stage {
@@ -904,6 +1084,28 @@
     gap: 6px;
 }
 
+.stereo-cost-link-panel {
+    display: grid;
+    grid-template-columns: max-content minmax(30px, 1fr) max-content;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    border: 1px solid #cffafe;
+    border-radius: 999px;
+    padding: 5px 8px;
+    color: #0e7490;
+    background: #ecfeff;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.stereo-cost-link-panel i {
+    display: block;
+    height: 1px;
+    min-width: 0;
+    background: repeating-linear-gradient(90deg, #0891b2 0 7px, transparent 7px 12px);
+}
+
 .stereo-cost-summary span,
 .stereo-map-summary span {
     display: grid;
@@ -931,6 +1133,17 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
+}
+
+.stereo-map-summary .stereo-flying-badge {
+    display: inline-flex;
+    grid-column: 1 / -1;
+    min-height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #a5f3fc;
+    color: #0e7490;
+    background: #ecfeff;
 }
 
 .stereo-block-workbench .stereo-map-card {
@@ -986,25 +1199,6 @@
     100% { box-shadow: 0 0 0 rgba(37, 99, 235, 0); }
 }
 
-@media (min-width: 1024px) {
-    body:has(.stereo-lab) .ai-assistant-fab {
-        width: 54px;
-        height: 54px;
-        justify-content: center;
-        padding: 7px;
-        border-radius: 50%;
-    }
-
-    body:has(.stereo-lab) .ai-assistant-fab .ai-fab-text {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-    }
-}
-
 @media (max-width: 1380px) {
     .stereo-workbench {
         grid-template-columns: minmax(218px, 238px) minmax(0, 1fr) minmax(250px, 284px);
@@ -1058,9 +1252,20 @@
     }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 760px) {
     body:has(.stereo-lab) .ai-assistant-fab {
         display: none;
+    }
+
+    .stereo-lab .vision-control-panel,
+    .stereo-lab .vision-notes-panel {
+        position: static;
+        top: auto;
+        max-height: none;
+    }
+
+    .stereo-hero > div:first-child {
+        padding-left: 0;
     }
 
     .station-tabs.station-tabs.stereo-tabs {
@@ -1100,7 +1305,8 @@
     }
 
     .stereo-status-grid,
-    .stereo-calculation-chain {
+    .stereo-calculation-chain,
+    .stereo-capability-row {
         grid-template-columns: 1fr;
     }
 }

@@ -18,6 +18,13 @@
             </select>
         </label>
         <label class="vision-field">
+            <span>算法模式</span>
+            <select data-mv-epipolar-input="algorithmMode">
+                <option value="synthetic" selected>教学合成 / Synthetic Demo</option>
+                <option value="real">真实样例 / Real OpenCV</option>
+            </select>
+        </label>
+        <label class="vision-field">
             <span>匹配点数量 <output data-mv-epipolar-output="matchCount">32</output></span>
             <input type="range" min="12" max="64" step="2" value="32" data-mv-epipolar-input="matchCount">
         </label>
@@ -75,7 +82,7 @@
             </div>
             <div class="multiview-stage-chips">
                 <span data-mv-epipolar-chip="step">特征匹配 / Feature Matches</span>
-                <span data-mv-epipolar-chip="constraint">x'^T F x = 0</span>
+                <span data-mv-epipolar-chip="constraint">\( \mathbf{x}'^{\mathsf T}\mathbf{F}\mathbf{x}=0 \)</span>
                 <span data-mv-epipolar-chip="quality">inliers --</span>
             </div>
         </div>
@@ -84,21 +91,21 @@
             <section class="multiview-view-card">
                 <div class="multiview-section-head">
                     <strong>图像 1 <small>Image 1</small></strong>
-                    <span>特征点 x / current point</span>
+                    <span>特征点 \( \mathbf{x} \) / current point</span>
                 </div>
                 <div class="multiview-svg-frame multiview-image-frame" data-mv-epipolar-image="left"></div>
             </section>
             <section class="multiview-view-card">
                 <div class="multiview-section-head">
                     <strong>对极几何 <small>Epipolar Geometry</small></strong>
-                    <span>C1 / C2 · F mapping</span>
+                    <span>\( C_1/C_2 \) · \( \mathbf{F} \) mapping</span>
                 </div>
                 <div class="multiview-svg-frame multiview-geometry-frame" data-mv-epipolar-geometry></div>
             </section>
             <section class="multiview-view-card">
                 <div class="multiview-section-head">
                     <strong>图像 2 <small>Image 2</small></strong>
-                    <span>极线 l' 与候选 x'</span>
+                    <span>极线 \( \mathbf{l}' \) 与候选 \( \mathbf{x}' \)</span>
                 </div>
                 <div class="multiview-svg-frame multiview-image-frame" data-mv-epipolar-image="right"></div>
             </section>
@@ -118,26 +125,26 @@
 
         <div class="vision-formula-card">
             <span>对极约束</span>
-            <strong>x'^T F x = 0</strong>
-            <small>基础矩阵 F 把左图点 x 映射为右图极线 l'。</small>
+            <strong>\( \mathbf{x}'^{\mathsf T}\mathbf{F}\mathbf{x}=0 \)</strong>
+            <small>基础矩阵 \( \mathbf{F} \) 把左图点 \( \mathbf{x} \) 映射为右图极线 \( \mathbf{l}' \)。</small>
         </div>
         <div class="vision-formula-card">
             <span>点到极线</span>
-            <strong>l' = F x</strong>
-            <small>正确匹配点 x' 应落在 l' 附近，而不是在整张图像中盲搜。</small>
+            <strong>\( \mathbf{l}'=\mathbf{F}\mathbf{x} \)</strong>
+            <small>正确匹配点 \( \mathbf{x}' \) 应落在 \( \mathbf{l}' \) 附近，而不是在整张图像中盲搜。</small>
         </div>
 
         <div class="multiview-notes-body" data-mv-epipolar-notes></div>
 
         <div class="vision-output-schema">
             <span>当前状态</span>
-            <code data-mv-epipolar-substitution>x=(--,--), x'=(--,--), |x'^T F x|=--</code>
+            <code data-mv-epipolar-substitution>\( \mathbf{x}=(--,--,1),\ \mathbf{x}'=(--,--,1),\ |\mathbf{x}'^{\mathsf T}\mathbf{F}\mathbf{x}|=-- \)</code>
         </div>
 
         <div class="multiview-observation-list">
             <article><strong>单幅图像</strong><span>缺少视线交会，不能直接恢复绝对深度。</span></article>
             <article><strong>极点与极线</strong><span>极点是另一相机中心的投影，所有对应极线都穿过它。</span></article>
-            <article><strong>RANSAC</strong><span>用多数匹配的一致 F 剔除偏离极线的错误匹配。</span></article>
+            <article><strong>RANSAC</strong><span>用多数匹配的一致 \( \mathbf{F} \) 剔除偏离极线的错误匹配。</span></article>
         </div>
     </aside>
 </section>
@@ -145,7 +152,7 @@
 <ol class="vision-stepper multiview-stepper multiview-stepper--5" aria-label="对极几何与基础矩阵流程" data-mv-stepper="epipolar">
     <li class="is-active" data-mv-phase="matches"><span>1</span><div><strong>特征匹配</strong><small>Feature Matches</small></div></li>
     <li data-mv-phase="estimateF"><span>2</span><div><strong>估计基础矩阵</strong><small>Estimate F</small></div></li>
-    <li data-mv-phase="epiline"><span>3</span><div><strong>点到极线</strong><small>l' = F x</small></div></li>
+    <li data-mv-phase="epiline"><span>3</span><div><strong>点到极线</strong><small>\( \mathbf{l}'=\mathbf{F}\mathbf{x} \)</small></div></li>
     <li data-mv-phase="error"><span>4</span><div><strong>对极误差</strong><small>Epipolar Error</small></div></li>
     <li data-mv-phase="ransac"><span>5</span><div><strong>RANSAC 内点</strong><small>RANSAC Inliers</small></div></li>
 </ol>

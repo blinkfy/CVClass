@@ -1,0 +1,105 @@
+{
+  "defaultSample": "cat",
+  "samples": [
+    {
+      "id": "cat",
+      "title": "生成小猫",
+      "scene": "cat",
+      "prompt": "a small cat",
+      "samplingSteps": 30,
+      "steps": [
+        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "rough shape" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "object contour" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "details appear" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "generated image" }
+      ],
+      "guidance": [
+        { "scale": 1.0, "description": "弱条件，结果更随机。" },
+        { "scale": 3.0, "description": "条件略增强，主体开始靠近 prompt。" },
+        { "scale": 7.5, "description": "常用条件强度，语义和自然度较平衡。" },
+        { "scale": 12.0, "description": "强条件，可能牺牲自然度和多样性。" }
+      ]
+    },
+    {
+      "id": "street",
+      "title": "生成城市街景",
+      "scene": "street",
+      "prompt": "a blue car on street",
+      "samplingSteps": 32,
+      "steps": [
+        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "rough layout" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "road contour" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "car details" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "generated street" }
+      ],
+      "guidance": [
+        { "scale": 1.0, "description": "街道结构随机性更高。" },
+        { "scale": 3.0, "description": "车辆和道路语义逐渐增强。" },
+        { "scale": 7.5, "description": "prompt 对蓝色车辆有清晰引导。" },
+        { "scale": 12.0, "description": "过强条件可能让局部纹理不自然。" }
+      ]
+    },
+    {
+      "id": "flower",
+      "title": "生成花朵",
+      "scene": "flower",
+      "prompt": "a flower photo",
+      "samplingSteps": 28,
+      "steps": [
+        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "color field" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "petal contour" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "texture detail" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "generated flower" }
+      ],
+      "guidance": [
+        { "scale": 1.0, "description": "花朵颜色和位置更随机。" },
+        { "scale": 3.0, "description": "花瓣结构更容易稳定。" },
+        { "scale": 7.5, "description": "常用条件强度，主体清晰。" },
+        { "scale": 12.0, "description": "可能过度贴合 prompt，细节变硬。" }
+      ]
+    },
+    {
+      "id": "digit",
+      "title": "生成手写数字",
+      "scene": "digit",
+      "prompt": "handwritten digit",
+      "samplingSteps": 20,
+      "steps": [
+        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "stroke hint" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "digit contour" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "stroke detail" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "generated digit" }
+      ],
+      "guidance": [
+        { "scale": 1.0, "description": "笔画类别更随机。" },
+        { "scale": 3.0, "description": "数字轮廓逐步稳定。" },
+        { "scale": 7.5, "description": "文本条件和笔画自然度较平衡。" },
+        { "scale": 12.0, "description": "可能产生过粗或过硬笔画。" }
+      ]
+    },
+    {
+      "id": "style",
+      "title": "图像风格变化",
+      "scene": "style",
+      "prompt": "watercolor style",
+      "samplingSteps": 34,
+      "steps": [
+        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "soft color" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "style contour" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "wash texture" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "watercolor output" }
+      ],
+      "guidance": [
+        { "scale": 1.0, "description": "风格方向较自由。" },
+        { "scale": 3.0, "description": "水彩质感开始增强。" },
+        { "scale": 7.5, "description": "风格与主体保持较好平衡。" },
+        { "scale": 12.0, "description": "过强风格可能覆盖细节。" }
+      ]
+    }
+  ]
+}

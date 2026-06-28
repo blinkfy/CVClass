@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}CLIP：图像与文本的对比学习{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-directory1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_clip.css') }}?v=20260628-compact-b1">
+{% endblock %}
+
+{% block content %}
+<div
+    class="vision-lab frontier-algo frontier-clip clip-lab"
+    data-frontier-algo="clip"
+    data-clip-lab
+    data-samples-url="{{ url_for('static', filename='assets/data/frontier/clip_samples.json') }}?v=20260628-module-b1"
+>
+    <header class="vision-hero station-hero frontier-algo-hero">
+        <div>
+            <span class="section-label station-eyebrow">WORLD 04 · FRONTIER MODULE</span>
+            <h1 class="station-title">CLIP：图像与文本的对比学习</h1>
+            <p class="station-summary">理解图像编码器与文本编码器如何进入同一语义空间，并通过相似度完成 zero-shot 分类。</p>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">Image Encoder / Text Encoder / Embedding / Similarity Matrix / Zero-shot</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="图文对齐与视觉语言模型导航">
+        <a class="is-active" href="{{ url_for('frontier_clip_page') }}">CLIP</a>
+        <a href="{{ url_for('frontier_vlm_page') }}">VLM</a>
+        <a href="{{ url_for('frontier_multimodal_page') }}">多模态理解</a>
+    </nav>
+
+    <section class="vision-workbench frontier-algo-workbench clip-workbench" aria-label="CLIP 图文对齐教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>INPUT &amp; PARAMS</h3><p>图像、prompt 与相似度设置</p></div>
+            </div>
+
+            <label class="vision-field">
+                <span>示例图像</span>
+                <select data-clip-control="sample" aria-label="选择 CLIP zero-shot 图像"></select>
+            </label>
+
+            <label class="vision-field">
+                <span>Prompt 模板</span>
+                <select data-clip-control="template" aria-label="选择 CLIP prompt 模板"></select>
+            </label>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="CLIP 显示模式">
+                <strong>显示模式</strong>
+                <div class="frontier-segmented" data-clip-display-modes>
+                    <button type="button" class="is-active" data-clip-display="space">Embedding Space</button>
+                    <button type="button" data-clip-display="matrix">Similarity Matrix</button>
+                    <button type="button" data-clip-display="ranking">Zero-shot Ranking</button>
+                    <button type="button" data-clip-display="pairs">Contrastive Pairs</button>
+                </div>
+            </div>
+
+            <div class="frontier-player" data-frontier-player-controls>
+                <div class="frontier-player-buttons">
+                    <button type="button" data-frontier-prev>上一步</button>
+                    <button type="button" data-frontier-play>播放</button>
+                    <button type="button" data-frontier-next>下一步</button>
+                    <button type="button" data-frontier-reset>重置</button>
+                </div>
+                <label class="frontier-speed-control">
+                    <span>速度</span>
+                    <select data-frontier-speed aria-label="播放速度">
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </label>
+                <div class="frontier-current-step">
+                    <strong data-frontier-step-name>Image/Text Input</strong>
+                    <span data-frontier-step-note>图像卡与文本 prompt 卡作为双塔编码器输入。</span>
+                </div>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary">
+                <div><span>图像数</span><strong data-clip-summary="imageCount">5</strong></div>
+                <div><span>文本数</span><strong data-clip-summary="textCount">5</strong></div>
+                <div><span>Embedding 维度</span><strong data-clip-summary="dim">512</strong></div>
+                <div><span>当前计算</span><strong data-clip-summary="compute">cosine similarity</strong></div>
+                <div><span>Top-1 文本</span><strong data-clip-summary="top1">-</strong></div>
+            </div>
+
+            <section class="clip-real-model-panel" aria-label="真实 CLIP zero-shot 试验">
+                <div class="clip-real-model-head">
+                    <div>
+                        <strong>真实 CLIP zero-shot</strong>
+                        <span>Transformers.js 4.2.0 · Xenova/clip-vit-base-patch32</span>
+                    </div>
+                    <img data-clip-real-preview alt="当前真实模型输入图像">
+                </div>
+                <p data-clip-real="message">点击加载后，浏览器按需下载 ONNX 权重；失败时保留上方预设向量演示。</p>
+                <div class="clip-real-model-actions">
+                    <button type="button" data-clip-real="load">加载模型</button>
+                    <button type="button" data-clip-real="run">运行当前图像</button>
+                </div>
+                <ol class="clip-real-model-results" data-clip-real-results></ol>
+            </section>
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage">
+            <div class="vision-stage-header">
+                <div>
+                    <span>PLAYGROUND</span>
+                    <h3 data-clip-stage-title>Image/Text → Dual Encoder → Shared Space</h3>
+                </div>
+                <div class="frontier-stage-chips">
+                    <span data-clip-chip="sample">dog</span>
+                    <span data-clip-chip="mode">Embedding Space</span>
+                    <span data-clip-chip="pair">sim(i,t)</span>
+                </div>
+            </div>
+
+            <div class="frontier-stage-canvas clip-stage-canvas" data-clip-stage></div>
+            <div class="frontier-pipeline clip-pipeline" data-clip-pipeline aria-label="CLIP 计算流程"></div>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-clip-note="step">Image/Text Input</strong>
+                <p data-clip-note="summary">图像卡和文本 prompt 卡进入两个独立编码器。</p>
+            </div>
+
+            <div class="frontier-note-grid">
+                <div><span>输入结构</span><strong data-clip-note="input">Images + Text Prompts</strong></div>
+                <div><span>中间结构</span><strong data-clip-note="middle">image vectors + text vectors</strong></div>
+                <div><span>核心计算</span><strong data-clip-note="compute">cosine similarity</strong></div>
+                <div><span>输出结构</span><strong data-clip-note="output">Top-k text labels</strong></div>
+                <div><span>与 ViT / DINO 的关系</span><strong data-clip-note="vit">视觉编码器可使用 ViT，DINO 解释无标签表征预训练。</strong></div>
+                <div><span>与 VLM 的关系</span><strong data-clip-note="vlm">CLIP 对齐语义空间，VLM 在此基础上接入语言生成。</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card">
+                <span>核心公式</span>
+                <strong data-clip-note="formula">sim(i,t)= i·t / (||i|| ||t||)</strong>
+                <small data-clip-note="formulaNote">当前相似度由前端对预设 512 维向量真实计算。</small>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>Zero-shot Top-K</span>
+                <ol class="frontier-top-list" data-clip-top-list></ol>
+            </div>
+        </aside>
+    </section>
+
+    <ol class="vision-stepper frontier-algo-stepper clip-stepper" aria-label="CLIP 图文对齐流程" data-frontier-stepper></ol>
+
+    <section class="frontier-bottom-player" aria-label="CLIP 底部播放控制">
+        <div>
+            <span>当前流程</span>
+            <strong data-frontier-step-name>Image/Text Input</strong>
+            <small data-frontier-step-note>图像卡与文本 prompt 卡作为双塔编码器输入。</small>
+        </div>
+        <div class="frontier-bottom-player-actions">
+            <button type="button" data-frontier-prev>上一步</button>
+            <button type="button" data-frontier-play>播放</button>
+            <button type="button" data-frontier-next>下一步</button>
+            <button type="button" data-frontier-reset>重置</button>
+            <label>
+                <span>速度</span>
+                <select data-frontier-speed aria-label="底部播放速度">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <section class="frontier-next-panel" aria-labelledby="clipNextTitle">
+        <div>
+            <span>下一步：VLM</span>
+            <h2 id="clipNextTitle">CLIP 解释图文如何在语义空间对齐；VLM 继续展示图像 token 与 prompt token 如何融合并生成回答。</h2>
+        </div>
+        <div class="frontier-next-actions">
+            <a href="{{ url_for('vision_transformer_dino_page') }}">前置 DINO</a>
+            <a href="{{ url_for('frontier_vlm_page') }}">进入 VLM</a>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
+<script src="{{ url_for('static', filename='js/frontier_clip.js') }}?v=20260628-model-b3"></script>
+{% endblock %}

@@ -4,15 +4,14 @@ from io import BytesIO
 import base64
 import json
 from time import perf_counter
-from waitress import serve
 from flask import Flask, jsonify, request
 from PIL import Image, UnidentifiedImageError
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from models.digit_infer_numpy import get_model_status, predict_digit
 from models.edge_visualization import build_edge_response
 from models.feature_utils import build_feature_match_response, build_feature_response
 from models.image_utils import convolve_gray_image, make_histogram, process_image
+from models.multiview_real import build_multiview_real_response
 from page_routes import register_page_routes
 from ai_routes import register_ai_routes
 
@@ -356,6 +355,18 @@ def feature_match_api():
     except Exception:
         app.logger.exception("feature matching failed")
         return jsonify({"error": "特征匹配处理失败，请检查图片和参数后重试"}), 500
+
+
+@app.route("/api/multiview-reconstruction/real-run", methods=["POST"])
+def multiview_real_run_api():
+    try:
+        return jsonify(build_multiview_real_response(request.form, app.static_folder))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        app.logger.exception("multiview real reconstruction failed")
+        return jsonify({"error": "真实多视图几何计算失败，请稍后重试"}), 500
+
 
 @app.route("/api/digit-recognize", methods=["POST"])
 def digit_recognize():

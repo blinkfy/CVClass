@@ -5,7 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/multiview_reconstruction.css') }}?v=20260628-mv6">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/multiview_reconstruction.css') }}?v=20260628-mv26">
 {% endblock %}
 
 {% block content %}
@@ -18,8 +18,9 @@
         </div>
         <div class="station-hero-actions multiview-hero-actions">
             <span class="multiview-state">{{ multiview_status }}</span>
+            <span class="multiview-state multiview-state--real">真实图片 · OpenCV 双图演示</span>
             <span class="multiview-state">机制拆解 · 多视图几何</span>
-            <span class="multiview-state">公式推导 · F / E / Triangulation</span>
+            <span class="multiview-state">公式推导 · \( \mathbf{F} \) / \( \mathbf{E} \) / Triangulation</span>
             <strong class="station-badge">{{ multiview_badge }}</strong>
         </div>
     </header>
@@ -35,5 +36,20 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/geometry_vision/multiview_reconstruction.js') }}?v=20260628-mv5"></script>
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/multiview_reconstruction.js') }}?v=20260628-mv26"></script>
 {% endblock %}

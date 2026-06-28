@@ -5,8 +5,8 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-module-a1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_vit.css') }}?v=20260628-module-a1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-layout1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_vit.css') }}?v=20260628-layout1">
 {% endblock %}
 
 {% block content %}
@@ -14,33 +14,31 @@
     class="vision-lab frontier-algo vit-lab"
     data-frontier-algo="vit"
     data-vit-lab
-    data-samples-url="{{ url_for('static', filename='assets/data/frontier/vit_samples.json') }}?v=20260628-module-a1"
+    data-samples-url="{{ url_for('static', filename='assets/data/frontier/vit_samples.json') }}?v=20260628-real1"
 >
     <header class="vision-hero station-hero frontier-algo-hero">
         <div>
-            <span class="section-label station-eyebrow">STATION 10 · FRONTIER VISION</span>
+            <span class="section-label station-eyebrow">World 04 · Module A</span>
             <h1 class="station-title">ViT / Transformer：把图像切成 Token</h1>
             <p class="station-summary">从卷积局部窗口到全局注意力表征，理解视觉 Transformer 的输入、计算和输出结构。</p>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
             <span class="frontier-algo-state">机制拆解 · 教学动画</span>
             <span class="frontier-algo-state frontier-algo-state--honest">预设样例 · 非真实推理</span>
-            <strong class="station-badge">Patch Token / Self-Attention / CLS / Representation</strong>
+            <strong class="station-badge">Patch Token / Self-Attention / CLS / 表征</strong>
         </div>
     </header>
 
-    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="前沿视觉表征模块导航">
-        <a href="{{ url_for('frontier_page') }}">前沿总览</a>
-        <a class="is-active" href="{{ url_for('frontier_vit_page') }}">ViT / Transformer</a>
-        <a href="{{ url_for('frontier_dino_page') }}">DINO 自监督表征</a>
-        <a href="{{ url_for('vision_banana_page') }}">Vision Banana</a>
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="视觉 Transformer 与自监督表征模块导航">
+        <a class="is-active" href="{{ url_for('vision_transformer_vit_page') }}">ViT / Transformer</a>
+        <a href="{{ url_for('vision_transformer_dino_page') }}">DINO 自监督表征</a>
     </nav>
 
     <section class="vision-workbench frontier-algo-workbench vit-workbench" aria-label="ViT Transformer 教学工作台">
         <aside class="vision-panel vision-control-panel frontier-algo-controls">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">01</span>
-                <div><h3>INPUT &amp; PARAMS</h3><p>图像、patch 与注意力设置</p></div>
+                <div><h3>输入与参数</h3><p>图像、Patch 与注意力设置</p></div>
             </div>
 
             <label class="vision-field">
@@ -49,7 +47,7 @@
             </label>
 
             <label class="vision-field">
-                <span>Patch Size</span>
+                <span>Patch 尺寸</span>
                 <select data-vit-control="patchSize" aria-label="选择 patch 尺寸">
                     <option value="8">8×8</option>
                     <option value="16" selected>16×16</option>
@@ -58,21 +56,21 @@
             </label>
 
             <label class="vision-field">
-                <span>Attention Head</span>
+                <span>注意力头</span>
                 <select data-vit-control="head" aria-label="选择 attention head">
-                    <option value="head1">Head 1</option>
-                    <option value="head2">Head 2</option>
-                    <option value="head3">Head 3</option>
-                    <option value="average" selected>Average</option>
+                    <option value="head1">第 1 头</option>
+                    <option value="head2">第 2 头</option>
+                    <option value="head3">第 3 头</option>
+                    <option value="average" selected>平均</option>
                 </select>
             </label>
 
             <div class="frontier-control-group" role="radiogroup" aria-label="ViT 显示模式">
                 <strong>显示模式</strong>
                 <div class="frontier-segmented" data-vit-display-modes>
-                    <button type="button" class="is-active" data-vit-display="patch">Patch Grid</button>
-                    <button type="button" data-vit-display="token">Token Sequence</button>
-                    <button type="button" data-vit-display="attention">Attention Map</button>
+                    <button type="button" class="is-active" data-vit-display="patch">Patch 网格</button>
+                    <button type="button" data-vit-display="token">Token 序列</button>
+                    <button type="button" data-vit-display="attention">Attention 热力图</button>
                     <button type="button" data-vit-display="cls">CLS 聚合</button>
                 </div>
             </div>
@@ -94,7 +92,7 @@
                     </select>
                 </label>
                 <div class="frontier-current-step">
-                    <strong data-frontier-step-name>Image</strong>
+                    <strong data-frontier-step-name>图像</strong>
                     <span data-frontier-step-note>输入图像被表示为 H×W×3 张量。</span>
                 </div>
             </div>
@@ -104,20 +102,20 @@
                 <div><span>Patch</span><strong data-vit-summary="patch">16×16</strong></div>
                 <div><span>Token 数</span><strong data-vit-summary="tokens">196</strong></div>
                 <div><span>加 CLS</span><strong data-vit-summary="tokensCls">197</strong></div>
-                <div><span>当前步骤</span><strong data-vit-summary="step">Image</strong></div>
+                <div><span>当前步骤</span><strong data-vit-summary="step">图像</strong></div>
             </div>
         </aside>
 
         <div class="vision-stage-panel frontier-algo-stage">
             <div class="vision-stage-header">
                 <div>
-                    <span>PLAYGROUND</span>
-                    <h3 data-vit-stage-title>Image → Patch → Token → Transformer</h3>
+                    <span>交互演示</span>
+                    <h3 data-vit-stage-title>图像 → Patch → Token → Transformer</h3>
                 </div>
                 <div class="frontier-stage-chips">
-                    <span data-vit-chip="sample">city</span>
+                    <span data-vit-chip="sample">城市街道</span>
                     <span data-vit-chip="shape">224×224×3</span>
-                    <span data-vit-chip="mode">Patch Grid</span>
+                    <span data-vit-chip="mode">Patch 网格</span>
                 </div>
             </div>
 
@@ -128,17 +126,17 @@
         <aside class="vision-panel vision-notes-panel frontier-algo-notes">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">02</span>
-                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+                <div><h3>过程说明</h3><p>当前步骤输入、计算和输出</p></div>
             </div>
 
             <div class="frontier-note-card">
                 <span>当前步骤</span>
-                <strong data-vit-note="step">Image</strong>
-                <p data-vit-note="summary">把输入图像作为 224×224×3 张量，是后续 patch token 化的起点。</p>
+                <strong data-vit-note="step">图像</strong>
+                <p data-vit-note="summary">把输入图像作为 224×224×3 张量，是后续 Patch Token 化的起点。</p>
             </div>
 
             <div class="frontier-note-grid">
-                <div><span>输入结构</span><strong data-vit-note="input">Image ∈ R^(H×W×3)</strong></div>
+                <div><span>输入结构</span><strong data-vit-note="input">图像 ∈ R^(H×W×3)</strong></div>
                 <div><span>核心计算</span><strong data-vit-note="compute">读取 RGB 张量</strong></div>
                 <div><span>输出结构</span><strong data-vit-note="output">224×224×3 图像张量</strong></div>
                 <div><span>与 CNN 的关系</span><strong data-vit-note="relation">CNN 从局部卷积开始，ViT 先把图像改写为序列。</strong></div>
@@ -146,12 +144,12 @@
 
             <div class="vision-formula-card frontier-formula-card">
                 <span>核心公式</span>
-                <strong data-vit-note="formula">Image ∈ R^(H×W×3)</strong>
-                <small data-vit-note="formulaNote">当前页面使用预设 attention weights，不执行真实模型推理。</small>
+                <strong data-vit-note="formula">图像 ∈ R^(H×W×3)</strong>
+                <small data-vit-note="formulaNote">当前页面使用预设 Attention 权重，不执行真实模型推理。</small>
             </div>
 
             <div class="frontier-note-card">
-                <span>Top-5 attended patches</span>
+                <span>关注度最高的 5 个 Patch</span>
                 <ol class="frontier-top-list" data-vit-top-list></ol>
             </div>
 
@@ -169,12 +167,12 @@
             <span>下一步：DINO</span>
             <h2 id="vitNextTitle">ViT 解释图像如何变成 token；DINO 解释这些 token 表征如何在无标签数据中被训练出来。</h2>
         </div>
-        <a href="{{ url_for('frontier_dino_page') }}">进入 DINO</a>
+        <a href="{{ url_for('vision_transformer_dino_page') }}">进入 DINO</a>
     </section>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-a1"></script>
-<script src="{{ url_for('static', filename='js/frontier_vit.js') }}?v=20260628-module-a1"></script>
+<script src="{{ url_for('static', filename='js/frontier_vit.js') }}?v=20260628-arch1"></script>
 {% endblock %}

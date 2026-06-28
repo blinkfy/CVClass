@@ -18,6 +18,13 @@
             </select>
         </label>
         <label class="vision-field">
+            <span>算法模式</span>
+            <select data-mv-pose-input="algorithmMode">
+                <option value="synthetic" selected>教学合成 / Synthetic Demo</option>
+                <option value="real">真实样例 / Real OpenCV</option>
+            </select>
+        </label>
+        <label class="vision-field">
             <span>内参模式</span>
             <select data-mv-pose-input="intrinsics">
                 <option value="known" selected>已知 K</option>
@@ -34,7 +41,7 @@
         </label>
 
         <div class="multiview-toggle-grid">
-            <label class="vision-toggle-row"><span>显示 F → E 转换</span><input type="checkbox" data-mv-pose-input="showFE" checked></label>
+            <label class="vision-toggle-row"><span>显示 \( \mathbf{F}\rightarrow\mathbf{E} \) 转换</span><input type="checkbox" data-mv-pose-input="showFE" checked></label>
             <label class="vision-toggle-row"><span>显示 SVD 分解</span><input type="checkbox" data-mv-pose-input="showSVD" checked></label>
             <label class="vision-toggle-row"><span>显示四组位姿候选</span><input type="checkbox" data-mv-pose-input="showCandidates" checked></label>
             <label class="vision-toggle-row"><span>显示正深度检查</span><input type="checkbox" data-mv-pose-input="showCheirality" checked></label>
@@ -47,8 +54,8 @@
                 <option value="matches">特征匹配 / Matches</option>
                 <option value="f">基础矩阵 / F Matrix</option>
                 <option value="normalize">内参归一化 / Normalize with K</option>
-                <option value="e">本质矩阵 / Essential Matrix E</option>
-                <option value="decompose">分解 E / Decompose E</option>
+                <option value="e">本质矩阵 / Essential Matrix</option>
+                <option value="decompose">分解本质矩阵 / Decompose Essential Matrix</option>
                 <option value="cheirality">正深度检查 / Cheirality Check</option>
                 <option value="pose">相机位姿 / Camera Pose</option>
             </select>
@@ -61,10 +68,10 @@
         </div>
 
         <div class="vision-kv-grid">
-            <div><span>E 奇异值</span><strong data-mv-pose-summary="singular">--</strong></div>
+            <div><span>\( \mathbf{E} \) 奇异值</span><strong data-mv-pose-summary="singular">--</strong></div>
             <div><span>位姿候选</span><strong data-mv-pose-summary="candidates">4 组</strong></div>
             <div><span>正深度胜出</span><strong data-mv-pose-summary="winner">--</strong></div>
-            <div><span>尺度状态</span><strong data-mv-pose-summary="scale">t 方向有尺度不定性</strong></div>
+            <div><span>尺度状态</span><strong data-mv-pose-summary="scale">\( \mathbf{t} \) 方向有尺度不定性</strong></div>
         </div>
     </aside>
 
@@ -72,19 +79,19 @@
         <div class="vision-stage-header">
             <div>
                 <span>ESSENTIAL MATRIX & CAMERA POSE PLAYGROUND</span>
-                <h3 data-mv-pose-title>从 F 与内参恢复相机相对位姿</h3>
+                <h3 data-mv-pose-title>从 \( \mathbf{F} \) 与内参恢复相机相对位姿</h3>
             </div>
             <div class="multiview-stage-chips">
                 <span data-mv-pose-chip="step">特征匹配 / Matches</span>
-                <span data-mv-pose-chip="formula">E = K'^T F K</span>
-                <span data-mv-pose-chip="pose">R,t pending</span>
+                <span data-mv-pose-chip="formula">\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</span>
+                <span data-mv-pose-chip="pose">\( \mathbf{R},\mathbf{t} \) pending</span>
             </div>
         </div>
 
         <section class="multiview-view-card multiview-pipeline-card">
             <div class="multiview-section-head">
                 <strong>矩阵流水线 <small>Matrix Pipeline</small></strong>
-                <span>特征匹配 → F → K,K' → E → SVD → 位姿候选</span>
+                <span>特征匹配 → \( \mathbf{F} \) → \( \mathbf{K},\mathbf{K}' \) → \( \mathbf{E} \) → SVD → 位姿候选</span>
             </div>
             <div class="multiview-pipeline" data-mv-pose-pipeline></div>
         </section>
@@ -92,7 +99,7 @@
         <section class="multiview-view-card multiview-candidates-card">
             <div class="multiview-section-head">
                 <strong>位姿候选 <small>Pose Candidates</small></strong>
-                <span>R1,+t / R1,-t / R2,+t / R2,-t</span>
+                <span>\( \mathbf{R}_1,+\mathbf{t} \) / \( \mathbf{R}_1,-\mathbf{t} \) / \( \mathbf{R}_2,+\mathbf{t} \) / \( \mathbf{R}_2,-\mathbf{t} \)</span>
             </div>
             <div class="multiview-candidate-grid" data-mv-pose-candidates></div>
         </section>
@@ -109,36 +116,40 @@
 
         <div class="vision-formula-card">
             <span>本质矩阵</span>
-            <strong>E = K'^T F K</strong>
-            <small>F 在像素坐标中工作，E 在归一化相机坐标中表达两相机的相对运动。</small>
+            <strong>\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</strong>
+            <small>\( \mathbf{F} \) 在像素坐标中工作，\( \mathbf{E} \) 在归一化相机坐标中表达两相机的相对运动。</small>
         </div>
         <div class="vision-formula-card">
             <span>位姿候选</span>
-            <strong>E = [t]x R</strong>
-            <small>E 的分解会产生 4 组 R,t，需要用正深度检查选择。</small>
+            <strong>\( \mathbf{E}=[\mathbf{t}]_{\times}\mathbf{R} \)</strong>
+            <small>\( \mathbf{E} \) 的分解会产生 4 组 \( \mathbf{R},\mathbf{t} \)，需要用正深度检查选择。</small>
         </div>
 
         <div class="multiview-notes-body" data-mv-pose-notes></div>
 
         <div class="vision-output-schema">
             <span>当前分解</span>
-            <code data-mv-pose-substitution>R=--, t=--, positive depth=--</code>
+            <code data-mv-pose-substitution>
+                <span class="mv-formula-line">\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</span>
+                <span class="mv-formula-line">\( \mathbf{R}=--,\ \mathbf{t}=-- \)</span>
+                <span class="mv-formula-line">\( \text{positive depth}=-- \)</span>
+            </code>
         </div>
 
         <div class="multiview-observation-list">
             <article><strong>内参已知</strong><span>可以把像素匹配归一化，去除相机焦距和主点影响。</span></article>
             <article><strong>四组候选</strong><span>代数分解不唯一，几何上的点必须位于两台相机前方。</span></article>
-            <article><strong>尺度不定</strong><span>两视图 E 只能恢复平移方向，不能单独恢复绝对距离尺度。</span></article>
+            <article><strong>尺度不定</strong><span>两视图 \( \mathbf{E} \) 只能恢复平移方向，不能单独恢复绝对距离尺度。</span></article>
         </div>
     </aside>
 </section>
 
 <ol class="vision-stepper multiview-stepper multiview-stepper--7" aria-label="本质矩阵与相机位姿流程" data-mv-stepper="pose">
     <li class="is-active" data-mv-phase="matches"><span>1</span><div><strong>特征匹配</strong><small>Matches</small></div></li>
-    <li data-mv-phase="f"><span>2</span><div><strong>基础矩阵</strong><small>F Matrix</small></div></li>
+    <li data-mv-phase="f"><span>2</span><div><strong>基础矩阵</strong><small>\( \mathbf{F} \) Matrix</small></div></li>
     <li data-mv-phase="normalize"><span>3</span><div><strong>内参归一化</strong><small>Normalize with K</small></div></li>
-    <li data-mv-phase="e"><span>4</span><div><strong>本质矩阵</strong><small>Essential E</small></div></li>
-    <li data-mv-phase="decompose"><span>5</span><div><strong>分解 E</strong><small>Decompose E</small></div></li>
+    <li data-mv-phase="e"><span>4</span><div><strong>本质矩阵</strong><small>Essential \( \mathbf{E} \)</small></div></li>
+    <li data-mv-phase="decompose"><span>5</span><div><strong>分解 \( \mathbf{E} \)</strong><small>Decompose \( \mathbf{E} \)</small></div></li>
     <li data-mv-phase="cheirality"><span>6</span><div><strong>正深度检查</strong><small>Cheirality Check</small></div></li>
     <li data-mv-phase="pose"><span>7</span><div><strong>相机位姿</strong><small>Camera Pose</small></div></li>
 </ol>

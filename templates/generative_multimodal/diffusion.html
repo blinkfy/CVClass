@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Diffusion：从噪声逐步生成图像{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-module-b1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/generative_multimodal/diffusion.css') }}?v=20260628-diffusion1">
+{% endblock %}
+
+{% block content %}
+<div
+    class="vision-lab frontier-algo gm-algo gm-diffusion"
+    data-gm-diffusion
+    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/diffusion_samples.json') }}?v=20260628-diffusion1"
+>
+    <header class="vision-hero station-hero frontier-algo-hero gm-hero diffusion-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 10 · GENERATIVE &amp; MULTIMODAL VISION</span>
+            <h1 class="station-title">Diffusion：从噪声逐步生成图像</h1>
+            <p class="station-summary">通过前向加噪和反向去噪过程，理解扩散模型如何从随机噪声逐步恢复并生成图像。</p>
+            <div class="gm-status-pills" aria-label="Diffusion 页面状态">
+                <span>机制拆解 · 教学动画</span>
+                <span>预渲染序列 · 去噪过程演示</span>
+                <span class="gm-status-honest">非真实训练 · 预设样例</span>
+            </div>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">Forward Diffusion</strong>
+            <strong class="station-badge">Denoising</strong>
+            <strong class="station-badge">Timestep</strong>
+            <strong class="station-badge">Text Condition</strong>
+            <strong class="station-badge">Sampling</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs gm-tabs" aria-label="生成式与多模态视觉导航">
+        <a href="{{ url_for('generative_multimodal_sam_page') }}">SAM</a>
+        <a href="{{ url_for('generative_multimodal_gan_page') }}">GAN</a>
+        <a class="is-active" href="{{ url_for('generative_multimodal_diffusion_page') }}">Diffusion</a>
+    </nav>
+
+    <section class="vision-workbench frontier-algo-workbench gm-workbench diffusion-workbench" aria-label="Diffusion 机制拆解教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls gm-controls" aria-label="INPUT AND PARAMS">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>INPUT &amp; PARAMS</h3><p>任务、prompt、timestep 与 guidance</p></div>
+            </div>
+
+            <label class="vision-field">
+                <span>示例任务</span>
+                <select data-diff-control="sample" aria-label="选择 Diffusion 示例任务"></select>
+            </label>
+
+            <label class="vision-field">
+                <span>Prompt</span>
+                <input type="text" data-diff-control="prompt" aria-label="编辑 prompt" value="a small cat">
+            </label>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="Timestep">
+                <strong>Timestep</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" data-diff-timestep="0">t = 0</button>
+                    <button type="button" data-diff-timestep="25">t = 25</button>
+                    <button type="button" class="is-active" data-diff-timestep="50">t = 50</button>
+                    <button type="button" data-diff-timestep="75">t = 75</button>
+                    <button type="button" data-diff-timestep="100">t = 100</button>
+                </div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="显示模式">
+                <strong>显示模式</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" class="is-active" data-diff-display="forward">Forward Noise</button>
+                    <button type="button" data-diff-display="reverse">Reverse Denoise</button>
+                    <button type="button" data-diff-display="condition">Prompt Condition</button>
+                    <button type="button" data-diff-display="sampling">Sampling Timeline</button>
+                </div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="Guidance Scale">
+                <strong>Guidance Scale</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" data-diff-guidance="1">1.0</button>
+                    <button type="button" data-diff-guidance="3">3.0</button>
+                    <button type="button" class="is-active" data-diff-guidance="7.5">7.5</button>
+                    <button type="button" data-diff-guidance="12">12.0</button>
+                </div>
+            </div>
+
+            <div class="frontier-player">
+                <div class="frontier-player-buttons">
+                    <button type="button" data-frontier-prev>上一步</button>
+                    <button type="button" data-frontier-play>播放</button>
+                    <button type="button" data-frontier-next>下一步</button>
+                    <button type="button" data-frontier-reset>重置</button>
+                </div>
+                <label class="frontier-speed-control">
+                    <span>速度</span>
+                    <select data-frontier-speed aria-label="Diffusion 播放速度">
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </label>
+                <div class="frontier-current-step">
+                    <strong data-frontier-step-name>Clean Image</strong>
+                    <span data-frontier-step-note>x0 是训练时的干净图像。</span>
+                </div>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary gm-status-summary">
+                <div><span>当前 prompt</span><strong data-diff-summary="prompt">--</strong></div>
+                <div><span>当前 timestep</span><strong data-diff-summary="timestep">t = 50</strong></div>
+                <div><span>当前阶段</span><strong data-diff-summary="phase">Forward Noise</strong></div>
+                <div><span>Noise level</span><strong data-diff-summary="noise">0.50</strong></div>
+                <div><span>Guidance scale</span><strong data-diff-summary="guidance">7.5</strong></div>
+                <div><span>采样步数</span><strong data-diff-summary="steps">30</strong></div>
+            </div>
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage gm-stage-panel diffusion-stage-panel">
+            <div class="vision-stage-header">
+                <div>
+                    <span>PLAYGROUND</span>
+                    <h3 data-diff-stage-title>Clean Image → Noise → Reverse Denoise → Output</h3>
+                </div>
+                <div class="frontier-stage-chips gm-stage-chips">
+                    <span data-diff-chip="sample">cat</span>
+                    <span data-diff-chip="timestep">t = 50</span>
+                    <span data-diff-chip="display">Forward Noise</span>
+                </div>
+            </div>
+            <div class="gm-stage-player" aria-label="Diffusion 主舞台播放控制">
+                <button type="button" data-frontier-prev>上一步</button>
+                <button type="button" data-frontier-play>播放</button>
+                <button type="button" data-frontier-next>下一步</button>
+                <button type="button" data-frontier-reset>重置</button>
+            </div>
+
+            <div class="frontier-stage-canvas gm-stage-canvas diffusion-stage" data-diff-stage>
+                <div class="frontier-loading">正在加载 Diffusion 预设样例...</div>
+            </div>
+            <div class="frontier-pipeline gm-pipeline diffusion-pipeline" data-diff-pipeline aria-label="Diffusion 计算流程"></div>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes gm-notes" aria-label="PROCESS NOTES">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-diff-note="step">Clean Image</strong>
+                <p data-diff-note="summary">模型学习如何从不同噪声程度恢复图像。</p>
+            </div>
+
+            <div class="frontier-note-grid gm-note-grid">
+                <div><span>输入结构</span><strong data-diff-note="input">x0，真实干净图像</strong></div>
+                <div><span>核心过程</span><strong data-diff-note="compute">学习加噪 / 去噪</strong></div>
+                <div><span>输出结构</span><strong data-diff-note="output">denoised image</strong></div>
+                <div><span>当前状态</span><strong data-diff-note="state">训练样本起点</strong></div>
+                <div><span>影响因素</span><strong data-diff-note="metrics">seed, prompt, guidance scale, steps</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card gm-formula-card">
+                <span>概念公式</span>
+                <strong data-diff-note="formula">x0</strong>
+                <small data-diff-note="formulaNote">本页使用预渲染序列和前端 fallback 演示去噪过程，不运行真实 Diffusion 推理。</small>
+            </div>
+        </aside>
+    </section>
+
+    <ol class="vision-stepper frontier-algo-stepper gm-stepper diffusion-stepper" aria-label="Diffusion 流程 stepper" data-frontier-stepper></ol>
+
+    <section class="frontier-bottom-player gm-bottom-player" aria-label="Diffusion 底部播放控制">
+        <div>
+            <span>当前流程</span>
+            <strong data-frontier-step-name>Clean Image</strong>
+            <small data-frontier-step-note>x0 是训练时的干净图像。</small>
+        </div>
+        <div class="frontier-bottom-player-actions">
+            <button type="button" data-frontier-prev>上一步</button>
+            <button type="button" data-frontier-play>播放</button>
+            <button type="button" data-frontier-next>下一步</button>
+            <button type="button" data-frontier-reset>重置</button>
+            <label>
+                <span>速度</span>
+                <select data-frontier-speed aria-label="底部播放速度">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <section class="gm-compare-panel" aria-labelledby="gmCompareTitle">
+        <div>
+            <span>GAN vs Diffusion</span>
+            <h2 id="gmCompareTitle">两个生成机制的关键差异</h2>
+        </div>
+        <div class="gm-compare-grid">
+            <article>
+                <strong>GAN</strong>
+                <p>输入：latent z；核心：Generator vs Discriminator；训练：对抗优化；输出：直接生成图像；难点：训练不稳定、模式崩溃。</p>
+            </article>
+            <article>
+                <strong>Diffusion</strong>
+                <p>输入：noise + condition；核心：逐步去噪；训练：预测噪声；输出：多步采样生成图像；难点：采样慢、计算量大。</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="frontier-next-panel gm-next-panel" aria-labelledby="diffNextTitle">
+        <div>
+            <span>后续：Vision Banana</span>
+            <h2 id="diffNextTitle">Diffusion 展示生成式视觉的图像生成机制；Vision Banana 进一步探索用生成式接口承载多种视觉任务。</h2>
+        </div>
+        <div class="frontier-next-actions">
+            <a href="{{ url_for('generative_multimodal_gan_page') }}">返回 GAN</a>
+            <a href="{{ url_for('vision_banana_page') }}">进入 Vision Banana</a>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
+<script src="{{ url_for('static', filename='js/generative_multimodal/diffusion.js') }}?v=20260628-diffusion1"></script>
+{% endblock %}

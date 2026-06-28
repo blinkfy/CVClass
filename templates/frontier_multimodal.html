@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}多模态理解：图像、文本与语义的联合表示{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-directory1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_multimodal.css') }}?v=20260628-compact-b1">
+{% endblock %}
+
+{% block content %}
+<div
+    class="vision-lab frontier-algo frontier-multimodal multimodal-lab"
+    data-frontier-algo="multimodal"
+    data-multimodal-lab
+    data-samples-url="{{ url_for('static', filename='assets/data/frontier/multimodal_samples.json') }}?v=20260628-module-b1"
+>
+    <header class="vision-hero station-hero frontier-algo-hero">
+        <div>
+            <span class="section-label station-eyebrow">WORLD 04 · FRONTIER MODULE</span>
+            <h1 class="station-title">多模态理解：图像、文本与语义的联合表示</h1>
+            <p class="station-summary">展示图像、文本、OCR、语音与布局等多模态输入如何进入统一任务管线。</p>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">Modality / Encoder / Fusion / Retrieval / VQA / Grounding</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="图文对齐与视觉语言模型导航">
+        <a href="{{ url_for('frontier_clip_page') }}">CLIP</a>
+        <a href="{{ url_for('frontier_vlm_page') }}">VLM</a>
+        <a class="is-active" href="{{ url_for('frontier_multimodal_page') }}">多模态理解</a>
+    </nav>
+
+    <section class="vision-workbench frontier-algo-workbench multimodal-workbench" aria-label="多模态理解教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>INPUT &amp; PARAMS</h3><p>模态、融合方式和任务输出</p></div>
+            </div>
+
+            <div class="frontier-control-group" aria-label="输入模态选择">
+                <strong>输入模态选择</strong>
+                <div class="frontier-segmented multimodal-modality-toggles" data-mm-modalities>
+                    <button type="button" class="is-active" data-mm-modality="image">Image</button>
+                    <button type="button" class="is-active" data-mm-modality="text">Text</button>
+                    <button type="button" class="is-active" data-mm-modality="ocr">OCR</button>
+                    <button type="button" class="is-active" data-mm-modality="audio">Audio</button>
+                    <button type="button" class="is-active" data-mm-modality="layout">Layout</button>
+                </div>
+            </div>
+
+            <label class="vision-field">
+                <span>融合方式</span>
+                <select data-mm-control="fusion" aria-label="选择多模态融合方式">
+                    <option value="early">Early Fusion</option>
+                    <option value="late">Late Fusion</option>
+                    <option value="cross" selected>Cross Attention</option>
+                    <option value="unified">Unified Token</option>
+                </select>
+            </label>
+
+            <label class="vision-field">
+                <span>任务选择</span>
+                <select data-mm-control="task" aria-label="选择多模态任务">
+                    <option value="retrieval">图文检索</option>
+                    <option value="vqa" selected>视觉问答</option>
+                    <option value="caption">图像描述</option>
+                    <option value="grounding">区域定位</option>
+                    <option value="classification">多模态分类</option>
+                </select>
+            </label>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="多模态显示模式">
+                <strong>显示模式</strong>
+                <div class="frontier-segmented" data-mm-display-modes>
+                    <button type="button" class="is-active" data-mm-display="pipeline">Pipeline</button>
+                    <button type="button" data-mm-display="tokens">Token View</button>
+                    <button type="button" data-mm-display="matrix">Fusion Matrix</button>
+                    <button type="button" data-mm-display="output">Task Output</button>
+                </div>
+            </div>
+
+            <div class="frontier-player" data-frontier-player-controls>
+                <div class="frontier-player-buttons">
+                    <button type="button" data-frontier-prev>上一步</button>
+                    <button type="button" data-frontier-play>播放</button>
+                    <button type="button" data-frontier-next>下一步</button>
+                    <button type="button" data-frontier-reset>重置</button>
+                </div>
+                <label class="frontier-speed-control">
+                    <span>速度</span>
+                    <select data-frontier-speed aria-label="播放速度">
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </label>
+                <div class="frontier-current-step">
+                    <strong data-frontier-step-name>Inputs</strong>
+                    <span data-frontier-step-note>多种模态作为同一任务管线的输入。</span>
+                </div>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary">
+                <div><span>当前模态</span><strong data-mm-summary="modalities">5</strong></div>
+                <div><span>融合方式</span><strong data-mm-summary="fusion">Cross Attention</strong></div>
+                <div><span>输出任务</span><strong data-mm-summary="task">视觉问答</strong></div>
+                <div><span>输出指标</span><strong data-mm-summary="metric">Accuracy</strong></div>
+            </div>
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage">
+            <div class="vision-stage-header">
+                <div>
+                    <span>PLAYGROUND</span>
+                    <h3 data-mm-stage-title>Inputs → Encoders → Fusion → Task Output</h3>
+                </div>
+                <div class="frontier-stage-chips">
+                    <span data-mm-chip="modalities">Image/Text/OCR/Audio/Layout</span>
+                    <span data-mm-chip="fusion">Cross Attention</span>
+                    <span data-mm-chip="task">VQA</span>
+                </div>
+            </div>
+
+            <div class="frontier-stage-canvas multimodal-stage-canvas" data-mm-stage></div>
+            <div class="frontier-pipeline multimodal-pipeline" data-mm-pipeline aria-label="多模态理解流程"></div>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>PROCESS NOTES</h3><p>当前模态、融合与输出</p></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-mm-note="step">Inputs</strong>
+                <p data-mm-note="summary">多种模态输入进入统一任务管线。</p>
+            </div>
+
+            <div class="frontier-note-grid">
+                <div><span>当前模态</span><strong data-mm-note="modalities">Image / Text / OCR / Audio / Layout</strong></div>
+                <div><span>输入结构</span><strong data-mm-note="input">cards + prompt + signal + layout grid</strong></div>
+                <div><span>编码方式</span><strong data-mm-note="encoder">modality-specific encoders</strong></div>
+                <div><span>融合方式</span><strong data-mm-note="fusion">Cross Attention</strong></div>
+                <div><span>输出任务</span><strong data-mm-note="task">视觉问答</strong></div>
+                <div><span>适用场景</span><strong data-mm-note="scenario">检索、问答、描述、定位和分类。</strong></div>
+                <div><span>与 CLIP / VLM 的关系</span><strong data-mm-note="relation">CLIP 提供图文对齐，VLM 展示问答生成，多模态理解扩展输入类型。</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card">
+                <span>结构式</span>
+                <strong data-mm-note="formula">Output = Head(Fusion(E_img, E_text, E_ocr, E_audio, E_layout))</strong>
+                <small data-mm-note="formulaNote">当前页面使用预设任务输出，不执行真实多模态模型推理。</small>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>关键概念</span>
+                <div class="multimodal-concept-chips">
+                    <i>Modality</i><i>Embedding</i><i>Fusion</i><i>Cross-Attention</i><i>Retrieval</i><i>VQA</i><i>Grounding</i>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <ol class="vision-stepper frontier-algo-stepper multimodal-stepper" aria-label="多模态理解流程" data-frontier-stepper></ol>
+
+    <section class="frontier-bottom-player" aria-label="多模态理解底部播放控制">
+        <div>
+            <span>当前流程</span>
+            <strong data-frontier-step-name>Inputs</strong>
+            <small data-frontier-step-note>多种模态作为同一任务管线的输入。</small>
+        </div>
+        <div class="frontier-bottom-player-actions">
+            <button type="button" data-frontier-prev>上一步</button>
+            <button type="button" data-frontier-play>播放</button>
+            <button type="button" data-frontier-next>下一步</button>
+            <button type="button" data-frontier-reset>重置</button>
+            <label>
+                <span>速度</span>
+                <select data-frontier-speed aria-label="底部播放速度">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <section class="frontier-next-panel" aria-labelledby="multimodalNextTitle">
+        <div>
+            <span>后续：SAM / Diffusion / Vision Banana</span>
+            <h2 id="multimodalNextTitle">多模态理解把图像、文本和其它信号组织为统一接口；后续可继续观察提示式分割、生成模型和统一视觉任务输出。</h2>
+        </div>
+        <div class="frontier-next-actions">
+            <a href="{{ url_for('frontier_vlm_page') }}">前置 VLM</a>
+            <a href="{{ url_for('vision_banana_page') }}">进入 Vision Banana</a>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
+<script src="{{ url_for('static', filename='js/frontier_multimodal.js') }}?v=20260628-arch1"></script>
+{% endblock %}

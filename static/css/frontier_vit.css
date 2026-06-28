@@ -14,13 +14,52 @@
 
 .vit-visual-stack,
 .vit-side-stack {
-    display: grid;
-    gap: 12px;
+    display: contents;
+}
+
+.vit-image-panel {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.vit-visual-stack > .frontier-stage-card:not(.vit-image-panel) {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.vit-architecture-panel {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.vit-token-panel {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.vit-attention-panel {
+    grid-column: 1;
+    grid-row: 4;
+}
+
+.vit-encoder-panel {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.vit-output-panel {
+    grid-column: 2;
+    grid-row: 4;
+}
+
+.vit-stage-layout > *,
+.vit-visual-stack > *,
+.vit-side-stack > * {
     min-width: 0;
 }
 
 .vit-image-panel .frontier-sample-frame {
-    width: min(100%, 480px);
+    width: min(100%, 430px);
     justify-self: center;
 }
 
@@ -129,16 +168,12 @@
     overflow-wrap: anywhere;
 }
 
-.vit-token-panel {
-    min-height: 190px;
-}
-
 .vit-token-sequence {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     align-content: start;
-    max-height: 196px;
+    max-height: 156px;
     overflow: auto;
     padding: 10px;
     background:
@@ -452,6 +487,23 @@
     .vit-output-grid,
     .vit-attention-layout {
         grid-template-columns: 1fr;
+    }
+
+    .vit-image-panel,
+    .vit-visual-stack > .frontier-stage-card:not(.vit-image-panel),
+    .vit-architecture-panel,
+    .vit-token-panel,
+    .vit-attention-panel,
+    .vit-encoder-panel,
+    .vit-output-panel {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .vit-visual-stack,
+    .vit-side-stack {
+        display: grid;
+        gap: 12px;
     }
 
     .vit-encoder-chain {

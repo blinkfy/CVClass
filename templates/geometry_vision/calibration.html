@@ -82,7 +82,7 @@
             <section class="calibration-card calibration-card--world">
                 <div class="geometry-section-head">
                     <strong>世界角点平面</strong>
-                    <span>Object Points · Z = 0</span>
+                    <span>Object Points · \(Z=0\)</span>
                 </div>
                 <div class="geometry-svg-frame" data-geo-calib-world></div>
             </section>
@@ -163,7 +163,7 @@
 
         <div class="vision-formula-card">
             <span>重投影误差</span>
-            <strong>e = || p_detected - project(K,R,t,Xw) ||</strong>
+            <strong>\(e=\left\lVert \mathbf p_{\mathrm{detected}}-\operatorname{project}(\mathbf K,\mathbf R,\mathbf t,\mathbf X_w)\right\rVert_2\)</strong>
             <small>标定通过多张图像的角点约束共同优化参数，而不是直接从单张图像读出参数。</small>
         </div>
     </aside>

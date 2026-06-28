@@ -88,8 +88,68 @@
       "source": "Generated locally from /static/assets/examples/human_pose/pose_sample_standing.jpg",
       "author": "Project-generated derivative",
       "license": "Classroom assignment asset; source image record kept above",
-      "usedFor": ["action_sample_standing_preset_video"],
-      "note": "Short WebM clip used by /human-pose/action as a preset video. MoveNet keypoints are inferred from extracted frames; the clip itself is not a pretrained action dataset sample."
+      "usedFor": ["legacy_action_sample_standing_preset_video"],
+      "note": "Earlier generated fallback clip. The current /human-pose/action presets now use downloaded real video clips."
+    },
+    {
+      "id": "action_waving_real_video",
+      "file": "/static/assets/examples/human_pose/action_waving_real.mp4",
+      "source": "Pexels, Boy Waving His Hands",
+      "sourceUrl": "https://www.pexels.com/video/boy-waving-his-hands-5510480/",
+      "downloadUrl": "https://videos.pexels.com/video-files/5510480/5510480-sd_540_960_24fps.mp4",
+      "license": "Pexels video page source recorded; classroom assignment asset",
+      "usedFor": ["action_sample_waving_real_video"],
+      "note": "Replaced the earlier close-up video-call clip with a clearer single-person waving clip so keypoints and arm skeleton are readable."
+    },
+    {
+      "id": "action_jumping_real_video",
+      "file": "/static/assets/examples/human_pose/action_jumping_real.mp4",
+      "source": "Pexels, Single-person jumping jacks exercise video",
+      "sourceUrl": "https://www.pexels.com/video/4764124/",
+      "downloadUrl": "https://videos.pexels.com/video-files/4764124/4764124-sd_640_360_30fps.mp4",
+      "license": "Pexels video page source recorded; classroom assignment asset",
+      "usedFor": ["action_sample_jumping_real_video"],
+      "note": "Replaced the earlier distant warm-up clip because the person was too small and near the horizon. The current clip shows a single person doing jumping jacks with clear full-body keypoints."
+    },
+    {
+      "id": "action_running_real_video",
+      "file": "/static/assets/examples/human_pose/action_running_real.mp4",
+      "source": "Mixkit, Woman running fast on a running track",
+      "sourceUrl": "https://mixkit.co/free-stock-video/woman-running-fast-on-a-running-track-32792/",
+      "downloadUrl": "https://assets.mixkit.co/videos/32792/32792-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_running_real_video"],
+      "note": "Replaced the earlier behind-runner clip because its first segment showed mostly legs and later frames made the body too small. The current track clip keeps a single runner visible across the sampled frames for clearer pose skeleton teaching."
+    },
+    {
+      "id": "action_standing_real_video",
+      "file": "/static/assets/examples/human_pose/action_standing_real.mp4",
+      "source": "Mixkit, Woman during a sunset on a rooftop",
+      "sourceUrl": "https://mixkit.co/free-stock-video/woman-during-a-sunset-on-a-rooftop-4840/",
+      "downloadUrl": "https://assets.mixkit.co/videos/4840/4840-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_standing_real_video"],
+      "note": "Preset real video with clear full-body standing silhouette."
+    },
+    {
+      "id": "action_walking_real_video",
+      "file": "/static/assets/examples/human_pose/action_walking_real.mp4",
+      "source": "Mixkit, Young man walking listening to music from his headphones",
+      "sourceUrl": "https://mixkit.co/free-stock-video/young-man-walking-listening-to-music-from-his-headphones-4855/",
+      "downloadUrl": "https://assets.mixkit.co/videos/4855/4855-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_walking_real_video"],
+      "note": "Preset real video with full-body walking motion in profile."
+    },
+    {
+      "id": "action_clapping_real_video",
+      "file": "/static/assets/examples/human_pose/action_clapping_real.mp4",
+      "source": "Mixkit, Portrait of a proud young woman clapping",
+      "sourceUrl": "https://mixkit.co/free-stock-video/portrait-of-a-proud-young-woman-clapping-43813/",
+      "downloadUrl": "https://assets.mixkit.co/videos/43813/43813-720.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_clapping_real_video"],
+      "note": "Replaced the earlier audience clip because it contained multiple overlapping people and confused the single-person skeleton teaching flow. The current clip is a clearer single-person clapping example."
     },
     {
       "id": "volleyball_player_jumping",

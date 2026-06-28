@@ -14,13 +14,52 @@
 
 .dino-visual-stack,
 .dino-side-stack {
-    display: grid;
-    gap: 12px;
+    display: contents;
+}
+
+.dino-image-panel {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.dino-visual-stack > .frontier-stage-card:not(.dino-image-panel) {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.dino-architecture-panel {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.dino-branch-panel {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.dino-distribution-panel {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.dino-side-stack > .frontier-stage-card:nth-child(4) {
+    grid-column: 1;
+    grid-row: 4;
+}
+
+.dino-side-stack > .frontier-stage-card:nth-child(5) {
+    grid-column: 2;
+    grid-row: 4;
+}
+
+.dino-stage-layout > *,
+.dino-visual-stack > *,
+.dino-side-stack > * {
     min-width: 0;
 }
 
 .dino-image-panel .frontier-sample-frame {
-    width: min(100%, 468px);
+    width: min(100%, 420px);
     justify-self: center;
 }
 
@@ -77,17 +116,17 @@
 .dino-view-strip {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    padding: 10px;
+    gap: 6px;
+    padding: 8px;
 }
 
 .dino-view-card {
     position: relative;
-    min-height: 74px;
+    min-height: 58px;
     overflow: hidden;
     border: 1px solid #dbeafe;
-    border-radius: 12px;
-    padding: 8px;
+    border-radius: 10px;
+    padding: 7px;
     background:
         linear-gradient(90deg, rgba(219, 234, 254, 0.42) 1px, transparent 1px),
         linear-gradient(180deg, rgba(219, 234, 254, 0.42) 1px, transparent 1px),
@@ -111,10 +150,10 @@
 
 .dino-view-card i {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 32px;
-    height: 22px;
+    right: 7px;
+    bottom: 7px;
+    width: 27px;
+    height: 18px;
     border: 1px solid rgba(96, 165, 250, 0.56);
     border-radius: 6px;
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(16, 185, 129, 0.14));
@@ -122,7 +161,7 @@
 
 .dino-stage-layout[data-step="views"] .dino-view-card {
     animation: dinoMultiCrop 0.52s var(--frontier-algo-motion) both;
-    animation-delay: var(--crop-delay, 0ms);
+    animation-delay: 0ms;
 }
 
 .dino-branch-panel {
@@ -338,7 +377,7 @@
 
 .dino-feature-space {
     position: relative;
-    min-height: 250px;
+    min-height: 210px;
     background:
         linear-gradient(90deg, rgba(219, 234, 254, 0.58) 1px, transparent 1px),
         linear-gradient(180deg, rgba(219, 234, 254, 0.58) 1px, transparent 1px),
@@ -458,6 +497,23 @@
     .dino-branch-grid,
     .dino-ema-panel {
         grid-template-columns: 1fr;
+    }
+
+    .dino-image-panel,
+    .dino-visual-stack > .frontier-stage-card:not(.dino-image-panel),
+    .dino-architecture-panel,
+    .dino-branch-panel,
+    .dino-distribution-panel,
+    .dino-side-stack > .frontier-stage-card:nth-child(4),
+    .dino-side-stack > .frontier-stage-card:nth-child(5) {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .dino-visual-stack,
+    .dino-side-stack {
+        display: grid;
+        gap: 12px;
     }
 
     .dino-flow-line {

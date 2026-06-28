@@ -15,8 +15,6 @@
             <p>理解计算机视觉从手工特征、CNN、检测分割，到视觉基础模型与统一视觉任务接口的发展方向。</p>
             <div class="frontier-hero-actions">
                 <a class="frontier-primary-action" href="#frontierTaskLab">进入任务演示</a>
-                <a class="frontier-secondary-action" href="{{ url_for('frontier_vit_page') }}">ViT / Transformer</a>
-                <a class="frontier-secondary-action" href="{{ url_for('frontier_dino_page') }}">DINO 自监督</a>
                 <a class="frontier-secondary-action" href="{{ url_for('vision_banana_page') }}">Vision Banana 案例</a>
             </div>
         </div>
@@ -160,22 +158,23 @@
         </div>
     </section>
 
-    <section class="frontier-section" data-reveal-section aria-labelledby="frontierTransformerTitle">
+    <section class="frontier-section" data-reveal-section aria-labelledby="frontierVlmModuleTitle">
         <div class="frontier-section-head">
-            <span class="frontier-kicker">World 04 · Module A</span>
-            <h2 id="frontierTransformerTitle">视觉 Transformer 与自监督表征</h2>
-            <p>从图像 patch token 到 self-supervised attention，理解前沿视觉表征学习。</p>
+            <span class="frontier-kicker">World 04 · Module B</span>
+            <h2 id="frontierVlmModuleTitle">图文对齐与视觉语言模型</h2>
+            <p>从图文 embedding 对齐到视觉问答和多模态融合，理解现代视觉语言模型如何把图像、文本和其它模态组织到统一任务接口。</p>
         </div>
         <div class="frontier-model-grid">
             <article class="frontier-model-card frontier-model-card--banana">
-                <div class="model-card-glyph model-card-glyph--dino" aria-hidden="true"></div>
-                <span>ViT / Transformer、DINO</span>
-                <h3>把图像切成 Token，再用无标签数据训练表征</h3>
-                <p>ViT 解释图像如何进入 Transformer；DINO 解释多视图、teacher-student 与 EMA 如何学习可迁移视觉特征。</p>
-                <dl><div><dt>包含</dt><dd>ViT / Transformer、DINO</dd></div><div><dt>状态</dt><dd>机制拆解 · 教学动画</dd></div></dl>
+                <div class="model-card-glyph model-card-glyph--clip" aria-hidden="true"></div>
+                <span>CLIP / VLM / Multimodal</span>
+                <h3>语义空间对齐、视觉问答与多模态任务管线</h3>
+                <p>CLIP 展示双塔编码、相似度矩阵和 zero-shot 分类；VLM 展示图像 token、prompt token、跨模态融合和证据高亮；多模态理解扩展到 OCR、Audio 与 Layout。</p>
+                <dl><div><dt>包含</dt><dd>CLIP、VLM、多模态理解</dd></div><div><dt>状态</dt><dd>机制拆解 · 教学动画</dd></div></dl>
                 <div class="frontier-hero-actions">
-                    <a class="frontier-primary-action" href="{{ url_for('frontier_vit_page') }}">进入 ViT</a>
-                    <a class="frontier-secondary-action" href="{{ url_for('frontier_dino_page') }}">进入 DINO</a>
+                    <a class="frontier-primary-action" href="{{ url_for('frontier_clip_page') }}">进入 CLIP</a>
+                    <a class="frontier-secondary-action" href="{{ url_for('frontier_vlm_page') }}">进入 VLM</a>
+                    <a class="frontier-secondary-action" href="{{ url_for('frontier_multimodal_page') }}">进入多模态理解</a>
                 </div>
             </article>
         </div>
@@ -193,6 +192,7 @@
                 <h3>图文对齐与开放词表理解</h3>
                 <p>把图像和文本放进同一语义空间，使分类不再局限于固定标签。</p>
                 <dl><div><dt>代表任务</dt><dd>开放词表分类、检索</dd></div><div><dt>系统关系</dt><dd>CNN 表征进入语义对齐</dd></div></dl>
+                <a href="{{ url_for('frontier_clip_page') }}">进入 CLIP 页</a>
             </article>
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--dino" aria-hidden="true"></div>
@@ -200,7 +200,6 @@
                 <h3>自监督视觉表征</h3>
                 <p>不用人工标签也能学习稳定视觉特征，支撑迁移和密集预测。</p>
                 <dl><div><dt>代表任务</dt><dd>特征提取、聚类、检测预训练</dd></div><div><dt>系统关系</dt><dd>延伸角点特征与 CNN 学习</dd></div></dl>
-                <a href="{{ url_for('frontier_dino_page') }}">进入 DINO 页</a>
             </article>
             <article class="frontier-model-card">
                 <div class="model-card-glyph model-card-glyph--sam" aria-hidden="true"></div>
@@ -215,6 +214,7 @@
                 <h3>视觉语言模型</h3>
                 <p>把图像理解、语言推理与任务指令组合到同一个对话式入口。</p>
                 <dl><div><dt>代表任务</dt><dd>视觉问答、指代表达</dd></div><div><dt>系统关系</dt><dd>从高层任务走向多模态推理</dd></div></dl>
+                <a href="{{ url_for('frontier_vlm_page') }}">进入 VLM 页</a>
             </article>
             <article class="frontier-model-card frontier-model-card--banana">
                 <div class="model-card-glyph model-card-glyph--banana" aria-hidden="true"></div>

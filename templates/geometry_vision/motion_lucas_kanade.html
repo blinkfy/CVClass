@@ -89,7 +89,7 @@
             <section class="motion-view-card">
                 <div class="geometry-section-head">
                     <strong>局部窗口与两帧匹配</strong>
-                    <span>feature point + patch</span>
+                    <span>Local Window · Feature Point + Patch</span>
                 </div>
                 <div class="motion-svg-frame motion-lk-image-stage" data-motion-lk-frames></div>
             </section>
@@ -97,7 +97,7 @@
             <section class="motion-solve-panel">
                 <div class="geometry-section-head">
                     <strong>矩阵求解</strong>
-                    <span>\(\mathbf A\mathbf v=\mathbf b,\ \mathbf A^\mathsf{T}\mathbf A\mathbf v=\mathbf A^\mathsf{T}\mathbf b\)</span>
+                    <span>Least Squares · \(\mathbf A\mathbf v=\mathbf b\)</span>
                 </div>
                 <div class="motion-equation-grid">
                     <article class="motion-matrix-card" data-motion-lk-matrix-card="a">
@@ -122,13 +122,37 @@
             <section class="motion-result-panel">
                 <div class="geometry-section-head">
                     <strong>结果向量与可跟踪性</strong>
-                    <span>flow + confidence</span>
+                    <span>Flow Vector · Confidence</span>
                 </div>
                 <div class="motion-svg-frame motion-lk-result" data-motion-lk-result></div>
             </section>
         </div>
 
         <div class="motion-flow-preview motion-lk-flow-preview" data-motion-lk-preview aria-label="Lucas-Kanade 步骤预览"></div>
+
+        <div class="motion-lk-support-grid" aria-label="Lucas-Kanade 算法依据">
+            <div class="motion-reference-card motion-assumption-card">
+                <span>Lucas-Kanade 假设</span>
+                <article><strong>亮度恒定</strong><small>同一物理点在相邻帧中亮度近似不变。</small></article>
+                <article><strong>两帧小运动</strong><small>位移足够小，一阶泰勒展开才有效。</small></article>
+                <article><strong>邻域流相似</strong><small>一个窗口内的相邻像素共享同一运动向量。</small></article>
+            </div>
+
+            <div class="motion-reference-card motion-lk-step-notes">
+                <span>当前步骤 / Step Notes</span>
+                <div class="motion-notes-body" data-motion-lk-notes></div>
+            </div>
+
+            <div class="motion-code-card">
+                <span>OpenCV 对照</span>
+                <code>cv2.calcOpticalFlowPyrLK(
+    prevImg, nextImg, prevPts, None,
+    winSize=(15,15), maxLevel=2,
+    criteria=(EPS | COUNT, 10, 0.03)
+)</code>
+                <small>goodFeaturesToTrack 常用于先找角点，PyrLK 再输出 nextPts、status 和 err。</small>
+            </div>
+        </div>
     </div>
 
     <aside class="vision-panel vision-notes-panel motion-notes-panel">
@@ -159,24 +183,11 @@
             </div>
         </div>
 
-        <div class="motion-reference-card motion-assumption-card">
-            <span>Lucas-Kanade 假设</span>
-            <article><strong>亮度恒定</strong><small>同一物理点在相邻帧中亮度近似不变。</small></article>
-            <article><strong>两帧小运动</strong><small>位移足够小，一阶泰勒展开才有效。</small></article>
-            <article><strong>邻域流相似</strong><small>一个窗口内的相邻像素共享同一运动向量。</small></article>
+        <div class="motion-reference-card motion-lk-side-cue">
+            <span>质量判断 / Quality Cue</span>
+            <article><strong>角点最稳定</strong><small>λ1、λ2 同时较大时，二维位移约束充分。</small></article>
+            <article><strong>边缘会漂移</strong><small>只有一个方向梯度强时，沿边缘方向仍不确定。</small></article>
         </div>
-
-        <div class="motion-code-card">
-            <span>OpenCV 对照</span>
-            <code>cv2.calcOpticalFlowPyrLK(
-    prevImg, nextImg, prevPts, None,
-    winSize=(15,15), maxLevel=2,
-    criteria=(EPS | COUNT, 10, 0.03)
-)</code>
-            <small>goodFeaturesToTrack 常用于先找角点，PyrLK 再输出 nextPts、status 和 err。</small>
-        </div>
-
-        <div class="motion-notes-body" data-motion-lk-notes></div>
 
         <div class="vision-output-schema">
             <span>当前解</span>

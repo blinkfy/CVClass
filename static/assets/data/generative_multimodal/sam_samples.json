@@ -1,0 +1,259 @@
+{
+  "samples": [
+    {
+      "id": "street_vehicle",
+      "title": "街道车辆",
+      "image": "/static/assets/generative_multimodal/sam/street_vehicle.svg",
+      "realImage": "/static/assets/generative_multimodal/sam_real/street_vehicle.png",
+      "embedding": "/static/assets/models/generative_multimodal/sam/embeddings/street_vehicle.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "street",
+      "size": [640, 420],
+      "defaultObjectId": "car_1",
+      "objects": [
+        {
+          "id": "car_1",
+          "label": "vehicle",
+          "bbox": [174, 154, 540, 356],
+          "positive_points": [[356, 260]],
+          "negative_points": [[128, 232]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "完整车辆",
+              "score": 0.91,
+              "stability": 0.88,
+              "areaRatio": 0.184,
+              "contourLength": 418,
+              "polygon": [[188, 254], [214, 206], [250, 154], [426, 154], [504, 254], [540, 324], [514, 356], [190, 356]]
+            },
+            {
+              "id": "mask_2",
+              "name": "车身局部",
+              "score": 0.82,
+              "stability": 0.76,
+              "areaRatio": 0.121,
+              "contourLength": 294,
+              "polygon": [[202, 254], [242, 214], [296, 194], [430, 202], [506, 260], [496, 324], [212, 322]]
+            },
+            {
+              "id": "mask_3",
+              "name": "相邻区域",
+              "score": 0.63,
+              "stability": 0.66,
+              "areaRatio": 0.096,
+              "contourLength": 236,
+              "polygon": [[146, 214], [284, 198], [322, 264], [284, 330], [140, 314], [104, 252]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop_objects",
+      "title": "桌面物体",
+      "image": "/static/assets/generative_multimodal/sam/desktop_objects.svg",
+      "realImage": "/static/assets/generative_multimodal/sam_real/desktop_objects.png",
+      "embedding": "/static/assets/models/generative_multimodal/sam/embeddings/desktop_objects.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "desktop",
+      "size": [640, 420],
+      "defaultObjectId": "laptop_1",
+      "objects": [
+        {
+          "id": "laptop_1",
+          "label": "laptop",
+          "bbox": [184, 92, 470, 324],
+          "positive_points": [[320, 186]],
+          "negative_points": [[474, 246]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "笔记本电脑",
+              "score": 0.9,
+              "stability": 0.86,
+              "areaRatio": 0.169,
+              "contourLength": 386,
+              "polygon": [[198, 94], [458, 96], [466, 264], [438, 324], [220, 324], [184, 286]]
+            },
+            {
+              "id": "mask_2",
+              "name": "屏幕区域",
+              "score": 0.84,
+              "stability": 0.79,
+              "areaRatio": 0.099,
+              "contourLength": 256,
+              "polygon": [[214, 112], [444, 112], [444, 248], [214, 248]]
+            },
+            {
+              "id": "mask_3",
+              "name": "桌面邻近物体",
+              "score": 0.61,
+              "stability": 0.62,
+              "areaRatio": 0.082,
+              "contourLength": 228,
+              "polygon": [[424, 180], [544, 178], [588, 266], [558, 346], [430, 330]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "animal_subject",
+      "title": "动物主体",
+      "image": "/static/assets/generative_multimodal/sam/animal_subject.svg",
+      "realImage": "/static/assets/generative_multimodal/sam_real/animal_subject.png",
+      "embedding": "/static/assets/models/generative_multimodal/sam/embeddings/animal_subject.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "animal",
+      "size": [640, 420],
+      "defaultObjectId": "animal_1",
+      "objects": [
+        {
+          "id": "animal_1",
+          "label": "animal",
+          "bbox": [172, 132, 528, 360],
+          "positive_points": [[332, 238]],
+          "negative_points": [[92, 304]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "完整动物",
+              "score": 0.89,
+              "stability": 0.84,
+              "areaRatio": 0.202,
+              "contourLength": 452,
+              "polygon": [[178, 220], [226, 154], [298, 132], [450, 156], [526, 220], [504, 304], [426, 340], [236, 354], [176, 292]]
+            },
+            {
+              "id": "mask_2",
+              "name": "躯干主体",
+              "score": 0.81,
+              "stability": 0.73,
+              "areaRatio": 0.132,
+              "contourLength": 318,
+              "polygon": [[262, 178], [448, 160], [516, 230], [472, 306], [292, 318], [216, 248]]
+            },
+            {
+              "id": "mask_3",
+              "name": "头部局部",
+              "score": 0.68,
+              "stability": 0.7,
+              "areaRatio": 0.074,
+              "contourLength": 210,
+              "polygon": [[184, 144], [280, 128], [334, 178], [318, 258], [214, 274], [164, 214]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medical_slice",
+      "title": "医学切片",
+      "image": "/static/assets/generative_multimodal/sam/medical_slice.svg",
+      "realImage": "/static/assets/generative_multimodal/sam_real/medical_slice.png",
+      "embedding": "/static/assets/models/generative_multimodal/sam/embeddings/medical_slice.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "medical",
+      "size": [640, 420],
+      "defaultObjectId": "lesion_1",
+      "objects": [
+        {
+          "id": "lesion_1",
+          "label": "region",
+          "bbox": [286, 188, 392, 292],
+          "positive_points": [[338, 236]],
+          "negative_points": [[238, 174]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "目标组织区",
+              "score": 0.87,
+              "stability": 0.83,
+              "areaRatio": 0.055,
+              "contourLength": 188,
+              "polygon": [[326, 190], [366, 196], [390, 226], [380, 266], [346, 292], [306, 282], [286, 244], [298, 210]]
+            },
+            {
+              "id": "mask_2",
+              "name": "保守核心区",
+              "score": 0.8,
+              "stability": 0.78,
+              "areaRatio": 0.036,
+              "contourLength": 144,
+              "polygon": [[326, 204], [360, 206], [376, 232], [366, 260], [338, 276], [310, 260], [302, 230]]
+            },
+            {
+              "id": "mask_3",
+              "name": "扩展组织区",
+              "score": 0.65,
+              "stability": 0.68,
+              "areaRatio": 0.083,
+              "contourLength": 236,
+              "polygon": [[280, 170], [360, 156], [430, 214], [408, 300], [318, 322], [246, 270], [238, 206]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "indoor_scene",
+      "title": "室内场景",
+      "image": "/static/assets/generative_multimodal/sam/indoor_scene.svg",
+      "realImage": "/static/assets/generative_multimodal/sam_real/indoor_scene.png",
+      "embedding": "/static/assets/models/generative_multimodal/sam/embeddings/indoor_scene.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "indoor",
+      "size": [640, 420],
+      "defaultObjectId": "sofa_1",
+      "objects": [
+        {
+          "id": "sofa_1",
+          "label": "sofa",
+          "bbox": [142, 192, 490, 376],
+          "positive_points": [[316, 282]],
+          "negative_points": [[500, 284]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "完整沙发",
+              "score": 0.88,
+              "stability": 0.85,
+              "areaRatio": 0.176,
+              "contourLength": 396,
+              "polygon": [[146, 258], [184, 198], [298, 192], [450, 200], [490, 260], [484, 340], [428, 376], [176, 374], [142, 326]]
+            },
+            {
+              "id": "mask_2",
+              "name": "座面区域",
+              "score": 0.79,
+              "stability": 0.74,
+              "areaRatio": 0.103,
+              "contourLength": 264,
+              "polygon": [[152, 256], [488, 258], [476, 334], [176, 334]]
+            },
+            {
+              "id": "mask_3",
+              "name": "相邻椅子",
+              "score": 0.62,
+              "stability": 0.65,
+              "areaRatio": 0.073,
+              "contourLength": 218,
+              "polygon": [[452, 224], [550, 226], [564, 342], [504, 374], [448, 336]]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

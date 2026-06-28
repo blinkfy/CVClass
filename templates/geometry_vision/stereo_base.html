@@ -5,7 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/stereo_depth.css') }}?v=20260628-stereo2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/stereo_depth.css') }}?v=20260628-stereo3">
 {% endblock %}
 
 {% block content %}
@@ -22,6 +22,18 @@
         </div>
     </header>
 
+    <div class="stereo-capability-row" aria-label="双目视觉演示能力状态">
+        {% if active_sub_page == 'block_matching' %}
+        <span>前端计算 · SAD / SSD / NCC</span>
+        <span>预设样例 · Stereo Pair</span>
+        <span>机制拆解 · Block Matching</span>
+        {% else %}
+        <span>机制拆解 · 教学动画</span>
+        <span>预设样例 · Stereo Pair</span>
+        <span>公式推导 · b·f/d</span>
+        {% endif %}
+    </div>
+
     <nav class="vision-tabs station-tabs vision-module-tabs stereo-tabs" aria-label="双目视觉与深度内部导航">
         {% for item in stereo_nav %}
         <a class="{{ 'is-active' if item.active else '' }}" href="{{ item.href }}">{{ item.label }}</a>
@@ -33,5 +45,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/geometry_vision/stereo_depth.js') }}?v=20260628-stereo2"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/stereo_depth.js') }}?v=20260628-stereo3"></script>
 {% endblock %}

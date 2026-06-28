@@ -8,35 +8,36 @@
             this.timer = 0;
             this.onStepChange = typeof options.onStepChange === "function" ? options.onStepChange : function () {};
             this.onPlayChange = typeof options.onPlayChange === "function" ? options.onPlayChange : function () {};
+            const all = (selector) => Array.from(root.querySelectorAll(selector));
             this.el = {
-                prev: root.querySelector("[data-frontier-prev]"),
-                next: root.querySelector("[data-frontier-next]"),
-                play: root.querySelector("[data-frontier-play]"),
-                reset: root.querySelector("[data-frontier-reset]"),
-                speed: root.querySelector("[data-frontier-speed]"),
-                name: root.querySelector("[data-frontier-step-name]"),
-                note: root.querySelector("[data-frontier-step-note]"),
+                prev: all("[data-frontier-prev]"),
+                next: all("[data-frontier-next]"),
+                play: all("[data-frontier-play]"),
+                reset: all("[data-frontier-reset]"),
+                speed: all("[data-frontier-speed]"),
+                name: all("[data-frontier-step-name]"),
+                note: all("[data-frontier-step-note]"),
                 stepper: root.querySelector("[data-frontier-stepper]"),
             };
             this.bind();
         }
 
         bind() {
-            this.el.prev?.addEventListener("click", () => this.setStep(this.index - 1));
-            this.el.next?.addEventListener("click", () => this.setStep(this.index + 1));
-            this.el.play?.addEventListener("click", () => this.togglePlay());
-            this.el.reset?.addEventListener("click", () => {
+            this.el.prev.forEach((button) => button.addEventListener("click", () => this.setStep(this.index - 1)));
+            this.el.next.forEach((button) => button.addEventListener("click", () => this.setStep(this.index + 1)));
+            this.el.play.forEach((button) => button.addEventListener("click", () => this.togglePlay()));
+            this.el.reset.forEach((button) => button.addEventListener("click", () => {
                 this.stop();
                 this.setStep(0);
-            });
-            this.el.speed?.addEventListener("change", () => {
-                this.speed = Number(this.el.speed.value) || 1;
+            }));
+            this.el.speed.forEach((select) => select.addEventListener("change", () => {
+                this.speed = Number(select.value) || 1;
                 if (this.timer) {
                     this.stop();
                     this.play();
                 }
                 this.renderControls();
-            });
+            }));
             window.addEventListener("beforeunload", () => this.stop());
         }
 
@@ -109,15 +110,15 @@
         renderControls() {
             const atFirst = this.index <= 0;
             const atLast = !this.steps.length || this.index >= this.steps.length - 1;
-            if (this.el.prev) this.el.prev.disabled = atFirst;
-            if (this.el.next) this.el.next.disabled = atLast;
-            if (this.el.reset) this.el.reset.disabled = atFirst && !this.timer;
-            if (this.el.play) {
-                this.el.play.textContent = this.timer ? "暂停" : "播放";
-                this.el.play.classList.toggle("is-active", Boolean(this.timer));
-                this.el.play.setAttribute("aria-pressed", this.timer ? "true" : "false");
-            }
-            if (this.el.speed) this.el.speed.value = String(this.speed || 1);
+            this.el.prev.forEach((button) => { button.disabled = atFirst; });
+            this.el.next.forEach((button) => { button.disabled = atLast; });
+            this.el.reset.forEach((button) => { button.disabled = atFirst && !this.timer; });
+            this.el.play.forEach((button) => {
+                button.textContent = this.timer ? "暂停" : "播放";
+                button.classList.toggle("is-active", Boolean(this.timer));
+                button.setAttribute("aria-pressed", this.timer ? "true" : "false");
+            });
+            this.el.speed.forEach((select) => { select.value = String(this.speed || 1); });
             this.root.classList.toggle("is-playing", Boolean(this.timer));
         }
 
@@ -139,8 +140,8 @@
 
         emit() {
             const step = this.current();
-            if (this.el.name) this.el.name.textContent = step.label || "";
-            if (this.el.note) this.el.note.textContent = step.note || step.short || "";
+            this.el.name.forEach((item) => { item.textContent = step.label || ""; });
+            this.el.note.forEach((item) => { item.textContent = step.note || step.short || ""; });
             this.root.dataset.frontierStep = step.id || "";
             this.onStepChange(this.index, step);
         }

@@ -148,13 +148,4 @@
         </div>
     </aside>
 </section>
-
-<ol class="vision-stepper stereo-stepper stereo-stepper--6" aria-label="视差与深度流程" data-stereo-stepper="disparity">
-    <li class="is-active" data-stereo-phase="pick"><span>1</span><div><strong>同名点</strong><small>same 3D point</small></div></li>
-    <li data-stereo-phase="measure"><span>2</span><div><strong>测量坐标</strong><small>xL / xR</small></div></li>
-    <li data-stereo-phase="disparity"><span>3</span><div><strong>计算视差</strong><small>d = xL - xR</small></div></li>
-    <li data-stereo-phase="rays"><span>4</span><div><strong>三角射线</strong><small>两光心相交</small></div></li>
-    <li data-stereo-phase="depth"><span>5</span><div><strong>深度 Z</strong><small>Z = bf / d</small></div></li>
-    <li data-stereo-phase="error"><span>6</span><div><strong>误差带</strong><small>Δd 放大</small></div></li>
-</ol>
 {% endblock %}

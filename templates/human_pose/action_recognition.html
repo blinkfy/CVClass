@@ -4,7 +4,7 @@
 <section
     class="vision-workbench human-action-workbench"
     data-human-action
-    data-action-data-url="{{ url_for('static', filename='assets/data/human_pose/action_samples.json') }}?v=20260628-video1"
+    data-action-data-url="{{ url_for('static', filename='assets/data/human_pose/action_samples.json') }}?v=20260628-video7"
     data-action-model-url="{{ url_for('static', filename='assets/models/human_pose/action/pose_sequence_classifier.json') }}?v=20260627-localmodel2"
     data-pose-worker-url="{{ url_for('static', filename='js/human_pose/pose_worker.js') }}?v=20260627-worker1"
     data-pose-model-url-lightning="{{ url_for('static', filename='assets/models/human_pose/movenet/singlepose-lightning/model.json') }}"
@@ -71,6 +71,38 @@
                 <span data-action-sample-label>加载动作推理输入...</span>
                 <span data-action-tensor-chip>T × H × W × C</span>
                 <span data-action-window-chip>3D window</span>
+            </div>
+
+            <div class="human-action-flow" aria-label="视频到关键点骨架再到动作识别">
+                <article class="human-action-flow-card human-action-flow-video" data-action-flow-node="video">
+                    <div class="human-action-flow-head">
+                        <span>01</span>
+                        <strong>真实视频输入</strong>
+                    </div>
+                    <div class="human-action-video-preview-shell">
+                        <video class="human-action-video-preview" data-action-video-preview muted playsinline controls preload="metadata"></video>
+                        <b data-action-video-badge>预置真实视频</b>
+                    </div>
+                    <p data-action-video-caption>从预置真实视频或上传视频开始抽帧。</p>
+                </article>
+
+                <article class="human-action-flow-card" data-action-flow-node="pose">
+                    <div class="human-action-flow-head">
+                        <span>02</span>
+                        <strong>关键点骨架</strong>
+                    </div>
+                    <div class="human-action-flow-skeleton" data-action-flow-skeleton></div>
+                    <p data-action-flow-pose>点击识别后生成逐帧关键点与骨架。</p>
+                </article>
+
+                <article class="human-action-flow-card" data-action-flow-node="class">
+                    <div class="human-action-flow-head">
+                        <span>03</span>
+                        <strong>动作识别</strong>
+                    </div>
+                    <div class="human-action-flow-prob" data-action-flow-prob></div>
+                    <p data-action-flow-class>姿态序列进入本地动作分类器。</p>
+                </article>
             </div>
 
             <div class="human-action-clip" data-action-clip>

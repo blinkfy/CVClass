@@ -264,6 +264,38 @@
     font-family: Arial, "Microsoft YaHei", sans-serif;
 }
 
+.geometry-lab mjx-container {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.geometry-lab mjx-container[display="true"] {
+    margin: 0;
+}
+
+.geo-matrix-card code mjx-container,
+.vision-output-schema code mjx-container,
+.geo-status-cell mjx-container,
+.camera-micro-grid mjx-container,
+.calibration-results-panel mjx-container,
+.vision-formula-card mjx-container {
+    margin: 0;
+}
+
+.geo-matrix-card code mjx-container,
+.calibration-results-panel code mjx-container {
+    font-size: 0.94em;
+}
+
+.vision-output-schema code mjx-container[display="true"] {
+    text-align: left !important;
+}
+
+.vision-output-schema code mjx-container[display="true"] svg {
+    display: inline-block;
+}
+
 .geometry-pipeline {
     position: relative;
     display: grid;
@@ -343,23 +375,24 @@
 }
 
 .geometry-projection-workbench .geo-matrix-card {
+    gap: 4px;
     min-height: 144px;
     padding: 8px;
 }
 
 .geometry-projection-workbench .geo-matrix-card span {
-    font-size: 8.8px;
+    font-size: 9.6px;
 }
 
 .geometry-projection-workbench .geo-matrix-card strong {
-    font-size: 13.4px;
+    font-size: 14.2px;
 }
 
 .geometry-projection-workbench .geo-matrix-card code {
     max-height: 6em;
     overflow: hidden;
-    font-size: 9.7px;
-    line-height: 1.24;
+    font-size: 10.4px;
+    line-height: 1.14;
 }
 
 .geo-matrix-card.is-active {
@@ -587,29 +620,6 @@
 
 .geometry-stepper li.is-active strong {
     color: #1d4ed8;
-}
-
-@media (min-width: 1024px) {
-    body:has(.geometry-lab) .ai-assistant-fab {
-        width: 54px;
-        height: 54px;
-        justify-content: center;
-        padding: 7px;
-        border-radius: 50%;
-    }
-
-    body:has(.geometry-lab) .ai-assistant-fab .ai-fab-text {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-    }
-
-    .geometry-notes-panel > .vision-kv-grid:last-child {
-        padding-right: 58px;
-    }
 }
 
 .geo-grid-line {
@@ -1244,10 +1254,13 @@
     }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 760px) {
     body:has(.geometry-lab) .ai-assistant-fab {
         display: none;
     }
+}
+
+@media (max-width: 820px) {
 
     .geometry-workbench,
     .geometry-projection-lower,

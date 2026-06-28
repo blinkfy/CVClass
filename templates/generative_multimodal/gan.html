@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}GAN：生成器与判别器的对抗学习{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-module-b1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/generative_multimodal/gan.css') }}?v=20260628-gan1">
+{% endblock %}
+
+{% block content %}
+<div
+    class="vision-lab frontier-algo gm-algo gm-gan"
+    data-gm-gan
+    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/gan_samples.json') }}?v=20260628-gan1"
+>
+    <header class="vision-hero station-hero frontier-algo-hero gm-hero gan-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 10 · GENERATIVE &amp; MULTIMODAL VISION</span>
+            <h1 class="station-title">GAN：生成器与判别器的对抗学习</h1>
+            <p class="station-summary">从随机噪声出发，观察生成器如何尝试生成图像，判别器如何判断真假，并理解对抗训练的动态过程。</p>
+            <div class="gm-status-pills" aria-label="GAN 页面状态">
+                <span>机制拆解 · 教学动画</span>
+                <span class="gm-status-honest">预设样例 · 非真实训练</span>
+                <span>对抗学习 · Generator / Discriminator</span>
+            </div>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">Latent Vector</strong>
+            <strong class="station-badge">Generator</strong>
+            <strong class="station-badge">Discriminator</strong>
+            <strong class="station-badge">Adversarial Loss</strong>
+            <strong class="station-badge">Fake Image</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs gm-tabs" aria-label="生成式与多模态视觉导航">
+        <a href="{{ url_for('generative_multimodal_sam_page') }}">SAM</a>
+        <a class="is-active" href="{{ url_for('generative_multimodal_gan_page') }}">GAN</a>
+        <a href="{{ url_for('generative_multimodal_diffusion_page') }}">Diffusion</a>
+    </nav>
+
+    <section class="vision-workbench frontier-algo-workbench gm-workbench gan-workbench" aria-label="GAN 机制拆解教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls gm-controls" aria-label="INPUT AND PARAMS">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>INPUT &amp; PARAMS</h3><p>类别、隐变量和训练阶段</p></div>
+            </div>
+
+            <label class="vision-field">
+                <span>生成类别</span>
+                <select data-gan-control="sample" aria-label="选择 GAN 生成类别"></select>
+            </label>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="Latent z 控制">
+                <strong>Latent z 控制</strong>
+                <div class="frontier-segmented gm-segmented" data-gan-latents></div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="训练阶段">
+                <strong>训练阶段</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" class="is-active" data-gan-phase="early">Early</button>
+                    <button type="button" data-gan-phase="middle">Middle</button>
+                    <button type="button" data-gan-phase="late">Late</button>
+                </div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="显示模式">
+                <strong>显示模式</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" class="is-active" data-gan-display="flow">Network Flow</button>
+                    <button type="button" data-gan-display="batch">Real vs Fake</button>
+                    <button type="button" data-gan-display="loss">Loss Battle</button>
+                    <button type="button" data-gan-display="latent">Latent Interpolation</button>
+                </div>
+            </div>
+
+            <div class="frontier-player">
+                <div class="frontier-player-buttons">
+                    <button type="button" data-frontier-prev>上一步</button>
+                    <button type="button" data-frontier-play>播放</button>
+                    <button type="button" data-frontier-next>下一步</button>
+                    <button type="button" data-frontier-reset>重置</button>
+                </div>
+                <label class="frontier-speed-control">
+                    <span>速度</span>
+                    <select data-frontier-speed aria-label="GAN 播放速度">
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </label>
+                <div class="frontier-current-step">
+                    <strong data-frontier-step-name>Noise z</strong>
+                    <span data-frontier-step-note>随机隐变量作为生成器输入。</span>
+                </div>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary gm-status-summary">
+                <div><span>当前类别</span><strong data-gan-summary="sample">--</strong></div>
+                <div><span>Latent Dim</span><strong data-gan-summary="latentDim">100</strong></div>
+                <div><span>训练阶段</span><strong data-gan-summary="phase">Early</strong></div>
+                <div><span>Latent z</span><strong data-gan-summary="latent">z1</strong></div>
+                <div><span>D(real)</span><strong data-gan-summary="dReal">--</strong></div>
+                <div><span>D(fake)</span><strong data-gan-summary="dFake">--</strong></div>
+                <div><span>G loss</span><strong data-gan-summary="gLoss">--</strong></div>
+                <div><span>D loss</span><strong data-gan-summary="dLoss">--</strong></div>
+            </div>
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage gm-stage-panel gan-stage-panel">
+            <div class="vision-stage-header">
+                <div>
+                    <span>PLAYGROUND</span>
+                    <h3 data-gan-stage-title>Noise z → Generator → Discriminator → Loss Battle</h3>
+                </div>
+                <div class="frontier-stage-chips gm-stage-chips">
+                    <span data-gan-chip="sample">digit</span>
+                    <span data-gan-chip="phase">Early</span>
+                    <span data-gan-chip="display">Network Flow</span>
+                </div>
+            </div>
+            <div class="gm-stage-player" aria-label="GAN 主舞台播放控制">
+                <button type="button" data-frontier-prev>上一步</button>
+                <button type="button" data-frontier-play>播放</button>
+                <button type="button" data-frontier-next>下一步</button>
+                <button type="button" data-frontier-reset>重置</button>
+            </div>
+
+            <div class="frontier-stage-canvas gm-stage-canvas gan-stage" data-gan-stage>
+                <div class="frontier-loading">正在加载 GAN 预设样例...</div>
+            </div>
+            <div class="frontier-pipeline gm-pipeline gan-pipeline" data-gan-pipeline aria-label="GAN 计算流程"></div>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes gm-notes" aria-label="PROCESS NOTES">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-gan-note="step">Noise z</strong>
+                <p data-gan-note="summary">GAN 不从图像开始生成，而是从随机隐变量 z 开始。</p>
+            </div>
+
+            <div class="frontier-note-grid gm-note-grid">
+                <div><span>输入结构</span><strong data-gan-note="input">z ∈ R^d</strong></div>
+                <div><span>核心作用</span><strong data-gan-note="compute">随机采样 latent vector</strong></div>
+                <div><span>输出结构</span><strong data-gan-note="output">latent code</strong></div>
+                <div><span>当前状态</span><strong data-gan-note="state">等待进入 Generator</strong></div>
+                <div><span>指标解释</span><strong data-gan-note="metrics">D(real), D(fake), G loss, D loss</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card gm-formula-card">
+                <span>概念公式</span>
+                <strong data-gan-note="formula">z ∈ R^d</strong>
+                <small data-gan-note="formulaNote">本页使用前端预设样例和 Canvas/SVG fallback 演示机制，不运行真实 GAN 训练。</small>
+            </div>
+        </aside>
+    </section>
+
+    <ol class="vision-stepper frontier-algo-stepper gm-stepper gan-stepper" aria-label="GAN 流程 stepper" data-frontier-stepper></ol>
+
+    <section class="frontier-bottom-player gm-bottom-player" aria-label="GAN 底部播放控制">
+        <div>
+            <span>当前流程</span>
+            <strong data-frontier-step-name>Noise z</strong>
+            <small data-frontier-step-note>随机隐变量作为生成器输入。</small>
+        </div>
+        <div class="frontier-bottom-player-actions">
+            <button type="button" data-frontier-prev>上一步</button>
+            <button type="button" data-frontier-play>播放</button>
+            <button type="button" data-frontier-next>下一步</button>
+            <button type="button" data-frontier-reset>重置</button>
+            <label>
+                <span>速度</span>
+                <select data-frontier-speed aria-label="底部播放速度">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <section class="frontier-next-panel gm-next-panel" aria-labelledby="ganNextTitle">
+        <div>
+            <span>下一步：Diffusion</span>
+            <h2 id="ganNextTitle">GAN 通过对抗学习生成图像；Diffusion 则通过逐步去噪生成图像。</h2>
+        </div>
+        <div class="frontier-next-actions">
+            <a href="{{ url_for('generative_multimodal_sam_page') }}">前置 SAM</a>
+            <a href="{{ url_for('generative_multimodal_diffusion_page') }}">进入 Diffusion</a>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
+<script src="{{ url_for('static', filename='js/generative_multimodal/gan.js') }}?v=20260628-gan1"></script>
+{% endblock %}

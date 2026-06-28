@@ -13,7 +13,7 @@
     {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }} {{ 'human-pose-page-shell' if active_page|default('') == 'human_pose' else '' }}">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }} {{ 'human-pose-page-shell' if active_page|default('') == 'human_pose' else '' }} {{ 'vision-transformer-page-shell' if active_page|default('') == 'vision_transformer' else '' }} {{ 'vision-language-page-shell' if active_page|default('') == 'vision_language' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
@@ -155,11 +155,29 @@
                 <a class="{{ 'active' if active_page == 'multiview_reconstruction' and active_sub_page|default('') == 'triangulation' else '' }}" href="{{ url_for('multiview_triangulation_page') }}">三角测量与稀疏点云</a>
             </div>
 
-            <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
+            <a class="{{ 'active' if active_page == 'vision_transformer' else '' }}" href="{{ url_for('vision_transformer_page') }}">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="{{ 'active' if active_page == 'vision_transformer' and active_sub_page|default('') == 'vit' else '' }}" href="{{ url_for('vision_transformer_vit_page') }}">ViT / Transformer</a>
+                <a class="{{ 'active' if active_page == 'vision_transformer' and active_sub_page|default('') == 'dino' else '' }}" href="{{ url_for('vision_transformer_dino_page') }}">DINO 自监督表征</a>
+            </div>
+
+            <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') in ['clip', 'vlm', 'multimodal'] else '' }}" href="{{ url_for('frontier_clip_page') }}">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'clip' else '' }}" href="{{ url_for('frontier_clip_page') }}">CLIP 图文对齐</a>
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'vlm' else '' }}" href="{{ url_for('frontier_vlm_page') }}">VLM 视觉语言模型</a>
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'multimodal' else '' }}" href="{{ url_for('frontier_multimodal_page') }}">多模态理解</a>
+            </div>
+
+            <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') in ['sam', 'gan', 'diffusion'] else '' }}" href="{{ url_for('generative_multimodal_sam_page') }}">提示式与生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="提示式与生成式视觉模型子页面">
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'sam' else '' }}" href="{{ url_for('generative_multimodal_sam_page') }}">SAM 提示式图像分割</a>
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'gan' else '' }}" href="{{ url_for('generative_multimodal_gan_page') }}">GAN 对抗生成</a>
+                <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'diffusion' else '' }}" href="{{ url_for('generative_multimodal_diffusion_page') }}">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="{{ 'active' if active_page == 'frontier' else '' }}" href="{{ url_for('frontier_page') }}">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
                 <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'overview' else '' }}" href="{{ url_for('frontier_page') }}">前沿总览</a>
-                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'vit' else '' }}" href="{{ url_for('frontier_vit_page') }}">ViT / Transformer</a>
-                <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'dino' else '' }}" href="{{ url_for('frontier_dino_page') }}">DINO 自监督表征</a>
                 <a class="{{ 'active' if active_page == 'frontier' and active_sub_page|default('') == 'vision_banana' else '' }}" href="{{ url_for('vision_banana_page') }}">Vision Banana 案例</a>
             </div>
         </nav>
@@ -173,7 +191,7 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/core/base.js') }}?v=20260627-quest-learn-records"></script>
-    <script src="{{ url_for('static', filename='js/core/ai_assistant.js') }}?v=20260624-aidiagnose1"></script>
+    <script src="{{ url_for('static', filename='js/core/ai_assistant.js') }}?v=20260628-frontier-ai1"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -160,14 +160,4 @@
         </div>
     </aside>
 </section>
-
-<ol class="vision-stepper stereo-stepper stereo-stepper--7" aria-label="块匹配与视差图流程" data-stereo-stepper="block">
-    <li class="is-active" data-stereo-phase="rectified"><span>1</span><div><strong>校正图像</strong><small>same rows</small></div></li>
-    <li data-stereo-phase="patch"><span>2</span><div><strong>左图 patch</strong><small>local window</small></div></li>
-    <li data-stereo-phase="search"><span>3</span><div><strong>扫描线搜索</strong><small>candidate d</small></div></li>
-    <li data-stereo-phase="cost"><span>4</span><div><strong>代价计算</strong><small>SAD / SSD / NCC</small></div></li>
-    <li data-stereo-phase="wta"><span>5</span><div><strong>WTA 选择</strong><small>argmin / argmax</small></div></li>
-    <li data-stereo-phase="disparityMap"><span>6</span><div><strong>视差图</strong><small>dense d</small></div></li>
-    <li data-stereo-phase="depthMap"><span>7</span><div><strong>深度图</strong><small>Z = bf / d</small></div></li>
-</ol>
 {% endblock %}

@@ -5,7 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/camera_geometry.css') }}?v=20260628-geometry10">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/geometry_vision/camera_geometry.css') }}?v=20260628-geometry14">
 {% endblock %}
 
 {% block content %}
@@ -33,5 +33,20 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/geometry_vision/camera_geometry.js') }}?v=20260628-geometry9"></script>
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/camera_geometry.js') }}?v=20260628-geometry11"></script>
 {% endblock %}

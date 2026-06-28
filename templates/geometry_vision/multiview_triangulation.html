@@ -18,6 +18,13 @@
             </select>
         </label>
         <label class="vision-field">
+            <span>算法模式</span>
+            <select data-mv-tri-input="algorithmMode">
+                <option value="synthetic" selected>教学合成 / Synthetic Demo</option>
+                <option value="real">真实样例 / Real OpenCV</option>
+            </select>
+        </label>
+        <label class="vision-field">
             <span>匹配点数量 <output data-mv-tri-output="matchCount">36</output></span>
             <input type="range" min="8" max="72" step="2" value="36" data-mv-tri-input="matchCount">
         </label>
@@ -38,14 +45,20 @@
             <input type="range" min="1" max="36" step="1" value="6" data-mv-tri-input="currentPoint">
         </label>
 
-        <div class="multiview-toggle-grid">
-            <label class="vision-toggle-row"><span>显示反投影射线</span><input type="checkbox" data-mv-tri-input="showRays" checked></label>
-            <label class="vision-toggle-row"><span>显示三维点</span><input type="checkbox" data-mv-tri-input="showPoint" checked></label>
-            <label class="vision-toggle-row"><span>显示重投影点</span><input type="checkbox" data-mv-tri-input="showReprojection" checked></label>
-            <label class="vision-toggle-row"><span>显示误差向量</span><input type="checkbox" data-mv-tri-input="showErrors" checked></label>
-            <label class="vision-toggle-row"><span>显示点云</span><input type="checkbox" data-mv-tri-input="showCloud" checked></label>
-            <label class="vision-toggle-row"><span>显示外点 / 低置信点</span><input type="checkbox" data-mv-tri-input="showOutliers" checked></label>
-            <label class="vision-toggle-row"><span>点云旋转</span><input type="checkbox" data-mv-tri-input="rotateCloud" checked></label>
+        <div class="multiview-toggle-clusters">
+            <div class="multiview-toggle-cluster">
+                <strong>几何显示 <small>Geometry</small></strong>
+                <label class="vision-toggle-row"><span>反投影射线</span><input type="checkbox" data-mv-tri-input="showRays" checked></label>
+                <label class="vision-toggle-row"><span>三维点</span><input type="checkbox" data-mv-tri-input="showPoint" checked></label>
+                <label class="vision-toggle-row"><span>稀疏点云</span><input type="checkbox" data-mv-tri-input="showCloud" checked></label>
+                <label class="vision-toggle-row"><span>点云旋转</span><input type="checkbox" data-mv-tri-input="rotateCloud" checked></label>
+            </div>
+            <div class="multiview-toggle-cluster">
+                <strong>验证显示 <small>Verification</small></strong>
+                <label class="vision-toggle-row"><span>重投影点</span><input type="checkbox" data-mv-tri-input="showReprojection" checked></label>
+                <label class="vision-toggle-row"><span>误差向量</span><input type="checkbox" data-mv-tri-input="showErrors" checked></label>
+                <label class="vision-toggle-row"><span>外点 / 低置信点</span><input type="checkbox" data-mv-tri-input="showOutliers" checked></label>
+            </div>
         </div>
 
         <label class="vision-field">
@@ -68,7 +81,7 @@
         </div>
 
         <div class="vision-kv-grid">
-            <div><span>当前 X</span><strong data-mv-tri-summary="point">--</strong></div>
+            <div><span>当前 \( \mathbf{X} \)</span><strong data-mv-tri-summary="point">--</strong></div>
             <div><span>平均误差</span><strong data-mv-tri-summary="error">--</strong></div>
             <div><span>点云规模</span><strong data-mv-tri-summary="cloud">--</strong></div>
             <div><span>置信状态</span><strong data-mv-tri-summary="confidence">--</strong></div>
@@ -83,7 +96,7 @@
             </div>
             <div class="multiview-stage-chips">
                 <span data-mv-tri-chip="step">匹配点 / Matched Points</span>
-                <span data-mv-tri-chip="equation">x ≈ P X</span>
+                <span data-mv-tri-chip="equation">\( \mathbf{x}\approx\mathbf{P}\mathbf{X} \)</span>
                 <span data-mv-tri-chip="error">error --</span>
             </div>
         </div>
@@ -92,14 +105,14 @@
             <section class="multiview-view-card">
                 <div class="multiview-section-head">
                     <strong>两视图匹配 <small>Matched Points</small></strong>
-                    <span>x / x' correspondence</span>
+                    <span>\( \mathbf{x}/\mathbf{x}' \) correspondence</span>
                 </div>
                 <div class="multiview-svg-frame multiview-tri-image-frame" data-mv-tri-images></div>
             </section>
             <section class="multiview-view-card">
                 <div class="multiview-section-head">
                     <strong>三角测量几何 <small>Triangulation</small></strong>
-                    <span>P1 / P2 · back-projected rays</span>
+                    <span>\( \mathbf{P}_1/\mathbf{P}_2 \) · back-projected rays</span>
                 </div>
                 <div class="multiview-svg-frame multiview-tri-geometry-frame" data-mv-tri-geometry></div>
             </section>
@@ -114,6 +127,7 @@
 
         <div class="multiview-lab-strip" data-mv-tri-status aria-label="三角测量当前计算状态"></div>
         <div class="multiview-verification-card" data-mv-tri-verification aria-label="重投影验证"></div>
+        <div class="multiview-tri-results-panel" data-mv-tri-results aria-label="三角测量实验结果"></div>
         <div class="multiview-flow-preview" data-mv-tri-preview aria-label="三角测量步骤预览"></div>
     </div>
 
@@ -125,12 +139,12 @@
 
         <div class="vision-formula-card">
             <span>投影关系</span>
-            <strong>x ≈ P X, x' ≈ P' X</strong>
-            <small>二维观测由三维点 X 经过投影矩阵 P 产生。</small>
+            <strong>\( \mathbf{x}\approx\mathbf{P}\mathbf{X},\ \mathbf{x}'\approx\mathbf{P}'\mathbf{X} \)</strong>
+            <small>二维观测由三维点 \( \mathbf{X} \) 经过投影矩阵 \( \mathbf{P} \) 产生。</small>
         </div>
         <div class="vision-formula-card">
             <span>重投影误差</span>
-            <strong>Σ ||x - project(PX)||²</strong>
+            <strong>\( \sum_i \lVert \mathbf{x}_i-\operatorname{project}(\mathbf{P}\mathbf{X}_i)\rVert^2 \)</strong>
             <small>有噪声时两条射线通常不完全相交，需要用误差评价重建质量。</small>
         </div>
 
@@ -138,7 +152,11 @@
 
         <div class="vision-output-schema">
             <span>当前代入</span>
-            <code data-mv-tri-substitution>P1/P2 ready, X=(--,--,--), reprojection=--</code>
+            <code data-mv-tri-substitution>
+                <span class="mv-formula-line">\( \mathbf{x}\approx\mathbf{P}\mathbf{X},\ \mathbf{x}'\approx\mathbf{P}'\mathbf{X} \)</span>
+                <span class="mv-formula-line">\( \mathbf{X}=(--,--,--) \)</span>
+                <span class="mv-formula-line">\( \bar e=-- \)</span>
+            </code>
         </div>
 
         <div class="multiview-observation-list">
@@ -153,7 +171,7 @@
     <li class="is-active" data-mv-phase="matched"><span>1</span><div><strong>匹配点</strong><small>Matched Points</small></div></li>
     <li data-mv-phase="pose"><span>2</span><div><strong>相机位姿</strong><small>Camera Pose</small></div></li>
     <li data-mv-phase="rays"><span>3</span><div><strong>反投影射线</strong><small>Back-project Rays</small></div></li>
-    <li data-mv-phase="triangulate"><span>4</span><div><strong>三角化 3D 点</strong><small>Triangulate X</small></div></li>
+    <li data-mv-phase="triangulate"><span>4</span><div><strong>三角化 3D 点</strong><small>Triangulate \( \mathbf{X} \)</small></div></li>
     <li data-mv-phase="reproject"><span>5</span><div><strong>重投影</strong><small>Reproject</small></div></li>
     <li data-mv-phase="error"><span>6</span><div><strong>误差检查</strong><small>Error Check</small></div></li>
     <li data-mv-phase="cloud"><span>7</span><div><strong>稀疏点云</strong><small>Sparse Cloud</small></div></li>

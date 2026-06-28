@@ -368,8 +368,8 @@
             setText('[data-motion-flow-output="dy"]', fmtSigned(config.dy, 0));
             setText('[data-motion-flow-output="noise"]', fmt(config.noise, 1));
             setText('[data-motion-flow-summary="pixel"]', `(${values.sample.pixel[0]}, ${values.sample.pixel[1]})`);
-            setText('[data-motion-flow-summary="truth"]', `u=${fmt(config.dx, 1)}, v=${fmt(config.dy, 1)}`);
-            setText('[data-motion-flow-summary="equation"]', `${fmt(values.ix, 2)}u ${values.iy >= 0 ? "+" : "-"} ${fmt(Math.abs(values.iy), 2)}v ${values.it >= 0 ? "+" : "-"} ${fmt(Math.abs(values.it), 2)}=0`);
+            setText('[data-motion-flow-summary="truth"]', `\\(u=${fmt(config.dx, 1)},\\ v=${fmt(config.dy, 1)}\\)`);
+            setText('[data-motion-flow-summary="equation"]', `\\(${fmt(values.ix, 2)}u ${values.iy >= 0 ? "+" : "-"} ${fmt(Math.abs(values.iy), 2)}v ${values.it >= 0 ? "+" : "-"} ${fmt(Math.abs(values.it), 2)}=0\\)`);
             setText('[data-motion-flow-summary="note"]', state.step === "aperture" ? "需要局部窗口约束" : "单像素约束不足");
             setText('[data-motion-flow-chip="step"]', stepSets.constraint.find((step) => step.id === state.step)?.title || state.step);
             setText('[data-motion-flow-chip="vector"]', `u=${fmt(config.dx, 1)}, v=${fmt(config.dy, 1)}`);
@@ -621,7 +621,7 @@ ${equation}
             setText('[data-motion-lk-output="iterations"]', config.iterations);
             setText('[data-motion-lk-summary="pixels"]', `${pixels}`);
             setText('[data-motion-lk-summary="rows"]', `${pixels} rows`);
-            setText('[data-motion-lk-summary="flow"]', `[${fmt(values.flow[0], 2)}, ${fmt(values.flow[1], 2)}]`);
+            setText('[data-motion-lk-summary="flow"]', `\\(\\mathbf v=[${fmt(values.flow[0], 2)},${fmt(values.flow[1], 2)}]^\\mathsf{T}\\)`);
             setText('[data-motion-lk-summary="quality"]', `${Math.round(values.confidence * 100)}%`);
             setText('[data-motion-lk-chip="step"]', stepSets.lk.find((step) => step.id === state.step)?.title || state.step);
             setText('[data-motion-lk-chip="window"]', `${config.windowSize}x${config.windowSize} window`);
@@ -830,8 +830,8 @@ ${equation}
             const coarse = rows[0]?.apparent || [0, 0];
             const finalResidual = rows[rows.length - 1]?.residual || 0;
             setText('[data-motion-pyramid-output="iterations"]', config.iterations);
-            setText('[data-motion-pyramid-summary="coarse"]', `[${fmt(coarse[0], 2)}, ${fmt(coarse[1], 2)}]`);
-            setText('[data-motion-pyramid-summary="accumulated"]', `[${fmt(sample.flow[0], 1)}, ${fmt(sample.flow[1], 1)}]`);
+            setText('[data-motion-pyramid-summary="coarse"]', `\\([${fmt(coarse[0], 2)},${fmt(coarse[1], 2)}]\\)`);
+            setText('[data-motion-pyramid-summary="accumulated"]', `\\([${fmt(sample.flow[0], 1)},${fmt(sample.flow[1], 1)}]\\)`);
             setText('[data-motion-pyramid-summary="residual"]', `${fmt(finalResidual, 2)} px`);
             setText('[data-motion-pyramid-summary="status"]', state.step === "final" ? "轨迹已合并" : "逐层估计中");
             setText('[data-motion-pyramid-chip="step"]', stepSets.pyramid.find((step) => step.id === state.step)?.title || state.step);

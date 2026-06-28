@@ -49,6 +49,20 @@
         if (el) el.innerHTML = value;
     }
 
+    let mathTimer = 0;
+    function typesetMath(base = root) {
+        if (!window.MathJax?.typesetPromise) return;
+        window.clearTimeout(mathTimer);
+        mathTimer = window.setTimeout(() => {
+            try {
+                window.MathJax.typesetClear?.([base]);
+                window.MathJax.typesetPromise([base]).catch(() => {});
+            } catch (error) {
+                // Formula rendering is presentational; keep the lab usable if MathJax fails.
+            }
+        }, 0);
+    }
+
     function pulse(el) {
         if (!el) return;
         el.classList.remove("is-pulsing");
@@ -302,6 +316,10 @@
             return rows.map((row) => `[${row.map((value) => fmt(value, 2)).join(", ")}]`).join("\n");
         }
 
+        function latexMatrixRows(rows) {
+            return rows.map((row) => row.map((value) => fmt(value, 2)).join(" & ")).join(" \\\\ ");
+        }
+
         function updateOutputs(config) {
             [
                 ["yaw", `${fmtInt(config.yaw)}°`],
@@ -320,7 +338,7 @@
         const notes = {
             world: {
                 title: "世界坐标 / World Coordinate",
-                formula: "Xw = [X, Y, Z, 1]^T",
+                formula: "\\(\\mathbf X_w=[X,Y,Z,1]^{\\mathsf T}\\)",
                 body: [
                     ["坐标系", "世界坐标描述真实三维点，与相机摆放位置无关。"],
                     ["输入结构", "点集可以是单点、立方体、棋盘格或坐标轴。"],
@@ -328,7 +346,7 @@
             },
             extrinsic: {
                 title: "外参变换 / Extrinsic Transform",
-                formula: "Xc = R Xw + t",
+                formula: "\\(\\mathbf X_c=\\mathbf R\\mathbf X_w+\\mathbf t\\)",
                 body: [
                     ["R", "旋转矩阵改变相机朝向，点阵在图像中会发生整体透视变化。"],
                     ["t", "平移向量改变相机相对世界的位置，tz 增大会让点看起来更远。"],
@@ -336,7 +354,7 @@
             },
             camera: {
                 title: "相机坐标 / Camera Coordinate",
-                formula: "Xc = [Xc, Yc, Zc]^T",
+                formula: "\\(\\mathbf X_c=[X_c,Y_c,Z_c]^{\\mathsf T}\\)",
                 body: [
                     ["深度 Zc", "Zc 越大，归一化坐标 Xc/Zc 和 Yc/Zc 越小。"],
                     ["可见性", "Zc 接近 0 时投影不稳定，真实系统会进行可见性过滤。"],
@@ -344,7 +362,7 @@
             },
             intrinsic: {
                 title: "内参投影 / Intrinsic Projection",
-                formula: "K = [[fx,s,cx],[0,fy,cy],[0,0,1]]",
+                formula: "\\(\\mathbf K=\\begin{bmatrix}f_x&s&c_x\\\\0&f_y&c_y\\\\0&0&1\\end{bmatrix}\\)",
                 body: [
                     ["fx / fy", "焦距像素单位控制水平和垂直方向的放大倍率。"],
                     ["cx / cy", "主点位置相当于图像坐标原点偏移。"],
@@ -352,10 +370,10 @@
             },
             pixel: {
                 title: "像素坐标 / Pixel Coordinate",
-                formula: "s[u,v,1]^T = K[R|t]Xw",
+                formula: "\\(s[u,v,1]^{\\mathsf T}=\\mathbf K[\\mathbf R|\\mathbf t]\\mathbf X_w\\)",
                 body: [
                     ["输出", "最终像素坐标用于在图像平面中定位三维点的观测位置。"],
-                    ["矩阵链路", "P = K[R|t] 把外参和内参合并为 3x4 投影矩阵。"],
+                    ["矩阵链路", "\\(\\mathbf P=\\mathbf K[\\mathbf R|\\mathbf t]\\) 把外参和内参合并为 \\(3\\times4\\) 投影矩阵。"],
                 ],
             },
         };
@@ -395,14 +413,20 @@
             setText('[data-geo-proj-summary="status"]', active?.z > 0.2 ? `${visibleCount}/${projected.length} 在图像内` : "深度过近");
             setText("[data-geo-current-pixel]", active ? `u=${fmt(active.u, 1)}, v=${fmt(active.v, 1)}` : "u=--, v=--");
             setText("[data-geo-param-impact]", impactText[state.lastParam] || impactText.fx);
-            setText("[data-geo-substitution]", active ? `Xw=[${fmt(active.world.x)}, ${fmt(active.world.y)}, ${fmt(active.world.z)}, 1]^T -> Xc=[${fmt(active.camera.x)}, ${fmt(active.camera.y)}, ${fmt(active.camera.z)}]^T -> pixel=(${fmt(active.u, 1)}, ${fmt(active.v, 1)})` : "--");
+            setText("[data-geo-substitution]", active ? `\\[
+\\begin{aligned}
+\\mathbf X_w&=[${fmt(active.world.x)},${fmt(active.world.y)},${fmt(active.world.z)},1]^{\\mathsf T}\\\\
+\\mathbf X_c&=[${fmt(active.camera.x)},${fmt(active.camera.y)},${fmt(active.camera.z)}]^{\\mathsf T}\\\\
+(u,v)&=(${fmt(active.u, 1)},${fmt(active.v, 1)})
+\\end{aligned}
+\\]` : "--");
 
-            setText('[data-geo-matrix="world"]', active ? `输入\nXw=[${fmt(active.world.x)}, ${fmt(active.world.y)}, ${fmt(active.world.z)}, 1]^T\n输出：世界点位置` : "--");
-            setText('[data-geo-matrix="extrinsic"]', `输入 Xw\n计算 Xc=RXw+t\nR=\n${matrixRows(r)}\nt=[${fmt(config.tx)}, ${fmt(config.ty)}, ${fmt(config.tz)}]^T`);
-            setText('[data-geo-matrix="camera"]', active ? `输出\nXc=[${fmt(active.camera.x)}, ${fmt(active.camera.y)}, ${fmt(active.camera.z)}]^T\nZc=${fmt(active.camera.z, 2)}` : "--");
-            setText('[data-geo-matrix="normalized"]', active ? `计算透视除法\nxn=Xc/Zc=${fmt(active.nx, 3)}\nyn=Yc/Zc=${fmt(active.ny, 3)}` : "--");
-            setText('[data-geo-matrix="intrinsic"]', active ? `K=[fx,s,cx;0,fy,cy;0,0,1]\nu=${fmtInt(config.fx)}*${fmt(active.nx, 3)}+${fmtInt(config.skew)}*${fmt(active.ny, 3)}+${fmtInt(config.cx)}\nv=${fmtInt(config.fy)}*${fmt(active.ny, 3)}+${fmtInt(config.cy)}` : "--");
-            setText('[data-geo-matrix="pixel"]', active ? `输出\ns[u,v,1]^T\n= [${fmt(active.u, 1)}, ${fmt(active.v, 1)}, 1]^T` : "--");
+            setText('[data-geo-matrix="world"]', active ? `输入 \\(\\mathbf X_w=[${fmt(active.world.x)},${fmt(active.world.y)},${fmt(active.world.z)},1]^{\\mathsf T}\\)\n输出：世界点位置` : "--");
+            setText('[data-geo-matrix="extrinsic"]', `计算 \\(\\mathbf X_c=\\mathbf R\\mathbf X_w+\\mathbf t\\)\n\\(\\mathbf R=\\begin{bmatrix}${latexMatrixRows(r)}\\end{bmatrix}\\)\n\\(\\mathbf t=[${fmt(config.tx)},${fmt(config.ty)},${fmt(config.tz)}]^{\\mathsf T}\\)`);
+            setText('[data-geo-matrix="camera"]', active ? `输出 \\(\\mathbf X_c=[${fmt(active.camera.x)},${fmt(active.camera.y)},${fmt(active.camera.z)}]^{\\mathsf T}\\)\n\\(Z_c=${fmt(active.camera.z, 2)}\\)` : "--");
+            setText('[data-geo-matrix="normalized"]', active ? `透视除法\n\\(x_n=\\frac{X_c}{Z_c}=${fmt(active.nx, 3)}\\)\n\\(y_n=\\frac{Y_c}{Z_c}=${fmt(active.ny, 3)}\\)` : "--");
+            setText('[data-geo-matrix="intrinsic"]', active ? `\\(\\mathbf K=\\begin{bmatrix}${fmtInt(config.fx)}&${fmtInt(config.skew)}&${fmtInt(config.cx)}\\\\0&${fmtInt(config.fy)}&${fmtInt(config.cy)}\\\\0&0&1\\end{bmatrix}\\)\n\\(u=f_xx_n+sy_n+c_x=${fmt(active.u, 1)}\\)\n\\(v=f_yy_n+c_y=${fmt(active.v, 1)}\\)` : "--");
+            setText('[data-geo-matrix="pixel"]', active ? `输出\n\\(s[u,v,1]^{\\mathsf T}=[${fmt(active.u, 1)},${fmt(active.v, 1)},1]^{\\mathsf T}\\)` : "--");
 
             $$(".geo-matrix-card").forEach((card) => {
                 const activeCard = activeStages.includes(card.dataset.geoStage);
@@ -418,12 +442,13 @@
                 <article><span>${index + 1}</span><div><strong>${item[0]}</strong><p>${item[1]}</p></div></article>
             `).join(""));
             renderStatusStrip($("[data-geo-flow-preview]"), [
-                {label: "当前输入", value: active ? `Xw=[${fmt(active.world.x)}, ${fmt(active.world.y)}, ${fmt(active.world.z)}, 1]` : "--", detail: `${projected.length} 个世界点`, active: state.step === "world"},
-                {label: "当前计算", value: state.step === "extrinsic" ? "Xc = R Xw + t" : state.step === "intrinsic" ? "u = fx*xn + s*yn + cx" : "P = K[R|t]", detail: stepTitle("projection", state.step), active: state.step === "extrinsic" || state.step === "intrinsic"},
-                {label: "当前输出", value: active ? `pixel=(${fmt(active.u, 1)}, ${fmt(active.v, 1)})` : "--", detail: "像素坐标 / Pixel Coordinate", active: state.step === "pixel"},
-                {label: "当前质量", value: `${visibleCount}/${projected.length} in image`, detail: active ? `Zc=${fmt(active.z, 2)} · 主点(${fmtInt(config.cx)},${fmtInt(config.cy)})` : "--", active: state.step === "camera"},
+                {label: "当前输入", value: active ? `\\(\\mathbf X_w=[${fmt(active.world.x)},${fmt(active.world.y)},${fmt(active.world.z)},1]^{\\mathsf T}\\)` : "--", detail: `${projected.length} 个世界点`, active: state.step === "world"},
+                {label: "当前计算", value: state.step === "extrinsic" ? "\\(\\mathbf X_c=\\mathbf R\\mathbf X_w+\\mathbf t\\)" : state.step === "intrinsic" ? "\\(u=f_xx_n+sy_n+c_x\\)" : "\\(\\mathbf P=\\mathbf K[\\mathbf R|\\mathbf t]\\)", detail: stepTitle("projection", state.step), active: state.step === "extrinsic" || state.step === "intrinsic"},
+                {label: "当前输出", value: active ? `\\((u,v)=(${fmt(active.u, 1)},${fmt(active.v, 1)})\\)` : "--", detail: "像素坐标 / Pixel Coordinate", active: state.step === "pixel"},
+                {label: "当前质量", value: `${visibleCount}/${projected.length} in image`, detail: active ? `\\(Z_c=${fmt(active.z, 2)}\\) · 主点 \\((${fmtInt(config.cx)},${fmtInt(config.cy)})\\)` : "--", active: state.step === "camera"},
             ]);
             updateStepper("projection", state.step);
+            typesetMath();
             if (animated) pulse($(".geometry-notes-panel"));
         }
 
@@ -576,16 +601,16 @@
             setHtml("[data-geo-camera-3d]", renderWorld(points, config));
             setHtml("[data-geo-camera-plane]", renderPlane(points, config));
             setText('[data-geo-camera-chip="step"]', stepSets.camera.find((step) => step.id === state.step)?.title || state.step);
-            setText('[data-geo-camera-chip="focal"]', `f = ${fmtInt(config.focal)}`);
-            setText('[data-geo-camera-chip="depth"]', `Z = ${fmt(config.depth, 1)}`);
+            setText('[data-geo-camera-chip="focal"]', `\\(f=${fmtInt(config.focal)}\\)`);
+            setText('[data-geo-camera-chip="depth"]', `\\(Z=${fmt(config.depth, 1)}\\)`);
             setText('[data-geo-camera-summary="point"]', `[${fmt(active.x)}, ${fmt(active.y)}, ${fmt(active.z)}]`);
             setText('[data-geo-camera-summary="scale"]', `${fmt(scale, 1)} px/unit`);
             setText('[data-geo-camera-summary="count"]', `${points.length}`);
             setText('[data-geo-camera-summary="note"]', state.lastParam === "depth" ? "Z 越大，投影越靠近中心" : "f 越大，图像越放大");
-            setText('[data-geo-camera-micro="point"]', `P = (${fmt(active.x, 2)}, ${fmt(active.y, 2)}, ${fmt(active.z, 2)})`);
-            setText('[data-geo-camera-micro="normalized"]', `xn = X/Z = ${fmt(active.x / Math.max(active.z, 0.2), 3)}, yn = Y/Z = ${fmt(active.y / Math.max(active.z, 0.2), 3)}`);
-            setText('[data-geo-camera-micro="image"]', `x = ${fmt(p.x, 1)}, y = ${fmt(p.y, 1)}`);
-            setText('[data-geo-camera-micro="scale"]', `f / Z = ${fmt(scale, 2)}`);
+            setText('[data-geo-camera-micro="point"]', `\\(P=(${fmt(active.x, 2)},${fmt(active.y, 2)},${fmt(active.z, 2)})\\)`);
+            setText('[data-geo-camera-micro="normalized"]', `\\(x_n=\\frac{X}{Z}=${fmt(active.x / Math.max(active.z, 0.2), 3)},\\ y_n=\\frac{Y}{Z}=${fmt(active.y / Math.max(active.z, 0.2), 3)}\\)`);
+            setText('[data-geo-camera-micro="image"]', `\\(x=\\frac{fX}{Z}=${fmt(p.x, 1)},\\ y=\\frac{fY}{Z}=${fmt(p.y, 1)}\\)`);
+            setText('[data-geo-camera-micro="scale"]', `\\(\\frac{f}{Z}=${fmt(scale, 2)}\\)`);
             setText('[data-geo-camera-micro="conclusion"]', state.lastParam === "depth" ? "Z 增大时 f/Z 变小，投影点向中心收缩。" : "f 增大时 f/Z 变大，投影点相对中心向外移动。");
             setText("[data-geo-camera-notes-title]", notes[state.step]?.[0] || "针孔投影");
             setHtml("[data-geo-camera-notes]", `
@@ -593,14 +618,21 @@
                 <article><span>2</span><div><strong>观察结论</strong><p>${state.lastParam === "depth" ? "增加 Z 深度会让所有像平面点向中心收缩。" : "增加焦距 f 会让所有投影点相对中心向外移动。"}</p></div></article>
                 <article><span>3</span><div><strong>内容边界</strong><p>这里展示理想成像坐标 x, y；像素坐标 u, v 需要再经过内参 K，放到第二页讲。</p></div></article>
             `);
-            setText("[data-geo-camera-substitution]", `P=(${fmt(active.x)}, ${fmt(active.y)}, ${fmt(active.z)}) -> xn=${fmt(active.x / Math.max(active.z, 0.2), 3)}, yn=${fmt(active.y / Math.max(active.z, 0.2), 3)} -> x=${fmt(p.x, 1)}, y=${fmt(p.y, 1)}`);
+            setText("[data-geo-camera-substitution]", `\\[
+\\begin{aligned}
+P&=(${fmt(active.x)},${fmt(active.y)},${fmt(active.z)})\\\\
+(x_n,y_n)&=(${fmt(active.x / Math.max(active.z, 0.2), 3)},${fmt(active.y / Math.max(active.z, 0.2), 3)})\\\\
+(x,y)&=(${fmt(p.x, 1)},${fmt(p.y, 1)})
+\\end{aligned}
+\\]`);
             renderStatusStrip($("[data-geo-camera-flow]"), [
-                {label: "当前输入", value: `P=(${fmt(active.x)}, ${fmt(active.y)}, ${fmt(active.z)})`, detail: `${points.length} 个上下文点`, active: state.step === "point"},
+                {label: "当前输入", value: `\\(P=(${fmt(active.x)},${fmt(active.y)},${fmt(active.z)})\\)`, detail: `${points.length} 个上下文点`, active: state.step === "point"},
                 {label: "当前计算", value: "projection ray", detail: "P → O → image plane", active: state.step === "ray" || state.step === "center"},
-                {label: "当前输出", value: `p=(${fmt(p.x, 1)}, ${fmt(p.y, 1)})`, detail: "成像平面坐标 / Image Plane", active: state.step === "plane" || state.step === "pixel"},
-                {label: "当前质量", value: `scale=${fmt(scale, 2)}`, detail: "projection scale = f / Z", active: state.step === "pixel"},
+                {label: "当前输出", value: `\\(p=(${fmt(p.x, 1)},${fmt(p.y, 1)})\\)`, detail: "成像平面坐标 / Image Plane", active: state.step === "plane" || state.step === "pixel"},
+                {label: "当前质量", value: `\\(\\frac{f}{Z}=${fmt(scale, 2)}\\)`, detail: "projection scale \\(=f/Z\\)", active: state.step === "pixel"},
             ]);
             updateStepper("camera", state.step);
+            typesetMath();
             if (animated) pulse($(".geometry-notes-panel"));
         }
 
@@ -958,8 +990,8 @@
             setText('[data-geo-calib-summary="meanError"]', `${fmt(meanError, 2)} px`);
             setText('[data-geo-calib-summary="imageError"]', `${fmt(imageError, 2)} px`);
             setText('[data-geo-calib-summary="status"]', state.step === "error" ? "误差分析完成" : "参数估计中");
-            setText('[data-geo-calib-result="k"]', `[${fmtInt(fx)},0,${fmtInt(cx)}]\n[0,${fmtInt(fy)},${fmtInt(cy)}]\n[0,0,1]`);
-            setText('[data-geo-calib-result="dist"]', `[${fmt(config.noise * 0.012, 4)}, ${fmt(-config.noise * 0.004, 4)}, 0.0008, -0.0006]`);
+            setText('[data-geo-calib-result="k"]', `\\(\\mathbf K=\\begin{bmatrix}${fmtInt(fx)}&0&${fmtInt(cx)}\\\\0&${fmtInt(fy)}&${fmtInt(cy)}\\\\0&0&1\\end{bmatrix}\\)`);
+            setText('[data-geo-calib-result="dist"]', `\\(\\mathbf d=[${fmt(config.noise * 0.012, 4)},${fmt(-config.noise * 0.004, 4)},0.0008,-0.0006]\\)`);
             setText('[data-geo-calib-result="meanError"]', `${fmt(meanError, 2)} px`);
             setText('[data-geo-calib-result="imageError"]', `${fmt(imageError, 2)} px`);
             setText('[data-geo-calib-result="cornerCount"]', `${points.length * config.images}`);
@@ -979,11 +1011,12 @@
             });
             renderStatusStrip($("[data-geo-calib-flow]"), [
                 {label: "当前输入", value: `${points.length} pairs × ${config.images}`, detail: "objectPoints + imagePoints", active: state.step === "chessboard" || state.step === "corners"},
-                {label: "当前计算", value: state.step === "solve" ? "solve K,R,t,dist" : state.step === "reproject" ? "project(K,R,t,Xw)" : "corner pairing", detail: stepTitle("calibration", state.step), active: state.step === "pairs" || state.step === "solve" || state.step === "reproject"},
-                {label: "当前输出", value: `K fx=${fmtInt(fx)}, fy=${fmtInt(fy)}`, detail: `dist ≈ ${fmt(config.noise * 0.012, 4)}`, active: state.step === "solve"},
+                {label: "当前计算", value: state.step === "solve" ? "\\(\\min\\sum_i\\lVert\\mathbf p_i-\\hat{\\mathbf p}_i\\rVert_2^2\\)" : state.step === "reproject" ? "\\(\\hat{\\mathbf p}=\\operatorname{project}(\\mathbf K,\\mathbf R,\\mathbf t,\\mathbf X_w)\\)" : "corner pairing", detail: stepTitle("calibration", state.step), active: state.step === "pairs" || state.step === "solve" || state.step === "reproject"},
+                {label: "当前输出", value: `\\(f_x=${fmtInt(fx)},\\ f_y=${fmtInt(fy)}\\)`, detail: `\\(d_1\\approx ${fmt(config.noise * 0.012, 4)}\\)`, active: state.step === "solve"},
                 {label: "当前质量", value: `mean=${fmt(meanError, 2)} px`, detail: maxPoint ? `max ${maxPoint.id}=${fmt(maxPoint.error, 2)} px` : "--", active: state.step === "error"},
             ]);
             updateStepper("calibration", state.step);
+            typesetMath();
             if (animated) {
                 pulse($(".geometry-notes-panel"));
                 pulse($(".calibration-results-panel"));

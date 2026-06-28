@@ -71,7 +71,7 @@
             <div class="geometry-stage-chips">
                 <span data-geo-chip="projection-step">世界坐标 / World Coordinate</span>
                 <span data-geo-chip="projection-count">8 points</span>
-                <span>P = K[R|t]</span>
+                <span>\(\mathbf P=\mathbf K[\mathbf R|\mathbf t]\)</span>
             </div>
         </div>
 
@@ -79,32 +79,32 @@
             <article class="geo-matrix-card" data-geo-stage="world">
                 <span>World Coordinate</span>
                 <strong>世界坐标</strong>
-                <code data-geo-matrix="world">[X, Y, Z, 1]^T</code>
+                <code data-geo-matrix="world">\(\mathbf X_w=[X,Y,Z,1]^{\mathsf T}\)</code>
             </article>
             <article class="geo-matrix-card" data-geo-stage="extrinsic">
                 <span>Extrinsic Transform</span>
                 <strong>外参变换</strong>
-                <code data-geo-matrix="extrinsic">R = I, t = 0</code>
+                <code data-geo-matrix="extrinsic">\(\mathbf R=\mathbf I,\ \mathbf t=\mathbf 0\)</code>
             </article>
             <article class="geo-matrix-card" data-geo-stage="camera">
                 <span>Camera Coordinate</span>
                 <strong>相机坐标</strong>
-                <code data-geo-matrix="camera">Xc = R Xw + t</code>
+                <code data-geo-matrix="camera">\(\mathbf X_c=\mathbf R\mathbf X_w+\mathbf t\)</code>
             </article>
             <article class="geo-matrix-card" data-geo-stage="normalized">
                 <span>Normalized Plane</span>
                 <strong>归一化平面</strong>
-                <code data-geo-matrix="normalized">x = Xc/Zc</code>
+                <code data-geo-matrix="normalized">\(x_n=\frac{X_c}{Z_c},\ y_n=\frac{Y_c}{Z_c}\)</code>
             </article>
             <article class="geo-matrix-card" data-geo-stage="intrinsic">
                 <span>Intrinsic Projection</span>
                 <strong>内参投影</strong>
-                <code data-geo-matrix="intrinsic">K maps to pixels</code>
+                <code data-geo-matrix="intrinsic">\(\mathbf K\) maps normalized points to pixels</code>
             </article>
             <article class="geo-matrix-card" data-geo-stage="pixel">
                 <span>Pixel Coordinate</span>
                 <strong>像素坐标</strong>
-                <code data-geo-matrix="pixel">s[u,v,1]^T</code>
+                <code data-geo-matrix="pixel">\(s[u,v,1]^{\mathsf T}\)</code>
             </article>
         </div>
 
@@ -128,7 +128,7 @@
 
         <div class="vision-formula-card">
             <span>核心公式</span>
-            <strong data-geo-notes-formula>s [u, v, 1]^T = K [R|t] Xw</strong>
+            <strong data-geo-notes-formula>\(s[u,v,1]^{\mathsf T}=\mathbf K[\mathbf R|\mathbf t]\mathbf X_w\)</strong>
             <small data-geo-notes-formula-note>外参先把世界点转入相机坐标，内参再把归一化点映射到像素网格。</small>
         </div>
 
@@ -136,7 +136,13 @@
 
         <div class="vision-output-schema">
             <span>当前点代入</span>
-            <code data-geo-substitution>Xw = [--]</code>
+            <code data-geo-substitution>\[
+\begin{aligned}
+\mathbf X_w&=[--]\\
+\mathbf X_c&=[--]\\
+(u,v)&=(--,--)
+\end{aligned}
+\]</code>
         </div>
 
         <div class="vision-kv-grid">
@@ -147,9 +153,9 @@
 </section>
 
 <ol class="vision-stepper geometry-stepper geometry-stepper--5" aria-label="投影矩阵处理流程" data-geo-stepper="projection">
-    <li class="is-active" data-geo-phase="world"><span>1</span><div><strong>世界坐标</strong><small>World Coordinate · Xw</small></div></li>
+    <li class="is-active" data-geo-phase="world"><span>1</span><div><strong>世界坐标</strong><small>World Coordinate · \(\mathbf X_w\)</small></div></li>
     <li data-geo-phase="extrinsic"><span>2</span><div><strong>外参变换</strong><small>Extrinsic Transform · R,t</small></div></li>
-    <li data-geo-phase="camera"><span>3</span><div><strong>相机坐标</strong><small>Camera Coordinate · Xc</small></div></li>
+    <li data-geo-phase="camera"><span>3</span><div><strong>相机坐标</strong><small>Camera Coordinate · \(\mathbf X_c\)</small></div></li>
     <li data-geo-phase="intrinsic"><span>4</span><div><strong>内参投影</strong><small>Intrinsic Projection · K</small></div></li>
     <li data-geo-phase="pixel"><span>5</span><div><strong>像素坐标</strong><small>Pixel Coordinate · u,v</small></div></li>
 </ol>

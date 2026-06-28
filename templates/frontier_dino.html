@@ -5,8 +5,8 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-module-a1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_dino.css') }}?v=20260628-module-a1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-layout1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_dino.css') }}?v=20260628-layout2">
 {% endblock %}
 
 {% block content %}
@@ -14,33 +14,31 @@
     class="vision-lab frontier-algo dino-lab"
     data-frontier-algo="dino"
     data-dino-lab
-    data-samples-url="{{ url_for('static', filename='assets/data/frontier/dino_samples.json') }}?v=20260628-module-a1"
+    data-samples-url="{{ url_for('static', filename='assets/data/frontier/dino_samples.json') }}?v=20260628-real1"
 >
     <header class="vision-hero station-hero frontier-algo-hero">
         <div>
-            <span class="section-label station-eyebrow">STATION 10 · FRONTIER VISION</span>
+            <span class="section-label station-eyebrow">World 04 · Module A</span>
             <h1 class="station-title">DINO：无标签图像的自监督表征</h1>
-            <p class="station-summary">通过 teacher-student、自监督对齐和多视图裁剪理解无标签视觉表征学习。</p>
+            <p class="station-summary">通过教师-学生结构、自监督对齐和多视图裁剪理解无标签视觉表征学习。</p>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
             <span class="frontier-algo-state">机制拆解 · 教学动画</span>
             <span class="frontier-algo-state frontier-algo-state--honest">预设样例 · 非真实推理</span>
-            <strong class="station-badge">Self-supervised / Teacher-Student / EMA / Attention</strong>
+            <strong class="station-badge">自监督 / 教师-学生 / EMA / Attention</strong>
         </div>
     </header>
 
-    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="前沿视觉表征模块导航">
-        <a href="{{ url_for('frontier_page') }}">前沿总览</a>
-        <a href="{{ url_for('frontier_vit_page') }}">ViT / Transformer</a>
-        <a class="is-active" href="{{ url_for('frontier_dino_page') }}">DINO 自监督表征</a>
-        <a href="{{ url_for('vision_banana_page') }}">Vision Banana</a>
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs" aria-label="视觉 Transformer 与自监督表征模块导航">
+        <a href="{{ url_for('vision_transformer_vit_page') }}">ViT / Transformer</a>
+        <a class="is-active" href="{{ url_for('vision_transformer_dino_page') }}">DINO 自监督表征</a>
     </nav>
 
     <section class="vision-workbench frontier-algo-workbench dino-workbench" aria-label="DINO 自监督表征教学工作台">
         <aside class="vision-panel vision-control-panel frontier-algo-controls">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">01</span>
-                <div><h3>INPUT &amp; PARAMS</h3><p>多视图、双分支与表征显示</p></div>
+                <div><h3>输入与参数</h3><p>多视图、双分支与表征显示</p></div>
             </div>
 
             <label class="vision-field">
@@ -51,37 +49,37 @@
             <label class="vision-field">
                 <span>视图模式</span>
                 <select data-dino-control="viewMode" aria-label="选择视图模式">
-                    <option value="global">Global View</option>
-                    <option value="local">Local Crop</option>
-                    <option value="multi" selected>Multi-crop</option>
+                    <option value="global">全局视图</option>
+                    <option value="local">局部裁剪</option>
+                    <option value="multi" selected>多裁剪</option>
                 </select>
             </label>
 
             <label class="vision-field">
                 <span>网络显示</span>
                 <select data-dino-control="network" aria-label="选择网络显示">
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="both" selected>Both</option>
+                    <option value="student">Student 分支</option>
+                    <option value="teacher">Teacher 分支</option>
+                    <option value="both" selected>全部分支</option>
                 </select>
             </label>
 
             <label class="vision-field">
-                <span>Attention Head</span>
+                <span>注意力头</span>
                 <select data-dino-control="head" aria-label="选择 DINO attention head">
-                    <option value="head1">Head 1</option>
-                    <option value="head2">Head 2</option>
-                    <option value="head3">Head 3</option>
-                    <option value="average" selected>Average</option>
+                    <option value="head1">第 1 头</option>
+                    <option value="head2">第 2 头</option>
+                    <option value="head3">第 3 头</option>
+                    <option value="average" selected>平均</option>
                 </select>
             </label>
 
             <div class="frontier-control-group" role="radiogroup" aria-label="DINO 表征显示模式">
                 <strong>表征显示</strong>
                 <div class="frontier-segmented" data-dino-representation-modes>
-                    <button type="button" class="is-active" data-dino-representation="distribution">Output Distribution</button>
-                    <button type="button" data-dino-representation="feature">Feature Space</button>
-                    <button type="button" data-dino-representation="attention">Attention Map</button>
+                    <button type="button" class="is-active" data-dino-representation="distribution">输出分布</button>
+                    <button type="button" data-dino-representation="feature">特征空间</button>
+                    <button type="button" data-dino-representation="attention">Attention 热力图</button>
                 </div>
             </div>
 
@@ -102,29 +100,29 @@
                     </select>
                 </label>
                 <div class="frontier-current-step">
-                    <strong data-frontier-step-name>Image Views</strong>
-                    <span data-frontier-step-note>同一张无标签图像被裁成多个 global / local views。</span>
+                    <strong data-frontier-step-name>多视图裁剪</strong>
+                    <span data-frontier-step-note>同一张无标签图像被裁成多个全局/局部视图。</span>
                 </div>
             </div>
 
             <div class="vision-kv-grid frontier-status-summary">
                 <div><span>当前样本</span><strong data-dino-summary="sample">animal</strong></div>
                 <div><span>视图数量</span><strong data-dino-summary="views">6</strong></div>
-                <div><span>训练方式</span><strong data-dino-summary="training">teacher-student</strong></div>
-                <div><span>当前步骤</span><strong data-dino-summary="step">Image Views</strong></div>
+                <div><span>训练方式</span><strong data-dino-summary="training">教师-学生</strong></div>
+                <div><span>当前步骤</span><strong data-dino-summary="step">多视图裁剪</strong></div>
             </div>
         </aside>
 
         <div class="vision-stage-panel frontier-algo-stage">
             <div class="vision-stage-header">
                 <div>
-                    <span>PLAYGROUND</span>
-                    <h3 data-dino-stage-title>Multi-crop → Student / Teacher → EMA</h3>
+                    <span>交互演示</span>
+                    <h3 data-dino-stage-title>多裁剪 → Student / Teacher → EMA</h3>
                 </div>
                 <div class="frontier-stage-chips">
-                    <span data-dino-chip="sample">animal</span>
-                    <span data-dino-chip="views">6 views</span>
-                    <span data-dino-chip="mode">Output Distribution</span>
+                    <span data-dino-chip="sample">动物主体</span>
+                    <span data-dino-chip="views">6 个视图</span>
+                    <span data-dino-chip="mode">输出分布</span>
                 </div>
             </div>
 
@@ -135,34 +133,34 @@
         <aside class="vision-panel vision-notes-panel frontier-algo-notes">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">02</span>
-                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+                <div><h3>过程说明</h3><p>当前步骤输入、计算和输出</p></div>
             </div>
 
             <div class="frontier-note-card">
                 <span>当前步骤</span>
-                <strong data-dino-note="step">Image Views</strong>
-                <p data-dino-note="summary">同一张无标签图像被裁成多个 global / local views，作为自监督训练信号。</p>
+                <strong data-dino-note="step">多视图裁剪</strong>
+                <p data-dino-note="summary">同一张无标签图像被裁成多个全局/局部视图，作为自监督训练信号。</p>
             </div>
 
             <div class="frontier-note-grid">
                 <div><span>输入结构</span><strong data-dino-note="input">无标签图像 + 多视图裁剪</strong></div>
-                <div><span>核心计算</span><strong data-dino-note="compute">multi-crop augment</strong></div>
-                <div><span>输出结构</span><strong data-dino-note="output">Global / Local view cards</strong></div>
+                <div><span>核心计算</span><strong data-dino-note="compute">多裁剪增强</strong></div>
+                <div><span>输出结构</span><strong data-dino-note="output">全局/局部视图卡片</strong></div>
                 <div><span>与 ViT 的关系</span><strong data-dino-note="relation">DINO 通常使用 ViT 作为 student / teacher 的视觉编码器。</strong></div>
-                <div><span>为什么是 self-supervised</span><strong data-dino-note="ssl">没有人工 class label，teacher soft target 提供学习目标。</strong></div>
+                <div><span>为什么是自监督</span><strong data-dino-note="ssl">没有人工类别标签，Teacher 软目标提供学习目标。</strong></div>
             </div>
 
             <div class="vision-formula-card frontier-formula-card">
                 <span>核心公式</span>
                 <strong data-dino-note="formula">views = crop_aug(image)</strong>
-                <small data-dino-note="formulaNote">当前页面使用预设分布、特征点和 attention map，不执行真实训练。</small>
+                <small data-dino-note="formulaNote">当前页面使用预设分布、特征点和 Attention 图，不执行真实训练。</small>
             </div>
 
             <div class="frontier-note-card">
                 <span>当前对齐摘要</span>
                 <div class="frontier-alignment-readout" data-dino-alignment>
-                    <strong>loss 1.92 → 0.74</strong>
-                    <span>student distribution 正在靠近 teacher soft target</span>
+                    <strong>损失 1.92 → 0.74</strong>
+                    <span>Student 分布正在靠近 Teacher 软目标</span>
                 </div>
             </div>
 
@@ -177,11 +175,11 @@
 
     <section class="frontier-next-panel" aria-labelledby="dinoNextTitle">
         <div>
-            <span>前置：ViT / Transformer · 后续：CLIP / SAM / VLM / Vision Banana</span>
-            <h2 id="dinoNextTitle">DINO 说明无标签视觉表征如何被训练；后续前沿模型会继续把表征接入语言、分割和统一任务接口。</h2>
+            <span>前置：ViT / Transformer · 本模块完成</span>
+            <h2 id="dinoNextTitle">DINO 说明无标签视觉表征如何被训练；接下来可回到学习路径，或继续学习后续视觉系统模块。</h2>
         </div>
         <div class="frontier-next-actions">
-            <a href="{{ url_for('frontier_page') }}">返回前沿探索</a>
+            <a href="{{ url_for('frontier_clip_page') }}">继续下一模块</a>
             <a href="{{ url_for('learning_path_page') }}">返回学习路径</a>
         </div>
     </section>
@@ -190,5 +188,5 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-a1"></script>
-<script src="{{ url_for('static', filename='js/frontier_dino.js') }}?v=20260628-module-a1"></script>
+<script src="{{ url_for('static', filename='js/frontier_dino.js') }}?v=20260628-arch1"></script>
 {% endblock %}

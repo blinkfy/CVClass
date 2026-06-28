@@ -1,0 +1,822 @@
+.frontier-clip {
+    --frontier-algo-blue: #1d4ed8;
+    --frontier-algo-cyan: #0891b2;
+    --frontier-algo-green: #10b981;
+    --clip-soft-green: #ecfdf5;
+    --clip-line: #bfdbfe;
+}
+
+.frontier-clip .clip-pipeline,
+.frontier-clip .clip-stepper {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.clip-stage-layout {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-flow: row dense;
+    align-items: start;
+    gap: 10px;
+}
+
+.clip-stage-layout .frontier-stage-card {
+    min-height: auto;
+    transition: border-color 0.32s var(--frontier-algo-motion), box-shadow 0.32s var(--frontier-algo-motion), transform 0.32s var(--frontier-algo-motion), opacity 0.32s var(--frontier-algo-motion);
+}
+
+.clip-stage-layout[data-step="input"] .clip-input-panel,
+.clip-stage-layout[data-step="encoder"] .clip-encoder-panel,
+.clip-stage-layout[data-step="space"] .clip-space-panel,
+.clip-stage-layout[data-step="matrix"] .clip-matrix-panel,
+.clip-stage-layout[data-step="contrast"] .clip-contrast-panel,
+.clip-stage-layout[data-step="zeroshot"] .clip-output-panel {
+    border-color: #67e8f9;
+    box-shadow: 0 16px 34px rgba(8, 145, 178, 0.12);
+    transform: translateY(-2px);
+}
+
+.clip-architecture-panel .model-arch-graph {
+    gap: 7px;
+    padding: 8px;
+}
+
+.clip-architecture-panel .model-arch-lanes {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 6px 8px;
+    align-items: center;
+}
+
+.clip-architecture-panel .model-arch-lane-label {
+    justify-content: center;
+    width: auto;
+}
+
+.clip-architecture-panel .model-arch-lane {
+    padding: 6px;
+}
+
+.clip-architecture-panel .model-arch-node {
+    gap: 3px;
+    min-height: 64px;
+    padding: 7px;
+}
+
+.clip-architecture-panel .model-arch-caption {
+    padding: 6px 8px;
+}
+
+.clip-architecture-panel {
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+.clip-input-panel {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+.clip-encoder-panel {
+    grid-column: 1 / -1;
+    grid-row: 3;
+}
+
+.clip-space-panel {
+    grid-column: 1 / span 6;
+    grid-row: 4;
+}
+
+.clip-matrix-panel {
+    grid-column: 7 / span 6;
+    grid-row: 4;
+}
+
+.clip-output-panel {
+    grid-column: 1 / span 6;
+    grid-row: 5;
+}
+
+.clip-contrast-panel {
+    grid-column: 7 / span 6;
+    grid-row: 5;
+}
+
+.clip-input-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 8px;
+}
+
+.clip-card-stack {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.clip-input-card,
+.clip-prompt-card {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 6px;
+    color: #172554;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+    animation: clipCardIn 0.48s var(--frontier-algo-motion) both;
+    animation-delay: var(--clip-delay, 0ms);
+}
+
+.clip-prompt-card {
+    grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.clip-input-card:hover,
+.clip-prompt-card:hover,
+.clip-input-card.is-active,
+.clip-prompt-card.is-active {
+    border-color: #10b981;
+    background: #f0fdfa;
+}
+
+.clip-input-card strong,
+.clip-prompt-card strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.clip-prompt-card strong {
+    display: -webkit-box;
+    line-height: 1.22;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.clip-input-card small,
+.clip-prompt-card small {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+}
+
+.clip-thumb {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 9px;
+    background: #dbeafe;
+}
+
+.clip-thumb .frontier-sample-scene {
+    transform: scale(1.08);
+}
+
+.clip-prompt-card > span {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: 9px;
+    color: #0369a1;
+    background: #e0f2fe;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.clip-input-arrow {
+    align-self: center;
+    justify-self: center;
+    writing-mode: horizontal-tb;
+    color: #0891b2;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.clip-dual-encoder {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+}
+
+.clip-flow-column {
+    display: grid;
+    gap: 7px;
+    min-height: 112px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 10px;
+    background: linear-gradient(180deg, #ffffff, #eff6ff);
+}
+
+.clip-flow-column strong {
+    color: #172554;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.clip-flow-column span,
+.clip-flow-column code {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 850;
+}
+
+.clip-vector-bar {
+    display: block;
+    height: 28px;
+    border-radius: 999px;
+    background:
+        linear-gradient(90deg, #2563eb 0 18%, #67e8f9 18% 34%, #10b981 34% 52%, #dbeafe 52% 100%);
+    background-size: 180% 100%;
+    animation: clipVectorFlow 0.82s var(--frontier-algo-motion) both;
+}
+
+.clip-vector-bar--text {
+    background:
+        linear-gradient(90deg, #0891b2 0 18%, #a7f3d0 18% 34%, #2563eb 34% 52%, #dbeafe 52% 100%);
+    background-size: 180% 100%;
+}
+
+.clip-shared-space-badge {
+    display: grid;
+    min-height: 72px;
+    place-items: center;
+    border: 1px dashed #67e8f9;
+    border-radius: 16px;
+    color: #0e7490;
+    background: #ecfeff;
+    font-size: 11px;
+    font-weight: 950;
+    text-align: center;
+}
+
+.clip-space {
+    position: relative;
+    min-height: 228px;
+    margin: 8px;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background:
+        linear-gradient(90deg, rgba(219, 234, 254, 0.72) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(219, 234, 254, 0.72) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 36px 36px;
+}
+
+.clip-axis {
+    position: absolute;
+    background: rgba(8, 145, 178, 0.2);
+}
+
+.clip-axis--x {
+    left: 8%;
+    right: 8%;
+    bottom: 18%;
+    height: 1px;
+}
+
+.clip-axis--y {
+    top: 8%;
+    bottom: 8%;
+    left: 16%;
+    width: 1px;
+}
+
+.clip-space-line {
+    position: absolute;
+    left: var(--x1);
+    top: var(--y1);
+    width: max(24px, calc(var(--x2) - var(--x1)));
+    height: 2px;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+    opacity: 0.22;
+    transform-origin: left center;
+    animation: clipLineGlow 0.7s var(--frontier-algo-motion) both;
+    animation-delay: var(--clip-delay, 0ms);
+}
+
+.clip-space-line.is-active {
+    opacity: 0.72;
+}
+
+.clip-point {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    min-height: 24px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0 8px;
+    color: #172554;
+    background: #ffffff;
+    font-size: 10px;
+    font-weight: 950;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    animation: clipPointSettle 0.72s var(--frontier-algo-motion) both;
+    animation-delay: var(--clip-delay, 0ms);
+}
+
+.clip-point--image {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+
+.clip-point--text {
+    border-color: #86efac;
+    background: #ecfdf5;
+}
+
+.clip-point.is-active {
+    z-index: 3;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.16);
+}
+
+.clip-matrix-wrap {
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+}
+
+.clip-matrix-labels--top,
+.clip-matrix-grid {
+    display: grid;
+    grid-template-columns: 58px repeat(5, minmax(44px, 1fr));
+    gap: 5px;
+}
+
+.clip-matrix-labels--top strong,
+.clip-row-label {
+    display: grid;
+    place-items: center;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.clip-matrix-cell {
+    min-height: 34px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    color: #172554;
+    background:
+        linear-gradient(180deg, rgba(16, 185, 129, 0.2), rgba(37, 99, 235, 0.12)) left bottom / var(--score) 100% no-repeat,
+        #ffffff;
+    font-size: 11px;
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform 0.2s var(--frontier-algo-motion), border-color 0.2s var(--frontier-algo-motion);
+}
+
+.clip-matrix-cell:hover,
+.clip-matrix-cell.is-selected {
+    border-color: #0891b2;
+    transform: translateY(-1px);
+}
+
+.clip-matrix-cell.is-positive {
+    border-color: #86efac;
+    box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.18);
+}
+
+.clip-contrast-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+}
+
+.clip-pair-card {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 8px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    animation: clipCardIn 0.46s var(--frontier-algo-motion) both;
+    animation-delay: var(--clip-delay, 0ms);
+}
+
+.clip-pair-card span {
+    color: #10b981;
+    font-size: 9px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.clip-pair-card strong {
+    color: #172554;
+    font-size: 10px;
+    line-height: 1.35;
+    font-weight: 950;
+}
+
+.clip-pair-card small {
+    color: #64748b;
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.clip-pair-card i,
+.clip-rank-row i {
+    display: block;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dbeafe;
+}
+
+.clip-pair-card b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+}
+
+.clip-ranking-panel {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.62fr) minmax(0, 1.38fr);
+    gap: 8px;
+    padding: 8px;
+}
+
+.clip-ranking-list {
+    display: grid;
+    gap: 8px;
+}
+
+.clip-rank-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 50px;
+    gap: 6px 9px;
+    align-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 8px;
+    background: #ffffff;
+    animation: clipCardIn 0.45s var(--frontier-algo-motion) both;
+    animation-delay: var(--clip-delay, 0ms);
+}
+
+.clip-rank-row span {
+    color: #0891b2;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.clip-rank-row strong {
+    color: #172554;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.clip-rank-row em {
+    color: #0f766e;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 950;
+    text-align: right;
+}
+
+.clip-rank-row small {
+    grid-column: 2 / -1;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.clip-rank-row b {
+    display: block;
+    width: var(--rank-width);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+    animation: clipRankGrow 0.72s var(--frontier-algo-motion) both;
+}
+
+.clip-rank-row.is-top {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.clip-real-model-panel {
+    display: grid;
+    gap: 10px;
+    border: 1px solid #bae6fd;
+    border-radius: 14px;
+    padding: 12px;
+    background: linear-gradient(180deg, #f8fbff, #ecfeff);
+}
+
+.clip-real-model-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 54px;
+    align-items: center;
+    gap: 10px;
+}
+
+.clip-real-model-head div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.clip-real-model-head strong {
+    color: #172554;
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.clip-real-model-head span,
+.clip-real-model-panel p {
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.45;
+    font-weight: 850;
+}
+
+.clip-real-model-head img {
+    width: 54px;
+    height: 54px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #ffffff;
+}
+
+.clip-real-model-panel p {
+    margin: 0;
+}
+
+.clip-real-model-panel p[data-phase="error"] {
+    color: #b91c1c;
+}
+
+.clip-real-model-panel p[data-phase="running"],
+.clip-real-model-panel p[data-phase="loading"] {
+    color: #0f766e;
+}
+
+.clip-real-model-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.clip-real-model-actions button {
+    min-height: 32px;
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    color: #172554;
+    background: #ffffff;
+    font-size: 11px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.clip-real-model-actions button:last-child {
+    border-color: #10b981;
+    color: #065f46;
+    background: #ecfdf5;
+}
+
+.clip-real-model-actions button:disabled {
+    cursor: wait;
+    opacity: 0.62;
+}
+
+.clip-real-model-results {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.clip-real-model-results li {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 5px 8px;
+    align-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 7px;
+    color: #172554;
+    background: #ffffff;
+}
+
+.clip-real-model-results li.is-empty {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.clip-real-model-results li.is-top {
+    border-color: #10b981;
+    background: #f0fdfa;
+}
+
+.clip-real-model-results span {
+    color: #0891b2;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.clip-real-model-results strong {
+    grid-column: 2;
+    color: #172554;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.clip-real-model-results small {
+    grid-column: 2;
+    min-width: 0;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.clip-real-model-results i {
+    display: block;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dbeafe;
+}
+
+.clip-real-model-results b {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+}
+
+.frontier-sample-scene[data-scene="flower"] {
+    background: linear-gradient(180deg, #dbeafe 0 44%, #dcfce7 44% 100%);
+}
+
+.frontier-sample-scene[data-scene="flower"] .f-scene-building {
+    display: none;
+}
+
+.frontier-sample-scene[data-scene="flower"] .f-scene-ground {
+    inset: 48% 0 0;
+    clip-path: none;
+    background: #bbf7d0;
+}
+
+.frontier-sample-scene[data-scene="flower"] .f-scene-subject {
+    left: 38%;
+    bottom: 27%;
+    width: 24%;
+    height: 24%;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 50% 50%, #facc15 0 18%, transparent 19%),
+        radial-gradient(circle at 20% 25%, #fb7185 0 20%, transparent 21%),
+        radial-gradient(circle at 80% 25%, #f472b6 0 20%, transparent 21%),
+        radial-gradient(circle at 25% 78%, #fb7185 0 20%, transparent 21%),
+        radial-gradient(circle at 76% 78%, #f472b6 0 20%, transparent 21%);
+    box-shadow: 0 34px 0 -11px #16a34a;
+}
+
+.frontier-sample-scene[data-scene="food"] {
+    background: linear-gradient(180deg, #f8fafc 0 48%, #e2e8f0 48% 100%);
+}
+
+.frontier-sample-scene[data-scene="food"] .f-scene-building,
+.frontier-sample-scene[data-scene="food"] .f-scene-sky {
+    display: none;
+}
+
+.frontier-sample-scene[data-scene="food"] .f-scene-ground {
+    inset: 0;
+    clip-path: none;
+    background:
+        linear-gradient(90deg, rgba(148, 163, 184, 0.22) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(148, 163, 184, 0.22) 1px, transparent 1px),
+        #f1f5f9;
+    background-size: 28px 28px;
+}
+
+.frontier-sample-scene[data-scene="food"] .f-scene-subject {
+    left: 26%;
+    bottom: 26%;
+    width: 48%;
+    height: 48%;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 39% 42%, #ef4444 0 9%, transparent 10%),
+        radial-gradient(circle at 58% 45%, #22c55e 0 9%, transparent 10%),
+        radial-gradient(circle at 47% 62%, #f59e0b 0 11%, transparent 12%),
+        radial-gradient(circle, #ffffff 0 56%, #cbd5e1 57% 66%, transparent 67%);
+    box-shadow: 0 15px 24px rgba(15, 23, 42, 0.18);
+}
+
+@keyframes clipCardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes clipVectorFlow {
+    from { opacity: 0.35; background-position: 100% 0; transform: scaleX(0.7); }
+    to { opacity: 1; background-position: 0 0; transform: scaleX(1); }
+}
+
+@keyframes clipPointSettle {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes clipLineGlow {
+    from { opacity: 0; transform: scaleX(0.2); }
+    to { opacity: 0.52; transform: scaleX(1); }
+}
+
+@keyframes clipRankGrow {
+    from { width: 0; }
+    to { width: var(--rank-width); }
+}
+
+@media (max-width: 1120px) {
+    .clip-stage-layout,
+    .clip-ranking-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-architecture-panel,
+    .clip-input-panel,
+    .clip-encoder-panel,
+    .clip-space-panel,
+    .clip-matrix-panel,
+    .clip-contrast-panel,
+    .clip-output-panel {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .clip-contrast-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .frontier-clip .clip-pipeline,
+    .frontier-clip .clip-stepper,
+    .clip-contrast-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-input-grid,
+    .clip-dual-encoder {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-card-stack,
+    .clip-contrast-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-input-arrow {
+        writing-mode: horizontal-tb;
+    }
+
+    .clip-matrix-labels--top,
+    .clip-matrix-grid {
+        grid-template-columns: 48px repeat(5, minmax(38px, 1fr));
+    }
+
+    .clip-real-model-actions,
+    .clip-real-model-results li {
+        grid-template-columns: 1fr;
+    }
+
+    .clip-real-model-results strong {
+        grid-column: auto;
+    }
+
+    .clip-real-model-results small {
+        grid-column: auto;
+        white-space: normal;
+    }
+}

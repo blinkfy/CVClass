@@ -1,0 +1,22 @@
+{
+  "modalities": [
+    {"id": "image", "label": "Image", "encoder": "Image Encoder", "embedding": "E_img", "color": "#2563eb"},
+    {"id": "text", "label": "Text", "encoder": "Text Encoder", "embedding": "E_text", "color": "#0891b2"},
+    {"id": "ocr", "label": "OCR", "encoder": "OCR Encoder", "embedding": "E_ocr", "color": "#10b981"},
+    {"id": "audio", "label": "Audio", "encoder": "Audio Encoder", "embedding": "E_audio", "color": "#f59e0b"},
+    {"id": "layout", "label": "Layout", "encoder": "Layout Encoder", "embedding": "E_layout", "color": "#7c3aed"}
+  ],
+  "fusionModes": {
+    "early": {"label": "Early Fusion", "summary": "所有 token 先合并，再进入统一编码器。"},
+    "late": {"label": "Late Fusion", "summary": "各模态先独立编码，最后融合分数或 logits。"},
+    "cross": {"label": "Cross Attention", "summary": "一个模态作为 Query，另一个模态作为 Key/Value。"},
+    "unified": {"label": "Unified Token", "summary": "不同模态被组织成统一 token 序列。"}
+  },
+  "tasks": {
+    "retrieval": {"label": "图文检索", "output": "Top-k matched text/image", "metric": "Recall@K"},
+    "vqa": {"label": "视觉问答", "output": "answer tokens: [图中] [有] [车辆] [和] [道路]", "metric": "Accuracy"},
+    "caption": {"label": "图像描述", "output": "caption: 一张包含道路、文字和场景布局的图像。", "metric": "BLEU / CIDEr"},
+    "grounding": {"label": "区域定位", "output": "bbox / mask highlight: target region", "metric": "Grounding IoU"},
+    "classification": {"label": "多模态分类", "output": "label: urban document scene · score 0.86", "metric": "Accuracy"}
+  }
+}

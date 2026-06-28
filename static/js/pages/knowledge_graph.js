@@ -56,6 +56,9 @@
         "/feature-detection/matching": "特征匹配",
         "/feature-detection/panorama": "图像拼接与全景拍照",
         "/frontier": "CV 前沿探索",
+        "/frontier/clip": "CLIP 图文对齐",
+        "/frontier/vlm": "VLM 视觉语言模型",
+        "/frontier/multimodal": "多模态理解",
         "/frontier/vision-banana": "Vision Banana 案例",
     };
     const COMPLETED_NODE_ROUTES = {
@@ -76,6 +79,10 @@
         视觉前沿探索: "/frontier",
         前沿探索: "/frontier",
         统一视觉模型: "/frontier",
+        CLIP: "/frontier/clip",
+        VLM: "/frontier/vlm",
+        多模态理解: "/frontier/multimodal",
+        多模态视觉模型: "/frontier/multimodal",
         VisionBanana: "/frontier/vision-banana",
 
         卷积与滤波: "/convolution",

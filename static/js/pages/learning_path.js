@@ -65,7 +65,10 @@
         "level-27-disparity-depth",
         "level-29-3d-reconstruction",
         "level-31-vit-transformer",
+        "level-32-clip",
         "level-34-sam",
+        "level-37-vlm",
+        "level-38-multimodal",
         "level-39-vision-banana",
         "level-40-unified-vision",
     ]);
@@ -97,12 +100,14 @@
         "level-28-epipolar": ["multiview-reconstruction"],
         "level-29-3d-reconstruction": ["multiview-reconstruction"],
         "level-30-triangulation": ["multiview-reconstruction"],
-        "level-31-vit-transformer": ["frontier"],
-        "level-32-clip": ["frontier"],
-        "level-33-dino": ["frontier"],
-        "level-34-sam": ["frontier"],
-        "level-39-vision-banana": ["frontier"],
-        "level-40-unified-vision": ["frontier"],
+        "level-31-vit-transformer": ["vision-transformer"],
+        "level-32-clip": ["frontier-clip"],
+        "level-33-dino": ["vision-transformer"],
+        "level-34-sam": ["frontier-sam"],
+        "level-37-vlm": ["frontier-vlm"],
+        "level-38-multimodal": ["frontier-multimodal"],
+        "level-39-vision-banana": ["frontier-vision-banana"],
+        "level-40-unified-vision": ["frontier-unified-vision"],
     };
 
     const state = {
@@ -239,10 +244,19 @@
         return Math.max(0, Math.floor(listWidth - metaWidth - gap - cardPaddingX));
     }
 
+    function orderedLevels(world) {
+        if (!Array.isArray(world.pathOrder) || !world.pathOrder.length) return world.levels;
+        const byId = new Map(world.levels.map((level) => [level.id, level]));
+        const ordered = world.pathOrder.map((id) => byId.get(id)).filter(Boolean);
+        const used = new Set(ordered.map((level) => level.id));
+        return ordered.concat(world.levels.filter((level) => !used.has(level.id)));
+    }
+
     function getWorldMapSize(world) {
+        const levels = orderedLevels(world);
         const viewportWidth = state.mapViewportWidths[world.id] || estimateMapViewportWidth();
-        const minWidth = Math.max(720, world.levels.length * 70 + 84);
-        const maxWidth = Math.min(1500, Math.max(1180, world.levels.length * 132 + 220));
+        const minWidth = Math.max(720, levels.length * 70 + 84);
+        const maxWidth = Math.min(1500, Math.max(1180, levels.length * 132 + 220));
         const overflowReserve = window.matchMedia("(max-width: 820px)").matches ? 14 : 32;
         const fittedWidth = Math.min(maxWidth, Math.max(minWidth, viewportWidth - overflowReserve));
 
@@ -281,6 +295,44 @@
         return { x, y: wave[index % wave.length] };
     }
 
+    function getWorld04LevelPoint(index, count, size) {
+        const startX = 64;
+        const endX = size.width - 88;
+        const span = Math.max(endX - startX, 1);
+        const x = startX + (span * index) / Math.max(count - 1, 1);
+        return {
+            x,
+            y: index % 2 === 0 ? 188 : 76,
+        };
+    }
+
+    function applyInitialDeepLink() {
+        const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+        if (!hash) return "";
+
+        if (hash === "path-frontier" || hash === "frontier" || hash === "world-04") {
+            state.focusedWorldId = "world-04";
+            state.selectedLevelId = "level-32-clip";
+            return "world-04";
+        }
+
+        const levelMatch = allLevels().find((item) => item.level.id === hash);
+        if (levelMatch) {
+            state.focusedWorldId = levelMatch.world.id;
+            state.selectedLevelId = levelMatch.level.id;
+            return levelMatch.world.id;
+        }
+
+        return "";
+    }
+
+    function scrollToInitialDeepLink(worldId) {
+        if (!worldId) return;
+        window.requestAnimationFrame(() => {
+            document.getElementById(worldId)?.scrollIntoView({ behavior: "auto", block: "center" });
+        });
+    }
+
     function buildSmoothSegmentPath(points, index) {
         const previous = points[Math.max(index - 1, 0)];
         const from = points[index];
@@ -307,15 +359,16 @@
     }
 
     function renderBranchSegments(world, learnedModules, points) {
-        const branchPairs = world.levels.length >= 10
+        const levels = orderedLevels(world);
+        const branchPairs = levels.length >= 10
             ? [[1, 3], [4, 6], [7, 9]]
             : [[1, 3], [4, 6]];
 
         return branchPairs
             .filter(([fromIndex, toIndex]) => points[fromIndex] && points[toIndex])
             .map(([fromIndex, toIndex], branchIndex) => {
-                const fromLevel = world.levels[fromIndex];
-                const toLevel = world.levels[toIndex];
+                const fromLevel = levels[fromIndex];
+                const toLevel = levels[toIndex];
                 const planned = effectiveStatus(fromLevel, learnedModules) === "planned"
                     || effectiveStatus(toLevel, learnedModules) === "planned";
                 const bright = fromLevel.id === state.selectedLevelId || toLevel.id === state.selectedLevelId;
@@ -329,8 +382,9 @@
     }
 
     function renderPathSegments(world, learnedModules, points) {
-        return world.levels.slice(1).map((level, index) => {
-            const previous = world.levels[index];
+        const levels = orderedLevels(world);
+        return levels.slice(1).map((level, index) => {
+            const previous = levels[index];
             const status = effectiveStatus(level, learnedModules);
             const previousStatus = effectiveStatus(previous, learnedModules);
             const planned = status === "planned" || previousStatus === "planned";
@@ -357,18 +411,18 @@
     function renderWorlds() {
         const learnedModules = readLearnedModules();
         el.worldList.innerHTML = state.data.worlds.map((world, worldIndex) => {
+            const levels = orderedLevels(world);
             const completed = world.levels.filter((level) => effectiveStatus(level, learnedModules) === "completed").length;
             const implemented = world.levels.filter((level) => level.route).length;
             const progress = Number.isFinite(world.progress) ? world.progress : Math.round((implemented / world.levels.length) * 100);
 
             const mapSize = getWorldMapSize(world);
-            const points = world.levels.map((level, index) => {
-                const point = getLevelPoint(index, world.levels.length, mapSize);
-                if (world.id === "world-04" && level.id === "level-33-dino") point.y += 54;
-                if (world.id === "world-04" && level.id === "level-34-sam") point.y -= 26;
-                return point;
-            });
-            const levelHtml = world.levels.map((level, index) => {
+            const points = levels.map((level, index) => (
+                world.id === "world-04"
+                    ? getWorld04LevelPoint(index, levels.length, mapSize)
+                    : getLevelPoint(index, levels.length, mapSize)
+            ));
+            const levelHtml = levels.map((level, index) => {
                 const status = effectiveStatus(level, learnedModules);
                 const meta = getStatusMeta(status);
                 const selected = state.selectedLevelId === level.id;
@@ -557,11 +611,13 @@
             if (!response.ok) throw new Error(`Quest map data failed: ${response.status}`);
             state.data = await response.json();
             state.selectedLevelId = state.data.defaultLevelId || allLevels()[0]?.level.id || "";
+            const initialWorldId = applyInitialDeepLink();
             renderStats();
             renderOverviewRoute();
             renderWorlds();
             renderPanel();
             bindGlobalEvents();
+            scrollToInitialDeepLink(initialWorldId);
         } catch (error) {
             console.error(error);
             el.worldList.innerHTML = "<div class=\"cv-quest-error\">学习路径数据加载失败，请刷新页面重试。</div>";

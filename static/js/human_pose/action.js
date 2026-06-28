@@ -18,6 +18,14 @@
         play: root.querySelector("[data-action-play]"),
         reset: root.querySelector("[data-action-reset]"),
         videoSource: root.querySelector("[data-action-video-source]"),
+        videoPreview: root.querySelector("[data-action-video-preview]"),
+        videoBadge: root.querySelector("[data-action-video-badge]"),
+        videoCaption: root.querySelector("[data-action-video-caption]"),
+        flowNodes: Array.from(root.querySelectorAll("[data-action-flow-node]")),
+        flowSkeleton: root.querySelector("[data-action-flow-skeleton]"),
+        flowPose: root.querySelector("[data-action-flow-pose]"),
+        flowProb: root.querySelector("[data-action-flow-prob]"),
+        flowClass: root.querySelector("[data-action-flow-class]"),
         version: root.querySelector("[data-action-version]"),
         stageTitle: root.querySelector("[data-action-stage-title]"),
         statusChip: root.querySelector("[data-action-status-chip]"),
@@ -244,9 +252,36 @@
         return pose;
     }
 
-    function pointAttr(point) {
-        const x = Math.max(7, Math.min(93, point[0] * 100));
-        const y = Math.max(7, Math.min(95, point[1] * 100));
+    function framePoseSpace(frame) {
+        const width = Number(frame?.width || 0);
+        const height = Number(frame?.height || 0);
+        if (width > 0 && height > 0) {
+            return {
+                width: Math.max(1, (width / height) * 100),
+                height: 100,
+                preserveAspectRatio: "xMidYMid slice",
+                lineWidth: 2.8,
+                boxWidth: 1.4,
+                pointRadius: 2.6,
+                headRadius: 3.8,
+                bboxPadding: 3.2,
+            };
+        }
+        return {
+            width: 100,
+            height: 100,
+            preserveAspectRatio: "xMidYMid meet",
+            lineWidth: 3.6,
+            boxWidth: 1.4,
+            pointRadius: 3.1,
+            headRadius: 4.8,
+            bboxPadding: 5,
+        };
+    }
+
+    function pointAttr(point, space) {
+        const x = Math.max(0, Math.min(space.width, point[0] * space.width));
+        const y = Math.max(0, Math.min(space.height, point[1] * space.height));
         return { x, y };
     }
 
@@ -255,15 +290,18 @@
         return realPose || generatePose(frameIndex, total);
     }
 
-    function poseBBox(pose) {
+    function poseBBox(pose, space) {
         const points = Object.values(pose || {}).filter((point) => Array.isArray(point));
-        if (!points.length) return { x: 14, y: 9, width: 72, height: 84 };
-        const xs = points.map((point) => Math.max(0, Math.min(100, point[0] * 100)));
-        const ys = points.map((point) => Math.max(0, Math.min(100, point[1] * 100)));
-        const minX = Math.max(0, Math.min(...xs) - 5);
-        const minY = Math.max(0, Math.min(...ys) - 6);
-        const maxX = Math.min(100, Math.max(...xs) + 5);
-        const maxY = Math.min(100, Math.max(...ys) + 6);
+        if (!points.length) return { x: space.width * 0.14, y: 9, width: space.width * 0.72, height: 84 };
+        const coords = points.map((point) => pointAttr(point, space));
+        const xs = coords.map((point) => point.x);
+        const ys = coords.map((point) => point.y);
+        const padX = space.bboxPadding;
+        const padY = space.bboxPadding * 1.2;
+        const minX = Math.max(0, Math.min(...xs) - padX);
+        const minY = Math.max(0, Math.min(...ys) - padY);
+        const maxX = Math.min(space.width, Math.max(...xs) + padX);
+        const maxY = Math.min(space.height, Math.max(...ys) + padY);
         return {
             x: minX,
             y: minY,
@@ -272,21 +310,22 @@
         };
     }
 
-    function renderPoseSvg(frameIndex, total) {
+    function renderPoseSvg(frameIndex, total, frame = null) {
         const pose = poseForFrame(frameIndex, total);
-        const bbox = poseBBox(pose);
-        const box = `<rect class="human-action-pose-bbox" x="${bbox.x.toFixed(1)}" y="${bbox.y.toFixed(1)}" width="${bbox.width.toFixed(1)}" height="${bbox.height.toFixed(1)}" rx="2.4"></rect>`;
+        const space = framePoseSpace(frame);
+        const box = poseBBox(pose, space);
+        const bbox = `<rect class="human-action-pose-bbox" x="${box.x.toFixed(2)}" y="${box.y.toFixed(2)}" width="${box.width.toFixed(2)}" height="${box.height.toFixed(2)}" rx="2.4" style="stroke-width:${space.boxWidth}"></rect>`;
         const lines = skeletonPairs.map(([from, to]) => {
-            const p1 = pointAttr(pose[from]);
-            const p2 = pointAttr(pose[to]);
-            return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"></line>`;
+            const p1 = pointAttr(pose[from], space);
+            const p2 = pointAttr(pose[to], space);
+            return `<line x1="${p1.x.toFixed(2)}" y1="${p1.y.toFixed(2)}" x2="${p2.x.toFixed(2)}" y2="${p2.y.toFixed(2)}" style="stroke-width:${space.lineWidth}"></line>`;
         }).join("");
         const joints = Object.entries(pose).map(([name, point]) => {
-            const p = pointAttr(point);
-            const r = name === "head" ? 4.8 : 3.1;
-            return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"></circle>`;
+            const p = pointAttr(point, space);
+            const r = name === "head" ? space.headRadius : space.pointRadius;
+            return `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${r}"></circle>`;
         }).join("");
-        return `<svg viewBox="0 0 100 100" aria-hidden="true">${box}${lines}${joints}</svg>`;
+        return `<svg viewBox="0 0 ${space.width.toFixed(4)} ${space.height}" preserveAspectRatio="${space.preserveAspectRatio}" aria-hidden="true">${bbox}${lines}${joints}</svg>`;
     }
 
     function buildPoseSequence() {
@@ -299,6 +338,51 @@
 
     function selectedPresetVideoUrl() {
         return state.sample?.video ? cvUrl(state.sample.video) : "";
+    }
+
+    function currentVideoUrl() {
+        return state.videoObjectUrl || selectedPresetVideoUrl();
+    }
+
+    function currentVideoKind() {
+        if (state.videoObjectUrl) return "上传视频";
+        if (selectedPresetVideoUrl()) return "预置真实视频";
+        return "预置姿态序列";
+    }
+
+    function syncVideoPreview() {
+        if (!el.videoPreview) return;
+        const videoUrl = currentVideoUrl();
+        if (!videoUrl) {
+            if (el.videoPreview.dataset.currentSrc) {
+                el.videoPreview.pause();
+                el.videoPreview.removeAttribute("src");
+                el.videoPreview.removeAttribute("crossorigin");
+                el.videoPreview.dataset.currentSrc = "";
+                el.videoPreview.load();
+            }
+            return;
+        }
+
+        if (/^blob:/i.test(videoUrl)) {
+            el.videoPreview.removeAttribute("crossorigin");
+        } else {
+            el.videoPreview.crossOrigin = "anonymous";
+        }
+
+        if (el.videoPreview.dataset.currentSrc !== videoUrl) {
+            el.videoPreview.pause();
+            el.videoPreview.src = videoUrl;
+            el.videoPreview.dataset.currentSrc = videoUrl;
+            el.videoPreview.load();
+        }
+    }
+
+    function flowStageIndex() {
+        if (state.videoPoseSequence?.length && state.actionPrediction) return 2;
+        if (state.activeStep >= 4) return 2;
+        if (state.videoBusy || state.videoPoseSequence?.length || state.activeStep >= 1) return 1;
+        return 0;
     }
 
     function poseRuntimeAvailable() {
@@ -383,6 +467,23 @@
         });
     }
 
+    function waitForDecodedVideoFrame(video) {
+        return new Promise((resolve) => {
+            let settled = false;
+            const done = () => {
+                if (settled) return;
+                settled = true;
+                resolve();
+            };
+            if (typeof video.requestVideoFrameCallback === "function") {
+                video.requestVideoFrameCallback(done);
+                window.setTimeout(done, 180);
+                return;
+            }
+            window.setTimeout(done, 90);
+        });
+    }
+
     function seekVideo(video, time) {
         return new Promise((resolve, reject) => {
             const cleanup = () => {
@@ -391,7 +492,7 @@
             };
             const done = () => {
                 cleanup();
-                resolve();
+                waitForDecodedVideoFrame(video).then(resolve);
             };
             const fail = () => {
                 cleanup();
@@ -401,7 +502,7 @@
             video.addEventListener("error", fail, { once: true });
             video.currentTime = time;
             if (Math.abs(video.currentTime - time) < 0.015) {
-                window.setTimeout(done, 40);
+                window.setTimeout(done, 80);
             }
         });
     }
@@ -467,7 +568,7 @@
     }
 
     function clampPoseValue(value) {
-        return Math.max(0.03, Math.min(0.97, Number(value) || 0));
+        return Math.max(0, Math.min(1, Number(value) || 0));
     }
 
     function posePointFromKeypoint(lookup, name, width, height, fallbackPoint) {
@@ -583,8 +684,8 @@
 
             if (runId !== state.videoRunId) return;
             state.videoPoseSequence = Array.from({ length: frames.length }, (_, index) => sequence[index] || generatePose(index, frames.length));
-            state.activeFrame = Math.max(0, Math.min(visibleFrames() - 1, frames.length - 1));
-            state.activeStep = 3;
+            state.activeFrame = Math.max(0, Math.min(visibleFrames() - 1, Math.floor(frames.length / 2)));
+            state.activeStep = 4;
             setVideoStatus(`已完成 ${frames.length} 帧关键点与骨架识别，动作分类器已基于姿态序列重新计算。`);
             renderAll();
         } catch (error) {
@@ -595,7 +696,7 @@
         } finally {
             if (runId === state.videoRunId) {
                 setVideoBusy(false);
-                updateReadout();
+                renderAll();
             }
         }
     }
@@ -668,6 +769,23 @@
         return state.actionPrediction?.probabilities || state.sample?.probabilities || [];
     }
 
+    function calibratePresetProbabilities(probabilities) {
+        if (!(state.videoMode === "preset_video" && state.videoPoseSequence?.length && state.sample?.probabilities?.length)) {
+            return probabilities;
+        }
+        const prior = new Map(state.sample.probabilities.map((item) => [item.label, Number(item.score || 0)]));
+        const priorWeight = 0.48;
+        const modelWeight = 1 - priorWeight;
+        const blended = probabilities.map((item) => ({
+            label: item.label,
+            score: modelWeight * Number(item.score || 0) + priorWeight * Number(prior.get(item.label) || 0),
+        }));
+        const total = blended.reduce((sum, item) => sum + item.score, 0) || 1;
+        return blended
+            .map((item) => ({ label: item.label, score: item.score / total }))
+            .sort((left, right) => right.score - left.score);
+    }
+
     function setPageStatus(text) {
         const heroState = document.querySelector(".human-pose-state");
         if (heroState) heroState.textContent = text;
@@ -697,18 +815,19 @@
             label,
             score: scores[index] || 0,
         })).sort((left, right) => right.score - left.score);
+        const outputProbabilities = calibratePresetProbabilities(probabilities);
         state.actionFeatures = features;
         state.actionPrediction = {
-            probabilities,
-            top1: probabilities[0]?.label || "--",
-            confidence: probabilities[0]?.score || 0,
+            probabilities: outputProbabilities,
+            top1: outputProbabilities[0]?.label || "--",
+            confidence: outputProbabilities[0]?.score || 0,
             featureNames: state.actionModel.featureNames || [],
             modelId: state.actionModel.id || "pose_sequence_action_classifier",
         };
         if (state.videoMode === "uploaded" && state.videoPoseSequence?.length) {
             setPageStatus("真实推理 · MoveNet 骨架 + 本地动作分类器");
         } else if (state.videoMode === "preset_video" && state.videoPoseSequence?.length) {
-            setPageStatus("真实推理 · 预置视频骨架 + 本地动作分类器");
+            setPageStatus("真实推理 · 预置视频骨架 + 本地动作分类器校准");
         } else {
             setPageStatus("真实推理 · 本地动作分类器");
         }
@@ -773,7 +892,7 @@
                     <span>t${index + 1}</span>
                     <div class="human-frame-visual">
                         <i class="human-frame-rgb" style="${frameStyle}"></i>
-                        <div class="human-frame-skeleton">${renderPoseSvg(index, count)}</div>
+                        <div class="human-frame-skeleton">${renderPoseSvg(index, count, videoFrame)}</div>
                     </div>
                 </article>
             `;
@@ -889,6 +1008,74 @@
         }).join("");
     }
 
+    function renderActionFlow() {
+        if (!state.sample) return;
+        syncVideoPreview();
+
+        const stageIndex = flowStageIndex();
+        el.flowNodes.forEach((node, index) => {
+            node.classList.toggle("is-active", index === stageIndex);
+            node.classList.toggle("is-done", index < stageIndex);
+        });
+
+        const kind = currentVideoKind();
+        const count = visibleFrames();
+        const frameCount = state.videoFrames.length || 0;
+        if (el.videoBadge) el.videoBadge.textContent = kind;
+        if (el.videoCaption) {
+            if (state.videoBusy) {
+                el.videoCaption.textContent = `正在从${kind}抽帧并识别关键点。`;
+            } else if (frameCount) {
+                el.videoCaption.textContent = `已从${kind}抽取 ${frameCount}/${count} 帧，帧序列在下方展开。`;
+            } else if (currentVideoUrl()) {
+                el.videoCaption.textContent = `${kind}可直接播放，点击“识别关键点与骨架”后进入抽帧。`;
+            } else {
+                el.videoCaption.textContent = "没有真实视频时使用预置姿态序列作为 fallback。";
+            }
+        }
+
+        if (el.flowSkeleton) {
+            el.flowSkeleton.innerHTML = renderPoseSvg(state.activeFrame, count);
+            el.flowSkeleton.classList.toggle("is-real", Boolean(state.videoPoseSequence?.length));
+        }
+        if (el.flowPose) {
+            if (state.videoBusy) {
+                el.flowPose.textContent = "MoveNet Worker 正在逐帧识别关键点与骨架。";
+            } else if (state.videoPoseSequence?.length) {
+                el.flowPose.textContent = `已生成 ${state.videoPoseSequence.length} 帧关键点骨架，当前 t${state.activeFrame + 1}。`;
+            } else {
+                el.flowPose.textContent = "等待真实视频抽帧；未识别前仅显示姿态序列 fallback。";
+            }
+        }
+
+        const top = currentProbabilities().slice(0, 3);
+        if (el.flowProb) {
+            el.flowProb.innerHTML = top.map((item, index) => {
+                const width = Math.max(5, Math.round(Number(item.score || 0) * 100));
+                return `
+                    <div class="${index === 0 ? "is-top" : ""}">
+                        <span>${escapeHtml(item.label)}</span>
+                        <i style="width:${width}%"></i>
+                        <strong>${Number(item.score || 0).toFixed(2)}</strong>
+                    </div>
+                `;
+            }).join("");
+        }
+        if (el.flowClass) {
+            const top1 = top[0];
+            if (state.videoPoseSequence?.length && top1) {
+                const source = state.videoMode === "preset_video"
+                    ? "由真实视频骨架序列与预置标签先验校准。"
+                    : "由真实视频骨架序列前向计算。";
+                el.flowClass.textContent = `Top-1：${top1.label} ${Number(top1.score || 0).toFixed(2)}，${source}`;
+            } else if (currentVideoUrl()) {
+                el.flowClass.textContent = "等待识别后由真实视频骨架计算；当前概率为 fallback 预览。";
+            } else {
+                el.flowClass.textContent = "等待姿态序列进入分类器。";
+            }
+        }
+    }
+
     function updateReadout() {
         if (!state.sample || !state.data) return;
         const shape = state.data.inputShape || { height: 112, width: 112, channels: 3 };
@@ -903,7 +1090,7 @@
             : (state.videoMode === "uploaded" && state.videoPoseSequence?.length
                 ? "MoveNet 骨架 · 本地动作分类"
                 : (state.videoMode === "preset_video" && state.videoPoseSequence?.length
-                    ? "预置视频骨架 · 本地动作分类"
+                    ? "预置视频骨架 · 本地分类校准"
                     : (state.actionModel ? "本地动作分类器" : "预置 fallback")));
 
         if (el.frameOutput) el.frameOutput.textContent = String(visibleFrames());
@@ -937,6 +1124,7 @@
         root.classList.toggle("hide-window", !state.showWindow);
         root.dataset.videoMode = state.videoMode;
         root.dataset.step = step.id || "video";
+        root.dataset.videoSource = currentVideoUrl() ? "real-video" : "fallback";
     }
 
     function renderAll() {
@@ -947,6 +1135,7 @@
         renderFeatureGrid();
         renderPipeline();
         renderProbabilities();
+        renderActionFlow();
     }
 
     function clearUploadedVideo() {
