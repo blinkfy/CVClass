@@ -29,66 +29,66 @@
     const STEPS = [
         {
             id: "input",
-            label: "Image/Text Input",
+            label: "图像/文本输入",
             short: "图像 + prompt",
             note: "图像卡与文本 prompt 卡作为双塔编码器输入。",
-            input: "5 images + 5 text prompts",
-            middle: "raw image cards / prompt strings",
+            input: "5 张图像 + 5 条文本 prompts",
+            middle: "原始图像卡片 / prompt 字符串",
             compute: "构造图像批次和文本批次",
-            output: "image batch, text batch",
+            output: "图像批次、文本批次",
             summary: "CLIP 的输入不是固定分类头，而是一组图像和一组候选文本。",
         },
         {
             id: "encoder",
-            label: "Dual Encoder",
+            label: "双塔编码器",
             short: "图像塔 / 文本塔",
             note: "图像进入 Image Encoder，文本进入 Text Encoder。",
             input: "image batch, text batch",
-            middle: "Image Encoder + Text Encoder",
+            middle: "图像编码器 + 文本编码器",
             compute: "encoder(image), encoder(text)",
-            output: "image vectors + text vectors",
+            output: "图像向量 + 文本向量",
             summary: "双塔结构让图像和文本可以分别编码，再在同一向量空间比较。",
         },
         {
             id: "space",
-            label: "Embedding Space",
+            label: "Embedding 空间",
             short: "共享语义空间",
             note: "匹配的图文点靠近，不匹配的点远离。",
-            input: "normalized image / text embeddings",
-            middle: "2D projected semantic space",
-            compute: "normalize + projection for visualization",
-            output: "aligned image/text points",
+            input: "归一化图像 / 文本 embeddings",
+            middle: "二维语义空间投影",
+            compute: "归一化 + 可视化投影",
+            output: "对齐后的图文点",
             summary: "二维散点是教学投影；相似度矩阵使用 512 维预设向量真实计算。",
         },
         {
             id: "matrix",
-            label: "Similarity Matrix",
+            label: "相似度矩阵",
             short: "image × text",
             note: "点击矩阵 cell 可同步高亮对应图像、文本和 cosine similarity。",
             input: "image embeddings I, text embeddings T",
             middle: "I × T score matrix",
             compute: "sim(i,t)= i·t / (||i|| ||t||)",
-            output: "cosine similarity matrix",
+            output: "cosine 相似度矩阵",
             summary: "对角线高表示正确图文配对相似度更高；非对角线是负样本对比。",
         },
         {
             id: "contrast",
-            label: "Contrastive Alignment",
+            label: "对比对齐",
             short: "正样本靠近",
             note: "正确匹配对角线发光，错误匹配淡化。",
-            input: "positive pairs + negative pairs",
-            middle: "diagonal positives, off-diagonal negatives",
+            input: "正样本对 + 负样本对",
+            middle: "对角线正样本、非对角线负样本",
             compute: "拉近正样本、推远负样本",
-            output: "aligned semantic neighborhoods",
+            output: "对齐后的语义邻域",
             summary: "对比学习的目标是让匹配图文对分数高于其它候选文本。",
         },
         {
             id: "zeroshot",
-            label: "Zero-shot Output",
-            short: "Top-k label",
+            label: "Zero-shot 输出",
+            short: "Top-K 标签",
             note: "为一张图像构造多个 prompt，计算相似度并输出 Top-k。",
-            input: "one image + candidate text prompts",
-            middle: "cosine scores over text labels",
+            input: "一张图像 + 候选文本 prompts",
+            middle: "文本标签的 cosine 分数",
             compute: "sort(sim(image, prompt_k))",
             output: "Top-1 / Top-2 / Top-3",
             summary: "zero-shot 分类本质上是图像与开放文本标签之间的相似度排序。",
@@ -228,11 +228,11 @@
 
     function displayLabel() {
         return {
-            space: "Embedding Space",
-            matrix: "Similarity Matrix",
-            ranking: "Zero-shot Ranking",
-            pairs: "Contrastive Pairs",
-        }[state.display] || "Embedding Space";
+            space: "Embedding 空间",
+            matrix: "相似度矩阵",
+            ranking: "Zero-shot 排名",
+            pairs: "对比样本",
+        }[state.display] || "Embedding 空间";
     }
 
     function hashString(value) {
@@ -552,7 +552,7 @@
                         <button type="button" class="clip-input-card ${active ? "is-active" : ""}" data-clip-image="${escapeHtml(sample.id)}" style="--clip-delay:${index * 55}ms">
                             <span class="clip-thumb">${sceneMarkup(sample)}</span>
                             <strong>${escapeHtml(sample.title)}</strong>
-                            <small>Image Encoder input</small>
+                            <small>图像编码器输入</small>
                         </button>
                     `;
                 }).join("")}
@@ -569,7 +569,7 @@
                         <button type="button" class="clip-prompt-card ${active ? "is-active" : ""}" data-clip-text="${escapeHtml(sample.id)}" style="--clip-delay:${index * 55}ms">
                             <span>T${index + 1}</span>
                             <strong>${escapeHtml(promptFor(sample))}</strong>
-                            <small>Text Encoder input</small>
+                            <small>文本编码器输入</small>
                         </button>
                     `;
                 }).join("")}
@@ -581,15 +581,15 @@
         return `
             <div class="clip-dual-encoder">
                 <div class="clip-flow-column">
-                    <strong>Image Encoder</strong>
-                    <span>ViT / ResNet image tower</span>
+                    <strong>图像编码器</strong>
+                    <span>ViT / ResNet 图像塔</span>
                     <i class="clip-vector-bar"></i>
                     <code>i ∈ R^512</code>
                 </div>
-                <div class="clip-shared-space-badge">shared semantic space</div>
+                <div class="clip-shared-space-badge">共享语义空间</div>
                 <div class="clip-flow-column">
-                    <strong>Text Encoder</strong>
-                    <span>Transformer text tower</span>
+                    <strong>文本编码器</strong>
+                    <span>Transformer 文本塔</span>
                     <i class="clip-vector-bar clip-vector-bar--text"></i>
                     <code>t ∈ R^512</code>
                 </div>
@@ -659,10 +659,10 @@
                         .sort((a, b) => b.score - a.score)[0];
                     return `
                         <article class="clip-pair-card" style="--clip-delay:${index * 70}ms">
-                            <span>positive</span>
+                            <span>正样本</span>
                             <strong>${escapeHtml(sample.label)} ↔ ${escapeHtml(promptFor(sample))}</strong>
                             <i><b style="width:${pct(positive)}%"></b></i>
-                            <small>hard negative: ${escapeHtml(hardestNegative.text.label)} · ${hardestNegative.score.toFixed(2)}</small>
+                            <small>难负样本：${escapeHtml(hardestNegative.text.label)} · ${hardestNegative.score.toFixed(2)}</small>
                         </article>
                     `;
                 }).join("")}
@@ -675,7 +675,7 @@
         return `
             <div class="clip-ranking-panel">
                 <div class="clip-ranking-image">
-                    <div class="frontier-sample-frame" data-caption="${escapeHtml(currentSample().title)} · zero-shot input">
+                    <div class="frontier-sample-frame" data-caption="${escapeHtml(currentSample().title)} · zero-shot 输入">
                         ${sceneMarkup(currentSample())}
                     </div>
                 </div>
@@ -862,18 +862,18 @@
         const completeKeys = activeIndex > 0 ? flowOrder.slice(0, activeIndex) : [];
         const laneNodes = [
             {
-                label: "Image tower",
+                label: "图像塔",
                 nodes: [
                     ["input", "图像输入", "Image", "图像 batch"],
-                    ["encoder", "Image Encoder", "ViT / ResNet", "输出 image vector"],
+                    ["encoder", "图像编码器", "ViT / ResNet", "输出 image vector"],
                     ["space", "共享空间", "Embedding", "归一化图像向量"],
                 ],
             },
             {
-                label: "Text tower",
+                label: "文本塔",
                 nodes: [
                     ["input", "文本输入", "Text", "prompt batch"],
-                    ["encoder", "Text Encoder", "Transformer", "输出 text vector"],
+                    ["encoder", "文本编码器", "Transformer", "输出 text vector"],
                     ["space", "共享空间", "Embedding", "归一化文本向量"],
                 ],
             },
@@ -896,7 +896,7 @@
                 </div>
                 <div class="model-arch-flow" style="--arch-cols:2">
                     ${[
-                        ["matrix", "相似度矩阵", "Similarity", "image × text cosine"],
+                        ["matrix", "相似度矩阵", "Similarity", "图像 × 文本 cosine"],
                         ["output", "Zero-shot 输出", "Top-k", "按文本标签排序"],
                     ].map((node) => `
                         <article class="model-arch-node ${archNodeClass(node[0], activeKeys, completeKeys)}">
@@ -922,14 +922,14 @@
                 <section class="frontier-stage-card frontier-architecture-card clip-architecture-panel">
                     <div class="frontier-section-headline">
                         <strong>CLIP 网络架构图</strong>
-                        <span>Image Encoder + Text Encoder → Similarity</span>
+                        <span>图像编码器 + 文本编码器 → 相似度</span>
                     </div>
                     ${architectureMarkup(step.id || "input")}
                 </section>
                 <section class="frontier-stage-card clip-input-panel">
                     <div class="frontier-section-headline">
-                        <strong>Image/Text Input</strong>
-                        <span>5 images + 5 prompts</span>
+                        <strong>图像/文本输入</strong>
+                        <span>5 张图像 + 5 条 prompts</span>
                     </div>
                     <div class="clip-input-grid">
                         ${imageCardsMarkup()}
@@ -940,23 +940,23 @@
 
                 <section class="frontier-stage-card clip-encoder-panel">
                     <div class="frontier-section-headline">
-                        <strong>Dual Encoder</strong>
-                        <span>image vector / text vector</span>
+                        <strong>双塔编码器</strong>
+                        <span>图像向量 / 文本向量</span>
                     </div>
                     ${encoderMarkup()}
                 </section>
 
                 <section class="frontier-stage-card clip-space-panel">
                     <div class="frontier-section-headline">
-                        <strong>Embedding Space</strong>
-                        <span>matched pairs move closer</span>
+                        <strong>Embedding 空间</strong>
+                        <span>匹配图文更接近</span>
                     </div>
                     ${embeddingSpaceMarkup()}
                 </section>
 
                 <section class="frontier-stage-card clip-matrix-panel">
                     <div class="frontier-section-headline">
-                        <strong>Similarity Matrix</strong>
+                        <strong>相似度矩阵</strong>
                         <span>${escapeHtml(cell.image.label)} × ${escapeHtml(cell.text.label)} = ${cell.score.toFixed(3)}</span>
                     </div>
                     ${matrixMarkup()}
@@ -964,16 +964,16 @@
 
                 <section class="frontier-stage-card clip-contrast-panel">
                     <div class="frontier-section-headline">
-                        <strong>Contrastive Alignment</strong>
-                        <span>diagonal positives / hard negatives</span>
+                        <strong>对比对齐</strong>
+                        <span>对角线正样本 / 难负样本</span>
                     </div>
                     ${contrastMarkup()}
                 </section>
 
                 <section class="frontier-stage-card clip-output-panel">
                     <div class="frontier-section-headline">
-                        <strong>Zero-shot Output</strong>
-                        <span>Top-k text prompts</span>
+                        <strong>Zero-shot 输出</strong>
+                        <span>Top-K 文本 prompts</span>
                     </div>
                     ${rankingMarkup()}
                 </section>

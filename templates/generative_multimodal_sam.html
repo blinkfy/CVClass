@@ -13,13 +13,13 @@
 <div
     class="vision-lab frontier-algo generative-sam sam-lab"
     data-generative-sam
-    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/sam_samples.json') }}?v=20260628-sam1"
-    data-model-manifest-url="{{ url_for('static', filename='assets/models/generative_multimodal/sam/sam_model_manifest.json') }}?v=20260628-sam-real1"
-    data-worker-url="{{ url_for('static', filename='js/generative_multimodal_sam_worker.js') }}?v=20260628-sam-real1"
+    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/sam_samples.json') }}?v=20260628-sam2"
+    data-model-manifest-url="{{ url_for('static', filename='assets/models/generative_multimodal/sam/sam_model_manifest.json') }}?v=20260628-sam-real3"
+    data-worker-url="{{ url_for('static', filename='js/generative_multimodal_sam_worker.js') }}?v=20260628-sam-real3"
 >
     <header class="vision-hero station-hero frontier-algo-hero sam-hero">
         <div>
-            <span class="section-label station-eyebrow">STATION 10 · GENERATIVE &amp; MULTIMODAL VISION</span>
+            <span class="section-label station-eyebrow">站点 10 · 生成式与多模态视觉</span>
             <h1 class="station-title">SAM：提示式图像分割</h1>
             <p class="station-summary">从点、框、mask 等用户提示出发，理解图像基础模型如何生成目标区域分割结果。</p>
             <div class="sam-status-pills" aria-label="SAM 页面状态">
@@ -30,19 +30,19 @@
             </div>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
-            <strong class="station-badge">Prompt Encoder</strong>
-            <strong class="station-badge">Image Embedding</strong>
+            <strong class="station-badge">提示编码器 Prompt Encoder</strong>
+            <strong class="station-badge">图像特征 Image Embedding</strong>
             <strong class="station-badge">Mask Decoder</strong>
-            <strong class="station-badge">Candidate Masks</strong>
-            <strong class="station-badge">Interactive Segmentation</strong>
+            <strong class="station-badge">候选 Masks</strong>
+            <strong class="station-badge">交互式分割</strong>
         </div>
     </header>
 
     <section class="vision-workbench frontier-algo-workbench sam-workbench" aria-label="SAM 提示式分割教学工作台">
-        <aside class="vision-panel vision-control-panel frontier-algo-controls sam-prompt" aria-label="INPUT AND PROMPT">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls sam-prompt" aria-label="输入与提示">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">01</span>
-                <div><h3>INPUT &amp; PROMPT</h3><p>样例、提示和 mask 参数</p></div>
+                <div><h3>输入与 Prompt</h3><p>样例、提示和 mask 参数</p></div>
             </div>
 
             <label class="vision-field">
@@ -53,10 +53,10 @@
             <div class="frontier-control-group sam-mode-tabs" role="tablist" aria-label="教学模式">
                 <strong>教学模式</strong>
                 <div class="frontier-segmented sam-mode-buttons">
-                    <button type="button" class="is-active" data-sam-mode="point">Point Prompt</button>
-                    <button type="button" data-sam-mode="box">Box Prompt</button>
-                    <button type="button" data-sam-mode="refine">Multi-prompt Refinement</button>
-                    <button type="button" data-sam-mode="output">Mask Output Structure</button>
+                    <button type="button" class="is-active" data-sam-mode="point">点提示 Point</button>
+                    <button type="button" data-sam-mode="box">框提示 Box</button>
+                    <button type="button" data-sam-mode="refine">多提示修正</button>
+                    <button type="button" data-sam-mode="output">Mask 输出结构</button>
                 </div>
             </div>
 
@@ -65,9 +65,9 @@
                 <select data-sam-control="promptType" aria-label="选择 prompt 类型">
                     <option value="positive">正点 Positive Point</option>
                     <option value="negative">负点 Negative Point</option>
-                    <option value="box">Box Prompt</option>
-                    <option value="multi">Multi-point Prompt</option>
-                    <option value="mask">Mask Prompt</option>
+                    <option value="box">框提示 Box Prompt</option>
+                    <option value="multi">多点提示 Multi-point</option>
+                    <option value="mask">Mask 提示</option>
                 </select>
             </label>
 
@@ -77,47 +77,47 @@
                     <button type="button" class="is-active" data-sam-tool="positive">添加正点</button>
                     <button type="button" data-sam-tool="negative">添加负点</button>
                     <button type="button" data-sam-tool="box">拖拽绘制 Box</button>
-                    <button type="button" data-sam-tool="mask">Mask Prompt</button>
+                    <button type="button" data-sam-tool="mask">Mask 提示</button>
                 </div>
                 <small data-sam-operation-hint>点击主图添加正点；右键可临时添加负点。</small>
             </div>
 
             <div class="sam-action-row">
                 <button type="button" data-sam-action="preset">使用预设提示</button>
-                <button type="button" data-sam-action="box">使用预设 box</button>
+                <button type="button" data-sam-action="box">使用预设 Box</button>
                 <button type="button" data-sam-action="clear">清除提示</button>
             </div>
 
-            <div class="sam-inference-panel" aria-label="SAM 真实 decoder 推理控制">
+            <div class="sam-inference-panel" aria-label="SAM 真实 Decoder 推理控制">
                 <div>
-                    <strong>ONNX Decoder</strong>
-                    <small data-sam-inference-status>未加载真实 decoder，当前使用预设 polygon fallback。</small>
+                    <strong>真实推理 · ONNX Decoder</strong>
+                    <small data-sam-inference-status>未加载真实 Decoder，当前使用预设 polygon fallback。</small>
                 </div>
                 <div class="sam-inference-actions">
                     <button type="button" data-sam-inference="load">加载真实 Decoder</button>
-                    <button type="button" data-sam-inference="run" disabled>运行当前 Prompt</button>
+                    <button type="button" data-sam-inference="run" disabled>运行当前提示</button>
                 </div>
                 <span data-sam-inference-backend>Backend: --</span>
             </div>
 
             <label class="vision-field">
-                <span>Candidate Mask</span>
+                <span>候选 Mask</span>
                 <select data-sam-control="candidate" aria-label="选择 candidate mask"></select>
             </label>
 
             <label class="vision-field sam-range-field">
-                <span>Mask threshold <b data-sam-value="threshold">0.55</b></span>
+                <span>Mask 阈值 <b data-sam-value="threshold">0.55</b></span>
                 <input type="range" min="0.30" max="0.90" step="0.01" value="0.55" data-sam-control="threshold">
             </label>
 
             <label class="vision-field sam-range-field">
-                <span>Overlay alpha <b data-sam-value="alpha">0.48</b></span>
+                <span>叠加透明度 Alpha <b data-sam-value="alpha">0.48</b></span>
                 <input type="range" min="0.20" max="0.80" step="0.01" value="0.48" data-sam-control="alpha">
             </label>
 
             <div class="sam-toggle-grid">
                 <label><input type="checkbox" checked data-sam-control="contour"> 显示轮廓</label>
-                <label><input type="checkbox" checked data-sam-control="grid"> 显示 embedding grid</label>
+                <label><input type="checkbox" checked data-sam-control="grid"> 显示 embedding 网格</label>
             </div>
 
             <div class="vision-kv-grid frontier-status-summary sam-status-summary">
@@ -127,20 +127,20 @@
                 <div><span>候选 mask</span><strong data-sam-summary="candidateCount">3</strong></div>
                 <div><span>当前 Mask</span><strong data-sam-summary="candidate">Mask 1</strong></div>
                 <div><span>IoU 预测分</span><strong data-sam-summary="score">--</strong></div>
-                <div><span>Stability</span><strong data-sam-summary="stability">--</strong></div>
-                <div><span>Mask Area</span><strong data-sam-summary="area">--</strong></div>
-                <div><span>Contour Length</span><strong data-sam-summary="contour">--</strong></div>
+                <div><span>稳定性 Stability</span><strong data-sam-summary="stability">--</strong></div>
+                <div><span>Mask 面积</span><strong data-sam-summary="area">--</strong></div>
+                <div><span>轮廓长度</span><strong data-sam-summary="contour">--</strong></div>
             </div>
         </aside>
 
         <div class="vision-stage-panel frontier-algo-stage sam-stage-panel">
             <div class="vision-stage-header">
                 <div>
-                    <span>PLAYGROUND</span>
-                    <h3 data-sam-stage-title>Image → Prompt → Candidate Masks</h3>
+                    <span>实验舞台 PLAYGROUND</span>
+                    <h3 data-sam-stage-title>图像 Image → Prompt → 候选 Masks</h3>
                 </div>
                 <div class="frontier-stage-chips sam-stage-chips">
-                    <span data-sam-chip="sample">Sample</span>
+                    <span data-sam-chip="sample">样例</span>
                     <span data-sam-chip="prompt">Prompt</span>
                     <span data-sam-chip="candidate">Mask 1</span>
                 </div>
@@ -154,17 +154,17 @@
 
             <section class="sam-mechanism" aria-label="SAM 内部机制">
                 <div class="sam-mechanism-head">
-                    <span>MECHANISM</span>
+                    <span>内部机制</span>
                     <strong>Image Encoder + Prompt Encoder → Mask Decoder</strong>
                 </div>
                 <div class="sam-flow" data-sam-flow></div>
             </section>
         </div>
 
-        <aside class="vision-panel vision-notes-panel frontier-algo-notes sam-notes gm-algo" aria-label="PROCESS NOTES">
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes sam-notes gm-algo" aria-label="过程说明">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">02</span>
-                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+                <div><h3>过程说明</h3><p>当前步骤输入、计算和输出</p></div>
             </div>
 
             <div class="frontier-note-card">
@@ -178,19 +178,19 @@
                 <div><span>核心计算</span><strong data-sam-note="compute">Image Encoder</strong></div>
                 <div><span>输出结构</span><strong data-sam-note="output">Image Embedding</strong></div>
                 <div><span>当前状态</span><strong data-sam-note="state">等待提示输入</strong></div>
-                <div><span>指标解释</span><strong data-sam-note="metrics">IoU / Stability / Area / Contour Length</strong></div>
+                <div><span>指标解释</span><strong data-sam-note="metrics">IoU / 稳定性 / 面积 / 轮廓长度</strong></div>
             </div>
 
             <div class="vision-formula-card frontier-formula-card sam-formula-card">
                 <span>概念公式</span>
                 <strong data-sam-note="formula">ImageEmbedding = ImageEncoder(Image)</strong>
-                <small data-sam-inference-note>当前页面默认使用预设 polygon mask；加载 ONNX decoder 且存在离线 embedding 后，才运行真实 Mask Decoder。</small>
+                <small data-sam-inference-note>当前页面默认使用预设 polygon mask；加载 ONNX Decoder 且存在离线 embedding 后，才运行真实 Mask Decoder。</small>
             </div>
 
             <div class="frontier-note-card sam-output-card">
                 <span>当前输出结构</span>
                 <pre data-sam-output-json>{
-  "mask": "H×W binary map",
+  "mask": "H×W 二值图",
   "bbox": [0, 0, 0, 0],
   "score": 0,
   "stability": 0,
@@ -235,6 +235,6 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
-<script src="{{ url_for('static', filename='js/generative_multimodal_sam_inference.js') }}?v=20260628-sam-real1"></script>
-<script src="{{ url_for('static', filename='js/generative_multimodal_sam.js') }}?v=20260628-sam-real1"></script>
+<script src="{{ url_for('static', filename='js/generative_multimodal_sam_inference.js') }}?v=20260628-sam-real3"></script>
+<script src="{{ url_for('static', filename='js/generative_multimodal_sam.js') }}?v=20260628-sam-real3"></script>
 {% endblock %}

@@ -16,9 +16,9 @@
                     late: { dReal: 0.73, dFake: 0.67, gLoss: 0.54, dLoss: 0.82, fakeQuality: "较清晰", description: "生成器更容易骗过判别器。" }
                 },
                 latentPoints: [
-                    { id: "z1", vector2d: [0.2, 0.7], label: "thin" },
-                    { id: "z2", vector2d: [0.8, 0.4], label: "bold" },
-                    { id: "z3", vector2d: [0.5, 0.2], label: "round" }
+                    { id: "z1", vector2d: [0.2, 0.7], label: "细笔画" },
+                    { id: "z2", vector2d: [0.8, 0.4], label: "粗笔画" },
+                    { id: "z3", vector2d: [0.5, 0.2], label: "圆润" }
                 ]
             }
         ]
@@ -27,51 +27,51 @@
     const STEPS = [
         {
             id: "noise",
-            label: "Noise z",
+            label: "随机噪声 Noise z",
             short: "随机隐变量",
             note: "随机隐变量作为生成器输入。",
             input: "z ∈ R^d",
             compute: "从潜空间采样 latent vector",
-            output: "latent code",
-            state: "等待进入 Generator",
-            metrics: "latent dim / z position",
+            output: "latent code 潜变量编码",
+            state: "等待进入生成器 Generator",
+            metrics: "潜变量维度 / z 位置",
             formula: "z ∈ R^d",
             summary: "GAN 不从图像开始生成，而是从随机隐变量 z 开始。"
         },
         {
             id: "generator",
-            label: "Generator",
+            label: "生成器 Generator",
             short: "z → image",
             note: "Generator 将 z 映射成图像空间。",
             input: "latent vector z",
-            compute: "Generator network G",
+            compute: "生成器网络 G",
             output: "x_fake = G(z)",
             state: "生成器正在放大结构",
-            metrics: "G loss / fake quality",
+            metrics: "G 损失 / 生成质量",
             formula: "x_fake = G(z)",
             summary: "生成器学习把潜变量映射成具有目标类别结构的图像。"
         },
         {
             id: "fake",
-            label: "Fake Image",
+            label: "生成图像 Fake Image",
             short: "生成图像",
             note: "生成结果可能从模糊噪声逐渐变成可识别图像。",
             input: "x_fake",
             compute: "前向生成结果",
-            output: "fake image",
-            state: "fake batch 等待判别",
-            metrics: "fake quality / diversity",
+            output: "生成图像 Fake Image",
+            state: "生成批次等待判别",
+            metrics: "生成质量 / 多样性",
             formula: "x_fake = G(z)",
-            summary: "训练越充分，fake image 通常越有类别轮廓，但仍可能存在伪影。"
+            summary: "训练越充分，生成图像通常越有类别轮廓，但仍可能存在伪影。"
         },
         {
             id: "batch",
-            label: "Real / Fake Batch",
+            label: "真假批次 Real/Fake",
             short: "真假样本",
             note: "真实图像和生成图像一起进入判别器。",
             input: "x_real + x_fake",
             compute: "构造判别器训练批次",
-            output: "real/fake batch",
+            output: "真假样本批次",
             state: "真假样本同时送入 D",
             metrics: "D(real), D(fake)",
             formula: "batch = {x_real, G(z)}",
@@ -79,12 +79,12 @@
         },
         {
             id: "discriminator",
-            label: "Discriminator",
+            label: "判别器 Discriminator",
             short: "真假分数",
             note: "Discriminator 判断输入图像是真实还是生成。",
-            input: "real/fake images",
-            compute: "D(x) → probability(real)",
-            output: "Real / Fake Score",
+            input: "真实 / 生成图像",
+            compute: "D(x) → 真实概率",
+            output: "真假分数 Real/Fake Score",
             state: "输出真假概率条",
             metrics: "D(real), D(fake)",
             formula: "D(x) → probability(real)",
@@ -92,38 +92,38 @@
         },
         {
             id: "loss",
-            label: "Loss Battle",
+            label: "损失博弈 Loss Battle",
             short: "G vs D",
             note: "G 在骗 D，D 在识别 G。",
             input: "D(real), D(fake)",
-            compute: "adversarial objectives",
-            output: "G loss + D loss",
-            state: "两条 loss 曲线动态博弈",
+            compute: "对抗目标函数",
+            output: "G 损失 + D 损失",
+            state: "两条损失曲线动态博弈",
             metrics: "G loss / D loss",
             formula: "min_G max_D V(D,G)",
             summary: "GAN 训练是动态博弈，不是单一 loss 一路下降。"
         },
         {
             id: "update",
-            label: "Update",
+            label: "交替更新 Update",
             short: "交替优化",
             note: "更新 D 提高识别能力，更新 G 提高欺骗能力。",
-            input: "loss gradients",
-            compute: "alternating optimization",
-            output: "updated G and D",
+            input: "损失梯度",
+            compute: "交替优化 alternating optimization",
+            output: "更新后的 G 和 D",
             state: "Generator / Discriminator 交替更新",
-            metrics: "learning stability",
+            metrics: "学习稳定性",
             formula: "D ← ∇L_D, G ← ∇L_G",
             summary: "二者交替优化，不是一次性完成；一方过强会让训练失衡。"
         },
         {
             id: "result",
-            label: "Generated Result",
+            label: "生成结果 Generated Result",
             short: "最终样例",
             note: "观察生成图像、真实性、多样性和模式崩溃风险。",
-            input: "updated generator G",
+            input: "更新后的生成器 G",
             compute: "G(z_new)",
-            output: "Generated Image",
+            output: "生成图像 Generated Image",
             state: "输出当前阶段的生成样例",
             metrics: "真实性 / 多样性 / 稳定性",
             formula: "x = G(z_new)",
@@ -132,12 +132,12 @@
     ];
 
     const PHASES = ["early", "middle", "late"];
-    const PHASE_LABEL = { early: "Early", middle: "Middle", late: "Late" };
+    const PHASE_LABEL = { early: "早期", middle: "中期", late: "后期" };
     const DISPLAY_LABEL = {
-        flow: "Network Flow",
-        batch: "Real vs Fake",
-        loss: "Loss Battle",
-        latent: "Latent Interpolation"
+        flow: "网络流程",
+        batch: "真假对比",
+        loss: "损失博弈",
+        latent: "潜空间插值"
     };
 
     const el = {
@@ -288,7 +288,7 @@
 
     function currentLatent() {
         if (state.latentId === "random") {
-            return { id: "random", vector2d: state.randomLatent, label: "random" };
+            return { id: "random", vector2d: state.randomLatent, label: "随机" };
         }
         return latentPoints().find((point) => point.id === state.latentId) || latentPoints()[0];
     }
@@ -311,9 +311,9 @@
     function sceneDetail(sample, index, real) {
         const latent = currentLatent().vector2d || [0.4, 0.5];
         if ((sample.scene || sample.id) === "digit") return String((index + Math.round((latent[0] || 0.2) * 9) + (real ? 2 : 0)) % 10);
-        if ((sample.scene || sample.id) === "face") return real ? "real" : "fake";
-        if ((sample.scene || sample.id) === "flower") return real ? "real" : "G";
-        return real ? "real" : "G";
+        if ((sample.scene || sample.id) === "face") return real ? "真" : "假";
+        if ((sample.scene || sample.id) === "flower") return real ? "真" : "G";
+        return real ? "真" : "G";
     }
 
     function ganArtMarkup(sample, quality, index, real) {
@@ -361,36 +361,36 @@
             <section class="gan-flow-panel">
                 <div class="gan-panel-heading">
                     <strong>对抗流程主图</strong>
-                    <span>Noise z -> G -> Fake -> D -> Score</span>
+                    <span>Noise z → G → Fake → D → Score</span>
                 </div>
                 <div class="gan-network" aria-label="GAN 对抗流程主图">
                     <article class="${nodeClass("noise", activeKeys)}">
-                        <span>INPUT</span>
+                        <span>输入</span>
                         <strong>Noise z</strong>
                         <div class="gan-vector-dots"><i></i><i></i><i></i><i></i></div>
                         <small>${escapeHtml(currentLatent().id)} / ${escapeHtml(currentLatent().label)}</small>
                     </article>
                     <div class="gan-arrow ${arrowActive("noise", "generator") ? "is-active" : ""}">-></div>
                     <article class="${nodeClass("generator", activeKeys)}">
-                        <span>NETWORK</span>
+                        <span>网络</span>
                         <strong>Generator G</strong>
                         <small>把 z 映射到图像空间</small>
                     </article>
                     <div class="gan-arrow ${arrowActive("generator", "fake") ? "is-active" : ""}">-></div>
                     <article class="${nodeClass("fake", activeKeys)}">
-                        <span>OUTPUT</span>
+                        <span>输出</span>
                         <strong>Fake Image</strong>
                         ${ganArtMarkup(sample, stageQuality(), 0, false)}
                     </article>
                     <div class="gan-arrow ${arrowActive("fake", "batch") ? "is-active" : ""}">-></div>
                     <article class="${nodeClass("batch", activeKeys)}">
-                        <span>BATCH</span>
+                        <span>批次</span>
                         <strong>Real / Fake</strong>
                         <small>真实图像和生成图像一起进入 D</small>
                     </article>
                     <div class="gan-arrow ${arrowActive("batch", "discriminator") ? "is-active" : ""}">-></div>
                     <article class="${nodeClass("discriminator", activeKeys)}">
-                        <span>JUDGE</span>
+                        <span>判别</span>
                         <strong>Discriminator D</strong>
                         <div class="gan-score-bars">
                             <div><span>D(real)</span><i><b style="--score:${pct(stage.dReal)}"></b></i><em>${Number(stage.dReal).toFixed(2)}</em></div>
@@ -401,11 +401,11 @@
                 </div>
                 <div class="gan-update-loop" aria-label="GAN loss 回传更新示意">
                     <article>
-                        <strong>Update D</strong>
+                        <strong>更新 D</strong>
                         <span>用 real / fake batch 提高真假判别能力。</span>
                     </article>
                     <article>
-                        <strong>Update G</strong>
+                        <strong>更新 G</strong>
                         <span>用 D(fake) 的反馈提高生成欺骗能力。</span>
                     </article>
                 </div>
@@ -419,14 +419,14 @@
         const realCards = Array.from({ length: 6 }, (_item, index) => `
             <article class="gan-mini-card is-real">
                 ${ganArtMarkup(sample, "late", index, true)}
-                <strong>Real ${index + 1}</strong>
+                <strong>真实 ${index + 1}</strong>
                 <span>真实样本示意</span>
             </article>
         `).join("");
         const fakeCards = Array.from({ length: 6 }, (_item, index) => `
             <article class="gan-mini-card is-fake">
                 ${ganArtMarkup(sample, quality, index, false)}
-                <strong>Fake ${index + 1}</strong>
+                <strong>生成 ${index + 1}</strong>
                 <span>${escapeHtml(currentStage().fakeQuality || "生成样本")}</span>
             </article>
         `).join("");
@@ -434,16 +434,16 @@
         return `
             <section class="gan-batch-panel">
                 <div class="gan-panel-heading">
-                    <strong>Real / Fake 对比区</strong>
-                    <span>${escapeHtml(PHASE_LABEL[state.phase])} quality</span>
+                    <strong>真假样本对比区</strong>
+                    <span>${escapeHtml(PHASE_LABEL[state.phase])}质量</span>
                 </div>
                 <div class="gan-batch-grid">
                     <div class="gan-batch-column">
-                        <div class="gan-panel-heading"><strong>Real Batch</strong><span>green label</span></div>
+                        <div class="gan-panel-heading"><strong>真实批次 Real Batch</strong><span>绿色标记</span></div>
                         <div class="gan-mini-grid">${realCards}</div>
                     </div>
                     <div class="gan-batch-column">
-                        <div class="gan-panel-heading"><strong>Fake Batch</strong><span>orange label</span></div>
+                        <div class="gan-panel-heading"><strong>生成批次 Fake Batch</strong><span>橙色标记</span></div>
                         <div class="gan-mini-grid">${fakeCards}</div>
                     </div>
                 </div>
@@ -473,12 +473,12 @@
         return `
             <section class="gan-loss-panel">
                 <div class="gan-panel-heading">
-                    <strong>Loss Battle 面板</strong>
-                    <span>Generator Loss / Discriminator Loss</span>
+                    <strong>损失博弈面板</strong>
+                    <span>G 损失 / D 损失</span>
                 </div>
                 <div class="gan-loss-tug">
-                    <div class="gan-tug-side"><span>Generator Loss</span><strong>${Number(currentStage().gLoss).toFixed(2)}</strong></div>
-                    <div class="gan-tug-side"><span>Discriminator Loss</span><strong>${Number(currentStage().dLoss).toFixed(2)}</strong></div>
+                    <div class="gan-tug-side"><span>G 损失</span><strong>${Number(currentStage().gLoss).toFixed(2)}</strong></div>
+                    <div class="gan-tug-side"><span>D 损失</span><strong>${Number(currentStage().dLoss).toFixed(2)}</strong></div>
                 </div>
                 <div class="gan-loss-chart" aria-label="GAN loss battle 曲线">
                     <svg viewBox="0 0 350 170" role="img" aria-label="Generator loss 与 Discriminator loss 曲线">
@@ -498,13 +498,12 @@
     }
 
     function renderLatentPanel() {
-        const sample = currentSample();
         const points = latentPoints();
         return `
             <section class="gan-latent-panel">
                 <div class="gan-panel-heading">
-                    <strong>Latent Interpolation</strong>
-                    <span>z changes output</span>
+                    <strong>潜空间插值 Latent</strong>
+                    <span>z 改变输出</span>
                 </div>
                 <div class="gan-latent-map" aria-label="潜空间二维教学投影">
                     ${points.map((point) => `
@@ -520,11 +519,17 @@
                         class="gan-latent-point ${state.latentId === "random" ? "is-active" : ""}"
                         data-gan-latent-point="random"
                         style="--x:${clamp01(state.randomLatent[0])};--y:${clamp01(state.randomLatent[1])}"
-                    >rand</button>
+                    >随机</button>
                 </div>
             </section>
+        `;
+    }
+
+    function renderGeneratedPanel() {
+        const sample = currentSample();
+        return `
             <section class="gan-generated-card">
-                <strong>Generated Result · ${escapeHtml(currentStage().fakeQuality || "")}</strong>
+                <strong>生成结果 · ${escapeHtml(currentStage().fakeQuality || "")}</strong>
                 ${ganArtMarkup(sample, stageQuality(), 8, false)}
                 <p>${escapeHtml(currentStage().description || "当前生成结果由预设样例和前端 fallback 组成。")}</p>
             </section>
@@ -540,9 +545,16 @@
         el.stage.innerHTML = `
             <div class="gan-stage-layout" data-display="${escapeHtml(state.display)}">
                 ${renderNetwork()}
-                ${renderBatchPanel()}
-                ${renderLossPanel()}
-                ${renderLatentPanel()}
+                <div class="gan-lower-layout">
+                    <div class="gan-lower-stack gan-lower-stack--left">
+                        ${renderBatchPanel()}
+                        ${renderLatentPanel()}
+                    </div>
+                    <div class="gan-lower-stack gan-lower-stack--right">
+                        ${renderLossPanel()}
+                        ${renderGeneratedPanel()}
+                    </div>
+                </div>
             </div>
         `;
     }

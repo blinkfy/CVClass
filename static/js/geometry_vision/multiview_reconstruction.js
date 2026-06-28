@@ -147,11 +147,7 @@
     function currentRealCloud(config) {
         const data = realState.data;
         if (!data?.cloud?.points?.length) return null;
-        const allPoints = data.cloud.points;
-        const count = clamp(Number(config.matchCount || 36), 1, allPoints.length);
-        const points = count >= allPoints.length
-            ? allPoints.slice()
-            : Array.from({length: count}, (_, index) => allPoints[Math.round(index * (allPoints.length - 1) / Math.max(count - 1, 1))]);
+        const points = data.cloud.points.slice();
         return {
             points,
             current: clamp(Number(config.currentPoint || 1) - 1, 0, points.length - 1),
@@ -468,9 +464,15 @@
             state.autoResume = false;
             stopPlayback();
         };
-        const move = (delta) => {
+        const move = (delta, {fromPlayback = false} = {}) => {
             const current = Math.max(0, steps.findIndex((step) => step.id === state.step));
-            state.step = steps[(current + delta + steps.length) % steps.length].id;
+            const next = clamp(current + delta, 0, steps.length - 1);
+            if (fromPlayback && next === current && delta > 0) {
+                state.autoResume = false;
+                stopPlayback();
+                return;
+            }
+            state.step = steps[next].id;
             render(true);
         };
 
@@ -498,8 +500,19 @@
         });
         const startPlayback = (advanceNow = true) => {
             if (state.timer || steps.length < 2) return;
-            if (advanceNow) move(1);
-            state.timer = window.setInterval(() => move(1), AUTO_PLAY_MS);
+            const current = Math.max(0, steps.findIndex((step) => step.id === state.step));
+            if (current >= steps.length - 1) {
+                state.autoResume = false;
+                stopPlayback();
+                return;
+            }
+            if (advanceNow) move(1, {fromPlayback: true});
+            if (state.step === steps[steps.length - 1].id) {
+                state.autoResume = false;
+                stopPlayback();
+                return;
+            }
+            state.timer = window.setInterval(() => move(1, {fromPlayback: true}), AUTO_PLAY_MS);
             setPlayState();
         };
         play?.addEventListener("click", () => {

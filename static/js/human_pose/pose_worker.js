@@ -4,6 +4,7 @@
     const CDN_SCRIPTS = [
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js",
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.22.0/dist/tf-backend-cpu.min.js",
         "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js",
     ];
@@ -52,16 +53,20 @@
 
     async function selectBackend() {
         if (state.backendName) return state.backendName;
+        if (self.tf?.engine?.().registryFactory?.webgl) {
+            try {
+                await self.tf.setBackend("webgl");
+                await self.tf.ready();
+                state.backendName = "webgl";
+                return state.backendName;
+            } catch (error) {
+                console.warn("TFJS WebGL backend is unavailable in pose worker; falling back to CPU.", error);
+            }
+        }
         if (self.tf?.engine?.().registryFactory?.cpu) {
             await self.tf.setBackend("cpu");
             await self.tf.ready();
             state.backendName = "cpu";
-            return state.backendName;
-        }
-        if (self.tf?.engine?.().registryFactory?.webgl) {
-            await self.tf.setBackend("webgl");
-            await self.tf.ready();
-            state.backendName = "webgl";
             return state.backendName;
         }
         throw new Error("No supported TFJS backend is available in worker");

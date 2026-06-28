@@ -4,11 +4,11 @@
 
     const DEFAULT_DATA = {
         modalities: [
-            { id: "image", label: "Image", encoder: "Image Encoder", embedding: "E_img", color: "#2563eb" },
-            { id: "text", label: "Text", encoder: "Text Encoder", embedding: "E_text", color: "#0891b2" },
+            { id: "image", label: "图像", encoder: "图像 Encoder", embedding: "E_img", color: "#2563eb" },
+            { id: "text", label: "文本", encoder: "文本 Encoder", embedding: "E_text", color: "#0891b2" },
             { id: "ocr", label: "OCR", encoder: "OCR Encoder", embedding: "E_ocr", color: "#10b981" },
-            { id: "audio", label: "Audio", encoder: "Audio Encoder", embedding: "E_audio", color: "#f59e0b" },
-            { id: "layout", label: "Layout", encoder: "Layout Encoder", embedding: "E_layout", color: "#7c3aed" },
+            { id: "audio", label: "音频", encoder: "音频 Encoder", embedding: "E_audio", color: "#f59e0b" },
+            { id: "layout", label: "布局", encoder: "布局 Encoder", embedding: "E_layout", color: "#7c3aed" },
         ],
         fusionModes: {
             early: { label: "Early Fusion", summary: "所有 token 先合并，再进入统一编码器。" },
@@ -17,50 +17,50 @@
             unified: { label: "Unified Token", summary: "不同模态被组织成统一 token 序列。" },
         },
         tasks: {
-            retrieval: { label: "图文检索", output: "Top-k matched text/image", metric: "Recall@K" },
-            vqa: { label: "视觉问答", output: "answer tokens: [图中] [有] [车辆] [和] [道路]", metric: "Accuracy" },
-            caption: { label: "图像描述", output: "caption: 一张包含道路、文字和场景布局的图像。", metric: "BLEU / CIDEr" },
-            grounding: { label: "区域定位", output: "bbox / mask highlight: target region", metric: "Grounding IoU" },
-            classification: { label: "多模态分类", output: "label: urban document scene · score 0.86", metric: "Accuracy" },
+            retrieval: { label: "图文检索", output: "Top-K 匹配文本 / 图像", metric: "Recall@K" },
+            vqa: { label: "视觉问答", output: "回答 tokens：[图中] [有] [车辆] [和] [道路]", metric: "Accuracy" },
+            caption: { label: "图像描述", output: "描述：一张包含道路、文字和场景布局的图像。", metric: "BLEU / CIDEr" },
+            grounding: { label: "区域定位", output: "bbox / mask 高亮：目标区域", metric: "Grounding IoU" },
+            classification: { label: "多模态分类", output: "标签：城市文档场景 · score 0.86", metric: "Accuracy" },
         },
     };
 
     const STEPS = [
         {
             id: "inputs",
-            label: "Inputs",
+            label: "输入",
             short: "多模态输入",
             note: "多种模态作为同一任务管线的输入。",
-            input: "Image / Text / OCR / Audio / Layout",
-            encoder: "raw modality adapters",
-            fusion: "not fused yet",
-            task: "prepare task request",
+            input: "图像 / 文本 / OCR / 音频 / 布局",
+            encoder: "原始模态 adapters",
+            fusion: "尚未融合",
+            task: "准备任务请求",
             scenario: "需要同时读取视觉、文本和结构信息的场景。",
             summary: "系统先收集不同模态输入，并保留每种模态的结构差异。",
             formula: "X = {image, text, ocr, audio, layout}",
         },
         {
             id: "encoders",
-            label: "Encoders",
+            label: "编码器",
             short: "独立编码",
             note: "不同模态进入各自 encoder，输出 E_img、E_text 等 embedding。",
-            input: "selected modalities",
-            encoder: "modality-specific encoders",
-            fusion: "embedding preparation",
-            task: "shared representation",
+            input: "已选择模态",
+            encoder: "各模态专用 encoders",
+            fusion: "embedding 准备",
+            task: "共享表征",
             scenario: "各模态尺度和采样方式不同，先独立编码更稳定。",
-            summary: "Image/Text/OCR/Audio/Layout 分别输出 embedding，为后续对齐做准备。",
+            summary: "图像、文本、OCR、音频和布局分别输出 embedding，为后续对齐做准备。",
             formula: "E_m = Encoder_m(X_m)",
         },
         {
             id: "alignment",
-            label: "Alignment",
+            label: "语义对齐",
             short: "统一空间",
             note: "不同 embedding 被对齐到统一语义空间。",
-            input: "modality embeddings",
-            encoder: "projection heads",
-            fusion: "semantic alignment",
-            task: "retrieval-ready representations",
+            input: "各模态 embeddings",
+            encoder: "投影头",
+            fusion: "语义对齐",
+            task: "可用于检索的表征",
             scenario: "图文检索和跨模态匹配依赖统一空间。",
             summary: "这里复用 CLIP 的向量空间概念，但输入模态更多。",
             formula: "Z_m = Normalize(Project(E_m))",
@@ -70,8 +70,8 @@
             label: "Fusion",
             short: "融合策略",
             note: "Early、Late、Cross Attention 和 Unified Token 展示不同融合时机。",
-            input: "aligned embeddings / tokens",
-            encoder: "fusion block",
+            input: "已对齐 embeddings / tokens",
+            encoder: "fusion 模块",
             fusion: "early / late / cross / unified",
             task: "joint task state",
             scenario: "任务复杂度和延迟预算决定融合方式。",
@@ -80,26 +80,26 @@
         },
         {
             id: "task",
-            label: "Task Output",
+            label: "任务输出",
             short: "多任务输出",
             note: "根据任务选择切换检索、问答、描述、定位和分类输出。",
-            input: "fused representation",
-            encoder: "task head",
+            input: "融合表征",
+            encoder: "任务头",
             fusion: "Head(Fusion(...))",
-            task: "retrieval / VQA / caption / grounding / classification",
+            task: "检索 / VQA / 描述 / 定位 / 分类",
             scenario: "同一融合状态可接不同任务头。",
             summary: "多模态系统的价值在于把不同输入组织成统一任务接口。",
             formula: "Output = Head(H)",
         },
         {
             id: "evaluation",
-            label: "Evaluation",
+            label: "评估",
             short: "指标",
             note: "不同任务需要不同指标：Recall@K、Accuracy、BLEU、IoU 等。",
-            input: "task output + target",
-            encoder: "metric adapters",
-            fusion: "evaluation protocol",
-            task: "quality report",
+            input: "任务输出 + 标注目标",
+            encoder: "指标 adapters",
+            fusion: "评估协议",
+            task: "质量报告",
             scenario: "多模态评测常同时关注自动指标和人工偏好。",
             summary: "评价指标必须跟任务类型对齐，不能用一个分数概括所有能力。",
             formula: "metric = Evaluate(Output, Target)",
@@ -211,11 +211,11 @@
 
     function displayLabel() {
         return {
-            pipeline: "Pipeline",
-            tokens: "Token View",
-            matrix: "Fusion Matrix",
-            output: "Task Output",
-        }[state.display] || "Pipeline";
+            pipeline: "管线视图",
+            tokens: "Token 视图",
+            matrix: "Fusion 矩阵",
+            output: "任务输出",
+        }[state.display] || "管线视图";
     }
 
     function modalityCardsMarkup() {
@@ -225,7 +225,7 @@
                     <article class="mm-modality-card mm-modality-card--${escapeHtml(item.id)}" style="--mm-color:${escapeHtml(item.color)};--mm-delay:${index * 70}ms">
                         <span>${escapeHtml(item.label)}</span>
                         <strong>${escapeHtml(inputLabel(item.id))}</strong>
-                        <small>${escapeHtml(item.encoder)} input</small>
+                        <small>${escapeHtml(item.encoder)} 输入</small>
                     </article>
                 `).join("")}
             </div>
@@ -234,12 +234,12 @@
 
     function inputLabel(id) {
         return {
-            image: "scene card",
-            text: "question prompt",
-            ocr: "detected text box",
-            audio: "waveform segment",
-            layout: "document grid",
-        }[id] || "input card";
+            image: "场景卡片",
+            text: "问题 prompt",
+            ocr: "检测文本框",
+            audio: "波形片段",
+            layout: "文档网格",
+        }[id] || "输入卡片";
     }
 
     function encoderMarkup() {
@@ -264,17 +264,17 @@
                     const y = 28 + Math.floor(index / 3) * 28;
                     return `<span style="--x:${x}%;--y:${y}%;--mm-color:${escapeHtml(item.color)};--mm-delay:${index * 90}ms">${escapeHtml(item.embedding)}</span>`;
                 }).join("")}
-                <strong>Unified semantic space</strong>
+                <strong>统一语义空间</strong>
             </div>
         `;
     }
 
     function fusionComparisonMarkup() {
         const items = [
-            ["early", "Early Fusion", "tokens first"],
-            ["late", "Late Fusion", "scores later"],
-            ["cross", "Cross Attention", "Q/K/V links"],
-            ["unified", "Unified Token", "single sequence"],
+            ["early", "Early Fusion", "先合并 tokens"],
+            ["late", "Late Fusion", "后融合分数"],
+            ["cross", "Cross Attention", "Q/K/V 连接"],
+            ["unified", "Unified Token", "统一序列"],
         ];
         return `
             <div class="mm-fusion-grid">
@@ -318,7 +318,7 @@
                 <div class="mm-output-visual">
                     <i></i><i></i><i></i><b></b>
                 </div>
-                <small>Metric: ${escapeHtml(task.metric)}</small>
+                <small>指标：${escapeHtml(task.metric)}</small>
             </div>
         `;
     }
@@ -343,8 +343,8 @@
         }[stepId] ?? 0;
         const selected = activeModalities().map((item) => item.label).join(" / ");
         const nodes = [
-            ["多模态输入", "Inputs", selected || "Image / Text / OCR / Audio / Layout"],
-            ["模态编码器", "Encoders", "每种输入进入专用 Encoder"],
+            ["多模态输入", "输入", selected || "图像 / 文本 / OCR / 音频 / 布局"],
+            ["模态编码器", "编码器", "每种输入进入专用 Encoder"],
             ["Fusion / Router", "融合路由", "统一 token 或 cross-attention"],
             ["Task Heads", "任务头", "检索、问答、描述、定位、分类"],
         ];
@@ -374,13 +374,13 @@
                 <section class="frontier-stage-card frontier-architecture-card mm-architecture-panel">
                     <div class="frontier-section-headline">
                         <strong>多模态网络架构图</strong>
-                        <span>Encoders → Fusion / Router → Task Heads</span>
+                        <span>编码器 → Fusion / Router → 任务头</span>
                     </div>
                     ${architectureMarkup(step.id || "inputs")}
                 </section>
                 <section class="frontier-stage-card mm-input-panel">
                     <div class="frontier-section-headline">
-                        <strong>Inputs</strong>
+                        <strong>输入</strong>
                         <span>${escapeHtml(activeModalities().map((item) => item.label).join(" / "))}</span>
                     </div>
                     ${modalityCardsMarkup()}
@@ -388,7 +388,7 @@
 
                 <section class="frontier-stage-card mm-encoder-panel">
                     <div class="frontier-section-headline">
-                        <strong>Encoders</strong>
+                        <strong>编码器</strong>
                         <span>E_img / E_text / E_ocr / E_audio / E_layout</span>
                     </div>
                     ${encoderMarkup()}
@@ -396,8 +396,8 @@
 
                 <section class="frontier-stage-card mm-alignment-panel">
                     <div class="frontier-section-headline">
-                        <strong>Alignment</strong>
-                        <span>shared semantic space</span>
+                        <strong>语义对齐</strong>
+                        <span>共享语义空间</span>
                     </div>
                     ${alignmentMarkup()}
                 </section>
@@ -413,7 +413,7 @@
 
                 <section class="frontier-stage-card mm-task-panel">
                     <div class="frontier-section-headline">
-                        <strong>Task Output</strong>
+                        <strong>任务输出</strong>
                         <span>${escapeHtml(currentTask().label)}</span>
                     </div>
                     ${taskOutputMarkup()}
@@ -421,8 +421,8 @@
 
                 <section class="frontier-stage-card mm-eval-panel">
                     <div class="frontier-section-headline">
-                        <strong>Evaluation</strong>
-                        <span>task-specific metrics</span>
+                        <strong>评估</strong>
+                        <span>任务相关指标</span>
                     </div>
                     ${evaluationMarkup()}
                 </section>

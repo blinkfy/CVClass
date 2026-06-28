@@ -14,7 +14,7 @@
     "windowSize": 4,
     "featureDim": 512
   },
-  "defaultSample": "running",
+  "defaultSample": "clapping",
   "pipeline": [
     {
       "id": "video",

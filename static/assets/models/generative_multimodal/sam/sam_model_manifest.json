@@ -4,6 +4,7 @@
   "modelUrl": "/static/assets/models/generative_multimodal/sam/sam_vit_b_mask_decoder.onnx",
   "modelAvailable": true,
   "defaultBackend": "wasm",
+  "imageEncoderLongSide": 1024,
   "embeddingShape": [1, 256, 64, 64],
   "embeddingDtype": "float16",
   "maskInputShape": [1, 1, 256, 256],

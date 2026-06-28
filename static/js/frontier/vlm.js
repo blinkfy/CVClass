@@ -26,26 +26,26 @@
     const STEPS = [
         {
             id: "image",
-            label: "Image",
+            label: "图像输入",
             short: "H×W×3",
             note: "输入图像以 H×W×3 进入视觉编码器。",
-            input: "Image ∈ R^(H×W×3) + Question Prompt",
-            middle: "raw image tensor",
+            input: "图像 ∈ R^(H×W×3) + 问题 Prompt",
+            middle: "原始图像张量",
             compute: "读取输入图像和问题",
-            output: "image canvas + question string",
+            output: "图像画布 + 问题文本",
             explain: "图像区域尚未关联到答案。",
             summary: "VLM 的第一步仍是把图像作为视觉输入，而不是直接进入聊天框。",
             formula: "Image ∈ R^(H×W×3)",
         },
         {
             id: "vision",
-            label: "Vision Tokens",
+            label: "视觉 Tokens",
             short: "patch / region tokens",
             note: "图像被切分为区域或 patch，并压缩成 visual token strip。",
-            input: "image tensor",
-            middle: "V1...V16 visual tokens",
+            input: "图像张量",
+            middle: "V1...V16 视觉 tokens",
             compute: "Vision Encoder(image)",
-            output: "ImageTokens",
+            output: "ImageTokens 序列",
             explain: "每个 token 对应一个图像区域。",
             summary: "视觉编码器把二维图像压缩为 token 序列，供后续融合模块读取。",
             formula: "V = VisionEncoder(Image)",
@@ -55,62 +55,62 @@
             label: "Prompt Tokens",
             short: "question tokens",
             note: "问题文本被拆成 prompt tokens。",
-            input: "Question Prompt",
-            middle: "T1...Tk text tokens",
+            input: "问题 Prompt",
+            middle: "T1...Tk 文本 tokens",
             compute: "Tokenizer(question)",
-            output: "PromptTokens",
+            output: "PromptTokens 序列",
             explain: "问题中的物体、区域、场景等词会引导视觉注意力。",
             summary: "文本 prompt 决定模型需要从图像中读取哪些证据。",
             formula: "T = Tokenizer(Prompt)",
         },
         {
             id: "fusion",
-            label: "Cross-modal Fusion",
+            label: "跨模态融合",
             short: "图文 token 互读",
             note: "visual tokens 和 text tokens 进入 fusion block。",
             input: "ImageTokens + PromptTokens",
-            middle: "cross-attention activations",
+            middle: "Cross-Attention 激活",
             compute: "h = CrossAttention(Q_text, K_image, V_image)",
-            output: "fused multimodal states",
+            output: "融合后的多模态状态",
             explain: "文本 token 连接到相关图像区域，区域出现 pulse 高亮。",
             summary: "跨模态融合让“物体”“位置”“动作”等词从图像 token 中取证。",
             formula: "h = CrossAttention(Q_text, K_image, V_image)",
         },
         {
             id: "decoder",
-            label: "Decoder",
+            label: "Decoder 解码",
             short: "逐 token 生成",
             note: "回答 token 逐步生成，每个 token 读取融合后的状态。",
-            input: "fused states + previous answer tokens",
-            middle: "decoder hidden states",
-            compute: "next token prediction",
-            output: "streaming answer tokens",
+            input: "融合状态 + 已生成回答 tokens",
+            middle: "Decoder 隐状态",
+            compute: "预测下一个 token",
+            output: "流式回答 tokens",
             explain: "生成过程中相关证据区域轻微闪烁。",
             summary: "VLM 的回答来自解码器逐 token 生成，而不是一次性从图像中复制文本。",
             formula: "Answer = Decoder(Fusion(ImageTokens, TextTokens))",
         },
         {
             id: "answer",
-            label: "Answer",
+            label: "回答",
             short: "完整回答",
             note: "展示完整回答，并保留回答与证据区域的连接。",
-            input: "answer token sequence",
-            middle: "detokenized sentence",
+            input: "回答 token 序列",
+            middle: "还原后的句子",
             compute: "join generated tokens",
-            output: "natural language answer",
+            output: "自然语言回答",
             explain: "当前回答来自预设样例，不是实时模型输出。",
             summary: "页面展示的是机制动画和样例问答，不模拟真实在线聊天。",
             formula: "Answer = join(tokens)",
         },
         {
             id: "evidence",
-            label: "Evidence",
+            label: "证据",
             short: "区域依据",
             note: "在图像上高亮回答依据区域，并显示 evidence scores。",
-            input: "answer tokens + image regions",
-            middle: "region scores",
-            compute: "rank evidence regions",
-            output: "highlight boxes + scores",
+            input: "回答 tokens + 图像区域",
+            middle: "区域分数",
+            compute: "证据区域排序",
+            output: "高亮框 + 分数",
             explain: "证据区域用于解释回答可能依赖的视觉线索。",
             summary: "证据高亮是预设可解释视图，用于说明 attention/evidence 的概念边界。",
             formula: "score(region | answer)",
@@ -207,11 +207,11 @@
 
     function displayLabel() {
         return {
-            fusion: "Token Fusion",
-            attention: "Attention to Image",
-            answer: "Answer Generation",
-            evidence: "Evidence Highlight",
-        }[state.display] || "Token Fusion";
+            fusion: "Token 融合",
+            attention: "图像注意力",
+            answer: "回答生成",
+            evidence: "证据高亮",
+        }[state.display] || "Token 融合";
     }
 
     function promptTokens() {
@@ -295,12 +295,12 @@
                     ${promptTokensMarkup()}
                 </div>
                 <div class="vlm-fusion-core">
-                    <span>Cross-modal Fusion</span>
+                    <span>跨模态融合</span>
                     <code>h = CrossAttention(Q_text, K_image, V_image)</code>
                     ${evidenceItems().slice(0, 3).map((item, index) => `<i style="--vlm-delay:${index * 120}ms">${escapeHtml(prompt[index + 1] || "Q")} → ${escapeHtml(item.label)}</i>`).join("")}
                 </div>
                 <div>
-                    <strong>Image Tokens</strong>
+                    <strong>图像 Tokens</strong>
                     ${visionTokensMarkup()}
                 </div>
             </div>
@@ -312,7 +312,7 @@
         return `
             <div class="vlm-decoder">
                 <div class="vlm-decoder-core">
-                    <span>Decoder</span>
+                    <span>Decoder 解码</span>
                     <code>Answer = Decoder(Fusion(ImageTokens, TextTokens))</code>
                 </div>
                 <div class="vlm-answer-stream">
@@ -325,7 +325,7 @@
     function answerMarkup() {
         return `
             <div class="vlm-answer-card">
-                <span>Answer</span>
+                <span>回答</span>
                 <strong>${escapeHtml(answerTokens().join(""))}</strong>
                 <p>Prompt 下拉框只改变 token 观察视角；回答与证据来自当前样例，不调用真实视觉语言模型。</p>
             </div>
@@ -361,7 +361,7 @@
             ["Vision Encoder", "视觉编码器", "输出图像 token"],
             ["Projector / Adapter", "接口适配", "对齐到 LLM token 空间"],
             ["LLM Decoder", "语言解码器", "按 prompt 生成回答 token"],
-            ["Answer / Evidence", "答案与证据", "输出文本并高亮依据区域"],
+            ["答案 / 证据", "Answer / Evidence", "输出文本并高亮依据区域"],
         ];
         return `
             <div class="model-arch-graph" aria-label="VLM 网络架构图">
@@ -390,13 +390,13 @@
                 <section class="frontier-stage-card frontier-architecture-card vlm-architecture-panel">
                     <div class="frontier-section-headline">
                         <strong>VLM 网络架构图</strong>
-                        <span>Vision Encoder → Adapter → LLM</span>
+                        <span>视觉编码器 → Adapter → LLM</span>
                     </div>
                     ${architectureMarkup(step.id || "image")}
                 </section>
                 <section class="frontier-stage-card vlm-image-panel">
                     <div class="frontier-section-headline">
-                        <strong>Image</strong>
+                        <strong>图像输入</strong>
                         <span>${escapeHtml(current.shape || "384×384×3")}</span>
                     </div>
                     <div class="frontier-sample-frame" data-caption="${escapeHtml(current.label)} · ${escapeHtml(current.shape || "H×W×3")}">
@@ -408,8 +408,8 @@
 
                 <section class="frontier-stage-card vlm-token-panel">
                     <div class="frontier-section-headline">
-                        <strong>Vision Tokens</strong>
-                        <span>patch / region strip</span>
+                        <strong>视觉 Tokens</strong>
+                        <span>patch / 区域序列</span>
                     </div>
                     ${visionTokensMarkup()}
                 </section>
@@ -424,24 +424,24 @@
 
                 <section class="frontier-stage-card vlm-fusion-panel">
                     <div class="frontier-section-headline">
-                        <strong>Cross-modal Fusion</strong>
-                        <span>text queries image regions</span>
+                        <strong>跨模态融合</strong>
+                        <span>文本查询图像区域</span>
                     </div>
                     ${fusionMarkup()}
                 </section>
 
                 <section class="frontier-stage-card vlm-decoder-panel">
                     <div class="frontier-section-headline">
-                        <strong>Decoder</strong>
-                        <span>answer token stream</span>
+                        <strong>Decoder 解码</strong>
+                        <span>回答 token 流</span>
                     </div>
                     ${decoderMarkup()}
                 </section>
 
                 <section class="frontier-stage-card vlm-answer-panel">
                     <div class="frontier-section-headline">
-                        <strong>Answer + Evidence</strong>
-                        <span>answer evidence</span>
+                        <strong>回答 + 证据</strong>
+                        <span>回答依据</span>
                     </div>
                     ${answerMarkup()}
                     ${evidenceScoresMarkup()}
@@ -489,7 +489,7 @@
         if (el.chips.mode) el.chips.mode.textContent = displayLabel();
         if (el.summary.visionTokens) el.summary.visionTokens.textContent = "16";
         if (el.summary.promptTokens) el.summary.promptTokens.textContent = String(promptTokens().length);
-        if (el.summary.fusion) el.summary.fusion.textContent = "cross-attention";
+        if (el.summary.fusion) el.summary.fusion.textContent = "Cross-Attention";
         if (el.summary.answer) el.summary.answer.textContent = String(answerTokens().length);
 
         if (el.notes.step) el.notes.step.textContent = step.label;

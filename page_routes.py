@@ -721,15 +721,15 @@ def register_page_routes(app, get_model_status):
 
     @app.route("/frontier/clip", methods=["GET"])
     def frontier_clip_page():
-        return render_template("frontier_clip.html", active_page="vision_language", active_sub_page="clip")
+        return render_template("frontier/clip.html", active_page="vision_language", active_sub_page="clip")
 
     @app.route("/frontier/vlm", methods=["GET"])
     def frontier_vlm_page():
-        return render_template("frontier_vlm.html", active_page="vision_language", active_sub_page="vlm")
+        return render_template("frontier/vlm.html", active_page="vision_language", active_sub_page="vlm")
 
     @app.route("/frontier/multimodal", methods=["GET"])
     def frontier_multimodal_page():
-        return render_template("frontier_multimodal.html", active_page="vision_language", active_sub_page="multimodal")
+        return render_template("frontier/multimodal.html", active_page="vision_language", active_sub_page="multimodal")
 
     @app.route("/generative-multimodal/sam", methods=["GET"])
     def generative_multimodal_sam_page():

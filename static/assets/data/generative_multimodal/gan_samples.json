@@ -33,9 +33,9 @@
         }
       },
       "latentPoints": [
-        { "id": "z1", "vector2d": [0.2, 0.7], "label": "thin" },
-        { "id": "z2", "vector2d": [0.8, 0.4], "label": "bold" },
-        { "id": "z3", "vector2d": [0.5, 0.2], "label": "round" }
+        { "id": "z1", "vector2d": [0.2, 0.7], "label": "细笔画" },
+        { "id": "z2", "vector2d": [0.8, 0.4], "label": "粗笔画" },
+        { "id": "z3", "vector2d": [0.5, 0.2], "label": "圆润" }
       ]
     },
     {
@@ -50,7 +50,7 @@
           "gLoss": 2.46,
           "dLoss": 0.27,
           "fakeQuality": "纹理噪声",
-          "description": "脸部结构还没有稳定出现，fake batch 多为局部纹理。"
+          "description": "脸部结构还没有稳定出现，生成批次多为局部纹理。"
         },
         "middle": {
           "dReal": 0.83,
@@ -66,13 +66,13 @@
           "gLoss": 0.68,
           "dLoss": 0.78,
           "fakeQuality": "稳定草图",
-          "description": "fake image 具有更完整的脸部布局，但仍可能出现伪影。"
+          "description": "生成图像具有更完整的脸部布局，但仍可能出现伪影。"
         }
       },
       "latentPoints": [
-        { "id": "z1", "vector2d": [0.22, 0.32], "label": "soft" },
-        { "id": "z2", "vector2d": [0.72, 0.58], "label": "sharp" },
-        { "id": "z3", "vector2d": [0.47, 0.82], "label": "wide" }
+        { "id": "z1", "vector2d": [0.22, 0.32], "label": "柔和" },
+        { "id": "z2", "vector2d": [0.72, 0.58], "label": "锐利" },
+        { "id": "z3", "vector2d": [0.47, 0.82], "label": "宽脸" }
       ]
     },
     {
@@ -107,9 +107,9 @@
         }
       },
       "latentPoints": [
-        { "id": "z1", "vector2d": [0.18, 0.56], "label": "petal" },
-        { "id": "z2", "vector2d": [0.76, 0.26], "label": "bright" },
-        { "id": "z3", "vector2d": [0.58, 0.78], "label": "dense" }
+        { "id": "z1", "vector2d": [0.18, 0.56], "label": "花瓣" },
+        { "id": "z2", "vector2d": [0.76, 0.26], "label": "明亮" },
+        { "id": "z3", "vector2d": [0.58, 0.78], "label": "密集" }
       ]
     },
     {
@@ -140,13 +140,13 @@
           "gLoss": 0.62,
           "dLoss": 0.81,
           "fakeQuality": "稳定物体",
-          "description": "fake image 能保留主要轮廓，但多样性仍需要观察。"
+          "description": "生成图像能保留主要轮廓，但多样性仍需要观察。"
         }
       },
       "latentPoints": [
-        { "id": "z1", "vector2d": [0.3, 0.24], "label": "box" },
-        { "id": "z2", "vector2d": [0.82, 0.52], "label": "tall" },
-        { "id": "z3", "vector2d": [0.44, 0.76], "label": "round" }
+        { "id": "z1", "vector2d": [0.3, 0.24], "label": "方块" },
+        { "id": "z2", "vector2d": [0.82, 0.52], "label": "高瘦" },
+        { "id": "z3", "vector2d": [0.44, 0.76], "label": "圆润" }
       ]
     }
   ]

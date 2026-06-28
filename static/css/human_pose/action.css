@@ -6,6 +6,10 @@
     gap: 12px;
 }
 
+.human-action-workbench {
+    grid-template-columns: minmax(205px, 0.58fr) minmax(500px, 1.66fr) minmax(240px, 0.62fr);
+}
+
 .human-action-controls .human-button-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }

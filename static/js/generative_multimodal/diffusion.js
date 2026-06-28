@@ -12,11 +12,11 @@
                 prompt: "a small cat",
                 samplingSteps: 30,
                 steps: [
-                    { t: 100, noise: 1, label: "pure noise" },
-                    { t: 75, noise: 0.75, label: "rough shape" },
-                    { t: 50, noise: 0.5, label: "object contour" },
-                    { t: 25, noise: 0.25, label: "details appear" },
-                    { t: 0, noise: 0, label: "generated image" }
+                    { t: 100, noise: 1, label: "纯噪声" },
+                    { t: 75, noise: 0.75, label: "粗略形状" },
+                    { t: 50, noise: 0.5, label: "主体轮廓" },
+                    { t: 25, noise: 0.25, label: "细节出现" },
+                    { t: 0, noise: 0, label: "生成图像" }
                 ],
                 guidance: [
                     { scale: 1, description: "弱条件，结果更随机。" },
@@ -31,115 +31,115 @@
     const STEPS = [
         {
             id: "clean",
-            label: "Clean Image",
+            label: "干净图像 Clean Image",
             short: "x0",
             note: "x0 是训练时的干净图像。",
             input: "x0，真实干净图像",
             compute: "训练样本作为加噪起点",
-            output: "clean image",
+            output: "干净图像 clean image",
             state: "模型学习不同噪声程度下的恢复目标",
-            metrics: "visual quality / detail stability",
+            metrics: "视觉质量 / 细节稳定性",
             formula: "x0",
             summary: "训练阶段模型学习如何从不同噪声程度恢复图像。"
         },
         {
             id: "forward",
-            label: "Forward Noise",
+            label: "前向加噪 Forward Noise",
             short: "逐步加噪",
             note: "逐步向图像加入高斯噪声。",
-            input: "x0 + noise schedule",
-            compute: "add Gaussian noise",
+            input: "x0 + 噪声日程 noise schedule",
+            compute: "加入高斯噪声",
             output: "x_t",
             state: "图像逐渐接近噪声",
-            metrics: "noise level",
+            metrics: "噪声强度 noise level",
             formula: "x_t = sqrt(alpha_t) x0 + sqrt(1-alpha_t) epsilon",
             summary: "前向过程把清晰图像逐步加噪，用来构造训练样本。"
         },
         {
             id: "schedule",
-            label: "Noise Schedule",
+            label: "噪声日程 Noise Schedule",
             short: "噪声日程",
             note: "t 越大，图像越接近纯噪声。",
             input: "timestep t",
-            compute: "schedule controls noise amount",
-            output: "noise level",
+            compute: "日程控制加噪量",
+            output: "噪声强度 noise level",
             state: "当前 timestep 控制噪声强度",
             metrics: "t / beta_t / alpha_t",
             formula: "noise = f(t)",
-            summary: "Noise Schedule 决定每一步加入多少噪声，是训练和采样的时间轴。"
+            summary: "噪声日程 Noise Schedule 决定每一步加入多少噪声，是训练和采样的时间轴。"
         },
         {
             id: "noise",
-            label: "Pure Noise",
+            label: "纯噪声 Pure Noise",
             short: "生成起点",
             note: "推理时通常从随机噪声开始。",
-            input: "random noise",
-            compute: "sample seed noise",
+            input: "随机噪声 random noise",
+            compute: "采样 seed 噪声",
             output: "x_T",
             state: "随机噪声作为生成起点",
-            metrics: "seed / variance",
+            metrics: "seed / 方差",
             formula: "x_T ~ N(0, I)",
             summary: "生成时通常不是从真实图像开始，而是从随机噪声开始反向去噪。"
         },
         {
             id: "denoise",
-            label: "Denoise Step",
+            label: "反向去噪 Reverse Denoise",
             short: "预测噪声",
             note: "模型预测当前图像中的噪声，然后减去噪声。",
             input: "x_t + t",
-            compute: "Denoising U-Net predicts noise",
+            compute: "Denoising U-Net 预测噪声",
             output: "x_{t-1}",
             state: "噪声粒子淡出，主体轮廓出现",
-            metrics: "predicted noise / residual",
+            metrics: "预测噪声 / 残差",
             formula: "x_{t-1} = denoise(x_t, t)",
             summary: "反向去噪每一步只做一点点恢复，多步累积形成最终图像。"
         },
         {
             id: "condition",
-            label: "Text Condition",
+            label: "文本条件 Text Condition",
             short: "prompt 引导",
             note: "文本 prompt 被编码成 text embedding，参与去噪网络计算。",
-            input: "prompt text",
-            compute: "Text Encoder -> Text Embedding",
-            output: "conditioned denoising",
+            input: "prompt 文本",
+            compute: "Text Encoder → Text Embedding",
+            output: "带条件的去噪",
             state: "文本语义连接到去噪网络",
             metrics: "guidance scale",
             formula: "epsilon_theta(x_t, t, c)",
-            summary: "Text Condition 引导生成内容朝 prompt 指定语义靠近。"
+            summary: "文本条件 Text Condition 引导生成内容朝 prompt 指定语义靠近。"
         },
         {
             id: "sampling",
-            label: "Sampling Path",
+            label: "采样路径 Sampling",
             short: "多步采样",
             note: "seed、prompt、guidance scale 和采样步数共同影响路径。",
-            input: "noise seed + condition",
-            compute: "iterative denoising",
-            output: "sampling trajectory",
+            input: "噪声 seed + 条件",
+            compute: "多步迭代去噪",
+            output: "采样轨迹",
             state: "多条采样路径产生不同结果",
-            metrics: "seed / prompt / steps",
+            metrics: "seed / prompt / 采样步数",
             formula: "x_T -> ... -> x_0",
             summary: "采样过程由多步去噪形成最终图像，同一个 prompt 也会因 seed 不同而变化。"
         },
         {
             id: "output",
-            label: "Generated Output",
+            label: "生成输出 Generated Output",
             short: "最终输出",
             note: "评价文本一致性、视觉质量、多样性和细节稳定性。",
-            input: "final denoised sample",
-            compute: "decode / output image",
-            output: "generated image",
+            input: "最终去噪样本",
+            compute: "解码 / 输出图像",
+            output: "生成图像 generated image",
             state: "输出当前 prompt 的生成样例",
-            metrics: "text alignment / visual quality",
+            metrics: "文本一致性 / 视觉质量",
             formula: "x_0 generated",
             summary: "最终输出是 Generated image；要同时看文本一致性、视觉质量和细节稳定性。"
         }
     ];
 
     const DISPLAY_LABEL = {
-        forward: "Forward Noise",
-        reverse: "Reverse Denoise",
-        condition: "Prompt Condition",
-        sampling: "Sampling Timeline"
+        forward: "前向加噪",
+        reverse: "反向去噪",
+        condition: "文本条件",
+        sampling: "采样时间线"
     };
 
     const el = {
@@ -278,7 +278,7 @@
         return sampleSteps().find((item) => Number(item.t) === target) || {
             t: target,
             noise: clamp01(target / 100),
-            label: target >= 100 ? "pure noise" : "intermediate"
+            label: target >= 100 ? "纯噪声" : "中间状态"
         };
     }
 
@@ -313,10 +313,10 @@
     function sceneDetail(sample, timestep) {
         const scene = sample.scene || sample.id || "cat";
         if (scene === "digit") return timestep <= 25 ? "7" : "";
-        if (scene === "street") return timestep <= 25 ? "car" : "";
-        if (scene === "flower") return timestep <= 25 ? "flower" : "";
-        if (scene === "style") return timestep <= 25 ? "wash" : "";
-        return timestep <= 25 ? "cat" : "";
+        if (scene === "street") return timestep <= 25 ? "车" : "";
+        if (scene === "flower") return timestep <= 25 ? "花" : "";
+        if (scene === "style") return timestep <= 25 ? "水彩" : "";
+        return timestep <= 25 ? "猫" : "";
     }
 
     function diffImageMarkup(timestep, label) {
@@ -328,7 +328,7 @@
                 class="diff-img"
                 data-scene="${escapeHtml(sample.scene || sample.id || "cat")}"
                 style="--noise:${noise.toFixed(2)}"
-                aria-label="${escapeHtml(label || step.label || "diffusion image")}"
+                aria-label="${escapeHtml(label || step.label || "扩散过程图像")}"
             >
                 <span class="diff-shape"></span>
                 <b class="diff-detail">${escapeHtml(sceneDetail(sample, Number(timestep)))}</b>
@@ -348,11 +348,11 @@
             <section class="diff-sequence-panel">
                 <div class="diff-panel-heading">
                     <strong>加噪 / 去噪主序列</strong>
-                    <span>${state.display === "reverse" ? "x100 -> x0" : "x0 -> x100"}</span>
+                    <span>${state.display === "reverse" ? "x100 → x0" : "x0 → x100"}</span>
                 </div>
                 <div class="diff-phase-note" aria-label="Diffusion 训练与生成阶段区分">
-                    <article><strong>训练理解</strong><span>Clean x0 -> Forward Noise -> 学习预测噪声</span></article>
-                    <article><strong>生成理解</strong><span>Pure Noise xT -> Reverse Denoise -> Generated Output</span></article>
+                    <article><strong>训练理解</strong><span>Clean x0 → Forward Noise → 学习预测噪声</span></article>
+                    <article><strong>生成理解</strong><span>Pure Noise xT → Reverse Denoise → Generated Output</span></article>
                 </div>
                 <div class="diff-sequence" aria-label="Diffusion timestep 序列">
                     ${orderedTimesteps().map((timestep) => {
@@ -361,7 +361,7 @@
                             <article class="diff-step-card ${Number(timestep) === Number(state.timestep) ? "is-active" : ""}" data-diff-step-card="${timestep}">
                                 ${diffImageMarkup(timestep, `x${timestep}`)}
                                 <strong>x${timestep}</strong>
-                                <span>${escapeHtml(step.label || "")} · noise ${Number(step.noise ?? timestep / 100).toFixed(2)}</span>
+                                <span>${escapeHtml(step.label || "")} · 噪声 ${Number(step.noise ?? timestep / 100).toFixed(2)}</span>
                             </article>
                         `;
                     }).join("")}
@@ -373,8 +373,8 @@
     function renderCurrentPanel() {
         const t = Number(state.timestep);
         const nextT = Math.max(0, t - 25);
-        const noisyLabel = `Noisy x_${t}`;
-        const lessLabel = `Less noisy x_${nextT}`;
+        const noisyLabel = `含噪 x_${t}`;
+        const lessLabel = `更少噪声 x_${nextT}`;
         return `
             <section class="diff-current-panel">
                 <div class="diff-panel-heading">
@@ -390,7 +390,7 @@
                     <div class="diff-unet">
                         <div>
                             <strong>Denoising U-Net</strong>
-                            <span>predict noise epsilon</span>
+                            <span>预测噪声 epsilon</span>
                         </div>
                     </div>
                     <div class="diff-arrow">-></div>
@@ -422,7 +422,7 @@
         return `
             <section class="diff-condition-panel">
                 <div class="diff-panel-heading">
-                    <strong>Text Condition 区</strong>
+                    <strong>文本条件区 Text Condition</strong>
                     <span>guidance ${Number(state.guidance).toFixed(1)}</span>
                 </div>
                 <div class="diff-condition-flow">
@@ -430,11 +430,11 @@
                         ${promptTokens().map((token, index) => `<span style="animation-delay:${index * 0.04}s">${escapeHtml(token)}</span>`).join("")}
                     </div>
                     <div class="diff-condition-card">
-                        <article><strong>Prompt</strong><span>${escapeHtml(state.prompt || "空 prompt / 无条件演示")}</span></article>
+                        <article><strong>Prompt 文本</strong><span>${escapeHtml(state.prompt || "空 prompt / 无条件演示")}</span></article>
                         <div class="diff-arrow">-></div>
-                        <article><strong>Text Encoder</strong><span>token -> embedding</span></article>
+                        <article><strong>Text Encoder</strong><span>token → embedding</span></article>
                         <div class="diff-arrow">-></div>
-                        <article><strong>Denoising Network</strong><span>conditioned U-Net</span></article>
+                        <article><strong>去噪网络</strong><span>conditioned U-Net</span></article>
                     </div>
                     <div>
                         <div class="diff-guidance-line" style="--guidance-width:${width}"><b></b></div>
@@ -448,14 +448,14 @@
     function renderSamplingPanel() {
         const sample = currentSample();
         const rows = [
-            ["Noise seed A", state.prompt || "empty prompt", "Result A", 25],
-            ["Noise seed B", state.prompt || "empty prompt", "Result B", 0],
-            ["Same seed", `${state.prompt || "empty prompt"} + variant`, "Different direction", 50]
+            ["噪声 seed A", state.prompt || "空 prompt", "结果 A", 25],
+            ["噪声 seed B", state.prompt || "空 prompt", "结果 B", 0],
+            ["相同 seed", `${state.prompt || "空 prompt"} + 变体`, "不同方向", 50]
         ];
         return `
             <section class="diff-sampling-panel">
                 <div class="diff-panel-heading">
-                    <strong>Sampling Path 区</strong>
+                    <strong>采样路径区 Sampling</strong>
                     <span>seed / prompt / guidance</span>
                 </div>
                 <div class="diff-sampling-paths" aria-label="Diffusion sampling path">
@@ -616,7 +616,7 @@
     function initWithData(data) {
         state.data = normalizeData(data);
         state.sampleId = state.data.defaultSample || samples()[0]?.id || "cat";
-        state.prompt = currentSample().prompt || "a small cat";
+                state.prompt = currentSample().prompt || "a small cat";
         renderAll();
     }
 

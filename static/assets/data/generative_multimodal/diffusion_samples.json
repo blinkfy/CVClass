@@ -8,11 +8,11 @@
       "prompt": "a small cat",
       "samplingSteps": 30,
       "steps": [
-        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
-        { "t": 75, "noise": 0.75, "image": "", "label": "rough shape" },
-        { "t": 50, "noise": 0.5, "image": "", "label": "object contour" },
-        { "t": 25, "noise": 0.25, "image": "", "label": "details appear" },
-        { "t": 0, "noise": 0.0, "image": "", "label": "generated image" }
+        { "t": 100, "noise": 1.0, "image": "", "label": "纯噪声" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "粗略形状" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "主体轮廓" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "细节出现" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "生成图像" }
       ],
       "guidance": [
         { "scale": 1.0, "description": "弱条件，结果更随机。" },
@@ -28,11 +28,11 @@
       "prompt": "a blue car on street",
       "samplingSteps": 32,
       "steps": [
-        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
-        { "t": 75, "noise": 0.75, "image": "", "label": "rough layout" },
-        { "t": 50, "noise": 0.5, "image": "", "label": "road contour" },
-        { "t": 25, "noise": 0.25, "image": "", "label": "car details" },
-        { "t": 0, "noise": 0.0, "image": "", "label": "generated street" }
+        { "t": 100, "noise": 1.0, "image": "", "label": "纯噪声" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "粗略布局" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "道路轮廓" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "车辆细节" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "生成街景" }
       ],
       "guidance": [
         { "scale": 1.0, "description": "街道结构随机性更高。" },
@@ -48,11 +48,11 @@
       "prompt": "a flower photo",
       "samplingSteps": 28,
       "steps": [
-        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
-        { "t": 75, "noise": 0.75, "image": "", "label": "color field" },
-        { "t": 50, "noise": 0.5, "image": "", "label": "petal contour" },
-        { "t": 25, "noise": 0.25, "image": "", "label": "texture detail" },
-        { "t": 0, "noise": 0.0, "image": "", "label": "generated flower" }
+        { "t": 100, "noise": 1.0, "image": "", "label": "纯噪声" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "颜色场" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "花瓣轮廓" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "纹理细节" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "生成花朵" }
       ],
       "guidance": [
         { "scale": 1.0, "description": "花朵颜色和位置更随机。" },
@@ -68,11 +68,11 @@
       "prompt": "handwritten digit",
       "samplingSteps": 20,
       "steps": [
-        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
-        { "t": 75, "noise": 0.75, "image": "", "label": "stroke hint" },
-        { "t": 50, "noise": 0.5, "image": "", "label": "digit contour" },
-        { "t": 25, "noise": 0.25, "image": "", "label": "stroke detail" },
-        { "t": 0, "noise": 0.0, "image": "", "label": "generated digit" }
+        { "t": 100, "noise": 1.0, "image": "", "label": "纯噪声" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "笔画提示" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "数字轮廓" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "笔画细节" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "生成数字" }
       ],
       "guidance": [
         { "scale": 1.0, "description": "笔画类别更随机。" },
@@ -88,11 +88,11 @@
       "prompt": "watercolor style",
       "samplingSteps": 34,
       "steps": [
-        { "t": 100, "noise": 1.0, "image": "", "label": "pure noise" },
-        { "t": 75, "noise": 0.75, "image": "", "label": "soft color" },
-        { "t": 50, "noise": 0.5, "image": "", "label": "style contour" },
-        { "t": 25, "noise": 0.25, "image": "", "label": "wash texture" },
-        { "t": 0, "noise": 0.0, "image": "", "label": "watercolor output" }
+        { "t": 100, "noise": 1.0, "image": "", "label": "纯噪声" },
+        { "t": 75, "noise": 0.75, "image": "", "label": "柔和色块" },
+        { "t": 50, "noise": 0.5, "image": "", "label": "风格轮廓" },
+        { "t": 25, "noise": 0.25, "image": "", "label": "水彩纹理" },
+        { "t": 0, "noise": 0.0, "image": "", "label": "水彩输出" }
       ],
       "guidance": [
         { "scale": 1.0, "description": "风格方向较自由。" },

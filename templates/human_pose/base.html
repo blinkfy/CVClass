@@ -6,7 +6,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260625-split6">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260625-samples4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/common.css') }}?v=20260627-upload1">
-{% if active_sub_page == 'skeleton' %}
+{% if active_sub_page == 'overview' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/overview.css') }}?v=20260628-overview1">
+{% elif active_sub_page == 'skeleton' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/skeleton.css') }}?v=20260627-vector1">
 {% elif active_sub_page == 'mechanism' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/human_pose/mechanism.css') }}?v=20260628-mechanism-cn1">
@@ -42,11 +44,13 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/human_pose/common.js') }}?v=20260627-keypoint2"></script>
-{% if active_sub_page == 'skeleton' %}
+{% if active_sub_page == 'overview' %}
+<script src="{{ url_for('static', filename='js/human_pose/overview.js') }}?v=20260628-overview1"></script>
+{% elif active_sub_page == 'skeleton' %}
 <script src="{{ url_for('static', filename='js/human_pose/skeleton.js') }}?v=20260627-worker6"></script>
 {% elif active_sub_page == 'mechanism' %}
 <script src="{{ url_for('static', filename='js/human_pose/mechanism.js') }}?v=20260628-mechanism-cn1"></script>
 {% elif active_sub_page == 'action' %}
-<script src="{{ url_for('static', filename='js/human_pose/action.js') }}?v=20260628-align2"></script>
+<script src="{{ url_for('static', filename='js/human_pose/action.js') }}?v=20260628-auto2"></script>
 {% endif %}
 {% endblock %}

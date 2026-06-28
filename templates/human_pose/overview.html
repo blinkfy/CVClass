@@ -1,56 +1,187 @@
 {% extends "human_pose/base.html" %}
 
 {% block human_pose_content %}
-<section class="human-overview-grid" aria-label="姿态估计总览">
-    <div class="human-flow-panel">
+<section class="human-overview-workbench" data-pose-overview data-method="topdown" data-step="input" aria-label="姿态估计总览对比台">
+    <aside class="human-overview-panel human-overview-control">
         <div class="human-section-head">
-            <span>Task Pipeline</span>
-            <h3>Input Image → Person Region → Keypoints → Skeleton → Pose Vector</h3>
+            <span>ALGORITHM COMPARE</span>
+            <h3>算法对比</h3>
         </div>
-        <div class="human-overview-flow">
-            <article>
-                <span>01</span>
-                <strong>Input Image</strong>
-                <p>输入可以是整张图像，也可以是检测后的人体 crop。</p>
-            </article>
-            <article>
-                <span>02</span>
-                <strong>Person Region</strong>
-                <p>人体框限定关键点预测的空间范围。</p>
-            </article>
-            <article>
-                <span>03</span>
-                <strong>Keypoints</strong>
-                <p>输出关节点坐标、置信度与可见性。</p>
-            </article>
-            <article>
-                <span>04</span>
-                <strong>Skeleton</strong>
-                <p>按骨架模板连接肩、肘、腕、髋、膝、踝等结构。</p>
-            </article>
-            <article>
-                <span>05</span>
-                <strong>Pose Vector</strong>
-                <p>把关键点坐标合并为可供动作识别使用的结构化向量。</p>
-            </article>
+        <div class="human-overview-methods" role="radiogroup" aria-label="选择姿态估计算法">
+            <button class="is-active" type="button" data-overview-method="topdown">Top-down 两阶段</button>
+            <button type="button" data-overview-method="bottomup">Bottom-up 自底向上</button>
+            <button type="button" data-overview-method="heatmap">Heatmap 峰值定位</button>
+            <button type="button" data-overview-method="regression">坐标回归</button>
+            <button type="button" data-overview-method="transformer">Transformer Pose</button>
         </div>
-    </div>
 
-    <aside class="human-summary-panel">
-        <div class="human-section-head">
-            <span>Technical Summary</span>
-            <h3>任务边界</h3>
-        </div>
-        <dl class="human-summary-list">
-            <div><dt>输入</dt><dd>人体图像、人体框或裁剪区域。</dd></div>
-            <div><dt>输出</dt><dd>关键点坐标、score、visible、骨架连接。</dd></div>
-            <div><dt>数据集</dt><dd>LSP / FLIC / COCO Keypoints。</dd></div>
-            <div><dt>指标</dt><dd>PCK、OKS、Keypoint AP。</dd></div>
-        </dl>
-        <div class="human-compare-card">
-            <strong>与分类、检测、分割的区别</strong>
-            <p>姿态估计不只判断“有人”或“人在哪里”，而是输出人体内部的结构点和几何关系。</p>
+        <div class="human-overview-control-block">
+            <strong>流程阶段</strong>
+            <div class="human-overview-step-buttons" role="group" aria-label="选择流程阶段">
+                <button class="is-active" type="button" data-overview-step="input">输入图像</button>
+                <button type="button" data-overview-step="person">人体区域</button>
+                <button type="button" data-overview-step="keypoints">关键点</button>
+                <button type="button" data-overview-step="skeleton">骨架连接</button>
+                <button type="button" data-overview-step="vector">姿态向量</button>
+            </div>
+            <button class="human-overview-play" type="button" data-overview-play>播放流程</button>
         </div>
     </aside>
+
+    <section class="human-overview-stage human-overview-panel">
+        <header class="human-overview-stage-head">
+            <div>
+                <span>POSE PIPELINE</span>
+                <h3 data-overview-title>Top-down 两阶段：先找人，再估计关键点</h3>
+            </div>
+            <strong data-overview-status>Person detector + keypoint head</strong>
+        </header>
+
+        <div class="human-overview-visual" aria-label="姿态估计流程图形">
+            <svg viewBox="0 0 720 420" role="img" aria-label="人体姿态估计图形流程">
+                <defs>
+                    <linearGradient id="overviewImageFill" x1="0" x2="1" y1="0" y2="1">
+                        <stop offset="0" stop-color="#eef8ff" />
+                        <stop offset="1" stop-color="#dbeafe" />
+                    </linearGradient>
+                    <radialGradient id="overviewHeatA" cx="50%" cy="50%" r="50%">
+                        <stop offset="0" stop-color="#f59e0b" stop-opacity=".82" />
+                        <stop offset=".45" stop-color="#38bdf8" stop-opacity=".36" />
+                        <stop offset="1" stop-color="#38bdf8" stop-opacity="0" />
+                    </radialGradient>
+                </defs>
+
+                <rect class="overview-image-plane" x="48" y="42" width="430" height="318" rx="24" />
+                <path class="overview-floor" d="M78 316 C160 292 330 294 448 324" />
+                <g class="overview-person overview-person-main">
+                    <circle cx="276" cy="104" r="25" />
+                    <path d="M276 132 L276 218" />
+                    <path d="M276 152 L222 194" />
+                    <path d="M276 152 L338 188" />
+                    <path d="M276 218 L236 300" />
+                    <path d="M276 218 L324 300" />
+                    <circle cx="222" cy="194" r="8" />
+                    <circle cx="338" cy="188" r="8" />
+                    <circle cx="236" cy="300" r="9" />
+                    <circle cx="324" cy="300" r="9" />
+                </g>
+                <g class="overview-person overview-person-secondary">
+                    <circle cx="376" cy="132" r="18" />
+                    <path d="M376 152 L376 220" />
+                    <path d="M376 166 L340 204" />
+                    <path d="M376 166 L416 202" />
+                    <path d="M376 220 L350 292" />
+                    <path d="M376 220 L404 292" />
+                </g>
+
+                <rect class="overview-detect-box overview-detect-box-main" x="174" y="64" width="210" height="270" rx="16" />
+                <rect class="overview-detect-box overview-detect-box-secondary" x="326" y="104" width="120" height="220" rx="16" />
+
+                <g class="overview-heatmaps">
+                    <circle cx="276" cy="104" r="42" />
+                    <circle cx="222" cy="194" r="34" />
+                    <circle cx="338" cy="188" r="34" />
+                    <circle cx="236" cy="300" r="36" />
+                    <circle cx="324" cy="300" r="36" />
+                </g>
+
+                <g class="overview-skeleton">
+                    <path d="M276 104 L276 152 L222 194" />
+                    <path d="M276 152 L338 188" />
+                    <path d="M276 152 L276 218 L236 300" />
+                    <path d="M276 218 L324 300" />
+                </g>
+                <g class="overview-keypoints">
+                    <circle cx="276" cy="104" r="6" />
+                    <circle cx="276" cy="152" r="6" />
+                    <circle cx="222" cy="194" r="6" />
+                    <circle cx="338" cy="188" r="6" />
+                    <circle cx="276" cy="218" r="6" />
+                    <circle cx="236" cy="300" r="6" />
+                    <circle cx="324" cy="300" r="6" />
+                </g>
+
+                <g class="overview-vector">
+                    <rect x="520" y="86" width="146" height="248" rx="18" />
+                    <path d="M538 126 H642" />
+                    <path d="M538 158 H620" />
+                    <path d="M538 190 H652" />
+                    <path d="M538 222 H612" />
+                    <path d="M538 254 H648" />
+                    <path d="M538 286 H628" />
+                    <path class="overview-flow-line" d="M404 210 C452 210 470 210 514 210" />
+                </g>
+            </svg>
+        </div>
+
+        <div class="human-overview-pipeline" aria-label="姿态估计流程">
+            <article class="is-active" data-overview-pipeline="input"><span>01</span><strong>输入图像</strong><small>RGB 图像或视频帧</small></article>
+            <article data-overview-pipeline="person"><span>02</span><strong>人体区域</strong><small>检测框或人体 crop</small></article>
+            <article data-overview-pipeline="keypoints"><span>03</span><strong>关键点</strong><small>关节坐标与置信度</small></article>
+            <article data-overview-pipeline="skeleton"><span>04</span><strong>骨架连接</strong><small>按模板连接肢体</small></article>
+            <article data-overview-pipeline="vector"><span>05</span><strong>姿态向量</strong><small>供动作识别使用</small></article>
+        </div>
+    </section>
+
+    <aside class="human-overview-panel human-overview-notes">
+        <div class="human-section-head">
+            <span>TECH NOTES</span>
+            <h3>当前算法摘要</h3>
+        </div>
+        <dl class="human-overview-readout">
+            <div><dt>输入</dt><dd data-overview-input>整图先进入人体检测器，再裁剪每个人体区域。</dd></div>
+            <div><dt>输出</dt><dd data-overview-output>每个人一组 COCO-17 关键点、score、visible 与 skeleton pairs。</dd></div>
+            <div><dt>优势</dt><dd data-overview-advantage>单人或少量人物时精度高，关键点落在人体 crop 内更稳定。</dd></div>
+            <div><dt>代价</dt><dd data-overview-cost>多人场景需要先检测每个人，人数越多推理越慢。</dd></div>
+        </dl>
+        <div class="human-overview-formula" data-overview-formula>
+            bbox → crop → heatmap head → argmax → keypoints
+        </div>
+    </aside>
+</section>
+
+<section class="human-overview-compare-panel" aria-label="姿态估计算法对比表">
+    <div class="human-section-head">
+        <span>METHOD MATRIX</span>
+        <h3>典型算法路线对比</h3>
+    </div>
+    <div class="human-overview-table" role="table" aria-label="姿态估计算法路线对比">
+        <div class="human-overview-row human-overview-row-head" role="row">
+            <span>路线</span><span>代表方法</span><span>计算方式</span><span>适合场景</span><span>主要限制</span>
+        </div>
+        <div class="human-overview-row is-active" data-method-row="topdown" role="row">
+            <span>Top-down</span><span>Mask R-CNN Keypoint / AlphaPose</span><span>先检测人，再对每个 crop 估计关键点</span><span>单人、少量多人、高精度展示</span><span>依赖人体检测质量，人数多时成本升高</span>
+        </div>
+        <div class="human-overview-row" data-method-row="bottomup" role="row">
+            <span>Bottom-up</span><span>OpenPose / Associative Embedding</span><span>先找全图关节点，再按肢体关系分组</span><span>多人密集场景、实时演示</span><span>关节点分组容易受遮挡和交叉肢体影响</span>
+        </div>
+        <div class="human-overview-row" data-method-row="heatmap" role="row">
+            <span>Heatmap</span><span>CPM / HRNet / SimpleBaseline</span><span>为每个关节点预测热力图，取峰值坐标</span><span>需要解释“模型如何定位关节”的教学页</span><span>热力图分辨率会影响坐标精细度</span>
+        </div>
+        <div class="human-overview-row" data-method-row="regression" role="row">
+            <span>坐标回归</span><span>DeepPose</span><span>直接回归归一化关节点坐标</span><span>说明早期端到端姿态向量思想</span><span>空间细节较弱，复杂姿态下稳定性不足</span>
+        </div>
+        <div class="human-overview-row" data-method-row="transformer" role="row">
+            <span>Transformer</span><span>TokenPose / ViTPose</span><span>用 token 建模全局人体结构关系</span><span>遮挡、长肢体依赖、复杂姿态</span><span>模型较大，浏览器端部署成本更高</span>
+        </div>
+    </div>
+</section>
+
+<section class="human-overview-metrics" aria-label="数据集与指标">
+    <article>
+        <span>DATASETS</span>
+        <strong>LSP / FLIC / COCO Keypoints</strong>
+        <p>LSP 偏运动姿态，FLIC 偏上半身标注，COCO 提供常用 17 点人体关键点定义。</p>
+    </article>
+    <article>
+        <span>PCK</span>
+        <strong>Percentage of Correct Keypoints</strong>
+        <p>判断预测点与标注点距离是否小于归一化阈值，适合解释关键点是否“落准”。</p>
+    </article>
+    <article>
+        <span>OKS / AP</span>
+        <strong>Object Keypoint Similarity</strong>
+        <p>COCO 使用 OKS 衡量整个人体关键点匹配程度，再计算 Keypoint AP。</p>
+    </article>
 </section>
 {% endblock %}

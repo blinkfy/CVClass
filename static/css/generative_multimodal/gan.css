@@ -120,6 +120,7 @@
 .gan-stage-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    align-items: start;
     gap: 10px;
     min-height: 620px;
 }
@@ -127,6 +128,7 @@
 .gan-stage-layout section,
 .gan-latent-card,
 .gan-generated-card {
+    align-self: start;
     border: 1px solid #dbeafe;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.94);
@@ -136,6 +138,20 @@
 .gan-flow-panel {
     grid-column: 1 / -1;
     padding: 12px;
+}
+
+.gan-lower-layout {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.gan-lower-stack {
+    display: grid;
+    gap: 10px;
+    align-content: start;
 }
 
 .gan-panel-heading {
@@ -593,7 +609,7 @@
 
 .gan-latent-map {
     position: relative;
-    min-height: 180px;
+    min-height: 150px;
     border: 1px solid #dbeafe;
     border-radius: 8px;
     background:
@@ -631,11 +647,13 @@
 .gan-generated-card {
     display: grid;
     gap: 8px;
+    align-content: start;
     padding: 10px;
 }
 
 .gan-generated-card .gan-art {
-    aspect-ratio: 1 / 0.78;
+    aspect-ratio: 16 / 9;
+    max-height: 240px;
 }
 
 .gan-generated-card strong {
@@ -779,6 +797,10 @@
 
     .gan-stage-layout {
         min-height: 0;
+    }
+
+    .gan-lower-layout {
+        grid-template-columns: 1fr;
     }
 
     .gan-network,

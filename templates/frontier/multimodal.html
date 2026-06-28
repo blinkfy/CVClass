@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-directory1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_multimodal.css') }}?v=20260628-compact-b1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier/multimodal.css') }}?v=20260628-compact-b1">
 {% endblock %}
 
 {% block content %}
@@ -14,16 +14,16 @@
     class="vision-lab frontier-algo frontier-multimodal multimodal-lab"
     data-frontier-algo="multimodal"
     data-multimodal-lab
-    data-samples-url="{{ url_for('static', filename='assets/data/frontier/multimodal_samples.json') }}?v=20260628-module-b1"
+    data-samples-url="{{ url_for('static', filename='assets/data/frontier/multimodal_samples.json') }}?v=20260628-zh-b1"
 >
     <header class="vision-hero station-hero frontier-algo-hero">
         <div>
-            <span class="section-label station-eyebrow">WORLD 04 · FRONTIER MODULE</span>
+            <span class="section-label station-eyebrow">WORLD 04 · 前沿模块</span>
             <h1 class="station-title">多模态理解：图像、文本与语义的联合表示</h1>
             <p class="station-summary">展示图像、文本、OCR、语音与布局等多模态输入如何进入统一任务管线。</p>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
-            <strong class="station-badge">Modality / Encoder / Fusion / Retrieval / VQA / Grounding</strong>
+            <strong class="station-badge">模态 / Encoder / Fusion / Retrieval / VQA / Grounding</strong>
         </div>
     </header>
 
@@ -37,17 +37,17 @@
         <aside class="vision-panel vision-control-panel frontier-algo-controls">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">01</span>
-                <div><h3>INPUT &amp; PARAMS</h3><p>模态、融合方式和任务输出</p></div>
+                <div><h3>输入与参数</h3><p>模态、融合方式和任务输出</p></div>
             </div>
 
             <div class="frontier-control-group" aria-label="输入模态选择">
                 <strong>输入模态选择</strong>
                 <div class="frontier-segmented multimodal-modality-toggles" data-mm-modalities>
-                    <button type="button" class="is-active" data-mm-modality="image">Image</button>
-                    <button type="button" class="is-active" data-mm-modality="text">Text</button>
+                    <button type="button" class="is-active" data-mm-modality="image">图像</button>
+                    <button type="button" class="is-active" data-mm-modality="text">文本</button>
                     <button type="button" class="is-active" data-mm-modality="ocr">OCR</button>
-                    <button type="button" class="is-active" data-mm-modality="audio">Audio</button>
-                    <button type="button" class="is-active" data-mm-modality="layout">Layout</button>
+                    <button type="button" class="is-active" data-mm-modality="audio">音频</button>
+                    <button type="button" class="is-active" data-mm-modality="layout">布局</button>
                 </div>
             </div>
 
@@ -75,10 +75,10 @@
             <div class="frontier-control-group" role="radiogroup" aria-label="多模态显示模式">
                 <strong>显示模式</strong>
                 <div class="frontier-segmented" data-mm-display-modes>
-                    <button type="button" class="is-active" data-mm-display="pipeline">Pipeline</button>
-                    <button type="button" data-mm-display="tokens">Token View</button>
-                    <button type="button" data-mm-display="matrix">Fusion Matrix</button>
-                    <button type="button" data-mm-display="output">Task Output</button>
+                    <button type="button" class="is-active" data-mm-display="pipeline">管线视图</button>
+                    <button type="button" data-mm-display="tokens">Token 视图</button>
+                    <button type="button" data-mm-display="matrix">Fusion 矩阵</button>
+                    <button type="button" data-mm-display="output">任务输出</button>
                 </div>
             </div>
 
@@ -99,7 +99,7 @@
                     </select>
                 </label>
                 <div class="frontier-current-step">
-                    <strong data-frontier-step-name>Inputs</strong>
+                    <strong data-frontier-step-name>输入</strong>
                     <span data-frontier-step-note>多种模态作为同一任务管线的输入。</span>
                 </div>
             </div>
@@ -115,11 +115,11 @@
         <div class="vision-stage-panel frontier-algo-stage">
             <div class="vision-stage-header">
                 <div>
-                    <span>PLAYGROUND</span>
-                    <h3 data-mm-stage-title>Inputs → Encoders → Fusion → Task Output</h3>
+                    <span>交互演示</span>
+                    <h3 data-mm-stage-title>输入 → 编码器 → Fusion → 任务输出</h3>
                 </div>
                 <div class="frontier-stage-chips">
-                    <span data-mm-chip="modalities">Image/Text/OCR/Audio/Layout</span>
+                    <span data-mm-chip="modalities">图像/文本/OCR/音频/布局</span>
                     <span data-mm-chip="fusion">Cross Attention</span>
                     <span data-mm-chip="task">VQA</span>
                 </div>
@@ -132,17 +132,17 @@
         <aside class="vision-panel vision-notes-panel frontier-algo-notes">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">02</span>
-                <div><h3>PROCESS NOTES</h3><p>当前模态、融合与输出</p></div>
+                <div><h3>过程说明</h3><p>当前模态、融合与输出</p></div>
             </div>
 
             <div class="frontier-note-card">
                 <span>当前步骤</span>
-                <strong data-mm-note="step">Inputs</strong>
+                <strong data-mm-note="step">输入</strong>
                 <p data-mm-note="summary">多种模态输入进入统一任务管线。</p>
             </div>
 
             <div class="frontier-note-grid">
-                <div><span>当前模态</span><strong data-mm-note="modalities">Image / Text / OCR / Audio / Layout</strong></div>
+                <div><span>当前模态</span><strong data-mm-note="modalities">图像 / 文本 / OCR / 音频 / 布局</strong></div>
                 <div><span>输入结构</span><strong data-mm-note="input">cards + prompt + signal + layout grid</strong></div>
                 <div><span>编码方式</span><strong data-mm-note="encoder">modality-specific encoders</strong></div>
                 <div><span>融合方式</span><strong data-mm-note="fusion">Cross Attention</strong></div>
@@ -166,45 +166,10 @@
         </aside>
     </section>
 
-    <ol class="vision-stepper frontier-algo-stepper multimodal-stepper" aria-label="多模态理解流程" data-frontier-stepper></ol>
-
-    <section class="frontier-bottom-player" aria-label="多模态理解底部播放控制">
-        <div>
-            <span>当前流程</span>
-            <strong data-frontier-step-name>Inputs</strong>
-            <small data-frontier-step-note>多种模态作为同一任务管线的输入。</small>
-        </div>
-        <div class="frontier-bottom-player-actions">
-            <button type="button" data-frontier-prev>上一步</button>
-            <button type="button" data-frontier-play>播放</button>
-            <button type="button" data-frontier-next>下一步</button>
-            <button type="button" data-frontier-reset>重置</button>
-            <label>
-                <span>速度</span>
-                <select data-frontier-speed aria-label="底部播放速度">
-                    <option value="0.5">0.5×</option>
-                    <option value="1" selected>1×</option>
-                    <option value="1.5">1.5×</option>
-                    <option value="2">2×</option>
-                </select>
-            </label>
-        </div>
-    </section>
-
-    <section class="frontier-next-panel" aria-labelledby="multimodalNextTitle">
-        <div>
-            <span>后续：SAM / Diffusion / Vision Banana</span>
-            <h2 id="multimodalNextTitle">多模态理解把图像、文本和其它信号组织为统一接口；后续可继续观察提示式分割、生成模型和统一视觉任务输出。</h2>
-        </div>
-        <div class="frontier-next-actions">
-            <a href="{{ url_for('frontier_vlm_page') }}">前置 VLM</a>
-            <a href="{{ url_for('vision_banana_page') }}">进入 Vision Banana</a>
-        </div>
-    </section>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
-<script src="{{ url_for('static', filename='js/frontier_multimodal.js') }}?v=20260628-arch1"></script>
+<script src="{{ url_for('static', filename='js/frontier/multimodal.js') }}?v=20260628-zh-b1"></script>
 {% endblock %}

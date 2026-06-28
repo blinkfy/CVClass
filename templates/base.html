@@ -168,9 +168,13 @@
                 <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'multimodal' else '' }}" href="{{ url_for('frontier_multimodal_page') }}">多模态理解</a>
             </div>
 
-            <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') in ['sam', 'gan', 'diffusion'] else '' }}" href="{{ url_for('generative_multimodal_sam_page') }}">提示式与生成式视觉模型</a>
-            <div class="sidebar-subnav" aria-label="提示式与生成式视觉模型子页面">
+            <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'sam' else '' }}" href="{{ url_for('generative_multimodal_sam_page') }}">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
                 <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'sam' else '' }}" href="{{ url_for('generative_multimodal_sam_page') }}">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') in ['gan', 'diffusion'] else '' }}" href="{{ url_for('generative_multimodal_gan_page') }}">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
                 <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'gan' else '' }}" href="{{ url_for('generative_multimodal_gan_page') }}">GAN 对抗生成</a>
                 <a class="{{ 'active' if active_page == 'vision_language' and active_sub_page|default('') == 'diffusion' else '' }}" href="{{ url_for('generative_multimodal_diffusion_page') }}">Diffusion 去噪生成</a>
             </div>

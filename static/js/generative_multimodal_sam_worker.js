@@ -2,6 +2,7 @@ const ORT_SCRIPT = "/static/vendor/onnxruntime-web/ort.min.js";
 const ORT_WASM_PATH = "/static/vendor/onnxruntime-web/";
 const DEFAULT_MANIFEST_URL = "/static/assets/models/generative_multimodal/sam/sam_model_manifest.json";
 const DEFAULT_MASK_INPUT_SHAPE = [1, 1, 256, 256];
+const DEFAULT_ENCODER_LONG_SIDE = 1024;
 
 let session = null;
 let manifest = null;
@@ -189,22 +190,41 @@ function normalizeBox(box) {
     return [Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2), Math.max(y1, y2)];
 }
 
-function collectPrompt(payload = {}) {
+function encoderScale(width, height) {
+    const longSide = Number(manifest?.imageEncoderLongSide || manifest?.encoderLongSide || DEFAULT_ENCODER_LONG_SIDE);
+    return Math.max(1, longSide) / Math.max(width || 1, height || 1);
+}
+
+function transformPoint(point, scale) {
+    return [
+        (Number(point?.[0]) || 0) * scale,
+        (Number(point?.[1]) || 0) * scale,
+    ];
+}
+
+function transformBox(box, scale) {
+    return box ? box.map((value) => value * scale) : null;
+}
+
+function collectPrompt(payload = {}, width = 640, height = 420) {
     const coords = [];
     const labels = [];
+    const scale = encoderScale(width, height);
     (payload.positivePoints || []).forEach((point) => {
         if (Array.isArray(point) && point.length >= 2) {
-            coords.push(Number(point[0]) || 0, Number(point[1]) || 0);
+            const transformed = transformPoint(point, scale);
+            coords.push(transformed[0], transformed[1]);
             labels.push(1);
         }
     });
     (payload.negativePoints || []).forEach((point) => {
         if (Array.isArray(point) && point.length >= 2) {
-            coords.push(Number(point[0]) || 0, Number(point[1]) || 0);
+            const transformed = transformPoint(point, scale);
+            coords.push(transformed[0], transformed[1]);
             labels.push(0);
         }
     });
-    const box = normalizeBox(payload.box);
+    const box = transformBox(normalizeBox(payload.box), scale);
     if (box) {
         coords.push(box[0], box[1], box[2], box[3]);
         labels.push(2, 3);
@@ -365,7 +385,7 @@ async function runPrediction(payload = {}) {
     const width = Number(imageSize[0]) || 640;
     const height = Number(imageSize[1]) || 420;
     const threshold = Math.max(0.01, Math.min(0.99, Number(payload.threshold) || 0.5));
-    const prompt = collectPrompt(payload);
+    const prompt = collectPrompt(payload, width, height);
 
     const names = {
         image: pickInput("image_embeddings", ["image_embeddings", "image_embedding"]),

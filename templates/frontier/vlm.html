@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-directory1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_vlm.css') }}?v=20260628-compact-b1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/frontier/vlm.css') }}?v=20260628-compact-b1">
 {% endblock %}
 
 {% block content %}
@@ -18,12 +18,12 @@
 >
     <header class="vision-hero station-hero frontier-algo-hero">
         <div>
-            <span class="section-label station-eyebrow">WORLD 04 · FRONTIER MODULE</span>
+            <span class="section-label station-eyebrow">WORLD 04 · 前沿模块</span>
             <h1 class="station-title">VLM：视觉语言模型如何理解图像</h1>
             <p class="station-summary">展示图像 token 与文本 prompt 如何融合，并逐步生成自然语言回答。</p>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
-            <strong class="station-badge">Image Tokens / Prompt Tokens / Cross-Attention / Decoder / Evidence</strong>
+            <strong class="station-badge">图像 Tokens / Prompt Tokens / Cross-Attention / Decoder / 证据</strong>
         </div>
     </header>
 
@@ -37,7 +37,7 @@
         <aside class="vision-panel vision-control-panel frontier-algo-controls">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">01</span>
-                <div><h3>INPUT &amp; PARAMS</h3><p>图像、问题和回答显示</p></div>
+                <div><h3>输入与参数</h3><p>图像、问题和回答显示</p></div>
             </div>
 
             <label class="vision-field">
@@ -63,10 +63,10 @@
             <div class="frontier-control-group" role="radiogroup" aria-label="VLM 显示模式">
                 <strong>显示模式</strong>
                 <div class="frontier-segmented" data-vlm-display-modes>
-                    <button type="button" class="is-active" data-vlm-display="fusion">Token Fusion</button>
-                    <button type="button" data-vlm-display="attention">Attention to Image</button>
-                    <button type="button" data-vlm-display="answer">Answer Generation</button>
-                    <button type="button" data-vlm-display="evidence">Evidence Highlight</button>
+                    <button type="button" class="is-active" data-vlm-display="fusion">Token 融合</button>
+                    <button type="button" data-vlm-display="attention">图像注意力</button>
+                    <button type="button" data-vlm-display="answer">回答生成</button>
+                    <button type="button" data-vlm-display="evidence">证据高亮</button>
                 </div>
             </div>
 
@@ -87,7 +87,7 @@
                     </select>
                 </label>
                 <div class="frontier-current-step">
-                    <strong data-frontier-step-name>Image</strong>
+                    <strong data-frontier-step-name>图像输入</strong>
                     <span data-frontier-step-note>输入图像以 H×W×3 进入视觉编码器。</span>
                 </div>
             </div>
@@ -103,12 +103,12 @@
         <div class="vision-stage-panel frontier-algo-stage">
             <div class="vision-stage-header">
                 <div>
-                    <span>PLAYGROUND</span>
-                    <h3 data-vlm-stage-title>Image Tokens + Prompt Tokens → Answer</h3>
+                    <span>交互演示</span>
+                    <h3 data-vlm-stage-title>图像 Tokens + Prompt Tokens → 回答</h3>
                 </div>
                 <div class="frontier-stage-chips">
                     <span data-vlm-chip="sample">street</span>
-                    <span data-vlm-chip="mode">Token Fusion</span>
+                    <span data-vlm-chip="mode">Token 融合</span>
                 </div>
             </div>
 
@@ -119,17 +119,17 @@
         <aside class="vision-panel vision-notes-panel frontier-algo-notes">
             <div class="vision-panel-heading">
                 <span class="vision-panel-index">02</span>
-                <div><h3>PROCESS NOTES</h3><p>当前步骤输入、计算和输出</p></div>
+                <div><h3>过程说明</h3><p>当前步骤输入、计算和输出</p></div>
             </div>
 
             <div class="frontier-note-card">
                 <span>当前步骤</span>
-                <strong data-vlm-note="step">Image</strong>
+                <strong data-vlm-note="step">图像输入</strong>
                 <p data-vlm-note="summary">输入图像先被视觉编码器切分为 visual tokens。</p>
             </div>
 
             <div class="frontier-note-grid">
-                <div><span>输入结构</span><strong data-vlm-note="input">Image + Question Prompt</strong></div>
+                <div><span>输入结构</span><strong data-vlm-note="input">图像 + 问题 Prompt</strong></div>
                 <div><span>中间结构</span><strong data-vlm-note="middle">visual tokens + text tokens</strong></div>
                 <div><span>核心计算</span><strong data-vlm-note="compute">cross-attention / multimodal fusion</strong></div>
                 <div><span>输出结构</span><strong data-vlm-note="output">answer tokens</strong></div>
@@ -143,51 +143,16 @@
             </div>
 
             <div class="frontier-note-card">
-                <span>Evidence scores</span>
+                <span>证据分数</span>
                 <ol class="frontier-top-list" data-vlm-evidence-list></ol>
             </div>
         </aside>
     </section>
 
-    <ol class="vision-stepper frontier-algo-stepper vlm-stepper" aria-label="VLM 视觉语言模型流程" data-frontier-stepper></ol>
-
-    <section class="frontier-bottom-player" aria-label="VLM 底部播放控制">
-        <div>
-            <span>当前流程</span>
-            <strong data-frontier-step-name>Image</strong>
-            <small data-frontier-step-note>输入图像以 H×W×3 进入视觉编码器。</small>
-        </div>
-        <div class="frontier-bottom-player-actions">
-            <button type="button" data-frontier-prev>上一步</button>
-            <button type="button" data-frontier-play>播放</button>
-            <button type="button" data-frontier-next>下一步</button>
-            <button type="button" data-frontier-reset>重置</button>
-            <label>
-                <span>速度</span>
-                <select data-frontier-speed aria-label="底部播放速度">
-                    <option value="0.5">0.5×</option>
-                    <option value="1" selected>1×</option>
-                    <option value="1.5">1.5×</option>
-                    <option value="2">2×</option>
-                </select>
-            </label>
-        </div>
-    </section>
-
-    <section class="frontier-next-panel" aria-labelledby="vlmNextTitle">
-        <div>
-            <span>下一步：多模态理解</span>
-            <h2 id="vlmNextTitle">VLM 展示图像与语言如何融合生成答案；多模态理解会把 OCR、语音、布局等输入接入统一任务管线。</h2>
-        </div>
-        <div class="frontier-next-actions">
-            <a href="{{ url_for('frontier_clip_page') }}">前置 CLIP</a>
-            <a href="{{ url_for('frontier_multimodal_page') }}">进入多模态理解</a>
-        </div>
-    </section>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
-<script src="{{ url_for('static', filename='js/frontier_vlm.js') }}?v=20260628-model-b3"></script>
+<script src="{{ url_for('static', filename='js/frontier/vlm.js') }}?v=20260628-zh-b1"></script>
 {% endblock %}

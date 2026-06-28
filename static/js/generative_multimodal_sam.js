@@ -73,7 +73,7 @@
     const STEPS = [
         {
             id: "image",
-            label: "Image",
+            label: "图像 Image",
             short: "输入图像",
             note: "输入图像以 H×W×3 进入视觉编码器。",
             input: "Image ∈ R^(H×W×3)",
@@ -85,129 +85,129 @@
         },
         {
             id: "image-encoder",
-            label: "Image Encoder",
+            label: "图像编码器",
             short: "视觉编码",
             note: "将原始图像编码为高维视觉特征。",
-            input: "Image tensor",
+            input: "图像张量 Image tensor",
             compute: "Vision Transformer / image encoder 提取上下文特征。",
-            output: "Image Embedding",
+            output: "图像特征 Image Embedding",
             summary: "同一张图像的 embedding 可以被多个不同 prompt 复用。",
             metrics: "编码后 token 数、网格分辨率和特征复用。",
             formula: "E_img = ImageEncoder(X)",
         },
         {
             id: "image-embedding",
-            label: "Image Embedding",
+            label: "图像特征",
             short: "特征网格",
             note: "Embedding grid 保存局部区域与上下文信息。",
-            input: "Image Embedding",
+            input: "图像特征 Image Embedding",
             compute: "把图像压缩成可查询的特征地图。",
-            output: "Embedding Grid",
+            output: "Embedding 网格",
             summary: "可以理解为图像被压缩成一张可查询的视觉特征地图。",
             metrics: "grid cell 激活、空间位置和上下文范围。",
             formula: "Grid = reshape(E_img)",
         },
         {
             id: "prompt-input",
-            label: "Prompt Input",
+            label: "提示输入",
             short: "点 / 框 / mask",
             note: "正点包含目标，负点排除区域，box 限定搜索范围。",
-            input: "Point / Box / Mask Prompt",
+            input: "点 / 框 / Mask Prompt",
             compute: "收集用户交互坐标并保持原图坐标系。",
-            output: "Prompt tokens before encoding",
+            output: "编码前的 Prompt tokens",
             summary: "点、框和粗略 mask 都是用户给模型的区域查询条件。",
             metrics: "正点数、负点数、box 面积和 prompt 类型。",
             formula: "P = {points, labels, boxes, mask_prior}",
         },
         {
             id: "prompt-encoder",
-            label: "Prompt Encoder",
+            label: "提示编码器",
             short: "提示编码",
             note: "把用户提示转换为模型可计算的 prompt embedding。",
-            input: "Prompt coordinates + labels",
+            input: "Prompt 坐标 + 标签",
             compute: "Sparse embedding 编码点/框，dense embedding 编码 mask prior。",
-            output: "Prompt Embedding",
+            output: "提示特征 Prompt Embedding",
             summary: "Prompt Encoder 把用户的操作变成可与图像 embedding 对齐的查询向量。",
             metrics: "sparse token、dense prior 和提示标签。",
             formula: "E_prompt = PromptEncoder(P)",
         },
         {
             id: "mask-decoder",
-            label: "Mask Decoder",
+            label: "Mask 解码器",
             short: "融合解码",
             note: "Image embedding 和 prompt embedding 汇入 decoder。",
-            input: "ImageEmbedding + PromptEmbedding",
+            input: "图像特征 + Prompt 特征",
             compute: "Mask = Decoder(ImageEmbedding, PromptEmbedding)",
-            output: "Mask logits + quality scores",
+            output: "Mask logits + 质量分数",
             summary: "Decoder 根据提示在图像 embedding 中查询相关区域。",
             metrics: "logit 响应、score 预测和候选数量。",
             formula: "M = Decoder(E_img, E_prompt)",
         },
         {
             id: "candidate-masks",
-            label: "Candidate Masks",
+            label: "候选 Masks",
             short: "候选分割",
             note: "同一个 prompt 可能对应局部、整体或相邻目标。",
             input: "Mask logits",
             compute: "生成多个候选 mask，并预测质量分数。",
-            output: "3 candidate masks + predicted IoU",
+            output: "3 个候选 masks + 预测 IoU",
             summary: "多候选结果用于表达提示歧义，用户可选择最符合意图的一项。",
-            metrics: "IoU 预测分、stability、area 和 contour length。",
+            metrics: "IoU 预测分、稳定性、面积和轮廓长度。",
             formula: "{M1, M2, M3}, score = Rank(DecoderOutput)",
         },
         {
             id: "final-output",
-            label: "Final Output",
+            label: "最终输出",
             short: "结构化输出",
             note: "输出不是一张图片，而是 mask、bbox、score、area 等结构。",
-            input: "Selected candidate mask",
+            input: "选中的候选 mask",
             compute: "根据阈值、提示和候选选择得到最终 mask。",
-            output: "mask + bbox + score + area + contour length + stability",
+            output: "mask + bbox + 分数 + 面积 + 轮廓长度 + 稳定性",
             summary: "最终结果是结构化分割输出，可继续进入测量、编辑或下游视觉任务。",
-            metrics: "IoU、Mask Area、Contour Length、Stability Score。",
+            metrics: "IoU、Mask 面积、轮廓长度、稳定性分数。",
             formula: "Output = {mask, bbox, score, area, contour, stability}",
         },
     ];
 
     const FLOW = [
-        { id: "image", title: "Image", detail: "H×W×3" },
-        { id: "image-encoder", title: "Image Encoder", detail: "visual features" },
-        { id: "image-embedding", title: "Image Embedding", detail: "grid map" },
-        { id: "prompt-input", title: "Prompt Input", detail: "point / box / mask" },
-        { id: "prompt-encoder", title: "Prompt Encoder", detail: "prompt embedding" },
-        { id: "mask-decoder", title: "Mask Decoder", detail: "query region" },
-        { id: "candidate-masks", title: "Candidate Masks", detail: "3 masks + score" },
-        { id: "final-output", title: "Final Output", detail: "mask + bbox" },
+        { id: "image", title: "图像 Image", detail: "H×W×3" },
+        { id: "image-encoder", title: "图像编码器", detail: "视觉特征" },
+        { id: "image-embedding", title: "Image Embedding", detail: "特征网格" },
+        { id: "prompt-input", title: "提示输入", detail: "点 / 框 / mask" },
+        { id: "prompt-encoder", title: "Prompt Encoder", detail: "提示特征" },
+        { id: "mask-decoder", title: "Mask Decoder", detail: "区域查询" },
+        { id: "candidate-masks", title: "候选 Masks", detail: "3 个 mask + 分数" },
+        { id: "final-output", title: "最终输出", detail: "mask + bbox" },
     ];
 
     const MODES = {
         point: {
-            label: "Point Prompt",
+            label: "点提示 Point",
             promptType: "positive",
             tool: "positive",
             step: 3,
             caption: "一个正点可能产生多个候选 mask，当前候选由下方卡片选择。",
         },
         box: {
-            label: "Box Prompt",
+            label: "框提示 Box",
             promptType: "box",
             tool: "box",
             step: 3,
             caption: "box 限定目标搜索范围，通常会让候选 mask 更稳定。",
         },
         refine: {
-            label: "Multi-prompt Refinement",
+            label: "多提示修正",
             promptType: "multi",
             tool: "negative",
             step: 5,
             caption: "正点扩展目标区域，负点排除误选区域，mask 会随提示收缩或偏移。",
         },
         output: {
-            label: "Mask Output Structure",
+            label: "Mask 输出结构",
             promptType: "mask",
             tool: "positive",
             step: 7,
-            caption: "最终输出是结构化数据；加载 ONNX Decoder 后会显示真实 decoder 结果，否则使用预设 fallback。",
+            caption: "最终输出是结构化数据；加载 ONNX Decoder 后会显示真实 Decoder 结果，否则使用预设 fallback。",
         },
     };
 
@@ -295,8 +295,9 @@
         inferenceClient: null,
         inferenceMode: "preset",
         inferenceStatus: "idle",
-        inferenceMessage: "未加载真实 decoder，当前使用预设 polygon fallback。",
+        inferenceMessage: "准备自动加载真实 Decoder；资源不可用时会回到预设 polygon fallback。",
         inferenceBackend: "--",
+        autoLoadStarted: false,
         embeddingSampleId: "",
         realResult: null,
         maskBitmapCache: new WeakMap(),
@@ -533,8 +534,8 @@
         return {
             source: metrics.source,
             mask: metrics.source === REAL_SOURCE
-                ? `${width}×${height} binary map (ONNX decoder output)`
-                : `${width}×${height} binary map (simulated polygon mask)`,
+                ? `${width}×${height} 二值图（ONNX Decoder 输出）`
+                : `${width}×${height} 二值图（预设 polygon mask）`,
             bbox: metrics.bbox,
             score: metrics.score,
             stability: metrics.stability,
@@ -549,17 +550,17 @@
         return {
             positive: "正点 Positive Point",
             negative: "负点 Negative Point",
-            box: "Box Prompt",
-            multi: "Multi-point Prompt",
-            mask: "Mask Prompt",
+            box: "框提示 Box Prompt",
+            multi: "多点提示 Multi-point",
+            mask: "Mask 提示",
         }[state.promptType] || "Prompt";
     }
 
     function toolHint() {
         return {
             positive: "点击主图添加正点；右键可临时添加负点。",
-            negative: "点击主图添加负点，观察 mask refinement。",
-            box: "在主图中按下并拖拽绘制 box prompt。",
+            negative: "点击主图添加负点，观察 mask 修正。",
+            box: "在主图中按下并拖拽绘制 Box prompt。",
             mask: "当前使用预设 polygon 作为 mask prior 演示。",
         }[state.tool] || "点击主图添加提示。";
     }
@@ -690,7 +691,7 @@
         const pointSvg = points.map((item, index) => pointMarkup(item.point, item.type, index)).join("");
         const stageBadge = usingRealDecoder()
             ? "真实推理 · ONNX Mask Decoder"
-            : "预设样例 · polygon mask fallback";
+            : "预设样例 · polygon mask 回退";
 
         el.stage.innerHTML = `
             <div class="sam-stage-frame" style="--sam-w:${width};--sam-h:${height}">
@@ -738,8 +739,8 @@
                     </svg>
                     <span>
                         <strong>${escapeHtml(candidate.name || `Mask ${index + 1}`)}</strong>
-                        <span>IoU ${metrics.score} · Stability ${metrics.stability}</span>
-                        <span>Area ${metrics.areaText} · Contour ${metrics.contourLength}</span>
+                        <span>IoU ${metrics.score} · 稳定性 ${metrics.stability}</span>
+                        <span>面积 ${metrics.areaText} · 轮廓 ${metrics.contourLength}</span>
                     </span>
                 </button>
             `;
@@ -810,7 +811,13 @@
         const decoderLoaded = ["ready", "running"].includes(state.inferenceStatus);
         if (el.inferenceLoad) {
             el.inferenceLoad.disabled = ["loading", "running"].includes(state.inferenceStatus);
-            el.inferenceLoad.textContent = decoderLoaded ? "重新加载 Decoder" : "加载真实 Decoder";
+            el.inferenceLoad.textContent = state.inferenceStatus === "loading"
+                ? "正在加载 Decoder"
+                : state.inferenceStatus === "running"
+                    ? "推理中"
+                    : decoderLoaded
+                        ? "重新加载 Decoder"
+                        : "加载真实 Decoder";
         }
         if (el.inferenceRun) {
             el.inferenceRun.disabled = !decoderLoaded || !sampleRealConfig().ready || state.inferenceStatus === "running";
@@ -820,7 +827,7 @@
         if (el.inferenceNote) {
             el.inferenceNote.textContent = usingRealDecoder()
                 ? "当前结果来自 ONNX Runtime Web 的真实 Mask Decoder；Image Encoder 未在浏览器实时运行，embedding 为离线预计算。"
-                : "当前页面默认使用预设 polygon mask；加载 ONNX decoder 且存在离线 embedding 后，才运行真实 Mask Decoder。";
+                : "当前页面默认使用预设 polygon mask；加载 ONNX Decoder 且存在离线 embedding 后，才运行真实 Mask Decoder。";
         }
         if (el.status.mode) {
             el.status.mode.textContent = usingRealDecoder()
@@ -848,8 +855,8 @@
         const metrics = outputMetrics(candidate);
         const step = state.player?.current ? state.player.current() : STEPS[0];
         const promptCount = state.positivePoints.length + state.negativePoints.length + (state.box ? 1 : 0);
-        const sourceLabel = usingRealDecoder() ? "ONNX decoder" : "preset fallback";
-        const currentState = `${MODES[state.mode]?.label || "Mode"} · ${promptCount} prompts · threshold ${state.threshold.toFixed(2)} · ${sourceLabel}`;
+        const sourceLabel = usingRealDecoder() ? "ONNX Decoder" : "预设 fallback";
+        const currentState = `${MODES[state.mode]?.label || "模式"} · ${promptCount} 个提示 · 阈值 ${state.threshold.toFixed(2)} · ${sourceLabel}`;
 
         if (el.stageTitle) el.stageTitle.textContent = `${step.label} · ${promptLabel()} → ${candidate.name || candidate.id}`;
         if (el.chip.sample) el.chip.sample.textContent = sample?.title || "--";
@@ -963,7 +970,7 @@
         const token = ++state.predictToken;
         state.inferenceStatus = "running";
         state.inferenceMode = "real_decoder";
-        state.inferenceMessage = "SAM Decoder 正在根据当前 prompt 推理。";
+        state.inferenceMessage = "SAM Decoder 正在根据当前 Prompt 推理。";
         renderControls();
         try {
             if (state.embeddingSampleId !== state.sampleId) {
@@ -1006,6 +1013,7 @@
     }
 
     async function loadRealDecoder() {
+        if (["loading", "running"].includes(state.inferenceStatus)) return;
         clearRealResult();
         state.inferenceMode = "preset";
         state.inferenceStatus = "loading";
@@ -1028,6 +1036,14 @@
             setInferenceFallback(`真实 Decoder 资源不可用：${shortError(error)}。当前继续使用预设 polygon fallback。`);
             renderAll();
         }
+    }
+
+    function maybeAutoLoadDecoder() {
+        if (state.autoLoadStarted) return;
+        state.autoLoadStarted = true;
+        window.setTimeout(() => {
+            loadRealDecoder();
+        }, 250);
     }
 
     function loadPresetPrompt(mode) {
@@ -1267,10 +1283,11 @@
         state.sampleId = samples()[0]?.id || "";
         state.candidateIndex = 0;
         state.runtimeMessage = state.dataSource === "json"
-            ? "已加载预设样例；未加载 ONNX Decoder 前使用 polygon fallback。"
+            ? "已加载真实样例；正在自动加载 ONNX Decoder。"
             : "JSON 加载失败或结构异常，当前使用 JS 内置默认数据。";
         loadPresetPrompt(state.mode);
         renderAll();
+        if (state.dataSource === "json") maybeAutoLoadDecoder();
     }
 
     function fetchJson(url) {

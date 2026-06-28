@@ -27,6 +27,15 @@ The repository now includes:
 `static/assets/data/generative_multimodal/sam_samples.json` marks the five
 samples as `realInferenceReady`.
 
+The current real-image samples were generated as 640x420 PNG classroom copies
+from existing local assets:
+
+- `street_vehicle.png`: `static/assets/frontier/vision-banana/depth/laguna-input.jpg`
+- `desktop_objects.png`: `static/assets/frontier/vision-banana/refseg/controller-input.png`
+- `animal_subject.png`: `static/assets/frontier/vision-banana/refseg/cats-input.jpeg`
+- `medical_slice.png`: `static/assets/frontier/vision-banana/insseg/food-input.jpg`
+- `indoor_scene.png`: `static/assets/img/classroom_students.jpg`
+
 ## References
 
 - Segment Anything repository: https://github.com/facebookresearch/segment-anything

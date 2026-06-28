@@ -74,6 +74,7 @@
         videoBusy: false,
         videoStatus: "",
         videoRunId: 0,
+        autoAnalyzeTimer: 0,
         poseWorker: null,
         poseWorkerRequestId: 0,
         poseWorkerRequests: new Map(),
@@ -353,6 +354,10 @@
     function syncVideoPreview() {
         if (!el.videoPreview) return;
         const videoUrl = currentVideoUrl();
+        el.videoPreview.muted = true;
+        el.videoPreview.loop = true;
+        el.videoPreview.autoplay = true;
+        el.videoPreview.playsInline = true;
         if (!videoUrl) {
             if (el.videoPreview.dataset.currentSrc) {
                 el.videoPreview.pause();
@@ -376,6 +381,8 @@
             el.videoPreview.dataset.currentSrc = videoUrl;
             el.videoPreview.load();
         }
+        const playPromise = el.videoPreview.play();
+        if (playPromise?.catch) playPromise.catch(() => {});
     }
 
     function flowStageIndex() {
@@ -529,7 +536,7 @@
 
         const sourceWidth = Math.max(1, video.videoWidth || 320);
         const sourceHeight = Math.max(1, video.videoHeight || 240);
-        const maxSide = 384;
+        const maxSide = 256;
         const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
         const width = Math.max(64, Math.round(sourceWidth * scale));
         const height = Math.max(64, Math.round(sourceHeight * scale));
@@ -631,6 +638,10 @@
     async function analyzeCurrentVideo() {
         if (!state.sample) return;
         stopPlayback();
+        if (state.autoAnalyzeTimer) {
+            window.clearTimeout(state.autoAnalyzeTimer);
+            state.autoAnalyzeTimer = 0;
+        }
         const runId = state.videoRunId + 1;
         state.videoRunId = runId;
 
@@ -699,6 +710,15 @@
                 renderAll();
             }
         }
+    }
+
+    function scheduleAutoAnalyze(delay = 420) {
+        if (!state.data || !state.sample) return;
+        if (state.autoAnalyzeTimer) window.clearTimeout(state.autoAnalyzeTimer);
+        state.autoAnalyzeTimer = window.setTimeout(() => {
+            state.autoAnalyzeTimer = 0;
+            analyzeCurrentVideo();
+        }, delay);
     }
 
     function range(values) {
@@ -1028,7 +1048,7 @@
             } else if (frameCount) {
                 el.videoCaption.textContent = `已从${kind}抽取 ${frameCount}/${count} 帧，帧序列在下方展开。`;
             } else if (currentVideoUrl()) {
-                el.videoCaption.textContent = `${kind}可直接播放，点击“识别关键点与骨架”后进入抽帧。`;
+                el.videoCaption.textContent = `${kind}可直接播放，页面会自动抽帧并识别关键点与骨架。`;
             } else {
                 el.videoCaption.textContent = "没有真实视频时使用预置姿态序列作为 fallback。";
             }
@@ -1163,7 +1183,7 @@
         if (el.videoName) el.videoName.textContent = file.name;
         setVideoStatus(`已选择 ${file.name}，开始抽帧并识别关键点与骨架...`);
         renderAll();
-        analyzeCurrentVideo();
+        scheduleAutoAnalyze(120);
     }
 
     function selectSample(sampleId) {
@@ -1175,6 +1195,7 @@
         clearUploadedVideo();
         renderControls();
         renderAll();
+        scheduleAutoAnalyze(180);
     }
 
     function play() {
@@ -1215,6 +1236,7 @@
             if (!file) {
                 clearUploadedVideo();
                 renderAll();
+                scheduleAutoAnalyze(220);
                 return;
             }
             selectUploadedVideo(file);
@@ -1222,11 +1244,20 @@
         el.frameSlider?.addEventListener("input", () => {
             state.frameCount = Number(el.frameSlider.value);
             state.activeFrame = Math.min(state.activeFrame, visibleFrames() - 1);
-            if (state.videoMode !== "preset" && (state.videoFrames.length || state.videoPoseSequence?.length)) {
+            if (currentVideoUrl()) {
+                state.videoRunId += 1;
                 state.videoFrames = [];
                 state.videoPoseSequence = null;
                 state.activeStep = 0;
-                setVideoStatus("帧数 T 已变化，请重新点击“识别关键点与骨架”生成对应长度的帧序列。");
+                setVideoBusy(false);
+                setVideoStatus("帧数 T 已变化，正在按新的 T 自动重新抽帧并识别。");
+                scheduleAutoAnalyze(520);
+            } else if (state.videoMode !== "preset" && (state.videoFrames.length || state.videoPoseSequence?.length)) {
+                state.videoFrames = [];
+                state.videoPoseSequence = null;
+                state.activeStep = 0;
+                setVideoStatus("帧数 T 已变化，正在自动生成对应长度的姿态序列。");
+                scheduleAutoAnalyze(520);
             } else if (state.videoPoseSequence?.length) {
                 state.videoPoseSequence = Array.from({ length: visibleFrames() }, (_, index) => generatePose(index, visibleFrames()));
             }
@@ -1255,6 +1286,7 @@
         });
         window.addEventListener("beforeunload", () => {
             stopPlayback();
+            if (state.autoAnalyzeTimer) window.clearTimeout(state.autoAnalyzeTimer);
             if (state.videoObjectUrl) URL.revokeObjectURL(state.videoObjectUrl);
             state.poseWorker?.terminate();
         });
@@ -1275,6 +1307,7 @@
                 state.sample = data.samples.find((sample) => sample.id === data.defaultSample) || data.samples[0];
                 renderControls();
                 renderAll();
+                scheduleAutoAnalyze(520);
             })
             .catch((error) => {
                 console.warn("Failed to load local action model; using preset fallback.", error);
@@ -1287,6 +1320,7 @@
                         state.sample = data.samples.find((sample) => sample.id === data.defaultSample) || data.samples[0];
                         renderControls();
                         renderAll();
+                        scheduleAutoAnalyze(520);
                     })
                     .catch((dataError) => {
                         console.error("Failed to load human action data", dataError);
