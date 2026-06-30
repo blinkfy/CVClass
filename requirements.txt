@@ -1,0 +1,13 @@
+flask>=2.3.0
+flask-cors>=4.0.0
+numpy>=1.24.0
+imageio>=2.31.0
+Pillow>=10.0.0
+scipy>=1.10.0
+# Phase 5 frontier modules (real pretrained models)
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+timm>=0.9.0
+diffusers>=0.25.0
+segment-anything>=1.0

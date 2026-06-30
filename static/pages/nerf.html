@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeRF - CV 通识教育</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <link rel="stylesheet" href="../css/model-demo-page.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="hero-main">
+      <div class="eyebrow">隐式 3D / 体渲染</div>
+      <h1 id="pageTitle">NeRF</h1>
+      <p class="subtitle" id="subtitle"></p>
+      <p class="intro" id="introText"></p>
+      <div class="problem-statement" id="problemStatement"></div>
+      <span class="status" id="statusPill"></span>
+    </div>
+    <aside class="panel controls">
+      <h2>运行真实后端</h2>
+      <div class="control-row">
+        <button id="sampleBtn" type="button">使用默认场景</button>
+        <button id="runBtn" class="primary" type="button">渲染 NeRF</button>
+      </div>
+      <div class="file-line" id="fileName">NeRF 使用内置三维辐射场</div>
+      <div id="paramsPanel" class="params"></div>
+    </aside>
+  </section>
+  <section class="info-grid">
+    <div class="panel"><h2>算法流程</h2><ul id="pipelineList"></ul></div>
+    <div class="panel"><h2>应用场景</h2><ul id="applicationsList"></ul></div>
+    <div class="panel"><h2>局限说明</h2><ul id="limitationsList"></ul></div>
+  </section>
+  <div id="loading" class="loading" hidden>后端正在进行射线采样和体渲染...</div>
+  <div id="errorBox" class="error" hidden></div>
+  <section id="metricsGrid" class="metrics"></section>
+  <section class="panel"><h2>后端步骤证据</h2><div id="stepsGrid" class="steps"></div></section>
+</main>
+<script>
+window.ModelDemoConfig = {
+  moduleId: 'nerf',
+  title: 'NeRF',
+  subtitle: '从不同视角合成新画面，让二维照片长出三维空间感。',
+  intro: 'NeRF 适合解释新视角合成、数字孪生、3D 展示背后的问题：给定相机位置后，系统沿每条视线询问空间里有什么颜色和密度。本页使用本地 NumPy 辐射场做真实 ray marching 和 volume rendering。',
+  problemStatement: 'NeRF 解决的是“如何从一个隐式三维场景渲染出任意视角图片”的问题。它把每条相机射线上的颜色和密度累积成最终像素。',
+  status: '真实本地机制实现',
+  params: [
+    { name: 'azimuth', label: '相机角度', type: 'range', min: -180, max: 180, step: 10, value: 0, suffix: '度' },
+    { name: 'resolution', label: '分辨率', type: 'range', min: 64, max: 128, step: 16, value: 96 },
+    { name: 'samples_per_ray', label: '采样点数', type: 'range', min: 32, max: 128, step: 16, value: 80 }
+  ],
+  pipeline: ['选择相机视角', '为每个像素发出一条射线', '沿射线采样多个 3D 点', '查询颜色和密度', '按透明度累积成像素', '得到深度图和新视角渲染'],
+  applications: ['新视角合成', '三维展示和数字孪生', '理解体渲染', '连接传统多视图几何和神经表示'],
+  limitations: ['这里是机制演示，不是训练好的真实场景', '完整 NeRF 训练需要多视角数据和较长优化时间', '分辨率越高计算越慢']
+};
+</script>
+<script src="../js/interactive-teaching-stage.js"></script>
+<script src="../js/model-demo-page.js"></script>
+</body>
+</html>

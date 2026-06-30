@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeNet-5 训练 & 推理可视化</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lenet_backprop.css') }}?v={{ static_version() }}">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  options: { ignoreHtmlClass: 'no-mathjax' },
+  startup: { typeset: false }
+};
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+{% raw %}
+<main id="app" class="bp-shell">
+
+  <!-- Sidebar Rail (always visible) -->
+  <aside class="step-rail">
+    <div class="brand-block">
+      <canvas :ref="el => setCanvasRef('digit', el)" class="digit-canvas" width="54" height="54"></canvas>
+      <div>
+        <h1>LeNet-5</h1>
+        <span>train & infer</span>
+      </div>
+    </div>
+
+    <template v-if="activeTrace">
+      <div class="sample-grid" v-if="activeTrace.sample">
+        <div v-if="activeTrace.sample.label != null"><span>Label</span><strong>{{ activeTrace.sample.label }}</strong></div>
+        <div><span>Pred</span><strong :class="{ok: activeTrace.sample.correct, warn: mode === 'train' && !activeTrace.sample.correct}">{{ activeTrace.sample.predicted }}</strong></div>
+        <div v-if="activeTrace.sample.loss != null"><span>Loss</span><strong :style="{color: lossColor}">{{ activeTrace.sample.loss.toFixed(4) }}</strong></div>
+        <div v-if="activeTrace.sample.confidence != null"><span>Conf</span><strong>{{ (activeTrace.sample.confidence * 100).toFixed(1) }}%</strong></div>
+      </div>
+
+      <div class="transport">
+        <button type="button" class="nav-btn" @click="prevStep" :disabled="currentStep <= 1">←</button>
+        <button type="button" class="nav-btn play" :class="{playing: autoPlaying}" @click="toggleAutoPlay">
+          {{ autoPlaying ? '暂停' : '自动' }}
+        </button>
+        <button type="button" class="nav-btn" @click="nextStep" :disabled="currentStep >= activeSteps.length">→</button>
+      </div>
+
+      <nav class="formula-summary" aria-label="公式总览">
+        <button v-for="s in activeSteps" :key="'rail-formula-'+s.step" type="button"
+                class="formula-summary-item" :class="{active: s.step === currentStep, done: s.step < currentStep}"
+                @click="setStep(s.step)">
+          <span class="formula-summary-num">{{ String(s.step).padStart(2, '0') }}</span>
+          <strong>{{ s.title }}</strong>
+          <span class="formula-summary-symbol" v-text="formulaSummaryText(s)"></span>
+          <em>{{ formulaChineseText(s) }}</em>
+        </button>
+      </nav>
+    </template>
+  </aside>
+
+  <!-- Workbench -->
+  <section class="workbench">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+    <!-- Mode tabs -->
+    <div class="mode-tabs" style="margin-bottom:0;">
+      <button class="mode-tab" :class="{active: mode === 'train'}" @click="switchMode('train')">训练 (Train)</button>
+      <button class="mode-tab" :class="{active: mode === 'infer'}" @click="switchMode('infer')">推理 (Inference)</button>
+      <template v-if="mode === 'train' && batchTraces.length > 1">
+        <span class="iter-sep">|</span>
+        <button class="mode-tab iter-btn" @click="prevIter" :disabled="batchIdx <= 0">◀ 上一样本</button>
+        <button class="mode-tab iter-btn" @click="nextIter" :disabled="batchIdx >= batchTraces.length - 1">下一样本 ▶</button>
+        <span class="iter-info">#{{ batchIdx + 1 }}/{{ batchTraces.length }}</span>
+      </template>
+    </div>
+    <a class="network-link" href="/static/pages/conv_lenet.html" target="_blank" title="在新标签页查看 LeNet-5 实时手写数字识别">网络结构 →</a>
+    </div>
+
+    <div v-if="mode === 'train' && activeTrace" class="phase-switch" aria-label="传播阶段切换">
+      <button type="button" class="phase-btn" :class="{active: activePhase === 'forward'}" @click="jumpPhase('forward')">
+        <span>前向传播</span><em>1-{{ phaseBounds.forwardEnd }}</em>
+      </button>
+      <button type="button" class="phase-btn" :class="{active: activePhase === 'backward'}" @click="jumpPhase('backward')">
+        <span>反向传播</span><em>{{ phaseBounds.backwardStart }}-{{ phaseBounds.total }}</em>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="backwardLoading && mode === 'train'" class="loading-panel"><strong>正在加载训练快照...</strong></div>
+    <div v-if="error" class="loading-panel"><strong class="error">{{ error }}</strong></div>
+
+    <!-- Inference: drawing canvas (always visible in infer mode) -->
+    <div v-if="mode === 'infer'" class="forward-input-area">
+      <div class="draw-col">
+        <div class="draw-canvas-shell">
+          <canvas ref="drawCanvasEl" width="200" height="200"
+                  @pointerdown="drawStart" @pointermove="drawMove" @pointerup="drawEnd"
+                  @pointerleave="drawEnd" @pointercancel="drawEnd"></canvas>
+        </div>
+        <div class="draw-actions">
+          <button class="draw-btn" @click="clearDraw">清除</button>
+          <button class="draw-btn primary" @click="runForward" :disabled="forwardLoading || !hasDrawn">开始推理</button>
+        </div>
+        <span v-if="forwardLoading" style="font-size:0.72rem;color:var(--muted)">计算中...</span>
+      </div>
+      <div class="forward-prediction" v-if="forwardTrace">
+        <div class="pred-digit">{{ forwardTrace.sample.predicted }}</div>
+        <div class="pred-meta">
+          <span>预测结果</span>
+          <span class="pred-conf">{{ (forwardTrace.sample.confidence * 100).toFixed(1) }}%</span>
+        </div>
+      </div>
+      <div class="forward-prediction" v-else>
+        <span class="draw-status">手写数字<br>点击"开始推理"</span>
+      </div>
+    </div>
+
+    <!-- Empty state: no trace loaded -->
+    <div v-if="!activeTrace && !backwardLoading" class="empty-state">
+      <strong>暂无数据</strong>
+      <span v-if="mode === 'train'">训练快照加载失败，请刷新页面重试</span>
+      <span v-else>请在手写画布上写一个数字，然后点击"开始推理"</span>
+    </div>
+
+    <!-- Main trace content -->
+    <template v-if="activeTrace">
+      <header class="topline">
+        <div>
+          <span class="eyebrow">{{ mode === 'train' ? '单样本演示 · 前向→反向 (Iter ' + (activeTrace?.sample?.iteration || '1') + ')' : 'Inference · 推理 (前向)' }}</span>
+          <h2>{{ currentStepData.title }}</h2>
+        </div>
+        <div class="top-metrics">
+          <span>Step <strong>{{ currentStep }}/{{ activeSteps.length }}</strong></span>
+          <span v-if="mode === 'train' && activeTrace.sample && activeTrace.sample.lr != null">lr <strong>{{ activeTrace.sample.lr }}</strong></span>
+          <span>{{ currentStepData.layer_type }}</span>
+        </div>
+      </header>
+
+      <!-- Architecture flow strip (grouped) -->
+      <section class="flow-panel">
+        <div class="flow-strip" aria-label="LeNet 网络结构">
+          <div v-for="(grp, gi) in archGroups" :key="'grp-'+gi" class="arch-group">
+            <span class="arch-group-label">{{ grp.label }}</span>
+            <div class="arch-group-cards">
+              <button v-for="layer in grp.layers" :key="'layer-'+layer.arch_index"
+                      class="layer-card" type="button"
+                      :class="{active: currentArchIndex === layer.arch_index, revealed: computedArchSet.has(layer.arch_index), pending: !computedArchSet.has(layer.arch_index)}"
+                      @click="jumpToArchLayer(layer.arch_index)">
+                <canvas :ref="el => setCanvasRef('arch'+layer.arch_index, el)" class="layer-canvas"></canvas>
+                <span class="layer-name">{{ layer.name }}</span>
+                <span class="layer-shape">{{ layer.shape }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Core row: formula | calculation + geometry -->
+      <section class="core-row">
+        <!-- Formula card -->
+        <article class="formula-card">
+          <div class="eyebrow">公式拆解</div>
+          <div class="formula-stage">
+            <div v-for="s in activeSteps" :key="'main-formula-'+s.step"
+                 class="main-formula" :class="{active: s.step === currentStep}">
+              <div class="formula-pair">
+                <div class="math-formula">
+                  <span>原公式</span>
+                  <span class="formula-render" v-text="formulaDisplayText(s)"></span>
+                </div>
+                <div class="plain-formula">
+                  <span>解释</span>
+                  <strong>{{ formulaChineseText(s) }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="formula-token-grid">
+            <div v-for="token in formulaTokens" :key="'token-'+currentStep+'-'+token.symbol" class="formula-token">
+              <strong>{{ token.symbol }}</strong>
+              <span>{{ token.meaning }}</span>
+              <em>{{ token.shape }}</em>
+            </div>
+          </div>
+          <div v-if="currentStepData.arch_update && mode === 'train'" class="update-flow formula-update-flow">
+            <div class="update-node">
+              <canvas :ref="el => setCanvasRef('upBefore', el)" class="update-canvas"></canvas>
+              <span>旧 W</span>
+            </div>
+            <strong class="update-op">− η</strong>
+            <div class="update-node">
+              <canvas :ref="el => setCanvasRef('upGrad', el)" class="update-canvas"></canvas>
+              <span>梯度 ∇W</span>
+            </div>
+            <strong class="update-op">=</strong>
+            <div class="update-node">
+              <canvas :ref="el => setCanvasRef('upAfter', el)" class="update-canvas"></canvas>
+              <span>新 W'</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Calculation + geometry + magnifier -->
+        <article class="calculation-board">
+          <div class="eyebrow">计算流 / 公式几何动画</div>
+          <p class="calc-desc">{{ geometryAnimation.plain || currentStepData.description }}</p>
+          <dl class="shape-grid">
+            <div><dt>in</dt><dd>{{ JSON.stringify(currentStepData.input_shape) }}</dd></div>
+            <div><dt>out</dt><dd>{{ JSON.stringify(currentStepData.output_shape) }}</dd></div>
+            <div><dt>{{ mode === 'train' ? '|∇|' : '|z|' }}</dt><dd>{{ currentStepData.grad_norm.toFixed(mode === 'train' ? 6 : 4) }}</dd></div>
+          </dl>
+          <div class="flow-chain" :class="'phase-'+stepPhase">
+            <template v-for="(node, i) in calculationFlow" :key="'flow-'+currentStep+'-'+i">
+              <div class="flow-node" :class="node.kind">
+                <strong>{{ node.label }}</strong>
+                <span v-if="node.meta">{{ node.meta }}</span>
+              </div>
+              <span v-if="i < calculationFlow.length - 1" class="flow-arrow">→</span>
+            </template>
+          </div>
+          <!-- Geometry animation canvas -->
+          <canvas :ref="el => setCanvasRef('geometry', el)" class="geometry-canvas"></canvas>
+          <!-- Magnifier -->
+          <div class="magnifier-box" v-if="magnifierContent">
+            <div class="magnifier-head">局部计算放大镜</div>
+            <p class="magnifier-plain">{{ magnifierContent.plain }}</p>
+            <div class="magnifier-io" v-if="magnifierContent.inputs.length || magnifierContent.output.value">
+              <div v-for="(inp, ii) in magnifierContent.inputs" :key="'mag-in-'+currentStep+'-'+ii" class="mag-io-item">
+                <span class="mag-label">{{ inp.label }}</span>
+                <canvas v-if="inp.kind === 'matrix' && inp.data"
+                  :ref="el => setCanvasRef('magIn'+ii, el)" class="mag-canvas"></canvas>
+                <span v-else class="mag-val">{{ Array.isArray(inp.data) ? inp.data.join(', ') : inp.data }}</span>
+              </div>
+              <span v-if="magnifierContent.inputs.length" class="flow-arrow">→</span>
+              <div class="mag-io-item mag-out" v-if="magnifierContent.output.value">
+                <span class="mag-label">{{ magnifierContent.output.label }}</span>
+                <strong class="mag-out-val">{{ magnifierContent.output.value }}</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Lower row: formula index
+      <section class="lower-row">
+        <aside class="formula-index">
+          <div class="section-head"><h3>步骤列表</h3><span>点击跳转</span></div>
+          <button v-for="s in activeSteps" :key="'fi-'+s.step" type="button"
+                  class="formula-item" :class="{active: s.step === currentStep}" @click="setStep(s.step)">
+            <span>{{ String(s.step).padStart(2, '0') }}</span>
+            <strong>{{ s.title }}</strong>
+            <em>|∇| {{ s.grad_norm.toFixed(4) }}</em>
+          </button>
+        </aside>
+      </section> -->
+    </template>
+  </section>
+</main>
+
+<script>
+const { createApp, ref, shallowRef, computed, watch, nextTick, onMounted, onBeforeUnmount, markRaw } = Vue;
+
+createApp({
+  setup() {
+    // ===== State =====
+    const mode = ref('train');  // 'train' | 'infer'
+    const backwardTrace = shallowRef(null);
+    const batchTraces = shallowRef([]);
+    const batchIdx = ref(0);
+    const forwardTrace = shallowRef(null);
+    const backwardLoading = ref(false);
+    const forwardLoading = ref(false);
+    const error = ref('');
+    const currentStep = ref(1);
+    const autoPlaying = ref(false);
+    const canvasRefs = {};
+    const drawCanvasEl = ref(null);
+    let autoTimer = null;
+    let drawFrame = null;
+    let lastTrace = null;
+    let mathSignature = '';
+
+    const drawing = ref(false);
+    const hasDrawn = ref(false);
+    let drawCtx = null;
+    const DRAW_LOGICAL_SIZE = 200;
+    const DRAW_DISPLAY_SIZE = 148;
+
+    function setCanvasRef(key, el) { if (el) canvasRefs[key] = el; }
+
+    // ===== Computed =====
+    const activeTrace = computed(() => mode.value === 'train' ? backwardTrace.value : forwardTrace.value);
+
+    // Active steps: training = forward(1-14) + backward(1-13) continuous; inference = forward only
+    const activeSteps = computed(() => {
+      if (!activeTrace.value) return [];
+      if (mode.value === 'train') {
+        const fw = activeTrace.value.forward_steps || [];
+        const bw = activeTrace.value.steps || [];
+        if (fw.length && bw.length) {
+          // Build continuous flow: fw steps (renumbered 1..14) + bw steps (renumbered 15..27)
+          const all = [];
+          for (const s of fw) all.push({ ...s, step: s.step, totalInFlow: fw.length + bw.length });
+          for (const s of bw) all.push({ ...s, step: fw.length + s.step, totalInFlow: fw.length + bw.length });
+          return all;
+        }
+        return bw.length ? bw : fw;
+      }
+      return activeTrace.value.steps || activeTrace.value.forward_steps || [];
+    });
+
+    const currentStepData = computed(() => {
+      const steps = activeSteps.value;
+      if (!steps.length) return { title: '', description: '', formula: '', data: {}, input_shape: [], output_shape: [], grad_norm: 0, layer_type: '' };
+      return steps[currentStep.value - 1] || steps[0];
+    });
+
+    const phaseBounds = computed(() => {
+      const fwCount = activeTrace.value?.forward_steps?.length || 0;
+      const total = activeSteps.value.length || 0;
+      return {
+        forwardStart: 1,
+        forwardEnd: fwCount || total,
+        backwardStart: fwCount ? fwCount + 1 : 1,
+        total,
+      };
+    });
+
+    const activePhase = computed(() => {
+      return currentStep.value > phaseBounds.value.forwardEnd ? 'backward' : 'forward';
+    });
+
+    const currentArchIndex = computed(() => {
+      if (currentStepData.value.arch_layer_index != null) return currentStepData.value.arch_layer_index;
+      const fallback = [13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 2, 1];
+      const steps = activeSteps.value;
+      const idx = steps.length > 0 ? steps[currentStep.value - 1]?.step : null;
+      return (idx != null) ? (fallback[idx - 1] ?? 13) : 13;
+    });
+
+    // Group architecture layers: old snapshots lack 'group', fall back by arch_index
+    const archGroups = computed(() => {
+      const layers = activeTrace.value?.architecture || [];
+      const groups = [];
+      let current = null;
+      for (const layer of layers) {
+        let g = layer.group;
+        if (!g) {
+          const ai = layer.arch_index;
+          if (ai === 0) g = '输入';
+          else if (ai <= 3) g = '卷积块 1';
+          else if (ai <= 6) g = '卷积块 2';
+          else g = '全连接';
+        }
+        if (g !== current) { current = g; groups.push({ label: g, layers: [] }); }
+        groups[groups.length - 1].layers.push(layer);
+      }
+      return groups;
+    });
+
+    // Progressive reveal: which arch indices have been "computed" up to current step.
+    // Static layers (weights + Input) are always included.
+    const fallbackArch = [13, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 2, 1];
+    const computedArchSet = computed(() => {
+      if (!activeTrace.value) return new Set();
+      const s = new Set();
+      // Input is available from the beginning; the rest is revealed by actual step progress.
+      s.add(0);
+      const steps = activeSteps.value;
+      for (let i = 0; i < currentStep.value && i < steps.length; i++) {
+        let ai = steps[i].arch_layer_index;
+        if (ai == null) ai = fallbackArch[steps[i].step - 1] ?? 13;
+        if (ai != null) s.add(ai);
+      }
+      return s;
+    });
+
+    const lossColor = computed(() => {
+      if (!backwardTrace.value) return '#172033';
+      const v = backwardTrace.value.sample.loss;
+      if (v > 1.5) return '#dc7b32';
+      if (v > 0.5) return '#b7791f';
+      return '#0f766e';
+    });
+
+    const currentVisuals = computed(() => currentStepData.value.visuals || []);
+
+    const probTarget = computed(() => {
+      const d = currentStepData.value.data || {};
+      if (d.target != null) return d.target;
+      if (activeTrace.value?.sample?.label != null) return activeTrace.value.sample.label;
+      return activeTrace.value?.sample?.predicted;
+    });
+
+    const forwardCount = computed(() => activeTrace.value?.forward_steps?.length || 0);
+    const isBackwardStep = computed(() => mode.value === 'train' && forwardCount.value > 0 && currentStep.value > forwardCount.value);
+    const stepPhase = computed(() => {
+      if (currentStepData.value.arch_update && mode.value === 'train') return 'update';
+      return isBackwardStep.value ? 'backward' : 'forward';
+    });
+
+    function shapeText(shape) {
+      if (!shape || !shape.length) return 'scalar';
+      return Array.isArray(shape) ? shape.join('×') : String(shape);
+    }
+
+    function isStepInBackwardPhase(step) {
+      return mode.value === 'train' && forwardCount.value > 0 && Number(step?.step || 0) > forwardCount.value;
+    }
+
+    function linearVarNames(step) {
+      const title = String(step?.title || '');
+      if (/FC3/i.test(title)) return { idx: '3', z: 'z_3', W: 'W_3', b: 'b_3', a: 'a_2', delta: '\\delta_3', prevDelta: '\\delta_2', layer: 'FC3', zName: '第三个全连接层的线性输出', wName: '第三个全连接层的权重', bName: '第三个全连接层的偏置', aName: '上一层输出', prevName: '上一层误差信号' };
+      if (/FC2/i.test(title)) return { idx: '2', z: 'z_2', W: 'W_2', b: 'b_2', a: 'a_1', delta: '\\delta_2', prevDelta: '\\delta_1', layer: 'FC2', zName: '第二个全连接层的线性输出', wName: '第二个全连接层的权重', bName: '第二个全连接层的偏置', aName: '上一层输出', prevName: '上一层误差信号' };
+      if (/FC1/i.test(title)) return { idx: '1', z: 'z_1', W: 'W_1', b: 'b_1', a: 'f', delta: '\\delta_1', prevDelta: '\\delta_f', layer: 'FC1', zName: '第一个全连接层的线性输出', wName: '第一个全连接层的权重', bName: '第一个全连接层的偏置', aName: '展平后的特征向量', prevName: '展平向量的误差信号' };
+      return { idx: '', z: 'z', W: 'W', b: 'b', a: 'a', delta: '\\delta', prevDelta: '\\delta_{prev}', layer: '全连接层', zName: '本层线性输出', wName: '本层权重', bName: '本层偏置', aName: '上一层输出', prevName: '上一层误差信号' };
+    }
+
+    function convVarNames(step) {
+      const title = String(step?.title || '');
+      if (/Conv2/i.test(title)) return { idx: '2', K: 'K_2', Z: 'Z_2', X: 'P_1', dX: '\\delta P_1', layer: 'Conv2', kName: '第二个卷积层的卷积核', inName: '上一层池化输出特征图', outName: '第二个卷积层输出误差信号' };
+      if (/Conv1/i.test(title)) return { idx: '1', K: 'K_1', Z: 'Z_1', X: 'X', dX: '\\delta X', layer: 'Conv1', kName: '第一个卷积层的卷积核', inName: '原始输入图像', outName: '第一个卷积层输出误差信号' };
+      return { idx: '', K: 'K', Z: 'Z', X: 'X', dX: '\\delta X', layer: '卷积层', kName: '卷积核', inName: '输入特征图', outName: '输出误差信号' };
+    }
+
+    function formulaChineseText(step) {
+      const s = step || currentStepData.value;
+      const lt = s.layer_type || '';
+      const lin = linearVarNames(s);
+      const conv = convVarNames(s);
+
+      if (s.arch_update && mode.value === 'train') {
+        if (lt === 'linear') {
+          return `前向关系：本层线性输出 = 本层权重 × ${lin.aName} + 本层偏置\n权重梯度：${lin.layer} 的误差信号 × ${lin.aName} → 每条连接该改多少\n参数更新：旧的${lin.wName} − 学习率 × 权重梯度 → 新的${lin.wName}`;
+        }
+        if (lt === 'conv_backward') {
+          return `卷积核梯度：${conv.outName} × 前向输入窗口 → 每个核像素该改多少\n核心观点：卷积核会滑过整张图，同一个核像素会在很多窗口里反复使用，所以每个位置都会给它一个反馈，最后把所有反馈累加成卷积核梯度\n参数更新：旧的${conv.kName} − 学习率 × 卷积核梯度 → 新的${conv.kName}`;
+        }
+        return '权重梯度：链式法则算出参数对损失的影响\n参数更新：旧参数 − 学习率η × 梯度 → 新参数';
+      }
+      if (lt === 'conv_forward') {
+        return '局部窗口：输入图上被卷积核盖住的小块\n一格输出：窗口逐项相乘求和 + 偏置 → 输出特征图的一个像素';
+      }
+      if (lt === 'pool_forward') {
+        return '池化窗口：取2×2小块\n一格输出：4个数求平均 → 尺寸变小、保留主要响应';
+      }
+      if (lt === 'linear_forward') {
+        return '每个输出神经元：所有输入 × 对应连接权重，再加偏置\n矩阵形式：权重矩阵 × 输入向量 + 偏置 → 输出向量';
+      }
+      if (lt === 'softmax') {
+        return '先把类别得分取指数变成正数\n再除以全部指数和 → 10个类别概率，总和为1';
+      }
+      if (lt === 'prediction') {
+        return '比较10个类别概率\n概率最大的类别 → 当前预测数字';
+      }
+      if (lt === 'softmax_ce') {
+        return '输出层误差信号：预测概率 − 真实标签(one-hot)\n预测太高：正梯度；预测太低：负梯度';
+      }
+      if (lt === 'linear') {
+        return `前向关系：本层线性输出 = 本层权重 × ${lin.aName} + 本层偏置\n权重梯度：${lin.layer} 的误差信号 × ${lin.aName} → 连接权重梯度\n继续回传：本层权重反向作用到 ${lin.layer} 的误差信号 → ${lin.prevName}`;
+      }
+      if (lt === 'pool_backward') {
+        return '平均池化反传：一个输出梯度 ÷ 4\n均匀回填到前向对应的2×2输入窗口';
+      }
+      if (lt === 'conv_backward') {
+        return `卷积核梯度：${conv.outName} × 前向输入窗口，并对所有滑动位置求和\n为什么要累加：卷积核不是只看一个窗口，它滑过的每个窗口都会告诉它应该变大还是变小\n输入梯度：输出误差信号按${conv.kName}反向分配回输入特征图`;
+      }
+      if (lt === 'reshape') {
+        return '重塑只改变排列视角，不改变梯度数值\n一维梯度 → 按原来的空间位置还原成特征图梯度';
+      }
+      if (lt === 'flatten') {
+        return '展平只改变形状，不改变数值\n特征图按固定顺序排成一维向量，送入全连接层';
+      }
+      if (lt === 'tanh' && isStepInBackwardPhase(s)) {
+        return 'Tanh反传：上游误差信号 × tanh局部导数\n激活接近±1时导数变小，梯度会被压小';
+      }
+      if (lt === 'tanh') {
+        return 'Tanh激活：把线性响应压到(-1,1)\n作用：加入非线性，让网络能表达更复杂关系';
+      }
+      return '输入 → 当前运算 → 输出';
+    }
+
+    function formulaShortText(step) {
+      const s = step || currentStepData.value;
+      const lt = s.layer_type || '';
+      const lin = linearVarNames(s);
+      const conv = convVarNames(s);
+      if (s.arch_update && mode.value === 'train') return "\\text{旧}W-\\eta\\times\\text{梯度}=\\text{新}W";
+      if (lt === 'conv_forward') return '\\text{局部窗}\\times\\text{卷积核}+b\\rightarrow\\text{一格输出}';
+      if (lt === 'pool_forward') return '\\frac{x_1+x_2+x_3+x_4}{4}\\rightarrow\\text{池化输出}';
+      if (lt === 'linear_forward') return '\\text{权重}\\times\\text{输入}+\\text{偏置}\\rightarrow\\text{输出}';
+      if (lt === 'softmax') return '\\text{类别得分}\\rightarrow\\text{类别概率}';
+      if (lt === 'prediction') return '\\hat{y}=\\arg\\max_i p_i';
+      if (lt === 'softmax_ce') return '\\text{输出误差}=p-y';
+      if (lt === 'linear') return `${lin.z}=${lin.W}${lin.a}+${lin.b},\\ \\nabla ${lin.W}=${lin.delta}${lin.a}^T`;
+      if (lt === 'pool_backward') return '\\text{回填梯度}=\\text{池化梯度}/4';
+      if (lt === 'conv_backward') return `\\nabla ${conv.K}=\\sum \\delta ${conv.Z}\\times\\text{输入窗口}`;
+      if (lt === 'reshape') return '\\text{一维梯度}\\rightarrow\\text{空间梯度}';
+      if (lt === 'flatten') return '\\text{特征图}\\rightarrow\\text{一维向量}';
+      if (lt === 'tanh' && isStepInBackwardPhase(s)) return '\\text{回传梯度}=\\text{上游梯度}\\times(1-a^2)';
+      if (lt === 'tanh') return 'a=\\tanh(z)';
+      return s.formula || 'y=f(x)';
+    }
+
+    function formulaDetailedText(step) {
+      const s = step || currentStepData.value;
+      const lt = s.layer_type || '';
+      const lin = linearVarNames(s);
+      const conv = convVarNames(s);
+      if (s.arch_update && mode.value === 'train') {
+        if (lt === 'linear') {
+          return String.raw`\begin{aligned}
+${lin.z} &= ${lin.W}${lin.a}+${lin.b} \\
+${lin.delta} &= \frac{\partial L}{\partial ${lin.z}} \\
+\frac{\partial L}{\partial ${lin.W}} &= ${lin.delta}\,${lin.a}^{T} \\
+{${lin.W}}_{new} &= {${lin.W}}_{old}-\eta\,\frac{\partial L}{\partial ${lin.W}}
+\end{aligned}`;
+        }
+        if (lt === 'conv_backward') {
+          return String.raw`\begin{aligned}
+\frac{\partial L}{\partial {${conv.K}}_{u,v}} &= \sum_{i,j}{\delta ${conv.Z}}_{i,j}\,{${conv.X}}_{i+u,j+v} \\
+{${conv.K}}_{new} &= {${conv.K}}_{old}-\eta\,\frac{\partial L}{\partial ${conv.K}}
+\end{aligned}`;
+        }
+        return String.raw`\begin{aligned}
+\text{先算梯度} &: \nabla W=\frac{\partial L}{\partial W} \\
+\text{再做更新} &: W_{\text{新}}=W_{\text{旧}}-\eta\nabla W
+\end{aligned}`;
+      }
+      if (lt === 'conv_forward') {
+        return String.raw`\begin{aligned}
+Z_{k,i,j} &= \sum_{c,u,v}X_{c,i+u,j+v}\,K_{k,c,u,v}+b_k \\
+&= \text{sum}(\text{patch}\odot K_k)+b_k
+\end{aligned}`;
+      }
+      if (lt === 'pool_forward') {
+        return String.raw`\begin{aligned}
+P_{c,i,j} &= \frac{x_1+x_2+x_3+x_4}{4}
+\end{aligned}`;
+      }
+      if (lt === 'linear_forward') {
+        return String.raw`\begin{aligned}
+z_i &= \sum_j W_{i,j}a_j+b_i \\
+z &= Wa+b
+\end{aligned}`;
+      }
+      if (lt === 'softmax') {
+        return String.raw`\begin{aligned}
+p_i &= \frac{e^{z_i}}{\sum_j e^{z_j}} \\
+p_0+\cdots+p_9 &= 1
+\end{aligned}`;
+      }
+      if (lt === 'prediction') {
+        return String.raw`\begin{aligned}
+\hat{y} &= \arg\max_i p_i
+\end{aligned}`;
+      }
+      if (lt === 'softmax_ce') {
+        return String.raw`\begin{aligned}
+L &= -\sum_i y_i\log p_i \\
+\delta_z &= \frac{\partial L}{\partial z}=p-y
+\end{aligned}`;
+      }
+      if (lt === 'linear') {
+        return String.raw`\begin{aligned}
+${lin.z} &= ${lin.W}${lin.a}+${lin.b} \\
+${lin.delta} &= \frac{\partial L}{\partial ${lin.z}} \\
+\frac{\partial L}{\partial ${lin.W}} &= ${lin.delta}\,${lin.a}^{T} \\
+${lin.prevDelta} &= ${lin.W}^{T}${lin.delta}
+\end{aligned}`;
+      }
+      if (lt === 'pool_backward') {
+        return String.raw`\begin{aligned}
+P &= \frac{x_1+x_2+x_3+x_4}{4} \\
+\frac{\partial L}{\partial x_1}
+=\frac{\partial L}{\partial x_2}
+=\frac{\partial L}{\partial x_3}
+=\frac{\partial L}{\partial x_4}
+&= \frac{1}{4}\frac{\partial L}{\partial P}
+\end{aligned}`;
+      }
+      if (lt === 'conv_backward') {
+        return String.raw`\begin{aligned}
+\frac{\partial L}{\partial {${conv.K}}_{u,v}} &= \sum_{i,j}{\delta ${conv.Z}}_{i,j}\,{${conv.X}}_{i+u,j+v} \\
+${conv.dX} &= \frac{\partial L}{\partial ${conv.X}}
+\end{aligned}`;
+      }
+      if (lt === 'reshape') {
+        return String.raw`\begin{aligned}
+\delta P_2 &= \operatorname{reshape}(\delta f)
+\end{aligned}`;
+      }
+      if (lt === 'flatten') {
+        return String.raw`\begin{aligned}
+f &= \operatorname{flatten}(P_2)
+\end{aligned}`;
+      }
+      if (lt === 'tanh' && isStepInBackwardPhase(s)) {
+        return String.raw`\begin{aligned}
+a &= \tanh(z) \\
+\frac{\partial a}{\partial z} &= 1-a^2 \\
+\delta_z &= \delta_a\odot(1-a^2)
+\end{aligned}`;
+      }
+      if (lt === 'tanh') {
+        return String.raw`\begin{aligned}
+a &= \tanh(z)
+\end{aligned}`;
+      }
+      return normalizeFormulaText(s.formula || formulaShortText(s));
+    }
+
+    function normalizeFormulaText(value) {
+      return String(value || 'y=f(x)')
+        .replace(/^\s*\$\$\s*/, '')
+        .replace(/\s*\$\$\s*$/, '')
+        .replace(/^\s*\\\[\s*/, '')
+        .replace(/\s*\\\]\s*$/, '')
+        .replace(/^\s*\\\(\s*/, '')
+        .replace(/\s*\\\)\s*$/, '')
+        .trim();
+    }
+
+    function formulaDisplayText(step) {
+      return `\\[${normalizeFormulaText(formulaDetailedText(step))}\\]`;
+    }
+
+    function formulaSummaryText(step) {
+      return `\\(${normalizeFormulaText(formulaShortText(step))}\\)`;
+    }
+
+    const formulaTokens = computed(() => {
+      const s = currentStepData.value;
+      const lt = s.layer_type || '';
+      const inShape = shapeText(s.input_shape);
+      const outShape = shapeText(s.output_shape);
+      const visuals = currentVisuals.value || [];
+      const visualShape = idx => visuals[idx]?.shape || (idx === 0 ? inShape : outShape);
+
+      if (s.arch_update && mode.value === 'train') {
+        return [
+          { symbol: 'W', meaning: '更新前参数', shape: visualShape(1) },
+          { symbol: '∇W', meaning: '本步参数梯度', shape: visualShape(0) },
+          { symbol: 'η', meaning: '学习率', shape: String(s.arch_update.lr ?? activeTrace.value?.sample?.lr ?? '0.01') },
+          { symbol: "W'", meaning: '更新后参数', shape: visualShape(1) },
+        ];
+      }
+
+      if (lt === 'conv_forward') {
+        return [
+          { symbol: 'X', meaning: '输入特征图/局部窗口', shape: inShape },
+          { symbol: 'W', meaning: '卷积核权重', shape: 'k×k' },
+          { symbol: 'b', meaning: '通道偏置', shape: 'out channels' },
+          { symbol: 'Z', meaning: '卷积响应输出', shape: outShape },
+        ];
+      }
+      if (lt === 'pool_forward') {
+        return [
+          { symbol: 'x', meaning: '池化窗口内像素', shape: '2×2 window' },
+          { symbol: 'mean', meaning: '窗口取平均', shape: '1 value' },
+          { symbol: 'P', meaning: '下采样输出', shape: outShape },
+        ];
+      }
+      if (lt === 'linear_forward') {
+        return [
+          { symbol: 'a', meaning: '输入向量', shape: inShape },
+          { symbol: 'W', meaning: '全连接权重矩阵', shape: visualShape(0) },
+          { symbol: 'b', meaning: '偏置', shape: outShape },
+          { symbol: 'z', meaning: '线性输出', shape: outShape },
+        ];
+      }
+      if (lt === 'softmax' || lt === 'prediction') {
+        return [
+          { symbol: 'z', meaning: '10 类 logits', shape: '10' },
+          { symbol: 'exp/sum', meaning: '归一化为概率', shape: '10' },
+          { symbol: 'p', meaning: '类别置信度分布', shape: outShape },
+        ];
+      }
+      if (lt === 'softmax_ce') {
+        return [
+          { symbol: 'p', meaning: 'Softmax 概率', shape: '10' },
+          { symbol: 'y', meaning: '真实标签 one-hot', shape: '10' },
+          { symbol: 'p-y', meaning: 'logits 梯度', shape: outShape },
+        ];
+      }
+      if (lt === 'linear') {
+        return [
+          { symbol: 'δ', meaning: '本层输出梯度', shape: inShape },
+          { symbol: 'aᵀ', meaning: '上一层激活转置', shape: 'prev activations' },
+          { symbol: '∂L/∂W', meaning: '权重梯度', shape: visualShape(0) },
+          { symbol: 'Wᵀδ', meaning: '传回上一层的梯度', shape: outShape },
+        ];
+      }
+      if (lt === 'pool_backward') {
+        return [
+          { symbol: 'δP', meaning: '池化输出端梯度', shape: inShape },
+          { symbol: '÷4', meaning: '均分回 2×2 输入窗口', shape: '2×2' },
+          { symbol: 'δA', meaning: '上采样后的输入端梯度', shape: outShape },
+        ];
+      }
+      if (lt === 'conv_backward') {
+        return [
+          { symbol: 'δ', meaning: '卷积输出梯度', shape: outShape },
+          { symbol: 'X patch', meaning: '前向输入局部窗口', shape: inShape },
+          { symbol: '∂L/∂W', meaning: '卷积核梯度', shape: visualShape(0) },
+          { symbol: '∂L/∂X', meaning: '传回输入特征图', shape: visualShape(1) },
+        ];
+      }
+      if (lt === 'reshape' || lt === 'flatten') {
+        return [
+          { symbol: 'index', meaning: '只改变索引顺序', shape: inShape },
+          { symbol: 'view', meaning: '不改变数值本身', shape: outShape },
+        ];
+      }
+      if (lt === 'tanh' && isBackwardStep.value) {
+        return [
+          { symbol: 'δ↑', meaning: '上游梯度', shape: inShape },
+          { symbol: "1-a²", meaning: 'tanh 局部导数', shape: inShape },
+          { symbol: 'δ↓', meaning: '修正后继续回传', shape: outShape },
+        ];
+      }
+      if (lt === 'tanh') {
+        return [
+          { symbol: 'z', meaning: '激活前响应', shape: inShape },
+          { symbol: 'tanh', meaning: '压缩到 (-1, 1)', shape: inShape },
+          { symbol: 'a', meaning: '激活输出', shape: outShape },
+        ];
+      }
+      return [
+        { symbol: 'in', meaning: '本步输入', shape: inShape },
+        { symbol: 'op', meaning: '当前计算', shape: lt || 'operation' },
+        { symbol: 'out', meaning: '本步输出', shape: outShape },
+      ];
+    });
+
+    const calculationFlow = computed(() => {
+      const s = currentStepData.value;
+      const lt = s.layer_type || '';
+
+      if (s.arch_update && mode.value === 'train') {
+        return [
+          { label: '梯度', meta: '', kind: 'gradient' },
+          { label: 'η缩放', meta: '', kind: 'operator' },
+          { label: '新权重', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'conv_forward') {
+        return [
+          { label: '局部窗', meta: '', kind: 'source' },
+          { label: '卷积核', meta: '', kind: 'operator' },
+          { label: '输出', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'pool_forward') {
+        return [
+          { label: '2×2', meta: '', kind: 'source' },
+          { label: '平均', meta: '', kind: 'operator' },
+          { label: '下采样', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'linear_forward') {
+        return [
+          { label: '输入', meta: '', kind: 'source' },
+          { label: '连接权重', meta: '', kind: 'operator' },
+          { label: '输出', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'softmax' || lt === 'prediction') {
+        return [
+          { label: '得分', meta: '', kind: 'source' },
+          { label: 'Softmax', meta: '', kind: 'operator' },
+          { label: '概率', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'softmax_ce') {
+        return [
+          { label: '概率', meta: '', kind: 'source' },
+          { label: '减标签', meta: '', kind: 'operator' },
+          { label: '梯度', meta: '', kind: 'gradient' },
+        ];
+      }
+      if (lt === 'linear') {
+        return [
+          { label: '梯度', meta: '', kind: 'gradient' },
+          { label: '连接权重', meta: '', kind: 'operator' },
+          { label: '回传', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'pool_backward') {
+        return [
+          { label: '梯度', meta: '', kind: 'gradient' },
+          { label: '÷4', meta: '', kind: 'operator' },
+          { label: '回填', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'conv_backward') {
+        return [
+          { label: '梯度', meta: '', kind: 'gradient' },
+          { label: '卷积核', meta: '', kind: 'operator' },
+          { label: '回传', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'reshape' || lt === 'flatten') {
+        return [
+          { label: '原形状', meta: '', kind: 'source' },
+          { label: '重排', meta: '', kind: 'operator' },
+          { label: '新形状', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'tanh' && isBackwardStep.value) {
+        return [
+          { label: '梯度', meta: '', kind: 'gradient' },
+          { label: '局部导数', meta: '', kind: 'operator' },
+          { label: '回传', meta: '', kind: 'result' },
+        ];
+      }
+      if (lt === 'tanh') {
+        return [
+          { label: 'z', meta: '', kind: 'source' },
+          { label: 'tanh', meta: '', kind: 'operator' },
+          { label: 'a', meta: '', kind: 'result' },
+        ];
+      }
+      return [
+        { label: '输入', meta: '', kind: 'source' },
+        { label: '运算', meta: '', kind: 'operator' },
+        { label: '输出', meta: '', kind: 'result' },
+      ];
+    });
+
+    // ===== 公式几何动画 =====
+    const geometryAnimation = computed(() => {
+      const s = currentStepData.value;
+      const lt = s.layer_type || '';
+      const step = s.step || currentStep.value;
+      const bw = isBackwardStep.value;
+      const up = !!(s.arch_update && mode.value === 'train');
+      const none = { type: 'generic', plain: s.description || '' };
+
+      if (up && lt === 'linear') return { type: 'linear-backward-update', plain: '旧权重 - 学习率 × 权重梯度 → 新权重' };
+      if (up && lt === 'conv_backward') return { type: 'conv-backward-update', plain: '旧卷积核 - 学习率 × 卷积核梯度 → 新卷积核' };
+      if (lt === 'conv_forward') return { type: 'conv-forward', plain: '输入局部窗 × 卷积核 + 偏置 → Conv响应' };
+      if (lt === 'pool_forward' || lt === 'pool_backward') {
+        if (bw) return { type: 'pool-backward', plain: '池化梯度 ÷ 4 → 回填2×2区域' };
+        return { type: 'pool-forward', plain: '2×2窗口 → 平均 → 尺寸减半' };
+      }
+      if (lt === 'tanh') {
+        if (bw) return { type: 'tanh-backward', plain: '上游梯度 × (激活)′ → 下游梯度' };
+        return { type: 'tanh-forward', plain: '线性响应 → tanh压缩 → 非线性特征' };
+      }
+      if (lt === 'linear_forward') return { type: 'linear-forward', plain: '输入节点 → 连接权重 → 输出节点' };
+      if (lt === 'softmax') return { type: 'softmax', plain: '类别得分 → 指数归一化 → 概率分布' };
+      if (lt === 'prediction') return { type: 'prediction', plain: '最大概率 → 预测' };
+      if (lt === 'softmax_ce') return { type: 'softmax-ce', plain: '预测概率 - 真实标签 → 输出层梯度' };
+      if (lt === 'linear') return { type: 'linear-backward', plain: '梯度沿连接权重反向传播' };
+      if (lt === 'conv_backward') return { type: 'conv-backward', plain: '输出梯度 × 输入窗口 → 卷积核梯度' };
+      if (lt === 'reshape' || lt === 'flatten') return { type: 'reshape', plain: lt === 'flatten' ? '空间特征图 → 按顺序排成向量' : '一维梯度 → 重塑为空间梯度' };
+      return none;
+    });
+
+    // ===== 局部计算放大镜 =====
+    const magnifierContent = computed(() => {
+      const s = currentStepData.value;
+      const d = s.data || {};
+      const lt = s.layer_type || '';
+
+      if (s.arch_update && mode.value === 'train') {
+        return {
+          title: '旧权重 - 学习率 × 权重梯度 → 新权重',
+          plain: '旧W - η∇W → 新W',
+          inputs: [], output: { label: '学习率 η', value: String(s.arch_update.lr || activeTrace.value?.sample?.lr || '0.01') },
+        };
+      }
+      if (lt === 'conv_forward') {
+        const w = (d.kernels && d.kernels[0]) ? d.kernels[0] : null;
+        const out = d.output_ch0;
+        const val = (out && out.length && out[0] != null) ? Number(out[0][0]).toFixed(4) : '—';
+        return {
+          title: '3×3窗 × 核 → 一个输出',
+          plain: '局部窗 × 卷积核 + 偏置',
+          inputs: [{ label: '卷积核 (3×3)', kind: 'matrix', data: w }],
+          output: { label: '输出[0,0]', value: val },
+        };
+      }
+      if (lt === 'pool_forward') {
+        const out = d.output_ch0;
+        const val = (out && out.length && out[0] != null) ? Number(out[0][0]).toFixed(4) : '—';
+        return {
+          title: '2×2平均 → 一个输出',
+          plain: '四个值求平均',
+          inputs: [],
+          output: { label: '池化[0,0]', value: val },
+        };
+      }
+      if (lt === 'tanh' && !isBackwardStep.value) {
+        const acts = d.act_vals || d.input_vals || [];
+        const zVals = acts.slice(0, 4).map(v => Number(v).toFixed(4));
+        const aVals = zVals.map(v => Math.tanh(Number(v)).toFixed(4));
+        return {
+          title: 'z → tanh(z)',
+          plain: 'z → tanh(z) → a',
+          inputs: [{ label: '激活前 z (前4值)', kind: 'vector', data: zVals }],
+          output: { label: '激活后 tanh(z)', value: aVals.join(', ') },
+        };
+      }
+      if (lt === 'linear_forward') {
+        const out = d.output_vec || [];
+        const val = out.length ? Number(out[0]).toFixed(4) : '—';
+        return {
+          title: '输入节点 → 连接 → 输出节点',
+          plain: '加权求和 + 偏置',
+          inputs: [],
+          output: { label: '输出神经元[0]', value: val },
+        };
+      }
+      if (lt === 'softmax' || lt === 'prediction') {
+        const probs = d.probs || [];
+        const maxP = probs.length ? Math.max(...probs.map(Number)) : 0;
+        return {
+          title: '得分 → 概率',
+          plain: '最大概率类别',
+          inputs: [],
+          output: { label: '最大概率', value: Number(maxP).toFixed(4) },
+        };
+      }
+      if (lt === 'softmax_ce') {
+        const probs = d.probs || [];
+        const target = d.target;
+        const pT = target != null && probs[target] != null ? Number(probs[target]).toFixed(4) : '—';
+        const grad = target != null && probs[target] != null ? (Number(probs[target]) - 1).toFixed(4) : '—';
+        return {
+          title: '概率 - 标签 → 梯度',
+          plain: 'p - y',
+          inputs: [{ label: '标签 ' + target + ' 的预测概率', kind: 'scalar', data: pT }],
+          output: { label: '该位置梯度 (p-1)', value: grad },
+        };
+      }
+      if (lt === 'linear') {
+        const wg = d.W_grad_slice;
+        const val = (wg && wg.length && wg[0] != null) ? Number(wg[0][0]).toFixed(6) : '—';
+        return {
+          title: '梯度 × 激活 → ∂W',
+          plain: '连接权重反向传播',
+          inputs: [],
+          output: { label: '∂W[0,0]', value: val },
+        };
+      }
+      if (lt === 'pool_backward') {
+        return {
+          title: '梯度 ÷4 → 2×2',
+          plain: '均分回填',
+          inputs: [],
+          output: { label: '分配因子', value: '÷4 (×0.25)' },
+        };
+      }
+      if (lt === 'conv_backward') {
+        const dw = d.d_W_ch0;
+        const val = (dw && dw.length && dw[0] != null) ? Number(dw[0][0]).toFixed(6) : '—';
+        return {
+          title: '梯度 × 输入窗 → 核梯度',
+          plain: '卷积核梯度',
+          inputs: [],
+          output: { label: '核梯度[0,0]', value: val },
+        };
+      }
+      if (lt === 'tanh' && isBackwardStep.value) {
+        const acts = d.act_vals || [];
+        const z = acts.length ? Number(acts[0]).toFixed(4) : '—';
+        return {
+          title: '梯度 × 局部导数',
+          plain: '上游 → 下游',
+          inputs: [],
+          output: { label: '(激活)′ 示例 = 1-a²[0]', value: z !== '—' ? (1 - Number(z) * Number(z)).toFixed(6) : '—' },
+        };
+      }
+      return null;
+    });
+
+    // ===== Canvas helpers =====
+    function prepareCanvas(canvas, cssW, cssH) {
+      if (!canvas) return null;
+      const dpr = window.devicePixelRatio || 1;
+      const pw = Math.max(1, Math.round(cssW * dpr));
+      const ph = Math.max(1, Math.round(cssH * dpr));
+      if (canvas.width !== pw) canvas.width = pw;
+      if (canvas.height !== ph) canvas.height = ph;
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+      return ctx;
+    }
+
+    function colorFor(v, positiveGreen) {
+      const t = Math.min(1, Math.abs(v));
+      if (Math.abs(v) < 1e-8) return '#f1f5f9';
+      if (positiveGreen) {
+        return v >= 0 ? `rgb(${Math.round(215-120*t)},${Math.round(245-45*t)},${Math.round(220-100*t)})`
+          : `rgb(${Math.round(255-45*t)},${Math.round(190-80*t)},${Math.round(190-70*t)})`;
+      }
+      return v >= 0 ? `rgb(${Math.round(245-70*t)},${Math.round(175-55*t)},${Math.round(205-35*t)})`
+        : `rgb(${Math.round(185-90*t)},${Math.round(210-35*t)},${Math.round(235-15*t)})`;
+    }
+
+    function drawMatrix(canvas, matrix, cssW, cssH, positiveGreen) {
+      const ctx = prepareCanvas(canvas, cssW, cssH);
+      if (!ctx || !matrix || !matrix.length) return;
+      const rows = matrix.length;
+      const cols = Array.isArray(matrix[0]) ? matrix[0].length : matrix.length;
+      let maxAbs = 0.001;
+      for (let r = 0; r < rows; r++) {
+        const row = Array.isArray(matrix[r]) ? matrix[r] : [matrix[r]];
+        for (let c = 0; c < row.length; c++) maxAbs = Math.max(maxAbs, Math.abs(Number(row[c]) || 0));
+      }
+      const cw = cssW / cols;
+      const ch = cssH / rows;
+      for (let r = 0; r < rows; r++) {
+        const row = Array.isArray(matrix[r]) ? matrix[r] : [matrix[r]];
+        for (let c = 0; c < cols; c++) {
+          const v = Number(row[c]) || 0;
+          ctx.fillStyle = colorFor(v / maxAbs, positiveGreen);
+          ctx.fillRect(c * cw, r * ch, Math.ceil(cw), Math.ceil(ch));
+        }
+      }
+    }
+
+    function drawKernels(canvas, kernels, cssW, cssH, positiveGreen) {
+      const ctx = prepareCanvas(canvas, cssW, cssH);
+      if (!ctx || !kernels || !kernels.length) return;
+      const n = Math.min(kernels.length, 16);
+      const cols = Math.ceil(Math.sqrt(n));
+      const rows = Math.ceil(n / cols);
+      const gap = 2;
+      const cellW = (cssW - gap * (cols + 1)) / cols;
+      const cellH = (cssH - gap * (rows + 1)) / rows;
+      // Fill background
+      ctx.fillStyle = 'rgba(241,245,249,0.6)';
+      ctx.fillRect(0, 0, cssW, cssH);
+      for (let k = 0; k < n; k++) {
+        const kernel = kernels[k];
+        if (!kernel || !kernel.length) continue;
+        const cx = (k % cols), cy = Math.floor(k / cols);
+        const ox = gap + cx * (cellW + gap), oy = gap + cy * (cellH + gap);
+        let maxAbs = 0.001;
+        for (const row of kernel) for (const val of row) maxAbs = Math.max(maxAbs, Math.abs(Number(val) || 0));
+        const krows = kernel.length, kcols = kernel[0].length;
+        const cw = cellW / kcols, ch = cellH / krows;
+        for (let r = 0; r < krows; r++)
+          for (let c = 0; c < kcols; c++) {
+            const v = Number(kernel[r][c]) || 0;
+            ctx.fillStyle = colorFor(v / maxAbs, positiveGreen);
+            ctx.fillRect(ox + c * cw, oy + r * ch, Math.ceil(cw), Math.ceil(ch));
+          }
+      }
+    }
+
+    function drawVector(canvas, values, cssW, cssH, positiveGreen) {
+      const arr = values || [];
+      const n = Math.min(arr.length, 28);
+      const matrix = [];
+      for (let i = 0; i < n; i++) matrix.push([Number(arr[i]) || 0]);
+      drawMatrix(canvas, matrix, cssW, cssH, positiveGreen);
+    }
+
+    function drawPending(canvas, cssW, cssH) {
+      const ctx = prepareCanvas(canvas, cssW, cssH);
+      if (!ctx) return;
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.92)';
+      ctx.fillRect(0, 0, cssW, cssH);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.42)';
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(5, 5, cssW - 10, cssH - 10);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '700 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('待计算', cssW / 2, cssH / 2);
+    }
+
+    function drawDigit() {
+      const img = activeTrace.value?.sample?.image;
+      const canvas = canvasRefs.digit;
+      const ctx = prepareCanvas(canvas, 54, 54);
+      if (!ctx || !img) return;
+      const cell = 54 / 28;
+      for (let r = 0; r < 28; r++)
+        for (let c = 0; c < 28; c++) {
+          const v = Number(img[r][c]) || 0;
+          const x = Math.round(255 - v * 245);
+          ctx.fillStyle = `rgb(${x},${x},${x})`;
+          ctx.fillRect(c * cell, r * cell, cell, cell);
+        }
+    }
+
+    const CS = 52;  // square canvas size for architecture thumbnails
+
+    function drawArchitecture() {
+      if (!activeTrace.value) return;
+      activeTrace.value.architecture.forEach((layer, idx) => {
+        const canvas = canvasRefs['arch' + idx];
+        if (!canvas) return;
+        if (!computedArchSet.value.has(layer.arch_index)) {
+          drawPending(canvas, CS, CS);
+          return;
+        }
+        if (layer.kernels) drawKernels(canvas, layer.kernels, CS, CS, false);
+        else if (layer.channels) drawKernels(canvas, layer.channels, CS, CS, false);
+        else if (layer.heatmap) drawMatrix(canvas, layer.heatmap, CS, CS, false);
+        else if (layer.vector) drawVector(canvas, layer.vector, CS, CS, false);
+        else {
+          const ctx = prepareCanvas(canvas, CS, CS);
+          if (!ctx) return;
+          ctx.fillStyle = '#7dd3fc';
+          ctx.font = '700 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(layer.value ?? ''), CS / 2, CS / 2 + 4);
+        }
+      });
+    }
+
+    function drawDetail() {
+      const step = currentStepData.value;
+      // Weight update
+      const upd = step.arch_update;
+      if (upd && mode.value === 'train') {
+        if (upd.type === 'kernels') {
+          drawKernels(canvasRefs.upBefore, upd.W_before, 64, 64, false);
+          drawKernels(canvasRefs.upGrad, upd.W_grad, 64, 64, true);
+          drawKernels(canvasRefs.upAfter, upd.W_after, 64, 64, false);
+        } else {
+          drawMatrix(canvasRefs.upBefore, upd.W_before, 64, 64, false);
+          drawMatrix(canvasRefs.upGrad, upd.W_grad, 64, 64, true);
+          drawMatrix(canvasRefs.upAfter, upd.W_after, 64, 64, false);
+        }
+      }
+    }
+
+    function drawAll() {
+      if (!activeTrace.value) { drawDigit(); return; }
+      if (lastTrace !== activeTrace.value) {
+        drawDigit();
+        lastTrace = activeTrace.value;
+      }
+      drawArchitecture();
+      drawDetail();
+      drawMagnifier();
+      startGeometryAnimation();
+    }
+
+    let animFrameId = null;
+    let animStartTime = 0;
+
+    function drawGeometryAnimationLegacy(timestamp) {
+      const spec = geometryAnimation.value;
+      const canvas = canvasRefs.geometry;
+      if (!canvas || !spec) { if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; } return; }
+      if (!animStartTime) animStartTime = timestamp;
+      const elapsed = timestamp - animStartTime;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const cssW = Math.max(360, Math.round(rect.width || canvas.clientWidth || 520));
+      const cssH = 240;
+      const targetW = Math.round(cssW * dpr);
+      const targetH = Math.round(cssH * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+      ctx.fillStyle = 'rgba(248,250,252,0.92)';
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      const W = cssW, H = cssH;
+      const period = 2800; // ms per animation cycle
+      const tCycle = (elapsed % period) / period; // 0..1
+      const ease = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+      const pulse = 0.5 + 0.5 * Math.sin(tCycle * Math.PI * 2);
+      const rr = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
+      const fillRound = (x, y, w, h, r, fill, stroke = null) => {
+        rr(x, y, w, h, r);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); }
+      };
+      const label = (text, x, y, color = '#475569', size = 12, align = 'center') => {
+        ctx.fillStyle = color;
+        ctx.font = `800 ${size}px "Microsoft YaHei", system-ui, sans-serif`;
+        ctx.textAlign = align;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y);
+      };
+      const arrow = (x1, y1, x2, y2, color = '#8b5cf6') => {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 8 * Math.cos(a - 0.45), y2 - 8 * Math.sin(a - 0.45));
+        ctx.lineTo(x2 - 8 * Math.cos(a + 0.45), y2 - 8 * Math.sin(a + 0.45));
+        ctx.closePath();
+        ctx.fill();
+      };
+      const drawGrid = (x, y, size, cells, active = null, color = '#0ea5e9') => {
+        fillRound(x - 3, y - 3, size + 6, size + 6, 10, 'rgba(255,255,255,0.72)', 'rgba(203,213,225,0.7)');
+        const cell = size / cells;
+        for (let r = 0; r < cells; r++) for (let c = 0; c < cells; c++) {
+          const v = 0.22 + 0.34 * (0.5 + 0.5 * Math.sin(r * 1.7 + c * 1.13));
+          ctx.fillStyle = `rgba(148,163,184,${v})`;
+          ctx.fillRect(x + c * cell + 1, y + r * cell + 1, cell - 2, cell - 2);
+        }
+        if (active) {
+          ctx.fillStyle = `${color}2e`;
+          ctx.fillRect(x + active.c * cell, y + active.r * cell, active.w * cell, active.h * cell);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + active.c * cell, y + active.r * cell, active.w * cell, active.h * cell);
+        }
+      };
+
+      const type = spec.type;
+
+      // === Conv forward: sliding window on input grid ===
+      if (type === 'conv-forward') {
+        const gridX = 15, gridY = 25, gridSz = 90, cells = 6;
+        const cell = gridSz / cells;
+        // Draw input grid
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(gridX, gridY, gridSz, gridSz);
+        for (let r = 0; r < cells; r++) for (let c = 0; c < cells; c++) {
+          ctx.fillStyle = `rgba(148,163,184,${0.3 + 0.15 * Math.sin(r * 2 + c)})`;
+          ctx.fillRect(gridX + c * cell + 1, gridY + r * cell + 1, cell - 2, cell - 2);
+        }
+        // Sliding window: moves over 4 positions
+        const winPos = Math.floor(tCycle * 4) % 4;
+        const wr = Math.floor(winPos / 2), wc = winPos % 2;
+        const wSize = 3 * cell;
+        ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 3;
+        ctx.strokeRect(gridX + wc * cell, gridY + wr * cell, wSize, wSize);
+        ctx.fillStyle = 'rgba(14,165,233,0.2)';
+        ctx.fillRect(gridX + wc * cell, gridY + wr * cell, wSize, wSize);
+        // Kernel
+        const kX = gridX + gridSz + 20, kY = gridY + 15, kSz = 55;
+        ctx.fillStyle = '#ec8bbd'; ctx.fillRect(kX, kY, kSz, kSz);
+        ctx.fillStyle = '#fff'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('卷积核', kX + kSz/2, kY + kSz/2 + 4);
+        // Output grid lighting up
+        const outX = kX + kSz + 25, outY = gridY, outSz = 70, outCells = 4;
+        const outCell = outSz / outCells;
+        ctx.fillStyle = '#f1f5f9'; ctx.fillRect(outX, outY, outSz, outSz);
+        for (let r = 0; r < outCells; r++) for (let c = 0; c < outCells; c++) {
+          const lit = (r * outCells + c) <= winPos;
+          ctx.fillStyle = lit ? '#7c3aed' : '#cbd5e1';
+          ctx.fillRect(outX + c * outCell + 2, outY + r * outCell + 2, outCell - 4, outCell - 4);
+        }
+        ctx.fillStyle = '#7c3aed'; ctx.font = '700 10px sans-serif';
+        ctx.fillText('输出', outX + outSz/2, outY + outSz + 15);
+      }
+
+      // === Pool: 2x2 merge animation ===
+      else if (type === 'pool-forward' || type === 'pool-backward') {
+        const inX = 30, inY = 25, inSz = 110, inCells = 6;
+        const inCell = inSz / inCells;
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(inX, inY, inSz, inSz);
+        for (let r = 0; r < inCells; r++) for (let c = 0; c < inCells; c++) {
+          ctx.fillStyle = `rgba(148,163,184,${0.3 + 0.2 * (0.5 + 0.5 * Math.sin(r * 1.7 + c * 1.13))})`;
+          ctx.fillRect(inX + c * inCell + 1, inY + r * inCell + 1, inCell - 2, inCell - 2);
+        }
+        // Highlighted 2x2 window cycles
+        const nWindows = 4;
+        const winIdx = Math.floor(tCycle * nWindows) % nWindows;
+        const wr = Math.floor(winIdx / 2), wc = winIdx % 2;
+        ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 3;
+        const wx = inX + wc * 2 * inCell, wy = inY + wr * 2 * inCell;
+        ctx.strokeRect(wx, wy, inCell * 2, inCell * 2);
+        ctx.fillStyle = 'rgba(14,165,233,0.25)'; ctx.fillRect(wx, wy, inCell * 2, inCell * 2);
+        // Arrow
+        ctx.fillStyle = '#a78bfa'; ctx.font = '800 20px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('→', inX + inSz + 15, inY + inSz/2 + 6);
+        // Output: merge 2x2 → 1 cell
+        const outX = inX + inSz + 35, outY = inY + 20, outSz = 70, outCells = 3;
+        const outCell = outSz / outCells;
+        ctx.fillStyle = '#f1f5f9'; ctx.fillRect(outX, outY, outSz, outSz);
+        for (let r = 0; r < outCells; r++) for (let c = 0; c < outCells; c++) {
+          const lit = (r * outCells + c) <= winIdx;
+          if (lit) {
+            // Pulsing effect
+            const pulse = 0.6 + 0.4 * Math.sin(tCycle * Math.PI * 2);
+            ctx.fillStyle = `rgba(124,58,237,${pulse})`;
+          } else {
+            ctx.fillStyle = '#cbd5e1';
+          }
+          ctx.fillRect(outX + c * outCell + 2, outY + r * outCell + 2, outCell - 4, outCell - 4);
+        }
+        ctx.fillStyle = '#475569'; ctx.font = '700 10px sans-serif';
+        ctx.fillText(type === 'pool-backward' ? '÷4 回填' : '平均池化', outX + outSz/2, outY + outSz + 15);
+      }
+
+      // === Tanh: point moving along curve ===
+      else if (type === 'tanh-forward' || type === 'tanh-backward') {
+        const cx = 40, cy = H - 40, cw = 110, ch = 100;
+        // Draw axes
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx, cy - ch); ctx.lineTo(cx, cy); ctx.lineTo(cx + cw, cy); ctx.stroke();
+        // Draw tanh curve
+        ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let i = 0; i <= cw; i++) {
+          const nx = (i / cw - 0.5) * 6;
+          ctx.lineTo(cx + i, cy - (Math.tanh(nx) * 0.5 + 0.5) * ch);
+        }
+        ctx.stroke();
+        // Moving point along curve
+        const pt = (tCycle * 0.8 + 0.1); // sweep 10%-90% to stay in visible range
+        const nx = (pt - 0.5) * 6;
+        const py = cy - (Math.tanh(nx) * 0.5 + 0.5) * ch;
+        const px = cx + pt * cw;
+        ctx.fillStyle = '#7c3aed'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#be185d'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('z', px - 10, cy + 18);
+        ctx.fillText(type === 'tanh-backward' ? '(激活)′' : 'tanh(z)', px + 10, py - 12);
+        // Arrow to output
+        ctx.fillStyle = '#a78bfa'; ctx.font = '800 20px sans-serif';
+        ctx.fillText('→', cx + cw + 20, cy - ch/2 + 6);
+        // Output side
+        const outVal = Math.tanh(nx);
+        const barH = outVal * 40;
+        ctx.fillStyle = outVal >= 0 ? '#0ea5e9' : '#ec8bbd';
+        ctx.fillRect(cx + cw + 45, cy - 40, 30, Math.abs(barH));
+        ctx.fillStyle = '#475569'; ctx.font = '700 11px sans-serif';
+        ctx.fillText(outVal.toFixed(3), cx + cw + 50, cy + 18);
+      }
+
+      // === Linear: weight row × input → output neuron ===
+      else if (type === 'linear-forward' || type === 'linear-backward' || type === 'linear-backward-update') {
+        // Input vector
+        const vX = 20, vY = 30, vW = 24, vH = 130, n = 8;
+        for (let i = 0; i < n; i++) {
+          const val = 0.3 + 0.7 * Math.sin(i * 1.5 + tCycle * Math.PI);
+          const alpha = 0.4 + 0.6 * val;
+          ctx.fillStyle = `rgba(14,165,233,${alpha})`;
+          ctx.fillRect(vX, vY + i * (vH / n) + 1, vW, vH / n - 2);
+        }
+        ctx.fillStyle = '#475569'; ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('向量', vX + vW/2, vY + vH + 18);
+        // Weight matrix highlight row
+        const wX = vX + vW + 20, wY = vY, wW = 70, wH = vH;
+        const highlightRow = Math.floor(tCycle * n) % n;
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < 5; j++) {
+            const isHl = i === highlightRow;
+            ctx.fillStyle = isHl ? `rgba(236,139,189,${0.6 + 0.4 * Math.sin(tCycle * 3)})` : 'rgba(203,213,225,0.5)';
+            ctx.fillRect(wX + j * (wW / 5) + 1, wY + i * (wH / n) + 1, wW / 5 - 2, wH / n - 2);
+          }
+        }
+        ctx.fillText('权重', wX + wW/2, vY + vH + 18);
+        // Arrow
+        ctx.fillStyle = '#a78bfa'; ctx.font = '800 24px sans-serif';
+        ctx.fillText('→', wX + wW + 12, vY + vH/2 + 8);
+        // Output neurons lighting up
+        const oX = wX + wW + 40, oY = vY, oW = 30;
+        for (let i = 0; i < n; i++) {
+          const lit = i <= highlightRow || (type.includes('backward'));
+          ctx.fillStyle = lit ? '#7c3aed' : '#cbd5e1';
+          if (lit && i === highlightRow) {
+            const pulse = 0.6 + 0.4 * Math.sin(tCycle * Math.PI * 2);
+            ctx.fillStyle = `rgba(124,58,237,${pulse})`;
+          }
+          ctx.fillRect(oX, oY + i * (vH / n) + 1, oW, vH / n - 2);
+        }
+        ctx.fillText('输出', oX + oW/2, vY + vH + 18);
+        if (type === 'linear-backward-update') {
+          ctx.fillStyle = '#be185d'; ctx.font = '700 11px sans-serif';
+          ctx.fillText('梯度→更新', oX + oW/2, vY - 8);
+        }
+      }
+
+      // === Softmax: bar chart ===
+      else if (type === 'softmax' || type === 'softmax-ce' || type === 'prediction') {
+        const baseX = 30, baseY = H - 30, barW = 22, maxH = 100;
+        const logits = [0.05, 0.08, 0.15, 0.06, 0.04, 0.03, 0.20, 0.09, 0.35, 0.10];
+        for (let i = 0; i < 10; i++) {
+          const bounce = 0.5 + 0.5 * Math.sin(tCycle * Math.PI * 2 + i * 0.4);
+          const h = logits[i] * maxH * bounce;
+          const isMax = i === 8;
+          ctx.fillStyle = isMax ? '#7c3aed' : '#94a3b8';
+          ctx.fillRect(baseX + i * 28, baseY - h, barW, h);
+          ctx.fillStyle = '#475569'; ctx.font = '600 10px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(i, baseX + i * 28 + barW/2, baseY + 14);
+        }
+        ctx.fillStyle = '#0ea5e9'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(type === 'softmax-ce' ? '概率→梯度' : type === 'prediction' ? 'argmax→预测' : 'exp→归一化', baseX, 25);
+      }
+
+      // === Reshape: grid → vector ===
+      else if (type === 'reshape') {
+        const gX = 30, gY = 30, gSz = 110, gCells = 4;
+        const gCell = gSz / gCells;
+        for (let r = 0; r < gCells; r++) for (let c = 0; c < gCells; c++) {
+          const alpha = 0.3 + 0.3 * Math.sin((r * gCells + c) * 0.5 + tCycle * Math.PI);
+          ctx.fillStyle = `rgba(14,165,233,${alpha})`;
+          ctx.fillRect(gX + c * gCell + 1, gY + r * gCell + 1, gCell - 2, gCell - 2);
+        }
+        ctx.fillStyle = '#475569'; ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('特征图', gX + gSz/2, gY + gSz + 15);
+        // Arrow with flowing dots
+        ctx.fillStyle = '#a78bfa'; ctx.font = '800 24px sans-serif';
+        ctx.fillText('→', gX + gSz + 15, gY + gSz/2 + 8);
+        // Vector
+        const vX = gX + gSz + 45, vY = gY + 5, vW = 18, vCount = 16;
+        for (let i = 0; i < vCount; i++) {
+          const alpha = 0.3 + 0.4 * Math.sin(i * 0.3 + tCycle * Math.PI);
+          ctx.fillStyle = `rgba(124,58,237,${alpha})`;
+          const vh = (gSz - 10) / vCount;
+          ctx.fillRect(vX, vY + i * vh + 1, vW, vh - 2);
+        }
+        ctx.fillText('向量', vX + vW/2, gY + gSz + 15);
+      }
+
+      // === Generic fallback ===
+      else {
+        ctx.fillStyle = '#0ea5e9'; ctx.font = '700 14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(type || '动画准备中', W / 2, H / 2 - 10);
+        // Subtle pulse
+        const r = 16 + 4 * Math.sin(tCycle * Math.PI * 2);
+        ctx.beginPath(); ctx.arc(W / 2, H / 2 + 25, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(14,165,233,${0.2 + 0.15 * Math.sin(tCycle * Math.PI * 2)})`;
+        ctx.fill();
+      }
+
+      animFrameId = requestAnimationFrame(drawGeometryAnimation);
+    }
+
+    function drawGeometryAnimation(timestamp) {
+      const spec = geometryAnimation.value;
+      const canvas = canvasRefs.geometry;
+      if (!canvas || !spec) {
+        if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+        return;
+      }
+      if (!animStartTime) animStartTime = timestamp;
+
+      const elapsed = timestamp - animStartTime;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const cssW = Math.max(360, Math.round(rect.width || canvas.clientWidth || 520));
+      const cssH = 240;
+      const targetW = Math.round(cssW * dpr);
+      const targetH = Math.round(cssH * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssW, cssH);
+
+      const W = cssW, H = cssH;
+      const type = spec.type || 'generic';
+      const t = (elapsed % 3400) / 3400;
+      const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+      const ease = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+      const lerp = (a, b, k) => a + (b - a) * k;
+
+      const roundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
+      const fillRound = (x, y, w, h, r, fill, stroke = '') => {
+        roundRect(x, y, w, h, r);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.4; ctx.stroke(); }
+      };
+      const labelBelow = (x, y, w, value, color = '#475569') => {
+        ctx.fillStyle = color;
+        ctx.font = '800 13px "Microsoft YaHei", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(value, x + w / 2, y);
+      };
+      const arrow = (x1, y1, x2, y2, color = '#8b5cf6') => {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 9 * Math.cos(a - 0.45), y2 - 9 * Math.sin(a - 0.45));
+        ctx.lineTo(x2 - 9 * Math.cos(a + 0.45), y2 - 9 * Math.sin(a + 0.45));
+        ctx.closePath();
+        ctx.fill();
+      };
+      const flowDot = (x1, y1, x2, y2, color = '#0ea5e9', offset = 0) => {
+        const k = (t + offset) % 1;
+        ctx.beginPath();
+        ctx.arc(lerp(x1, x2, k), lerp(y1, y2, k), 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
+      const drawGrid = (x, y, size, cells, active = null, accent = '#0ea5e9') => {
+        fillRound(x - 4, y - 4, size + 8, size + 8, 12, 'rgba(255,255,255,0.78)', 'rgba(203,213,225,0.78)');
+        const cell = size / cells;
+        for (let r = 0; r < cells; r++) {
+          for (let c = 0; c < cells; c++) {
+            const alpha = 0.20 + 0.30 * (0.5 + 0.5 * Math.sin(r * 1.5 + c * 1.2));
+            fillRound(x + c * cell + 1.5, y + r * cell + 1.5, cell - 3, cell - 3, 5, `rgba(148,163,184,${alpha})`);
+          }
+        }
+        if (active) {
+          const ax = x + active.c * cell;
+          const ay = y + active.r * cell;
+          const aw = active.w * cell;
+          const ah = active.h * cell;
+          fillRound(ax, ay, aw, ah, 9, `${accent}2e`, accent);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = accent;
+          roundRect(ax, ay, aw, ah, 9);
+          ctx.stroke();
+        }
+      };
+      const neuron = (x, y, r, fill, stroke = '#7dd3fc') => {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      };
+      const drawNetwork = (reverse = false, update = false) => {
+        const leftX = W * 0.28, rightX = W * 0.72;
+        const ys = [58, 92, 126, 160];
+        const r = 12;
+        for (const y1 of ys) {
+          for (const y2 of ys) {
+            const phase = (Math.abs(y1 - y2) / 140 + t) % 1;
+            ctx.strokeStyle = phase < 0.32 ? (reverse ? 'rgba(236,139,189,0.75)' : 'rgba(14,165,233,0.75)') : 'rgba(148,163,184,0.28)';
+            ctx.lineWidth = phase < 0.32 ? 2.1 : 1.1;
+            ctx.beginPath();
+            ctx.moveTo(leftX, y1);
+            ctx.lineTo(rightX, y2);
+            ctx.stroke();
+          }
+        }
+        const hot = Math.floor(t * ys.length) % ys.length;
+        ys.forEach((y, i) => neuron(leftX, y, r + (i === hot && !reverse ? 2 * pulse : 0), i === hot && !reverse ? '#bae6fd' : '#f8fafc', '#0ea5e9'));
+        ys.forEach((y, i) => neuron(rightX, y, r + (i === hot && reverse ? 2 * pulse : 0), i === hot || update ? '#ddd6fe' : '#f8fafc', update ? '#10b981' : '#8b5cf6'));
+        const sx = reverse ? rightX : leftX;
+        const ex = reverse ? leftX : rightX;
+        ys.slice(0, 3).forEach((y, i) => flowDot(sx, y, ex, ys[(i + hot) % ys.length], reverse ? '#ec8bbd' : '#0ea5e9', i * 0.18));
+        labelBelow(leftX - 36, 190, 72, reverse ? '回传梯度' : '输入节点');
+        labelBelow(rightX - 36, 190, 72, update ? '新权重' : '输出节点', update ? '#0f766e' : '#7c3aed');
+      };
+
+      fillRound(0, 0, W, H, 12, 'rgba(248,250,252,0.96)');
+
+      if (type === 'conv-forward' || type === 'conv-backward' || type === 'conv-backward-update') {
+        const cells = 7, kernel = 3, valid = cells - kernel + 1;
+        const gx = 28, gy = 42, gs = 118;
+        const total = valid * valid;
+        const raw = t * total;
+        const a = Math.floor(raw) % total;
+        const b = (a + 1) % total;
+        const k = ease(raw - Math.floor(raw));
+        const ar = Math.floor(a / valid), ac = a % valid;
+        const br = Math.floor(b / valid), bc = b % valid;
+        const rr = lerp(ar, br, k);
+        const cc = lerp(ac, bc, k);
+        drawGrid(gx, gy, gs, cells, { r: rr, c: cc, w: kernel, h: kernel }, type === 'conv-forward' ? '#0ea5e9' : '#10b981');
+        const kx = Math.min(W - 228, gx + gs + 58), ky = gy + 10, ks = 86;
+        fillRound(kx, ky, ks, ks, 18, type === 'conv-forward' ? 'rgba(236,139,189,0.88)' : 'rgba(16,185,129,0.82)', 'rgba(15,23,42,0.10)');
+        const kp = 13;
+        const kg = (ks - kp * 2) / kernel;
+        for (let r = 0; r < kernel; r++) for (let c = 0; c < kernel; c++) {
+          fillRound(kx + kp + c * kg + 3, ky + kp + r * kg + 3, kg - 6, kg - 6, 7, 'rgba(255,255,255,0.64)');
+        }
+        const ox = Math.min(W - 120, kx + ks + 62), oy = gy + 21, os = 72;
+        drawGrid(ox, oy, os, Math.max(1, valid), { r: Math.min(valid - 1, rr), c: Math.min(valid - 1, cc), w: 1, h: 1 }, '#7c3aed');
+        arrow(gx + gs + 14, gy + gs / 2, kx - 12, ky + ks / 2);
+        arrow(kx + ks + 14, ky + ks / 2, ox - 12, oy + os / 2);
+        flowDot(gx + gs + 14, gy + gs / 2, kx - 12, ky + ks / 2, '#0ea5e9');
+        flowDot(kx + ks + 14, ky + ks / 2, ox - 12, oy + os / 2, type === 'conv-forward' ? '#8b5cf6' : '#10b981', 0.25);
+        const labelY = 182;
+        labelBelow(gx, labelY, gs, type === 'conv-forward' ? '输入窗口' : '输出梯度');
+        labelBelow(kx, labelY, ks, type === 'conv-forward' ? '卷积核' : '核梯度');
+        labelBelow(ox, labelY, os, type === 'conv-backward-update' ? '新权重' : '输出');
+      } else if (type === 'pool-forward' || type === 'pool-backward') {
+        const cells = 6, win = 2, outCells = 3;
+        const gx = 50, gy = 44, gs = 120;
+        const total = outCells * outCells;
+        const raw = t * total;
+        const a = Math.floor(raw) % total;
+        const b = (a + 1) % total;
+        const k = ease(raw - Math.floor(raw));
+        const ar = Math.floor(a / outCells), ac = a % outCells;
+        const br = Math.floor(b / outCells), bc = b % outCells;
+        const rr = lerp(ar, br, k), cc = lerp(ac, bc, k);
+        drawGrid(gx, gy, gs, cells, { r: rr * win, c: cc * win, w: win, h: win }, type === 'pool-forward' ? '#0ea5e9' : '#10b981');
+        const mx = W / 2 - 25, my = gy + 42;
+        fillRound(mx, my, 50, 50, 20, type === 'pool-forward' ? 'rgba(124,58,237,0.84)' : 'rgba(16,185,129,0.84)');
+        ctx.fillStyle = '#fff';
+        ctx.font = '900 15px "Microsoft YaHei", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(type === 'pool-forward' ? '平均' : '÷4', mx + 25, my + 25);
+        const ox = Math.min(W - 150, W - 170), oy = gy + 22, os = 90;
+        drawGrid(ox, oy, os, outCells, { r: rr, c: cc, w: 1, h: 1 }, '#7c3aed');
+        arrow(gx + gs + 18, gy + gs / 2, mx - 12, my + 25);
+        arrow(mx + 62, my + 25, ox - 12, oy + os / 2);
+        flowDot(gx + gs + 18, gy + gs / 2, mx - 12, my + 25, '#0ea5e9');
+        flowDot(mx + 62, my + 25, ox - 12, oy + os / 2, '#7c3aed', 0.25);
+        const labelY = 184;
+        labelBelow(gx, labelY, gs, type === 'pool-forward' ? '2×2窗口' : '池化梯度');
+        labelBelow(mx - 10, labelY, 70, type === 'pool-forward' ? '平均' : '均分');
+        labelBelow(ox, labelY, os, type === 'pool-forward' ? '下采样' : '回填');
+      } else if (type === 'linear-forward' || type === 'linear-backward' || type === 'linear-backward-update') {
+        drawNetwork(type !== 'linear-forward', type === 'linear-backward-update');
+      } else if (type === 'tanh-forward' || type === 'tanh-backward') {
+        const x0 = 54, y0 = H - 60, cw = Math.min(210, W * 0.42), ch = 128;
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(x0, y0 - ch); ctx.lineTo(x0, y0); ctx.lineTo(x0 + cw, y0); ctx.stroke();
+        ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2.8; ctx.beginPath();
+        for (let i = 0; i <= cw; i++) {
+          const nx = (i / cw - 0.5) * 6;
+          const yy = y0 - (Math.tanh(nx) * 0.5 + 0.5) * ch;
+          if (i === 0) ctx.moveTo(x0 + i, yy); else ctx.lineTo(x0 + i, yy);
+        }
+        ctx.stroke();
+        const pt = 0.1 + 0.8 * ease(t);
+        const nx = (pt - 0.5) * 6;
+        const px = x0 + pt * cw, py = y0 - (Math.tanh(nx) * 0.5 + 0.5) * ch;
+        ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fillStyle = '#7c3aed'; ctx.fill();
+        const bx = Math.min(W - 120, x0 + cw + 92), by = y0 - ch;
+        fillRound(bx, by, 52, ch, 22, 'rgba(255,255,255,0.80)', 'rgba(203,213,225,0.85)');
+        const val = Math.tanh(nx), mid = by + ch / 2, bh = Math.abs(val) * ch * 0.42;
+        fillRound(bx + 11, val >= 0 ? mid - bh : mid, 30, Math.max(5, bh), 12, val >= 0 ? '#0ea5e9' : '#ec8bbd');
+        arrow(x0 + cw + 22, y0 - ch / 2, bx - 12, y0 - ch / 2);
+        labelBelow(x0, 184, cw, type === 'tanh-forward' ? 'tanh曲线' : '局部导数');
+        labelBelow(bx, 184, 52, type === 'tanh-forward' ? '激活输出' : '回传梯度', '#7c3aed');
+      } else if (type === 'softmax' || type === 'softmax-ce' || type === 'prediction') {
+        const baseX = Math.max(34, W * 0.12), baseY = 170, maxH = 112;
+        const vals = [0.05,0.08,0.15,0.06,0.04,0.03,0.20,0.09,0.35,0.10];
+        const bw = Math.max(12, Math.min(24, (W - baseX * 2) / 16));
+        vals.forEach((v, i) => {
+          const h = v * maxH * (0.80 + 0.20 * ease(t));
+          fillRound(baseX + i * (bw + 8), baseY - h, bw, h, 8, i === 8 ? '#7c3aed' : '#94a3b8');
+          labelBelow(baseX + i * (bw + 8) - 2, baseY + 8, bw + 4, String(i), '#475569');
+        });
+        labelBelow(baseX, 196, Math.min(W - baseX * 2, 320), type === 'softmax-ce' ? '概率 - 标签' : '类别概率', '#0c4a6e');
+      } else if (type === 'reshape') {
+        const gx = 58, gy = 46, gs = 118, cells = 4;
+        drawGrid(gx, gy, gs, cells);
+        const vx = Math.min(W - 120, gx + gs + 120), vy = gy + 4, vw = 36, vh = 110;
+        arrow(gx + gs + 18, gy + gs / 2, vx - 14, vy + vh / 2);
+        const count = 16;
+        for (let i = 0; i < count; i++) {
+          fillRound(vx, vy + i * (vh / count) + 1, vw, vh / count - 2, 4, `rgba(124,58,237,${0.30 + 0.34 * (0.5 + 0.5 * Math.sin(i * 0.45 + t * Math.PI * 2))})`);
+        }
+        flowDot(gx + gs + 18, gy + gs / 2, vx - 14, vy + vh / 2, '#7c3aed');
+        labelBelow(gx, 184, gs, '空间特征');
+        labelBelow(vx - 18, 184, 72, '向量');
+      } else {
+        const cx = W / 2 - 42, cy = 96;
+        ctx.beginPath(); ctx.arc(cx, cy, 24 + 3 * pulse, 0, Math.PI * 2); ctx.fillStyle = 'rgba(14,165,233,0.34)'; ctx.fill();
+        arrow(cx + 38, cy, cx + 86, cy);
+        ctx.beginPath(); ctx.arc(cx + 128, cy, 22 + 3 * (1 - pulse), 0, Math.PI * 2); ctx.fillStyle = 'rgba(124,58,237,0.30)'; ctx.fill();
+        labelBelow(cx - 28, 150, 56, '输入');
+        labelBelow(cx + 100, 150, 56, '输出', '#7c3aed');
+      }
+
+      animFrameId = requestAnimationFrame(drawGeometryAnimation);
+    }
+    function startGeometryAnimation() {
+      if (animFrameId) return;
+      animStartTime = 0;
+      animFrameId = requestAnimationFrame(drawGeometryAnimation);
+    }
+    function stopGeometryAnimation() {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      animStartTime = 0;
+    }
+
+    function drawMagnifier() {
+      const mag = magnifierContent.value;
+      if (!mag || !mag.inputs) return;
+      mag.inputs.forEach((inp, i) => {
+        if (inp.kind === 'matrix' && inp.data) {
+          drawMatrix(canvasRefs['magIn' + i], inp.data, 52, 52, false);
+        }
+      });
+    }
+
+    function scheduleDraw() {
+      if (drawFrame) return;
+      drawFrame = requestAnimationFrame(() => { drawFrame = null; drawAll(); });
+    }
+
+    async function renderMath() {
+      for (let i = 0; i < 60 && (!window.MathJax || !window.MathJax.typesetPromise); i++)
+        await new Promise(resolve => setTimeout(resolve, 100));
+      if (!window.MathJax || !window.MathJax.typesetPromise) return;
+      const signature = activeSteps.value.map(s => `${s.step}:${formulaShortText(s)}:${formulaDetailedText(s)}:${formulaChineseText(s)}`).join('|');
+      if (signature && signature === mathSignature) return;
+      mathSignature = signature;
+      const targets = [
+        document.querySelector('.formula-card'),
+        document.querySelector('.formula-summary')
+      ].filter(Boolean);
+      if (!targets.length) return;
+      if (window.MathJax.typesetClear) window.MathJax.typesetClear(targets);
+      await window.MathJax.typesetPromise(targets);
+    }
+
+    // ===== Data loading =====
+    async function loadSnapshots() {
+      backwardLoading.value = true;
+      error.value = '';
+      try {
+        const resp = await fetch('/static/training_snapshots.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        batchTraces.value = markRaw(data.snapshots || []);
+        if (!batchTraces.value.length) throw new Error('没有可用训练快照');
+        batchIdx.value = 0;
+        backwardTrace.value = batchTraces.value[0];
+        currentStep.value = 1;
+        await nextTick();
+        drawAll();
+        await renderMath();
+      } catch (e) { error.value = e.message || String(e); }
+      finally { backwardLoading.value = false; }
+    }
+
+    // ===== Drawing =====
+    function initDrawCanvas() {
+      const el = drawCanvasEl.value;
+      if (!el) return;
+      const dpr = window.devicePixelRatio || 1;
+      el.width = DRAW_LOGICAL_SIZE * dpr; el.height = DRAW_LOGICAL_SIZE * dpr;
+      el.style.width = DRAW_DISPLAY_SIZE + 'px'; el.style.height = DRAW_DISPLAY_SIZE + 'px';
+      drawCtx = el.getContext('2d');
+      drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawCtx.fillStyle = '#ffffff'; drawCtx.fillRect(0, 0, DRAW_LOGICAL_SIZE, DRAW_LOGICAL_SIZE);
+      drawCtx.lineCap = 'round'; drawCtx.lineJoin = 'round';
+      drawCtx.lineWidth = 14; drawCtx.strokeStyle = '#111827';
+    }
+
+    function getDrawPos(e) {
+      const el = drawCanvasEl.value;
+      if (!el) return { x: 0, y: 0 };
+      const rect = el.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * DRAW_LOGICAL_SIZE / rect.width,
+        y: (e.clientY - rect.top) * DRAW_LOGICAL_SIZE / rect.height
+      };
+    }
+
+    function drawStart(e) {
+      if (!drawCtx) { initDrawCanvas(); if (!drawCtx) return; }
+      e.preventDefault();
+      drawing.value = true; hasDrawn.value = true;
+      const p = getDrawPos(e);
+      drawCtx.beginPath(); drawCtx.moveTo(p.x, p.y);
+    }
+
+    function drawMove(e) {
+      if (!drawing.value) return;
+      e.preventDefault();
+      const p = getDrawPos(e);
+      drawCtx.lineTo(p.x, p.y); drawCtx.stroke();
+      drawCtx.beginPath(); drawCtx.moveTo(p.x, p.y);
+    }
+
+    function drawEnd() { if (drawing.value) { drawing.value = false; drawCtx.beginPath(); } }
+
+    function clearDraw() {
+      if (drawCtx) {
+        drawCtx.fillStyle = '#ffffff'; drawCtx.fillRect(0, 0, DRAW_LOGICAL_SIZE, DRAW_LOGICAL_SIZE);
+      }
+      hasDrawn.value = false;
+      forwardTrace.value = null;
+      error.value = '';
+      currentStep.value = 1;
+      lastTrace = null;
+      mathSignature = '';
+    }
+
+    async function runForward() {
+      if (!drawCanvasEl.value) return;
+      forwardLoading.value = true; error.value = '';
+      try {
+        const dataUrl = drawCanvasEl.value.toDataURL('image/png');
+        const resp = await fetch('/conv/api/forward_trace', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl })
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        forwardTrace.value = markRaw(data);
+        currentStep.value = 1;
+        mathSignature = '';
+        await nextTick(); drawAll(); await renderMath();
+      } catch (e) { error.value = e.message || String(e); }
+      finally { forwardLoading.value = false; }
+    }
+
+    // ===== Navigation =====
+    function setStep(step) { currentStep.value = step; if (autoPlaying.value) toggleAutoPlay(); }
+    function prevStep() { if (currentStep.value > 1) currentStep.value--; }
+    function nextStep() { if (activeSteps.value.length) { if (currentStep.value < activeSteps.value.length) currentStep.value++; } }
+
+    function advanceStep() {
+      if (!activeTrace.value) return;
+      if (currentStep.value < activeSteps.value.length) { currentStep.value++; return; }
+      // Loop: go back to step 1 (same sample, same trace)
+      currentStep.value = 1;
+    }
+
+    function toggleAutoPlay() {
+      autoPlaying.value = !autoPlaying.value;
+      if (autoPlaying.value) autoTimer = setInterval(advanceStep, 1600);
+      else { clearInterval(autoTimer); autoTimer = null; }
+    }
+
+    function prevIter() {
+      if (batchIdx.value > 0) {
+        batchIdx.value--;
+        backwardTrace.value = batchTraces.value[batchIdx.value];
+        currentStep.value = 1;
+        mathSignature = '';
+        nextTick().then(async () => { drawAll(); await renderMath(); });
+      }
+    }
+    function nextIter() {
+      if (batchIdx.value < batchTraces.value.length - 1) {
+        batchIdx.value++;
+        backwardTrace.value = batchTraces.value[batchIdx.value];
+        currentStep.value = 1;
+        mathSignature = '';
+        nextTick().then(async () => { drawAll(); await renderMath(); });
+      }
+    }
+
+    function jumpToArchLayer(idx) {
+      const bounds = phaseBounds.value;
+      const phaseStart = activePhase.value === 'backward' ? bounds.backwardStart : bounds.forwardStart;
+      const phaseEnd = activePhase.value === 'backward' ? bounds.total : bounds.forwardEnd;
+      const inCurrentPhase = activeSteps.value.filter(s => s.step >= phaseStart && s.step <= phaseEnd);
+      const match = inCurrentPhase.find(s => (s.arch_layer_index ?? -1) === idx)
+        || activeSteps.value.find(s => (s.arch_layer_index ?? -1) === idx);
+      if (match) setStep(match.step);
+    }
+
+    function jumpPhase(phase) {
+      const bounds = phaseBounds.value;
+      if (phase === 'forward') {
+        setStep(bounds.forwardStart);
+      } else {
+        setStep(bounds.backwardStart);
+      }
+    }
+
+    function switchMode(newMode) {
+      mode.value = newMode; currentStep.value = 1;
+      mathSignature = '';
+      if (autoPlaying.value) toggleAutoPlay();
+      nextTick().then(async () => { drawAll(); await renderMath(); });
+    }
+
+    // ===== Lifecycle =====
+    watch(currentStep, () => { stopGeometryAnimation(); scheduleDraw(); renderMath(); });
+    watch(mode, (newMode) => {
+      if (newMode === 'infer') nextTick(() => initDrawCanvas());
+    });
+
+    onMounted(async () => {
+      await loadSnapshots();
+      nextTick(() => initDrawCanvas());
+      if (backwardTrace.value) { autoPlaying.value = true; autoTimer = setInterval(advanceStep, 1600); }
+    });
+
+    onBeforeUnmount(() => {
+      if (autoTimer) clearInterval(autoTimer);
+      if (drawFrame) cancelAnimationFrame(drawFrame);
+      stopGeometryAnimation();
+    });
+
+    return {
+      mode, backwardTrace, batchTraces, batchIdx, forwardTrace, backwardLoading, forwardLoading,
+      error, currentStep, autoPlaying, activeTrace, activeSteps, currentStepData, currentArchIndex, archGroups, computedArchSet,
+      lossColor, currentVisuals, probTarget, stepPhase, calculationFlow, formulaTokens, phaseBounds, activePhase,
+      drawCanvasEl, setCanvasRef, setStep, prevStep, nextStep, toggleAutoPlay, jumpToArchLayer, jumpPhase,
+      switchMode, prevIter, nextIter, drawStart, drawMove, drawEnd, clearDraw, runForward, hasDrawn,
+      formulaChineseText, formulaShortText, formulaDisplayText, formulaSummaryText,
+      geometryAnimation, magnifierContent, JSON
+    };
+  }
+}).mount('#app');
+</script>
+{% endraw %}
+</body>
+</html>

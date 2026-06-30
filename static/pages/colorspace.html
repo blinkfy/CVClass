@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>色彩空间 - Cvtoolkits</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .page { max-width: 1220px; margin: 0 auto; padding: 24px 22px 46px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr);
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
+    .panel, .hero-main, .mode-section {
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-panel);
+      box-shadow: var(--cv-shadow);
+      color: var(--cv-text);
+    }
+    .hero-main { padding: 20px; }
+    .eyebrow {
+      color: var(--cv-accent);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 7px 0 10px; color: var(--cv-title); font-size: clamp(1.55rem, 2.6vw, 2.35rem); line-height: 1.16; }
+    .subtitle { margin: 0; color: var(--cv-muted); line-height: 1.7; font-size: .96rem; }
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px;
+    }
+    .concept-card {
+      min-height: 158px;
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-soft-surface);
+      padding: 13px;
+      display: grid;
+      grid-template-rows: 88px auto;
+      gap: 8px;
+      overflow: hidden;
+    }
+    .concept-card strong { color: var(--cv-title); font-size: .9rem; }
+    .concept-card span { color: var(--cv-muted); font-size: .74rem; line-height: 1.45; }
+    .visual { position: relative; min-height: 86px; border-radius: var(--cv-radius-sm); background: var(--cv-media-bg); overflow: hidden; }
+    .rgb-venn i, .cmyk-venn i {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      mix-blend-mode: screen;
+      opacity: .82;
+    }
+    .rgb-venn .r { background: #ef4444; left: 34px; top: 10px; }
+    .rgb-venn .g { background: #22c55e; left: 68px; top: 10px; }
+    .rgb-venn .b { background: #3b82f6; left: 51px; top: 38px; }
+    .cmyk-venn { background: #f8fafc; }
+    .cmyk-venn i { mix-blend-mode: multiply; opacity: .72; }
+    .cmyk-venn .c { background: #00aeef; left: 22px; top: 8px; }
+    .cmyk-venn .m { background: #ec008c; left: 58px; top: 8px; }
+    .cmyk-venn .y { background: #ffdd00; left: 40px; top: 36px; }
+    .cmyk-venn .k { background: #111827; width: 42px; height: 42px; left: 78px; top: 38px; opacity: .42; }
+    .hsv-wheel::before {
+      content: "";
+      position: absolute;
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: conic-gradient(#ef4444, #f97316, #facc15, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ef4444);
+      box-shadow: inset 0 0 0 18px rgba(255,255,255,.24);
+    }
+    .lab-plane::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      background:
+        linear-gradient(90deg, rgba(34,197,94,.9), rgba(248,250,252,.95), rgba(239,68,68,.9)),
+        linear-gradient(0deg, rgba(37,99,235,.95), transparent 48%, rgba(250,204,21,.95));
+      background-blend-mode: multiply;
+    }
+    .lab-plane::after {
+      content: "L";
+      position: absolute;
+      right: 16px;
+      top: 12px;
+      width: 12px;
+      height: 62px;
+      border-radius: 999px;
+      color: #111827;
+      font-size: .7rem;
+      text-align: center;
+      background: linear-gradient(#fff, #111827);
+    }
+    .upload-panel { padding: 16px; }
+    .upload-zone {
+      border: 1.5px dashed var(--cv-border-strong);
+      border-radius: var(--cv-radius);
+      background: var(--cv-control-bg);
+      padding: 14px;
+      transition: border-color .18s, background .18s;
+    }
+    .upload-zone.dragover { border-color: var(--cv-accent); background: var(--cv-soft-surface); }
+    .upload-row { display: flex; gap: 12px; align-items: center; }
+    button {
+      font: inherit;
+      border: 0;
+      border-radius: var(--cv-radius-sm);
+      cursor: pointer;
+      min-height: 40px;
+    }
+    .upload-btn, .run-btn {
+      color: #04111f;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--cv-accent), var(--cv-accent-2));
+      padding: 10px 14px;
+    }
+    .ghost-btn {
+      color: var(--cv-text);
+      background: var(--cv-soft-surface);
+      border: 1px solid var(--cv-border);
+      padding: 10px 13px;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .file-meta { color: var(--cv-muted); font-size: .84rem; line-height: 1.5; }
+    .file-meta strong { color: var(--cv-title); }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
+    .notice {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: var(--cv-radius-sm);
+      color: var(--cv-muted);
+      background: var(--cv-soft-surface);
+      border: 1px solid var(--cv-border);
+      font-size: .82rem;
+      line-height: 1.55;
+    }
+    .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+    .metric-pill {
+      border: 1px solid var(--cv-border);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--cv-muted);
+      background: var(--cv-soft-surface);
+      font-size: .78rem;
+    }
+    .metric-pill strong { color: var(--cv-title); }
+    .loading, .error {
+      display: none;
+      margin: 16px 0;
+      padding: 16px;
+      border-radius: var(--cv-radius);
+      border: 1px solid var(--cv-border);
+      background: var(--cv-panel);
+      color: var(--cv-muted);
+    }
+    .error { color: var(--cv-danger-text); border-color: color-mix(in srgb, var(--cv-danger) 42%, transparent); }
+    .mode-stack { display: grid; gap: 16px; }
+    .mode-section { overflow: hidden; }
+    .mode-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+      gap: 14px;
+      padding: 18px;
+      border-bottom: 1px solid var(--cv-border);
+      background: var(--cv-soft-surface-2);
+    }
+    .mode-head h2 { margin: 0 0 8px; color: var(--cv-title); font-size: 1.22rem; }
+    .mode-head p { margin: 0; color: var(--cv-muted); line-height: 1.62; font-size: .9rem; }
+    .formula-box {
+      align-self: start;
+      padding: 11px 12px;
+      border-radius: var(--cv-radius-sm);
+      color: var(--cv-text);
+      background: var(--cv-code-bg);
+      border: 1px solid var(--cv-border);
+      font-family: "Consolas", "SFMono-Regular", monospace;
+      font-size: .78rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+    .application-tags, .dimension-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .application-tags span, .dimension-tags span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: var(--cv-text);
+      background: var(--cv-soft-surface);
+      border: 1px solid var(--cv-border);
+      font-size: .75rem;
+    }
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      padding: 16px;
+    }
+    .channel-card {
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-panel-2);
+      overflow: hidden;
+      min-width: 0;
+    }
+    .channel-img {
+      aspect-ratio: 4 / 3;
+      display: grid;
+      place-items: center;
+      background: var(--cv-media-bg);
+      border-bottom: 1px solid var(--cv-border);
+    }
+    .channel-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .channel-body { padding: 12px; }
+    .channel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 7px;
+    }
+    .channel-title strong { color: var(--cv-title); font-size: .92rem; }
+    .range { color: var(--cv-faint); font-size: .74rem; white-space: nowrap; }
+    .channel-body p { margin: 0 0 8px; color: var(--cv-muted); font-size: .78rem; line-height: 1.55; }
+    .channel-body code {
+      display: block;
+      padding: 8px;
+      border-radius: var(--cv-radius-sm);
+      color: var(--cv-text);
+      background: var(--cv-code-bg);
+      border: 1px solid var(--cv-border);
+      font-size: .72rem;
+      overflow-wrap: anywhere;
+    }
+    .note { margin-top: 8px; color: var(--cv-faint); font-size: .72rem; line-height: 1.45; }
+    @media (max-width: 900px) {
+      .hero, .mode-head { grid-template-columns: 1fr; }
+      .concept-grid { grid-template-columns: 1fr; }
+      .upload-row { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">RGB / HSV / Lab / CMYK</div>
+        <h1>色彩空间：同一张图片的四种颜色坐标系</h1>
+        <p class="subtitle">
+          图像内容没有变，变的是描述颜色的坐标。RGB 关心屏幕怎样发光，HSV 关心人怎样调色，
+          Lab 关心人眼感知距离，CMYK 关心油墨怎样印到纸上。上传一张图后，可以直接看到四种模式拆出的每个维度。
+        </p>
+        <div class="notice">
+          这个页面运行本地确定性色彩空间转换算法，不依赖外部模型。每张通道图都来自实际像素计算。
+        </div>
+      </div>
+      <div class="panel concept-grid" aria-label="四种色彩空间概念图">
+        <div class="concept-card">
+          <div class="visual rgb-venn"><i class="r"></i><i class="g"></i><i class="b"></i></div>
+          <div><strong>RGB 发光相加</strong><br><span>红、绿、蓝三束光叠加，适合屏幕和相机。</span></div>
+        </div>
+        <div class="concept-card">
+          <div class="visual hsv-wheel"></div>
+          <div><strong>HSV 色相圆环</strong><br><span>把颜色拆成色相、饱和度、明度，适合调色和阈值。</span></div>
+        </div>
+        <div class="concept-card">
+          <div class="visual lab-plane"></div>
+          <div><strong>Lab 感知坐标</strong><br><span>L 是亮度，a/b 是绿红、蓝黄两条对立颜色轴。</span></div>
+        </div>
+        <div class="concept-card">
+          <div class="visual cmyk-venn"><i class="c"></i><i class="m"></i><i class="y"></i><i class="k"></i></div>
+          <div><strong>CMYK 油墨叠印</strong><br><span>青、品红、黄、黑覆盖白纸，是印刷的减色模型。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel upload-panel">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="upload-row">
+          <button class="upload-btn" id="uploadBtn" type="button">选择图片</button>
+          <div class="file-meta">
+            <strong id="fileName">未选择</strong><br>
+            支持 RGB、灰度、RGBA 图片；RGBA 会先合成到白色背景。
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="run-btn" id="runBtn" type="button" disabled>开始拆分</button>
+        <button class="ghost-btn" id="sampleBtn" type="button">使用内置示例</button>
+      </div>
+    </section>
+
+    <div class="status-row" id="metricsRow"></div>
+    <div class="loading" id="loading">正在计算 RGB、HSV、Lab、CMYK 通道...</div>
+    <div class="error" id="errorBox"></div>
+    <section class="mode-stack" id="modeStack" aria-live="polite"></section>
+  </main>
+
+  <script>
+    (function () {
+      var selectedFile = null;
+      var fileInput = document.getElementById('fileInput');
+      var uploadZone = document.getElementById('uploadZone');
+      var fileName = document.getElementById('fileName');
+      var uploadBtn = document.getElementById('uploadBtn');
+      var runBtn = document.getElementById('runBtn');
+      var sampleBtn = document.getElementById('sampleBtn');
+      var loading = document.getElementById('loading');
+      var errorBox = document.getElementById('errorBox');
+      var modeStack = document.getElementById('modeStack');
+      var metricsRow = document.getElementById('metricsRow');
+      var htmlEsc = window.esc || function (value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+      };
+
+      var dimensionLabels = {
+        rgb_space: ['R 红光强度', 'G 绿光强度', 'B 蓝光强度'],
+        hsv_space: ['H 色相', 'S 饱和度', 'V 明度'],
+        lab_space: ['L 感知亮度', 'a 绿-红轴', 'b 蓝-黄轴'],
+        cmyk_space: ['C 青色油墨', 'M 品红油墨', 'Y 黄色油墨', 'K 黑色油墨']
+      };
+
+      function setBusy(isBusy) {
+        loading.style.display = isBusy ? 'block' : 'none';
+        errorBox.style.display = 'none';
+        runBtn.disabled = isBusy || !selectedFile;
+        sampleBtn.disabled = isBusy;
+        uploadBtn.disabled = isBusy;
+      }
+
+      function setFile(file) {
+        selectedFile = file || null;
+        fileName.textContent = selectedFile ? selectedFile.name : '未选择';
+        runBtn.disabled = !selectedFile;
+      }
+
+      function runWithFile(file) {
+        setBusy(true);
+        var formData = new FormData();
+        if (file) formData.append('file', file);
+        fetch('/api/demo/colorspace', { method: 'POST', body: formData })
+          .then(function (response) {
+            return response.json().catch(function () { return {}; }).then(function (json) {
+              if (!response.ok) throw new Error(json.error || ('HTTP ' + response.status));
+              return json;
+            });
+          })
+          .then(render)
+          .catch(function (err) {
+            setBusy(false);
+            errorBox.textContent = err.message || String(err);
+            errorBox.style.display = 'block';
+          });
+      }
+
+      function renderMetrics(metrics, implementation) {
+        var items = [
+          ['实现', (implementation && (implementation.category || implementation.status)) || metrics.status || 'local_algorithm'],
+          ['色彩空间', metrics.color_spaces || 4],
+          ['通道图', metrics.channel_images || 13],
+          ['输入尺寸', Array.isArray(metrics.input_shape) ? metrics.input_shape.join(' x ') : '']
+        ];
+        metricsRow.innerHTML = items.map(function (item) {
+          return '<span class="metric-pill"><strong>' + htmlEsc(item[0]) + '</strong> ' + htmlEsc(item[1]) + '</span>';
+        }).join('');
+      }
+
+      function render(data) {
+        setBusy(false);
+        renderMetrics(data.metrics || {}, data.implementation || {});
+        modeStack.innerHTML = (data.steps || []).map(function (step) {
+          var dims = dimensionLabels[step.id] || [];
+          var apps = step.applications || [];
+          var channels = step.channels || [];
+          return '<article class="mode-section">' +
+            '<div class="mode-head">' +
+              '<div>' +
+                '<h2>' + htmlEsc(step.name || '') + '</h2>' +
+                '<p>' + htmlEsc(step.explanation || '') + '</p>' +
+                '<div class="dimension-tags">' + dims.map(function (d) { return '<span>' + htmlEsc(d) + '</span>'; }).join('') + '</div>' +
+                '<div class="application-tags">' + apps.map(function (a) { return '<span>' + htmlEsc(a) + '</span>'; }).join('') + '</div>' +
+              '</div>' +
+              '<code class="formula-box">' + htmlEsc(step.formula || '') + '</code>' +
+            '</div>' +
+            '<div class="channel-grid">' + channels.map(renderChannel).join('') + '</div>' +
+          '</article>';
+        }).join('');
+      }
+
+      function renderChannel(channel) {
+        var src = channel.image_base64 ? 'data:image/png;base64,' + channel.image_base64 : '';
+        return '<article class="channel-card">' +
+          '<div class="channel-img">' + (src ? '<img src="' + src + '" alt="' + htmlEsc(channel.name || '') + '" loading="lazy">' : '') + '</div>' +
+          '<div class="channel-body">' +
+            '<div class="channel-title"><strong>' + htmlEsc(channel.name || '') + '</strong><span class="range">' + htmlEsc(channel.range || '') + '</span></div>' +
+            '<p>' + htmlEsc(channel.meaning || '') + '</p>' +
+            '<code>' + htmlEsc(channel.formula || '') + '</code>' +
+            '<div class="note">' + htmlEsc(channel.visualization_note || '') + '</div>' +
+          '</div>' +
+        '</article>';
+      }
+
+      uploadBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function (event) { setFile(event.target.files[0]); });
+      runBtn.addEventListener('click', function () { runWithFile(selectedFile); });
+      sampleBtn.addEventListener('click', function () {
+        setFile(null);
+        fileName.textContent = '内置示例';
+        fetch('../images/demo-street.jpg')
+          .then(function (response) { return response.blob(); })
+          .then(function (blob) { runWithFile(new File([blob], 'demo-street.jpg', { type: blob.type || 'image/jpeg' })); })
+          .catch(function () { runWithFile(null); });
+      });
+      uploadZone.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        uploadZone.classList.add('dragover');
+      });
+      uploadZone.addEventListener('dragleave', function () { uploadZone.classList.remove('dragover'); });
+      uploadZone.addEventListener('drop', function (event) {
+        event.preventDefault();
+        uploadZone.classList.remove('dragover');
+        setFile(event.dataTransfer.files[0]);
+      });
+
+      sampleBtn.click();
+    })();
+  </script>
+</body>
+</html>

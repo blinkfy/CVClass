@@ -1,0 +1,130 @@
+import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
+
+
+__all__ = ["harris_pipeline"]
+
+SOBEL_X = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
+SOBEL_Y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=np.float32)
+
+
+def ensure_uint8(img):
+    arr = np.asarray(img)
+    if arr.dtype.kind == "f":
+        if arr.size and float(arr.max()) <= 1.0:
+            arr = arr * 255.0
+        return np.round(arr).clip(0, 255).astype(np.uint8)
+    return arr.clip(0, 255).astype(np.uint8)
+
+
+def to_gray(img):
+    arr = ensure_uint8(img)
+    if arr.ndim == 2:
+        return arr
+    weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    return np.round(np.dot(arr[..., :3], weights)).clip(0, 255).astype(np.uint8)
+
+
+def conv2d(img, kernel):
+    arr = np.asarray(img, dtype=np.float32)
+    ker = np.asarray(kernel, dtype=np.float32)
+    ph, pw = ker.shape[0] // 2, ker.shape[1] // 2
+    padded = np.pad(arr, ((ph, ph), (pw, pw)), mode="edge")
+    windows = sliding_window_view(padded, ker.shape)
+    return np.sum(windows * ker, axis=(2, 3))
+
+
+def gaussian_kernel(size=3, sigma=2.0):
+    size = int(size)
+    if size % 2 == 0:
+        size += 1
+    radius = size // 2
+    ax = np.arange(-radius, radius + 1, dtype=np.float32)
+    x, y = np.meshgrid(ax, ax)
+    ker = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
+    total = float(ker.sum())
+    if total <= 1e-12:
+        return np.ones((size, size), dtype=np.float32) / float(size * size)
+    return (ker / total).astype(np.float32)
+
+
+def gaussian_blur(img, size=3, sigma=2.0):
+    return conv2d(img, gaussian_kernel(size, sigma))
+
+
+def threshold_response(response, ratio=0.01):
+    arr = np.asarray(response, dtype=np.float32)
+    max_val = float(arr.max()) if arr.size else 0.0
+    threshold = max_val * float(ratio) if max_val > 0 else np.inf
+    return arr > threshold, threshold
+
+
+def nms_response(response, ratio=0.01, radius=1):
+    arr = np.asarray(response, dtype=np.float32)
+    mask, threshold = threshold_response(arr, ratio)
+    if arr.size == 0 or not np.any(mask):
+        return np.zeros(arr.shape, dtype=bool), threshold
+    radius = max(1, int(radius))
+    size = radius * 2 + 1
+    padded = np.pad(arr, ((radius, radius), (radius, radius)), mode="edge")
+    windows = sliding_window_view(padded, (size, size))
+    local = windows.max(axis=(2, 3))
+    return mask & (arr == local), threshold
+
+
+def harris_pipeline(img, k=0.04, threshold_ratio=0.01, nms=True,
+                    window_size=3, sigma=2.0, nms_radius=1,
+                    max_points=800):
+    original = ensure_uint8(img)
+    gray = to_gray(original).astype(np.float32)
+    ix = conv2d(gray, SOBEL_X)
+    iy = conv2d(gray, SOBEL_Y)
+    ixx = gaussian_blur(ix * ix, window_size, sigma)
+    iyy = gaussian_blur(iy * iy, window_size, sigma)
+    ixy = gaussian_blur(ix * iy, window_size, sigma)
+    det = ixx * iyy - ixy * ixy
+    trace = ixx + iyy
+    response = det - float(k) * trace * trace
+    if nms:
+        corner_mask, threshold = nms_response(response, threshold_ratio, nms_radius)
+    else:
+        corner_mask, threshold = threshold_response(response, threshold_ratio)
+    ys, xs = np.where(corner_mask)
+    values = response[ys, xs] if ys.size else np.array([], dtype=np.float32)
+    order = np.argsort(values)[::-1]
+    if max_points and order.size > int(max_points):
+        order = order[:int(max_points)]
+    points = [
+        {
+            "x": int(xs[i]),
+            "y": int(ys[i]),
+            "response": float(response[ys[i], xs[i]]),
+        }
+        for i in order
+    ]
+    selected_mask = np.zeros_like(corner_mask, dtype=np.uint8)
+    for point in points:
+        selected_mask[point["y"], point["x"]] = 255
+    return {
+        "original": original,
+        "gray": gray.astype(np.uint8),
+        "ix": ix,
+        "iy": iy,
+        "ixx": ixx,
+        "iyy": iyy,
+        "ixy": ixy,
+        "response": response,
+        "threshold_mask": response > threshold if np.isfinite(threshold) else np.zeros_like(response, dtype=bool),
+        "corner_mask": corner_mask,
+        "selected_mask": selected_mask,
+        "points": points,
+        "threshold_value": float(threshold) if np.isfinite(threshold) else 0.0,
+        "metrics": {
+            "count": int(len(points)),
+            "max_response": float(response.max()) if response.size else 0.0,
+            "threshold": float(threshold) if np.isfinite(threshold) else 0.0,
+            "k": float(k),
+            "threshold_ratio": float(threshold_ratio),
+            "nms": bool(nms),
+        },
+    }

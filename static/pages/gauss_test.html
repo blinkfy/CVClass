@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Gaussian Test</title></head><body>
+<h2>Gaussian Upload Test (minimal)</h2>
+<input type="file" id="f"><br><br>
+<label>Sigma: <input type="range" id="sigma" min="5" max="50" value="15"> <b id="sv">1.5</b></label><br><br>
+<button id="b">Upload to Gaussian API</button>
+<pre id="out"></pre>
+<script>
+var file=null;
+document.getElementById('f').addEventListener('change',function(e){
+  file=e.target.files[0];
+  document.getElementById('out').textContent='Selected: '+(file?file.name:'none');
+});
+document.getElementById('sigma').addEventListener('input',function(){
+  document.getElementById('sv').textContent=(this.value/10).toFixed(1);
+});
+document.getElementById('b').addEventListener('click',function(){
+  if(!file){document.getElementById('out').textContent='No file selected!';return;}
+  var fd=new FormData();
+  fd.append('file',file);
+  fd.append('sigma',(document.getElementById('sigma').value/10).toFixed(1));
+  document.getElementById('out').textContent='Uploading...';
+  fetch('/api/demo/gaussian',{method:'POST',body:fd})
+    .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,json:j}})})
+    .then(function(r){
+      if(r.ok)document.getElementById('out').textContent='SUCCESS! Steps: '+r.json.steps.length;
+      else document.getElementById('out').textContent='FAIL: '+r.status+' '+JSON.stringify(r.json);
+    })
+    .catch(function(e){document.getElementById('out').textContent='NETWORK ERROR: '+e.message});
+});
+</script>
+</body></html>

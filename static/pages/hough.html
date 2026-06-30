@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hough变换 — Cvtoolkits</title>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+<style>
+.page{max-width:1180px;margin:0 auto;padding:20px 22px 42px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;align-items:start;margin-bottom:14px}
+.hero-main,.panel{border:1px solid var(--cv-border);background:var(--cv-panel);box-shadow:var(--cv-shadow);border-radius:18px;backdrop-filter:blur(12px)}
+.hero-main{padding:18px 20px}
+.eyebrow{color:#f59e0b;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+h1{margin:6px 0 8px;font-size:clamp(1.55rem,3vw,2.35rem);line-height:1.12}
+.subtitle{margin:0;color:#a5b4fc;font-size:.94rem;line-height:1.65}
+.analogy{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.16);color:#fde68a;font-size:.84rem;line-height:1.6}
+.analogy strong{color:#fbbf24}
+.workspace{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start}
+.panel{padding:16px}
+.panel h2,.panel h3{margin:0 0 10px;font-size:1rem}
+.upload-zone{border:1.5px dashed rgba(148,163,184,.32);border-radius:16px;padding:14px;background:rgba(2,6,23,.3);transition:border-color .18s,background .18s}
+.upload-zone.dragover{border-color:#f59e0b;background:rgba(245,158,11,.08)}
+.upload-zone.has-file{border-style:solid;border-color:rgba(34,197,94,.58)}
+.upload-row{display:flex;gap:10px;align-items:center}
+button{font:inherit;border:0;border-radius:12px;cursor:pointer}
+.upload-btn,.run-btn{padding:10px 14px;color:#06121f;font-weight:900;background:linear-gradient(135deg,#fbbf24,#f97316)}
+button:disabled{opacity:.48;cursor:not-allowed}
+.file-meta{color:#94a3b8;font-size:.82rem;line-height:1.45}
+.file-meta strong{color:#e2e8f0}
+.params{display:grid;gap:10px;margin-top:12px}
+.param label{display:flex;justify-content:space-between;color:#cbd5e1;font-size:.82rem;margin-bottom:5px}
+.param b{color:#fbbf24}
+input[type=range]{width:100%;accent-color:#f59e0b}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.ghost-btn{padding:10px 13px;color:#cbd5e1;border:1px solid rgba(148,163,184,.2);background:rgba(148,163,184,.11)}
+.concept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.concept{min-height:74px;border-radius:13px;padding:10px;background:rgba(30,41,59,.68);border:1px solid rgba(148,163,184,.12)}
+.concept strong{display:block;font-size:.8rem;margin-bottom:4px;color:#e0f2fe}
+.concept span{color:#94a3b8;font-size:.75rem;line-height:1.45}
+.how-it-works{margin-top:12px;padding:14px;border-radius:14px;background:rgba(30,41,59,.5);border:1px solid rgba(148,163,184,.14)}
+.how-it-works h4{margin:0 0 8px;font-size:.9rem;color:#f8fafc}
+.how-it-works ol{margin:0;padding:0 0 0 18px;color:#cbd5e1;font-size:.82rem;line-height:1.8}
+.how-it-works code{font-size:.78rem;color:#fbbf24;background:rgba(245,158,11,.1);padding:1px 6px;border-radius:4px}
+.loading{display:none;text-align:center;padding:40px;border-radius:14px;color:#94a3b8;background:rgba(15,23,42,.55);border:1px solid rgba(148,163,184,.12)}
+.error{display:none;padding:14px;border-radius:14px;color:#fecaca;background:rgba(127,29,29,.24);border:1px solid rgba(248,113,113,.32)}
+.spinner{width:30px;height:30px;margin:0 auto 10px;border-radius:50%;border:3px solid rgba(148,163,184,.22);border-top-color:#fbbf24;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.step{overflow:hidden;border-radius:15px;background:rgba(15,23,42,.66);border:1px solid rgba(148,163,184,.13)}
+.step-img{min-height:145px;display:grid;place-items:center;background:rgba(2,6,23,.42)}
+.step-img img{width:100%;display:block}
+.step-body{padding:11px 12px}
+.step-body strong{display:block;font-size:.86rem;color:#f8fafc}
+.step-body p{margin:5px 0 0;color:#94a3b8;font-size:.76rem;line-height:1.55}
+@media(max-width:860px){.hero,.workspace{grid-template-columns:1fr}.concept-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="page">
+<section class="hero">
+  <div class="hero-main">
+    <div class="eyebrow">Hough Transform</div>
+    <h1>Hough变换：让边缘点"投票"找直线</h1>
+    <p class="subtitle">图像空间里一条直线上的无数个点，在参数空间 (ρ,θ) 里全部穿过同一个点——把"找直线"变成"找交点"。</p>
+    <div class="analogy">
+      <strong>🗳 直觉类比：</strong>想象一群人在操场上站成一条直线。你问每个人："如果你是某条直线上的一点，你觉得这条直线应该长什么样？" 每个人给出自己的猜测（一个 ρ 和一个 θ）。你在地上画一个 ρ-θ 坐标系，每个人把票投在自己猜测的位置。最后——<strong>票数最高的那个格子</strong>，就是真正的直线参数。这叫"投票"，Hough 变换的核心就是这个。
+    </div>
+    <div class="how-it-works">
+      <h4>三步理解 Hough 变换</h4>
+      <ol>
+        <li><strong>边缘检测预处理</strong>：先用 Canny 找到图像中所有边缘点——只有边缘点有资格投票。</li>
+        <li><strong>每个边缘点投一组票</strong>：过一点可以画无数条直线（不同角度）。每个角度 θ 对应唯一的 ρ（原点到直线的距离），所以每个边缘点投票给一条 <code>(ρ,θ)</code> 正弦曲线。</li>
+        <li><strong>找投票峰值</strong>：大量曲线在参数空间中交于一点 → 那个 (ρ,θ) 就是图像中的一条直线。</li>
+      </ol>
+    </div>
+  </div>
+  <aside class="panel">
+    <h3>核心概念</h3>
+    <div class="concept-grid">
+      <div class="concept"><strong>参数空间 (ρ,θ)</strong><span>ρ=原点到直线距离，θ=法线角度。图像中一条线 → 参数空间中一个点。</span></div>
+      <div class="concept"><strong>投票累加器</strong><span>一个二维数组，统计每个 (ρ,θ) 格子里有多少边缘点"支持"它。</span></div>
+      <div class="concept"><strong>峰值 = 检测到的线</strong><span>累加器中票数最高的格子，对应图像中最显著的直线。</span></div>
+    </div>
+  </aside>
+</section>
+
+<section class="workspace">
+  <aside class="panel">
+    <h3>📥 上传图片</h3>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <div class="upload-row">
+        <button class="upload-btn" id="uploadBtn">选择图片</button>
+        <div class="file-meta"><strong id="fileName">未选择文件</strong><br>支持检测直线和圆形</div>
+      </div>
+    </div>
+    <div class="params">
+      <div class="param">
+        <label>投票阈值 <b id="threshVal">80</b></label>
+        <input type="range" id="threshold" min="10" max="200" value="80" step="1">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="run-btn" id="runBtn" disabled>▶ 开始检测</button>
+      <button class="ghost-btn" id="sampleBtn">使用内置示例</button>
+    </div>
+  </aside>
+
+  <section class="panel">
+    <div class="results-head"><h3 id="resultTitle">检测结果</h3><p id="resultHint">上传图片或使用示例图。边缘点将在参数空间投票，峰值处就是检测到的直线。</p></div>
+    <div class="loading" id="loading"><div class="spinner"></div>投票计算中…</div>
+    <div class="error" id="errorBox"></div>
+    <div class="steps" id="steps"></div>
+  </section>
+</section>
+</main>
+
+<script>
+(function(){
+  var selectedFile=null;
+  var fileInput=document.getElementById('fileInput'),uploadZone=document.getElementById('uploadZone');
+  var fileName=document.getElementById('fileName'),uploadBtn=document.getElementById('uploadBtn');
+  var runBtn=document.getElementById('runBtn'),sampleBtn=document.getElementById('sampleBtn');
+  var loading=document.getElementById('loading'),errorBox=document.getElementById('errorBox');
+  var steps=document.getElementById('steps'),resultHint=document.getElementById('resultHint');
+
+  uploadBtn.addEventListener('click',function(){fileInput.click()});
+  fileInput.addEventListener('change',function(e){selectedFile=e.target.files[0]||null;if(selectedFile){fileName.textContent=selectedFile.name;uploadZone.classList.add('has-file');runBtn.disabled=false}});
+  uploadZone.addEventListener('dragover',function(e){e.preventDefault();uploadZone.classList.add('dragover')});
+  uploadZone.addEventListener('dragleave',function(){uploadZone.classList.remove('dragover')});
+  uploadZone.addEventListener('drop',function(e){e.preventDefault();uploadZone.classList.remove('dragover');selectedFile=e.dataTransfer.files[0]||null;if(selectedFile){fileName.textContent=selectedFile.name;uploadZone.classList.add('has-file');runBtn.disabled=false}});
+  document.getElementById('threshold').addEventListener('input',function(){document.getElementById('threshVal').textContent=this.value});
+
+  function setBusy(b){loading.style.display=b?'block':'none';errorBox.style.display='none';runBtn.disabled=b;sampleBtn.disabled=b}
+
+  function doRun(withFile){
+    setBusy(true);
+    var form=new FormData();
+    if(withFile) form.append('file',withFile);
+    form.append('threshold',document.getElementById('threshold').value);
+    fetch('/api/demo/hough',{method:'POST',body:form})
+      .then(function(r){return r.json().catch(function(){return{}}).then(function(j){if(!r.ok)throw new Error(j.error||'HTTP '+r.status);return j})})
+      .then(renderResult).catch(function(e){setBusy(false);showError(e.message||'未知错误')});
+  }
+
+  runBtn.addEventListener('click',function(){doRun(selectedFile)});
+  sampleBtn.addEventListener('click',function(){
+    selectedFile=null;fileInput.value='';fileName.textContent='内置示例图';
+    fetch('../images/demo-street.jpg').then(function(r){return r.blob()}).then(function(b){doRun(new File([b],'demo.jpg'))}).catch(function(){doRun(null)});
+  });
+
+  function renderResult(data){
+    setBusy(false);
+    var metrics=data.metrics||{};
+    resultHint.textContent='检测完成。'+(metrics.lines_detected?'找到 '+metrics.lines_detected+' 条直线。':'')+'每个边缘点向参数空间投票，峰值处就是检测到的几何形状。';
+    steps.innerHTML=(data.steps||[]).map(function(s,i){
+      var img=s.image_base64?'<img src="data:image/png;base64,'+s.image_base64+'" alt="'+esc(s.name||'')+'" loading="lazy">':'<span style="color:#64748b">无图像</span>';
+      return '<article class="step"><div class="step-img">'+img+'</div><div class="step-body"><strong>'+esc((i+1)+'. '+(s.name||s.id||'Step'))+'</strong><p>'+esc(s.explanation||'')+'</p>'+(s.formula?'<code class="step-formula">'+esc(s.formula)+'</code>':'')+'</div></article>';
+    }).join('');
+  }
+  function showError(m){errorBox.textContent=m;errorBox.style.display='block'}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+})();
+</script>
+</body>
+</html>

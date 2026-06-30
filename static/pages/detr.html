@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DETR - CV 通识教育</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <link rel="stylesheet" href="../css/model-demo-page.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="hero-main">
+      <div class="eyebrow">Transformer 检测范式</div>
+      <h1 id="pageTitle">DETR</h1>
+      <p class="subtitle" id="subtitle"></p>
+      <p class="intro" id="introText"></p>
+      <div class="problem-statement" id="problemStatement"></div>
+      <span class="status" id="statusPill"></span>
+    </div>
+    <aside class="panel controls">
+      <h2>运行真实后端</h2>
+      <input id="fileInput" type="file" accept="image/*" hidden>
+      <div class="control-row">
+        <button id="chooseBtn" type="button">选择图片</button>
+        <button id="sampleBtn" type="button">使用示例</button>
+        <button id="runBtn" class="primary" type="button">运行 DETR</button>
+      </div>
+      <div class="file-line" id="fileName">未选择文件，将使用内置示例</div>
+      <div id="paramsPanel" class="params"></div>
+    </aside>
+  </section>
+  <section class="info-grid">
+    <div class="panel"><h2>算法流程</h2><ul id="pipelineList"></ul></div>
+    <div class="panel"><h2>应用场景</h2><ul id="applicationsList"></ul></div>
+    <div class="panel"><h2>局限说明</h2><ul id="limitationsList"></ul></div>
+  </section>
+  <div id="loading" class="loading" hidden>后端正在运行 DETR，首次运行可能需要下载权重...</div>
+  <div id="errorBox" class="error" hidden></div>
+  <section id="metricsGrid" class="metrics"></section>
+  <section class="panel"><h2>后端步骤证据</h2><div id="stepsGrid" class="steps"></div></section>
+</main>
+<script>
+window.ModelDemoConfig = {
+  moduleId: 'detr',
+  title: 'DETR',
+  subtitle: '直接回答“图里有哪些物体，它们在哪里”。',
+  intro: 'DETR 适合理解现代目标检测：安防、自动驾驶、工业巡检都需要同时知道物体类别和位置。本页调用后端 DETR 管线，返回检测框、类别分数和 query 注意力摘要，让你观察每个查询槽如何尝试负责一个物体。',
+  problemStatement: 'DETR 解决的是“在一张图里找出所有重要物体”的问题。它不先手工列大量候选框，而是用一组 Object Query 直接预测目标集合。',
+  status: '真实后端推理或权重提示',
+  params: [
+    { name: 'threshold', label: '置信度阈值', type: 'range', min: 10, max: 90, step: 5, value: 50, scale: 100, fixed: 2 },
+    { name: 'query_idx', label: 'Query 编号', type: 'range', min: 0, max: 99, step: 1, value: 0 },
+    { name: 'head_idx', label: '注意力头', type: 'range', min: 0, max: 7, step: 1, value: 0 }
+  ],
+  pipeline: ['选择待检测图片', '提取图像特征', '让全图区域互相交换信息', '用 Object Query 寻找可能物体', '输出类别和矩形框', '过滤低置信度结果'],
+  applications: ['自动驾驶和监控检测', '工业缺陷或商品定位', '理解 Object Query', '比较 CNN 检测与 Transformer 检测'],
+  limitations: ['首次运行可能需要下载权重', 'CPU 推理较慢', '预训练类别之外的物体可能无法识别']
+};
+</script>
+<script src="../js/interactive-teaching-stage.js"></script>
+<script src="../js/model-demo-page.js"></script>
+</body>
+</html>

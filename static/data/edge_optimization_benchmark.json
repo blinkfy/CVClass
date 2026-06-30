@@ -1,0 +1,644 @@
+{
+  "generated_at": "2026-05-30T02:47:37",
+  "thresholds": {
+    "low": 50,
+    "high": 150
+  },
+  "notes": [
+    "The optimized stack variant keeps DFS-style hysteresis and uses separable Gaussian/Sobel.",
+    "The morph variant is included as a comparison because dilation iterations depend on longest connected weak-edge distance.",
+    "Large samples are resized before benchmarking to keep memory and runtime bounded."
+  ],
+  "samples": [
+    {
+      "tier": "small",
+      "label": "截图 2026-05-07",
+      "path": "E:\\life\\Screenshots\\屏幕截图 2026-05-07 202958.png",
+      "status": "ok",
+      "source_size": {
+        "width": 1397,
+        "height": 656,
+        "channels": 4,
+        "megapixels": 0.916
+      },
+      "bench_size": {
+        "width": 1397,
+        "height": 656,
+        "channels": 4,
+        "megapixels": 0.916
+      },
+      "scale": 1.0,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.454908,
+          "stage_seconds": {
+            "gray": 0.014696,
+            "gaussian": 0.085072,
+            "sobel": 0.128383,
+            "nms": 0.026961,
+            "link": 0.199778,
+            "total": 0.454908
+          },
+          "bench": {
+            "seconds": 0.456117,
+            "min_seconds": 0.456117,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.314387,
+          "stage_seconds": {
+            "gray": 0.013971,
+            "gaussian": 0.025155,
+            "sobel": 0.055194,
+            "nms": 0.025772,
+            "link": 0.194281,
+            "total": 0.314387
+          },
+          "speedup_vs_edge_py": 1.447,
+          "bench": {
+            "seconds": 0.315131,
+            "min_seconds": 0.315131,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 3.340522,
+          "stage_seconds": {
+            "gray": 0.008601,
+            "gaussian": 0.013351,
+            "sobel": 0.028029,
+            "nms": 0.013757,
+            "link": 3.276776,
+            "total": 3.340522
+          },
+          "speedup_vs_edge_py": 0.136,
+          "bench": {
+            "seconds": 3.340869,
+            "min_seconds": 3.340869,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 481,
+            "channels": 4,
+            "megapixels": 0.493
+          },
+          "scale": 0.733,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 283
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.000486,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 283
+    },
+    {
+      "tier": "medium",
+      "label": "记录 565B",
+      "path": "E:\\life\\记录\\565B2D0CA3F5794DA13650B5EC433DDD.png",
+      "status": "ok",
+      "source_size": {
+        "width": 2556,
+        "height": 1179,
+        "channels": 3,
+        "megapixels": 3.014
+      },
+      "bench_size": {
+        "width": 1600,
+        "height": 738,
+        "channels": 3,
+        "megapixels": 1.181
+      },
+      "scale": 0.626,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.438324,
+          "stage_seconds": {
+            "gray": 0.016418,
+            "gaussian": 0.110335,
+            "sobel": 0.164003,
+            "nms": 0.03891,
+            "link": 0.108643,
+            "total": 0.438324
+          },
+          "bench": {
+            "seconds": 0.439899,
+            "min_seconds": 0.439899,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.264047,
+          "stage_seconds": {
+            "gray": 0.016278,
+            "gaussian": 0.033804,
+            "sobel": 0.070601,
+            "nms": 0.037844,
+            "link": 0.105505,
+            "total": 0.264047
+          },
+          "speedup_vs_edge_py": 1.66,
+          "bench": {
+            "seconds": 0.264831,
+            "min_seconds": 0.264831,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 0.683374,
+          "stage_seconds": {
+            "gray": 0.00669,
+            "gaussian": 0.012531,
+            "sobel": 0.028517,
+            "nms": 0.013722,
+            "link": 0.621909,
+            "total": 0.683374
+          },
+          "speedup_vs_edge_py": 0.641,
+          "bench": {
+            "seconds": 0.683835,
+            "min_seconds": 0.683835,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 472,
+            "channels": 3,
+            "megapixels": 0.483
+          },
+          "scale": 0.4006,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 56
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.0,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 56
+    },
+    {
+      "tier": "medium",
+      "label": "记录 QQ 162643",
+      "path": "E:\\life\\记录\\QQ20260210-162643.png",
+      "status": "ok",
+      "source_size": {
+        "width": 2560,
+        "height": 1600,
+        "channels": 4,
+        "megapixels": 4.096
+      },
+      "bench_size": {
+        "width": 1600,
+        "height": 1000,
+        "channels": 4,
+        "megapixels": 1.6
+      },
+      "scale": 0.625,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.530865,
+          "stage_seconds": {
+            "gray": 0.025467,
+            "gaussian": 0.149573,
+            "sobel": 0.224634,
+            "nms": 0.052529,
+            "link": 0.078646,
+            "total": 0.530865
+          },
+          "bench": {
+            "seconds": 0.533392,
+            "min_seconds": 0.533392,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.317038,
+          "stage_seconds": {
+            "gray": 0.029303,
+            "gaussian": 0.059491,
+            "sobel": 0.104432,
+            "nms": 0.0475,
+            "link": 0.07629,
+            "total": 0.317038
+          },
+          "speedup_vs_edge_py": 1.674,
+          "bench": {
+            "seconds": 0.3185,
+            "min_seconds": 0.3185,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 1.759354,
+          "stage_seconds": {
+            "gray": 0.010353,
+            "gaussian": 0.018252,
+            "sobel": 0.038569,
+            "nms": 0.019308,
+            "link": 1.672862,
+            "total": 1.759354
+          },
+          "speedup_vs_edge_py": 0.302,
+          "bench": {
+            "seconds": 1.760052,
+            "min_seconds": 1.760052,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 640,
+            "channels": 4,
+            "megapixels": 0.655
+          },
+          "scale": 0.4,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 114
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.0,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 114
+    },
+    {
+      "tier": "medium",
+      "label": "记录 QQ 200839",
+      "path": "E:\\life\\记录\\QQ20260210-200839.png",
+      "status": "ok",
+      "source_size": {
+        "width": 2560,
+        "height": 1600,
+        "channels": 4,
+        "megapixels": 4.096
+      },
+      "bench_size": {
+        "width": 1600,
+        "height": 1000,
+        "channels": 4,
+        "megapixels": 1.6
+      },
+      "scale": 0.625,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.634963,
+          "stage_seconds": {
+            "gray": 0.025817,
+            "gaussian": 0.161554,
+            "sobel": 0.227222,
+            "nms": 0.050705,
+            "link": 0.169648,
+            "total": 0.634963
+          },
+          "bench": {
+            "seconds": 0.636984,
+            "min_seconds": 0.636984,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.383853,
+          "stage_seconds": {
+            "gray": 0.025038,
+            "gaussian": 0.044405,
+            "sobel": 0.09856,
+            "nms": 0.046955,
+            "link": 0.168874,
+            "total": 0.383853
+          },
+          "speedup_vs_edge_py": 1.654,
+          "bench": {
+            "seconds": 0.385337,
+            "min_seconds": 0.385337,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 1.199089,
+          "stage_seconds": {
+            "gray": 0.010042,
+            "gaussian": 0.017184,
+            "sobel": 0.037244,
+            "nms": 0.019907,
+            "link": 1.114702,
+            "total": 1.199089
+          },
+          "speedup_vs_edge_py": 0.53,
+          "bench": {
+            "seconds": 1.199651,
+            "min_seconds": 1.199651,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 640,
+            "channels": 4,
+            "megapixels": 0.655
+          },
+          "scale": 0.4,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 74
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 1e-06,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 74
+    },
+    {
+      "tier": "large",
+      "label": "揭幕者们 KV",
+      "path": "E:\\life\\Arknights\\pics\\揭幕者们\\KV.png",
+      "status": "ok",
+      "source_size": {
+        "width": 7680,
+        "height": 4320,
+        "channels": 3,
+        "megapixels": 33.178
+      },
+      "bench_size": {
+        "width": 2048,
+        "height": 1152,
+        "channels": 3,
+        "megapixels": 2.359
+      },
+      "scale": 0.2667,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.869824,
+          "stage_seconds": {
+            "gray": 0.033268,
+            "gaussian": 0.224886,
+            "sobel": 0.32145,
+            "nms": 0.090007,
+            "link": 0.2002,
+            "total": 0.869824
+          },
+          "bench": {
+            "seconds": 0.872511,
+            "min_seconds": 0.872511,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.52413,
+          "stage_seconds": {
+            "gray": 0.032922,
+            "gaussian": 0.065547,
+            "sobel": 0.143369,
+            "nms": 0.081317,
+            "link": 0.200955,
+            "total": 0.52413
+          },
+          "speedup_vs_edge_py": 1.66,
+          "bench": {
+            "seconds": 0.526018,
+            "min_seconds": 0.526018,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 0.751008,
+          "stage_seconds": {
+            "gray": 0.007748,
+            "gaussian": 0.015371,
+            "sobel": 0.035603,
+            "nms": 0.019897,
+            "link": 0.67238,
+            "total": 0.751008
+          },
+          "speedup_vs_edge_py": 1.158,
+          "bench": {
+            "seconds": 0.751433,
+            "min_seconds": 0.751433,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 576,
+            "channels": 3,
+            "megapixels": 0.59
+          },
+          "scale": 0.1333,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 47
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.0,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 47
+    },
+    {
+      "tier": "large",
+      "label": "揭幕者们 国际服海报",
+      "path": "E:\\life\\Arknights\\pics\\揭幕者们\\国际服海报.png",
+      "status": "ok",
+      "source_size": {
+        "width": 8192,
+        "height": 4608,
+        "channels": 4,
+        "megapixels": 37.749
+      },
+      "bench_size": {
+        "width": 2048,
+        "height": 1152,
+        "channels": 4,
+        "megapixels": 2.359
+      },
+      "scale": 0.25,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.833648,
+          "stage_seconds": {
+            "gray": 0.03897,
+            "gaussian": 0.225973,
+            "sobel": 0.335831,
+            "nms": 0.091305,
+            "link": 0.14155,
+            "total": 0.833648
+          },
+          "bench": {
+            "seconds": 0.836645,
+            "min_seconds": 0.836645,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.487765,
+          "stage_seconds": {
+            "gray": 0.03874,
+            "gaussian": 0.065979,
+            "sobel": 0.165464,
+            "nms": 0.079831,
+            "link": 0.137727,
+            "total": 0.487765
+          },
+          "speedup_vs_edge_py": 1.709,
+          "bench": {
+            "seconds": 0.490394,
+            "min_seconds": 0.490394,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 1.242185,
+          "stage_seconds": {
+            "gray": 0.009145,
+            "gaussian": 0.015544,
+            "sobel": 0.035436,
+            "nms": 0.019052,
+            "link": 1.163002,
+            "total": 1.242185
+          },
+          "speedup_vs_edge_py": 0.671,
+          "bench": {
+            "seconds": 1.242644,
+            "min_seconds": 1.242644,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 576,
+            "channels": 4,
+            "megapixels": 0.59
+          },
+          "scale": 0.125,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 83
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.0,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 83
+    },
+    {
+      "tier": "large",
+      "label": "记录 pics 33MP",
+      "path": "E:\\life\\记录\\pics\\f3d4842b0l92632de3762f7d15d5652f.png",
+      "status": "ok",
+      "source_size": {
+        "width": 7680,
+        "height": 4320,
+        "channels": 3,
+        "megapixels": 33.178
+      },
+      "bench_size": {
+        "width": 2048,
+        "height": 1152,
+        "channels": 3,
+        "megapixels": 2.359
+      },
+      "scale": 0.2667,
+      "runs": {
+        "edge_py": {
+          "name": "edge.py",
+          "total_seconds": 0.985988,
+          "stage_seconds": {
+            "gray": 0.037112,
+            "gaussian": 0.272312,
+            "sobel": 0.339668,
+            "nms": 0.089243,
+            "link": 0.247631,
+            "total": 0.985988
+          },
+          "bench": {
+            "seconds": 0.98922,
+            "min_seconds": 0.98922,
+            "repeat": 1
+          }
+        },
+        "opt_stack": {
+          "name": "optimized separable + stack",
+          "total_seconds": 0.568826,
+          "stage_seconds": {
+            "gray": 0.032044,
+            "gaussian": 0.064876,
+            "sobel": 0.148588,
+            "nms": 0.077484,
+            "link": 0.245812,
+            "total": 0.568826
+          },
+          "speedup_vs_edge_py": 1.733,
+          "bench": {
+            "seconds": 0.570658,
+            "min_seconds": 0.570658,
+            "repeat": 1
+          },
+          "link_mode": "stack"
+        },
+        "opt_morph": {
+          "name": "optimized separable + morph",
+          "total_seconds": 1.281317,
+          "stage_seconds": {
+            "gray": 0.008294,
+            "gaussian": 0.015662,
+            "sobel": 0.034852,
+            "nms": 0.019209,
+            "link": 1.203291,
+            "total": 1.281317
+          },
+          "speedup_vs_edge_py": 0.77,
+          "bench": {
+            "seconds": 1.281909,
+            "min_seconds": 1.281909,
+            "repeat": 1
+          },
+          "bench_size": {
+            "width": 1024,
+            "height": 576,
+            "channels": 3,
+            "megapixels": 0.59
+          },
+          "scale": 0.1333,
+          "safety_cap": 1024,
+          "link_mode": "morph",
+          "morph_iterations": 86
+        }
+      },
+      "diff_rate": {
+        "opt_stack_vs_edge_py": 0.0,
+        "opt_morph_vs_edge_py": null
+      },
+      "morph_iterations": 86
+    }
+  ]
+}

@@ -1,0 +1,1456 @@
+{
+  "generated_at": "2026-05-30T12:41:00",
+  "meta": {
+    "python_version": "3.12.13",
+    "numpy_version": "1.26.4",
+    "timeout_seconds": 5.0,
+    "repeat": 3,
+    "seed": 42,
+    "total_benchmark_seconds": 84.9,
+    "notes": [
+      "naive = pure Python for loops, no numpy vectorization, no Numba JIT.",
+      "numpy = edge.py with sliding_window_view vectorization.",
+      "optimized = edge_optimized.py with separable convolution.",
+      "Each non-timeout task was repeated `repeat` times; avg/min/max reported.",
+      "Timeout tasks were actually attempted and killed after timeout_s; they show status='timeout'.",
+      "Estimated times for timeout entries use O(HW) linear fit from completed sizes.",
+      "Real-image benchmarks (cap=256) run on 7 samples from bench_edge_optimized SAMPLES."
+    ]
+  },
+  "results": [
+    {
+      "size": 32,
+      "pixels": 1024,
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002133,
+          "min_s": 0.002094,
+          "max_s": 0.002165,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.005005,
+          "min_s": 0.004859,
+          "max_s": 0.00523,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.000401,
+          "min_s": 0.000382,
+          "max_s": 0.000425,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.010863,
+          "min_s": 0.010751,
+          "max_s": 0.010975,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.00016,
+          "min_s": 0.000102,
+          "max_s": 0.00026,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.000264,
+          "min_s": 0.000137,
+          "max_s": 0.000368,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 9.5e-05,
+          "min_s": 7.5e-05,
+          "max_s": 0.000127,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.000572,
+          "min_s": 0.000485,
+          "max_s": 0.000618,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.000111,
+          "min_s": 9.1e-05,
+          "max_s": 0.000142,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.000149,
+          "min_s": 9.3e-05,
+          "max_s": 0.000246,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 8.3e-05,
+          "min_s": 6.7e-05,
+          "max_s": 0.000108,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.000531,
+          "min_s": 0.000468,
+          "max_s": 0.000597,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 13.33,
+        "optimized_conv_3x3": 19.22,
+        "numpy_conv_5x5": 18.96,
+        "optimized_conv_5x5": 33.59,
+        "numpy_nms": 4.22,
+        "optimized_nms": 4.83,
+        "numpy_canny": 18.99,
+        "optimized_canny": 20.46
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 1.52587890625e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "size": 64,
+      "pixels": 4096,
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.008806,
+          "min_s": 0.008708,
+          "max_s": 0.008862,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.018758,
+          "min_s": 0.018423,
+          "max_s": 0.019265,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001636,
+          "min_s": 0.001594,
+          "max_s": 0.001679,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.043269,
+          "min_s": 0.042151,
+          "max_s": 0.044522,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.000477,
+          "min_s": 0.000238,
+          "max_s": 0.000906,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.000372,
+          "min_s": 0.000347,
+          "max_s": 0.000418,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.000287,
+          "min_s": 0.000169,
+          "max_s": 0.000494,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.001457,
+          "min_s": 0.001273,
+          "max_s": 0.001801,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.00031,
+          "min_s": 0.000216,
+          "max_s": 0.000426,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.000303,
+          "min_s": 0.000171,
+          "max_s": 0.000454,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.000299,
+          "min_s": 0.000224,
+          "max_s": 0.000445,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.00101,
+          "min_s": 0.000918,
+          "max_s": 0.001135,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 18.46,
+        "optimized_conv_3x3": 28.41,
+        "numpy_conv_5x5": 50.42,
+        "optimized_conv_5x5": 61.91,
+        "numpy_nms": 5.7,
+        "optimized_nms": 5.47,
+        "numpy_canny": 29.7,
+        "optimized_canny": 42.84
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 1.52587890625e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "size": 128,
+      "pixels": 16384,
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.033228,
+          "min_s": 0.032817,
+          "max_s": 0.033658,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.074872,
+          "min_s": 0.073063,
+          "max_s": 0.077766,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.007161,
+          "min_s": 0.007008,
+          "max_s": 0.007287,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.176658,
+          "min_s": 0.172014,
+          "max_s": 0.185477,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.001537,
+          "min_s": 0.001192,
+          "max_s": 0.002215,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.001653,
+          "min_s": 0.001478,
+          "max_s": 0.001807,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001293,
+          "min_s": 0.001041,
+          "max_s": 0.001511,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.005729,
+          "min_s": 0.004884,
+          "max_s": 0.006261,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.00048,
+          "min_s": 0.000366,
+          "max_s": 0.000699,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.000442,
+          "min_s": 0.000358,
+          "max_s": 0.000576,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.000603,
+          "min_s": 0.000571,
+          "max_s": 0.00066,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.002467,
+          "min_s": 0.002399,
+          "max_s": 0.002535,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 21.62,
+        "optimized_conv_3x3": 69.22,
+        "numpy_conv_5x5": 45.29,
+        "optimized_conv_5x5": 169.39,
+        "numpy_nms": 5.54,
+        "optimized_nms": 11.88,
+        "numpy_canny": 30.84,
+        "optimized_canny": 71.61
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "size": 256,
+      "pixels": 65536,
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.131838,
+          "min_s": 0.130443,
+          "max_s": 0.133345,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.29779,
+          "min_s": 0.292404,
+          "max_s": 0.30528,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.02866,
+          "min_s": 0.027753,
+          "max_s": 0.029175,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.668885,
+          "min_s": 0.663007,
+          "max_s": 0.671975,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.003743,
+          "min_s": 0.003439,
+          "max_s": 0.004199,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.006012,
+          "min_s": 0.005849,
+          "max_s": 0.006124,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.002311,
+          "min_s": 0.002155,
+          "max_s": 0.002606,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.019797,
+          "min_s": 0.019674,
+          "max_s": 0.0199,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.001456,
+          "min_s": 0.001348,
+          "max_s": 0.001567,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001974,
+          "min_s": 0.001861,
+          "max_s": 0.002129,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.002323,
+          "min_s": 0.002148,
+          "max_s": 0.002643,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.010261,
+          "min_s": 0.010075,
+          "max_s": 0.010442,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 35.22,
+        "optimized_conv_3x3": 90.55,
+        "numpy_conv_5x5": 49.53,
+        "optimized_conv_5x5": 150.86,
+        "numpy_nms": 12.4,
+        "optimized_nms": 12.34,
+        "numpy_canny": 33.79,
+        "optimized_canny": 65.19
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "size": 512,
+      "pixels": 262144,
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.527599,
+          "min_s": 0.524391,
+          "max_s": 0.531684,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 1.199803,
+          "min_s": 1.193359,
+          "max_s": 1.204465,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.115433,
+          "min_s": 0.115268,
+          "max_s": 0.115662,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 2.656588,
+          "min_s": 2.637335,
+          "max_s": 2.679608,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.014955,
+          "min_s": 0.014335,
+          "max_s": 0.01551,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.024666,
+          "min_s": 0.024519,
+          "max_s": 0.024788,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.009314,
+          "min_s": 0.009135,
+          "max_s": 0.009429,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.078852,
+          "min_s": 0.077759,
+          "max_s": 0.080946,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.006101,
+          "min_s": 0.005797,
+          "max_s": 0.006319,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.00696,
+          "min_s": 0.00671,
+          "max_s": 0.007118,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.009286,
+          "min_s": 0.009113,
+          "max_s": 0.009484,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.041228,
+          "min_s": 0.040595,
+          "max_s": 0.041998,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 35.28,
+        "optimized_conv_3x3": 86.48,
+        "numpy_conv_5x5": 48.64,
+        "optimized_conv_5x5": 172.39,
+        "numpy_nms": 12.39,
+        "optimized_nms": 12.43,
+        "numpy_canny": 33.69,
+        "optimized_canny": 64.44
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    }
+  ],
+  "timeout_estimates": {},
+  "real_config": {
+    "cap": 256,
+    "quick_mode": false,
+    "num_images": 7,
+    "elapsed_seconds": 42.8
+  },
+  "real_samples": [
+    {
+      "label": "截图 2026-05-07",
+      "tier": "small",
+      "path": "E:\\life\\Screenshots\\屏幕截图 2026-05-07 202958.png",
+      "source_size": {
+        "width": 1397,
+        "height": 656,
+        "channels": 4,
+        "megapixels": 0.916
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 120,
+        "channels": 4,
+        "megapixels": 0.031
+      },
+      "scale": 0.1832,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.061049,
+          "min_s": 0.059609,
+          "max_s": 0.062028,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.141116,
+          "min_s": 0.136335,
+          "max_s": 0.15064,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.012911,
+          "min_s": 0.012556,
+          "max_s": 0.013196,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.332265,
+          "min_s": 0.32527,
+          "max_s": 0.338605,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002283,
+          "min_s": 0.00188,
+          "max_s": 0.002798,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.00325,
+          "min_s": 0.003181,
+          "max_s": 0.003314,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001156,
+          "min_s": 0.000967,
+          "max_s": 0.001454,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.02071,
+          "min_s": 0.020411,
+          "max_s": 0.020879,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.000801,
+          "min_s": 0.000584,
+          "max_s": 0.001228,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.000808,
+          "min_s": 0.000758,
+          "max_s": 0.000847,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001001,
+          "min_s": 0.000933,
+          "max_s": 0.001108,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.016697,
+          "min_s": 0.016384,
+          "max_s": 0.016889,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 26.74,
+        "optimized_conv_3x3": 76.22,
+        "numpy_conv_5x5": 43.42,
+        "optimized_conv_5x5": 174.65,
+        "numpy_nms": 11.17,
+        "optimized_nms": 12.9,
+        "numpy_canny": 16.04,
+        "optimized_canny": 19.9
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "label": "记录 565B",
+      "tier": "medium",
+      "path": "E:\\life\\记录\\565B2D0CA3F5794DA13650B5EC433DDD.png",
+      "source_size": {
+        "width": 2556,
+        "height": 1179,
+        "channels": 3,
+        "megapixels": 3.014
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 118,
+        "channels": 3,
+        "megapixels": 0.03
+      },
+      "scale": 0.1002,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.059341,
+          "min_s": 0.058075,
+          "max_s": 0.061501,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.13249,
+          "min_s": 0.130478,
+          "max_s": 0.13518,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.012291,
+          "min_s": 0.012062,
+          "max_s": 0.012629,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.312212,
+          "min_s": 0.308713,
+          "max_s": 0.314394,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.001718,
+          "min_s": 0.001549,
+          "max_s": 0.001909,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.002971,
+          "min_s": 0.00283,
+          "max_s": 0.00322,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001027,
+          "min_s": 0.000995,
+          "max_s": 0.001075,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.015625,
+          "min_s": 0.015452,
+          "max_s": 0.015721,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.0008,
+          "min_s": 0.000547,
+          "max_s": 0.001242,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.000923,
+          "min_s": 0.000831,
+          "max_s": 0.001058,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001163,
+          "min_s": 0.001016,
+          "max_s": 0.00145,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.010668,
+          "min_s": 0.010373,
+          "max_s": 0.010835,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 34.54,
+        "optimized_conv_3x3": 74.18,
+        "numpy_conv_5x5": 44.59,
+        "optimized_conv_5x5": 143.54,
+        "numpy_nms": 11.97,
+        "optimized_nms": 10.57,
+        "numpy_canny": 19.98,
+        "optimized_canny": 29.27
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 3.3103813559322034e-05
+      }
+    },
+    {
+      "label": "记录 QQ 162643",
+      "tier": "medium",
+      "path": "E:\\life\\记录\\QQ20260210-162643.png",
+      "source_size": {
+        "width": 2560,
+        "height": 1600,
+        "channels": 4,
+        "megapixels": 4.096
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 160,
+        "channels": 4,
+        "megapixels": 0.041
+      },
+      "scale": 0.1,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.080749,
+          "min_s": 0.079888,
+          "max_s": 0.08198,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.181395,
+          "min_s": 0.180366,
+          "max_s": 0.183006,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.016927,
+          "min_s": 0.016694,
+          "max_s": 0.017073,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.409546,
+          "min_s": 0.405792,
+          "max_s": 0.41193,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002541,
+          "min_s": 0.002141,
+          "max_s": 0.002806,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.003785,
+          "min_s": 0.003484,
+          "max_s": 0.004179,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001303,
+          "min_s": 0.001233,
+          "max_s": 0.001441,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.015715,
+          "min_s": 0.015616,
+          "max_s": 0.015808,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.001259,
+          "min_s": 0.001076,
+          "max_s": 0.001544,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001114,
+          "min_s": 0.001007,
+          "max_s": 0.001303,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001253,
+          "min_s": 0.001159,
+          "max_s": 0.001424,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.010154,
+          "min_s": 0.010058,
+          "max_s": 0.010283,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 31.78,
+        "optimized_conv_3x3": 64.14,
+        "numpy_conv_5x5": 47.92,
+        "optimized_conv_5x5": 162.83,
+        "numpy_nms": 12.99,
+        "optimized_nms": 13.51,
+        "numpy_canny": 26.06,
+        "optimized_canny": 40.33
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "label": "记录 QQ 200839",
+      "tier": "medium",
+      "path": "E:\\life\\记录\\QQ20260210-200839.png",
+      "source_size": {
+        "width": 2560,
+        "height": 1600,
+        "channels": 4,
+        "megapixels": 4.096
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 160,
+        "channels": 4,
+        "megapixels": 0.041
+      },
+      "scale": 0.1,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.079701,
+          "min_s": 0.078968,
+          "max_s": 0.080406,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.178517,
+          "min_s": 0.17414,
+          "max_s": 0.181123,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.017049,
+          "min_s": 0.017007,
+          "max_s": 0.017108,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.422695,
+          "min_s": 0.419731,
+          "max_s": 0.424215,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002326,
+          "min_s": 0.002285,
+          "max_s": 0.002352,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.003935,
+          "min_s": 0.003884,
+          "max_s": 0.003983,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001444,
+          "min_s": 0.001326,
+          "max_s": 0.001666,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.022491,
+          "min_s": 0.022216,
+          "max_s": 0.0228,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.00106,
+          "min_s": 0.001044,
+          "max_s": 0.00107,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001159,
+          "min_s": 0.001028,
+          "max_s": 0.001316,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001374,
+          "min_s": 0.001305,
+          "max_s": 0.001499,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.016589,
+          "min_s": 0.016397,
+          "max_s": 0.016817,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 34.27,
+        "optimized_conv_3x3": 75.19,
+        "numpy_conv_5x5": 45.37,
+        "optimized_conv_5x5": 154.03,
+        "numpy_nms": 11.81,
+        "optimized_nms": 12.41,
+        "numpy_canny": 18.79,
+        "optimized_canny": 25.48
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "label": "揭幕者们 KV",
+      "tier": "large",
+      "path": "E:\\life\\Arknights\\pics\\揭幕者们\\KV.png",
+      "source_size": {
+        "width": 7680,
+        "height": 4320,
+        "channels": 3,
+        "megapixels": 33.178
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 144,
+        "channels": 3,
+        "megapixels": 0.037
+      },
+      "scale": 0.0333,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.071449,
+          "min_s": 0.06979,
+          "max_s": 0.073876,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.159746,
+          "min_s": 0.159004,
+          "max_s": 0.161201,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.015179,
+          "min_s": 0.014895,
+          "max_s": 0.015609,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.371654,
+          "min_s": 0.369659,
+          "max_s": 0.373773,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.00212,
+          "min_s": 0.001976,
+          "max_s": 0.00232,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.00338,
+          "min_s": 0.00325,
+          "max_s": 0.003536,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001447,
+          "min_s": 0.001296,
+          "max_s": 0.001729,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.016803,
+          "min_s": 0.016606,
+          "max_s": 0.016926,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.000829,
+          "min_s": 0.000681,
+          "max_s": 0.001092,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001178,
+          "min_s": 0.001018,
+          "max_s": 0.00147,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001372,
+          "min_s": 0.001291,
+          "max_s": 0.001524,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.011857,
+          "min_s": 0.011456,
+          "max_s": 0.012433,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 33.7,
+        "optimized_conv_3x3": 86.19,
+        "numpy_conv_5x5": 47.26,
+        "optimized_conv_5x5": 135.61,
+        "numpy_nms": 10.49,
+        "optimized_nms": 11.06,
+        "numpy_canny": 22.12,
+        "optimized_canny": 31.34
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "label": "揭幕者们 国际服海报",
+      "tier": "large",
+      "path": "E:\\life\\Arknights\\pics\\揭幕者们\\国际服海报.png",
+      "source_size": {
+        "width": 8192,
+        "height": 4608,
+        "channels": 4,
+        "megapixels": 37.749
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 144,
+        "channels": 4,
+        "megapixels": 0.037
+      },
+      "scale": 0.0312,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.071778,
+          "min_s": 0.070233,
+          "max_s": 0.073449,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.161801,
+          "min_s": 0.158785,
+          "max_s": 0.16334,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.015208,
+          "min_s": 0.015013,
+          "max_s": 0.015319,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.368847,
+          "min_s": 0.366671,
+          "max_s": 0.372897,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002157,
+          "min_s": 0.001923,
+          "max_s": 0.002475,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.003257,
+          "min_s": 0.003167,
+          "max_s": 0.003398,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001401,
+          "min_s": 0.001253,
+          "max_s": 0.001689,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.015995,
+          "min_s": 0.015734,
+          "max_s": 0.016181,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.001137,
+          "min_s": 0.000946,
+          "max_s": 0.001494,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001185,
+          "min_s": 0.001026,
+          "max_s": 0.001455,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001465,
+          "min_s": 0.00125,
+          "max_s": 0.00181,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.010993,
+          "min_s": 0.01081,
+          "max_s": 0.011166,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 33.28,
+        "optimized_conv_3x3": 63.13,
+        "numpy_conv_5x5": 49.68,
+        "optimized_conv_5x5": 136.54,
+        "numpy_nms": 10.86,
+        "optimized_nms": 10.38,
+        "numpy_canny": 23.06,
+        "optimized_canny": 33.55
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    },
+    {
+      "label": "记录 pics 33MP",
+      "tier": "large",
+      "path": "E:\\life\\记录\\pics\\f3d4842b0l92632de3762f7d15d5652f.png",
+      "source_size": {
+        "width": 7680,
+        "height": 4320,
+        "channels": 3,
+        "megapixels": 33.178
+      },
+      "bench_size": {
+        "width": 256,
+        "height": 144,
+        "channels": 3,
+        "megapixels": 0.037
+      },
+      "scale": 0.0333,
+      "status": "ok",
+      "naive": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.070336,
+          "min_s": 0.070293,
+          "max_s": 0.070371,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.16048,
+          "min_s": 0.158473,
+          "max_s": 0.1635,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.015285,
+          "min_s": 0.015069,
+          "max_s": 0.015433,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.375375,
+          "min_s": 0.367967,
+          "max_s": 0.386213,
+          "repeat": 3
+        }
+      },
+      "numpy": {
+        "conv_3x3": {
+          "status": "ok",
+          "avg_s": 0.002374,
+          "min_s": 0.002162,
+          "max_s": 0.002786,
+          "repeat": 3
+        },
+        "conv_5x5": {
+          "status": "ok",
+          "avg_s": 0.003242,
+          "min_s": 0.003199,
+          "max_s": 0.003278,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001318,
+          "min_s": 0.001255,
+          "max_s": 0.001436,
+          "repeat": 3
+        },
+        "canny": {
+          "status": "ok",
+          "avg_s": 0.018502,
+          "min_s": 0.018194,
+          "max_s": 0.018807,
+          "repeat": 3
+        }
+      },
+      "optimized": {
+        "conv_3x3_sep": {
+          "status": "ok",
+          "avg_s": 0.001058,
+          "min_s": 0.000942,
+          "max_s": 0.001262,
+          "repeat": 3
+        },
+        "conv_5x5_sep": {
+          "status": "ok",
+          "avg_s": 0.001074,
+          "min_s": 0.000872,
+          "max_s": 0.001241,
+          "repeat": 3
+        },
+        "nms": {
+          "status": "ok",
+          "avg_s": 0.001471,
+          "min_s": 0.001262,
+          "max_s": 0.001883,
+          "repeat": 3
+        },
+        "canny_stack": {
+          "status": "ok",
+          "avg_s": 0.013773,
+          "min_s": 0.013373,
+          "max_s": 0.013997,
+          "repeat": 3
+        }
+      },
+      "speedup_vs_naive": {
+        "numpy_conv_3x3": 29.63,
+        "optimized_conv_3x3": 66.48,
+        "numpy_conv_5x5": 49.5,
+        "optimized_conv_5x5": 149.42,
+        "numpy_nms": 11.6,
+        "optimized_nms": 10.39,
+        "numpy_canny": 20.29,
+        "optimized_canny": 27.25
+      },
+      "accuracy": {
+        "naive_vs_numpy_conv_3x3_max_diff": 0.0,
+        "naive_vs_numpy_conv_5x5_max_diff": 3.0517578125e-05,
+        "naive_vs_numpy_nms_max_diff": 0.0,
+        "naive_vs_numpy_canny_diff_rate": 0.0
+      }
+    }
+  ]
+}

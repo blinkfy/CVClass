@@ -1,0 +1,369 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>训练观察 — Cvtoolkits</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+        color: #0f1f3d;
+        background: var(--app-gradient);
+        min-height: 100vh;
+    }
+    .page { max-width: 960px; margin: 0 auto; padding: 20px 16px 32px; }
+    .page h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    .page .subtitle { color: var(--muted); font-size: 0.92rem; margin: 0 0 18px; }
+
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 18px; padding: 18px; box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+    }
+    .card h3 { margin: 0 0 12px; font-size: 1rem; }
+
+    .param-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .param-row label { font-size: 0.85rem; color: var(--muted); }
+    .param-row input[type=range] { width: 140px; }
+    .param-row span { font-size: 0.82rem; min-width: 36px; text-align: right; }
+
+    .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .preset-btn {
+        padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(15,23,42,0.15);
+        background: rgba(255,255,255,0.7); cursor: pointer; font-size: 0.82rem;
+        transition: all 0.2s;
+    }
+    .preset-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+    .status-bar {
+        display: flex; gap: 16px; margin-top: 10px; font-size: 0.85rem;
+        color: var(--muted);
+    }
+    .status-bar strong { color: var(--text); }
+
+    .matrix-display { display: grid; gap: 2px; width: fit-content; }
+    .matrix-cell {
+        width: 42px; height: 28px;
+        display: grid; place-items: center;
+        font-size: 0.72rem; font-weight: 600;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .kernel-row { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 6px; }
+    .kernel-col h4 { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); }
+
+    .loss-chart-wrap { margin-top: 8px; }
+    #lossChart { width: 100%; border-radius: 10px; background: rgba(255,255,255,0.5); border: 1px solid rgba(15,23,42,0.06); }
+</style>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="page">
+    <h1>卷积核训练观察</h1>
+    <p class="subtitle">使用梯度下降法训练卷积核，可视化损失下降和核权重演化过程</p>
+
+    <div class="layout">
+        <div class="card">
+            <h3>训练参数</h3>
+            <div style="margin-bottom:10px;">
+                <span style="font-size:0.85rem;color:var(--muted);">目标核类型</span>
+                <div class="preset-btns" id="presetBtns" style="margin-top:6px;">
+                    <button class="preset-btn active" data-preset="edge_detect">边缘检测</button>
+                    <button class="preset-btn" data-preset="blur">模糊</button>
+                    <button class="preset-btn" data-preset="sharpen">锐化</button>
+                    <button class="preset-btn" data-preset="random">随机</button>
+                </div>
+            </div>
+            <div class="param-row">
+                <label>核大小</label>
+                <input type="range" id="kernelSize" min="3" max="5" value="3" step="2">
+                <span id="kernelSizeLabel">3×3</span>
+            </div>
+            <div class="param-row">
+                <label>输入尺寸</label>
+                <input type="range" id="inputSize" min="5" max="10" value="7" step="1">
+                <span id="inputSizeLabel">7×7</span>
+            </div>
+            <div class="param-row">
+                <label>学习率</label>
+                <input type="range" id="learningRate" min="1" max="50" value="10" step="1">
+                <span id="lrLabel">0.1</span>
+            </div>
+            <div class="param-row">
+                <label>迭代次数</label>
+                <input type="range" id="iterations" min="20" max="300" value="100" step="10">
+                <span id="iterationsLabel">100</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="startBtn">开始训练</button>
+                <button class="btn btn-secondary" id="resetBtn">重置</button>
+            </div>
+            <div class="status-bar">
+                <span>迭代: <strong id="statusIter">-</strong></span>
+                <span>损失: <strong id="statusLoss">-</strong></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>核权重演化</h3>
+            <div class="kernel-row">
+                <div class="kernel-col">
+                    <h4>当前核</h4>
+                    <div class="matrix-display" id="currentKernel"></div>
+                </div>
+                <div class="kernel-col">
+                    <h4>目标核</h4>
+                    <div class="matrix-display" id="targetKernel"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+        <h3>损失曲线</h3>
+        <div class="loss-chart-wrap">
+            <canvas id="lossChart" width="900" height="260"></canvas>
+        </div>
+    </div>
+</main>
+
+<script>
+(function() {
+    var traceData = [];
+    var targetKernelData = null;
+    var currentKernelData = null;
+    var animFrame = null;
+    var animIdx = 0;
+    var isAnimating = false;
+
+    function renderMatrix(container, matrix) {
+        var rows = matrix.length, cols = matrix[0].length;
+        var maxAbs = 0;
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < cols; c++)
+                maxAbs = Math.max(maxAbs, Math.abs(matrix[r][c]));
+        if (maxAbs === 0) maxAbs = 1;
+
+        var html = '';
+        for (var r = 0; r < rows; r++) {
+            html += '<div style="display:flex;gap:2px;">';
+            for (var c = 0; c < cols; c++) {
+                var v = matrix[r][c];
+                var ratio = Math.abs(v) / maxAbs;
+                var bg;
+                if (v > 0) {
+                    var g = Math.round(220 - ratio * 180);
+                    bg = 'rgb(' + Math.round(255 - ratio * 150) + ',' + g + ',' + Math.round(255 - ratio * 170) + ')';
+                } else if (v < 0) {
+                    var g2 = Math.round(220 - ratio * 180);
+                    bg = 'rgb(255,' + g2 + ',' + g2 + ')';
+                } else {
+                    bg = '#eee';
+                }
+                html += '<div class="matrix-cell" style="background:' + bg + ';">' + (Number.isInteger(v) ? v : v.toFixed(2)) + '</div>';
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function drawLossChart() {
+        var canvas = document.getElementById('lossChart');
+        if (!traceData.length) return;
+        var dpr = window.devicePixelRatio || 1;
+        var cssW = canvas.clientWidth || 900;
+        var cssH = 260;
+        canvas.width = cssW * dpr;
+        canvas.height = cssH * dpr;
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = cssH + 'px';
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        ctx.clearRect(0, 0, cssW, cssH);
+        var pad = { top: 20, right: 20, bottom: 30, left: 50 };
+        var w = cssW - pad.left - pad.right;
+        var h = cssH - pad.top - pad.bottom;
+
+        var losses = traceData.map(function(t) { return t.loss; });
+        var maxLoss = Math.max.apply(null, losses) * 1.1 || 1;
+
+        // axes
+        ctx.strokeStyle = 'rgba(15,23,42,0.15)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, pad.top + h);
+        ctx.lineTo(pad.left + w, pad.top + h);
+        ctx.stroke();
+
+        // y labels
+        ctx.fillStyle = '#888';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'right';
+        for (var ty = 0; ty <= 4; ty++) {
+            var y = pad.top + h * ty / 4;
+            var val = (maxLoss * (4 - ty) / 4).toFixed(2);
+            ctx.fillText(val, pad.left - 6, y + 4);
+            ctx.strokeStyle = 'rgba(15,23,42,0.06)';
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(pad.left + w, y);
+            ctx.stroke();
+        }
+
+        // x labels
+        ctx.textAlign = 'center';
+        var n = traceData.length;
+        for (var tx = 0; tx <= 4; tx++) {
+            var step = Math.round((n - 1) * tx / 4);
+            var x = pad.left + w * tx / 4;
+            ctx.fillText(step, x, pad.top + h + 16);
+        }
+
+        // loss line
+        if (n > 1) {
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (var i = 0; i < n; i++) {
+                var ix = pad.left + w * i / (n - 1);
+                var iy = pad.top + h * (1 - traceData[i].loss / maxLoss);
+                if (i === 0) ctx.moveTo(ix, iy);
+                else ctx.lineTo(ix, iy);
+            }
+            ctx.stroke();
+
+            // current point
+            if (animIdx < n) {
+                var cx = pad.left + w * animIdx / (n - 1);
+                var cy = pad.top + h * (1 - traceData[animIdx].loss / maxLoss);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    function updateDisplay(idx) {
+        if (!traceData.length) return;
+        if (idx >= traceData.length) idx = traceData.length - 1;
+        var t = traceData[idx];
+        document.getElementById('statusIter').textContent = t.step;
+        document.getElementById('statusLoss').textContent = t.loss.toFixed(4);
+        renderMatrix(document.getElementById('currentKernel'), t.kernel);
+        animIdx = idx;
+        drawLossChart();
+    }
+
+    function animateThrough() {
+        if (!isAnimating) return;
+        if (animIdx < traceData.length - 1) {
+            animIdx++;
+            updateDisplay(animIdx);
+            animFrame = requestAnimationFrame(animateThrough);
+        } else {
+            isAnimating = false;
+            document.getElementById('startBtn').textContent = '开始训练';
+        }
+    }
+
+    function startAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+        animIdx = 0;
+        document.getElementById('startBtn').textContent = '训练中...';
+        animateThrough();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', function() {
+        if (isAnimating) return;
+
+        // Fetch training data from backend
+        var body = {
+            target_preset: document.querySelector('.preset-btn.active').dataset.preset,
+            kernel_size: parseInt(document.getElementById('kernelSize').value),
+            input_size: parseInt(document.getElementById('inputSize').value),
+            learning_rate: parseFloat(document.getElementById('lrLabel').textContent),
+            iterations: parseInt(document.getElementById('iterations').value)
+        };
+
+        document.getElementById('startBtn').textContent = '计算中...';
+        document.getElementById('startBtn').disabled = true;
+
+        fetch('/conv/api/train', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('startBtn').disabled = false;
+            traceData = data.iterations || [];
+            targetKernelData = data.target_kernel;
+
+            renderMatrix(document.getElementById('targetKernel'), targetKernelData);
+            startAnimation();
+        })
+        .catch(function() {
+            document.getElementById('startBtn').textContent = '开始训练';
+            document.getElementById('startBtn').disabled = false;
+            alert('训练失败，请重试。');
+        });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+        isAnimating = false;
+        traceData = [];
+        animIdx = 0;
+        document.getElementById('startBtn').textContent = '开始训练';
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('statusIter').textContent = '-';
+        document.getElementById('statusLoss').textContent = '-';
+        document.getElementById('currentKernel').innerHTML = '';
+        document.getElementById('targetKernel').innerHTML = '';
+        var canvas = document.getElementById('lossChart');
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // preset buttons
+    document.querySelectorAll('.preset-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+        });
+    });
+
+    // sliders
+    document.getElementById('kernelSize').addEventListener('input', function() {
+        document.getElementById('kernelSizeLabel').textContent = this.value + '×' + this.value;
+    });
+    document.getElementById('inputSize').addEventListener('input', function() {
+        document.getElementById('inputSizeLabel').textContent = this.value + '×' + this.value;
+    });
+    document.getElementById('learningRate').addEventListener('input', function() {
+        document.getElementById('lrLabel').textContent = (this.value / 100).toFixed(2);
+    });
+    document.getElementById('iterations').addEventListener('input', function() {
+        document.getElementById('iterationsLabel').textContent = this.value;
+    });
+
+    window.addEventListener('resize', function() { drawLossChart(); });
+})();
+</script>
+</body>
+</html>

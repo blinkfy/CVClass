@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图像匹配与拼接 - Cvtoolkits</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/match.css">
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="match-page">
+    <header class="match-header">
+        <div>
+            <h1>图像匹配与拼接</h1>
+            <p>上传两张有重叠的图片，用角点或尺度不变特征完成匹配过滤，并在底部生成拼接结果。</p>
+        </div>
+        <form id="matchForm" class="match-console" enctype="multipart/form-data">
+            <label class="select-control">
+                <span>算法</span>
+                <select name="algorithm" id="algorithmSelect">
+                    <option value="sift">SIFT</option>
+                    <option value="harris">Harris</option>
+                </select>
+            </label>
+
+            <label class="upload-button" for="leftInput">
+                <span class="upload-main">上传左图</span>
+                <span class="upload-name" id="leftName">未选择文件</span>
+                <input type="file" name="left" id="leftInput" accept="image/*" required>
+            </label>
+
+            <label class="upload-button" for="rightInput">
+                <span class="upload-main">上传右图</span>
+                <span class="upload-name" id="rightName">未选择文件</span>
+                <input type="file" name="right" id="rightInput" accept="image/*" required>
+            </label>
+
+            <label class="ratio-control">
+                <span>筛选严格度 <b id="ratioValue">0.80</b></span>
+                <small>越小越严格，匹配更少但更稳</small>
+                <input type="range" id="ratioInput" name="ratio" min="0.45" max="0.95" step="0.01" value="0.8">
+            </label>
+
+            <button type="submit" id="matchBtn">开始匹配</button>
+        </form>
+    </header>
+
+    <section class="stage-tabs" id="stageTabs">
+        <button class="active" type="button" data-stage="0">特征提取</button>
+        <button type="button" data-stage="1">匹配过滤</button>
+    </section>
+
+    <section class="match-stage">
+        <div class="canvas-row" id="canvasRow">
+            <div class="image-panel">
+                <canvas id="leftCanvas"></canvas>
+                <span>左图</span>
+            </div>
+            <div class="image-panel">
+                <canvas id="rightCanvas"></canvas>
+                <span>右图</span>
+            </div>
+            <svg id="matchSvg" preserveAspectRatio="none"></svg>
+            <div id="pointTip" class="point-tip"></div>
+            <div id="ratioTip" class="ratio-tip"></div>
+        </div>
+        <aside class="math-panel" id="mathPanel">
+            <h2>等待上传</h2>
+            <p>先选择左图和右图，再开始匹配。</p>
+        </aside>
+    </section>
+
+    <section class="match-result-section" id="matchResultSection" hidden>
+        <div class="match-result-head">
+            <h2>拼接结果</h2>
+            <p>根据保留下来的匹配点估计单应性矩阵，把右图变换到左图坐标系后融合显示。</p>
+        </div>
+        <div class="match-result-image">
+            <img id="matchResultImg" alt="图像拼接结果">
+        </div>
+    </section>
+</main>
+<script src="../js/match-page.js" charset="UTF-8"></script>
+</body>
+</html>

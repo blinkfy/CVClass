@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>检测与分割网络谱系</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <link rel="stylesheet" href="../css/ai-eye-page.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+  <style>
+    body { margin: 0; color: var(--cv-text); background: var(--app-gradient); font-family: var(--font); }
+    .taxonomy-page {
+      width: min(var(--cv-page-max, 1580px), calc(100% - var(--cv-page-gutter, 44px)));
+      margin: 0 auto;
+      padding: var(--cv-page-pad-top, 22px) 0 var(--cv-page-pad-bottom, 44px);
+      display: grid;
+      gap: var(--cv-section-gap, 16px);
+    }
+    .taxonomy-hero {
+      display: grid;
+      gap: 12px;
+      padding: clamp(18px, 3vw, 30px);
+      border-radius: var(--cv-radius);
+      border: 1px solid var(--cv-border);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--cv-panel) 94%, transparent), color-mix(in srgb, var(--cv-accent) 10%, var(--cv-panel)));
+      box-shadow: var(--cv-shadow);
+    }
+    .taxonomy-hero h1 {
+      margin: 0;
+      color: var(--cv-title);
+      font-size: clamp(1.5rem, 3vw, 2.35rem);
+      letter-spacing: 0;
+    }
+    .taxonomy-hero p,
+    .taxonomy-card p,
+    .taxonomy-card li,
+    .status-note {
+      color: var(--cv-muted);
+      line-height: 1.68;
+      overflow-wrap: anywhere;
+    }
+    .quick-map {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+    .quick-map a,
+    .back-link {
+      color: var(--cv-title);
+      text-decoration: none;
+      border: 1px solid var(--cv-border);
+      background: var(--cv-control-bg);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: transform var(--cv-motion-fast) var(--cv-ease-standard), border-color var(--cv-motion-fast) var(--cv-ease-standard), background var(--cv-motion-fast) var(--cv-ease-standard);
+    }
+    .quick-map a:hover,
+    .back-link:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--cv-accent) 58%, var(--cv-border));
+      background: var(--cv-soft-surface);
+    }
+    .taxonomy-section {
+      display: grid;
+      gap: 14px;
+      padding: clamp(16px, 2.6vw, 26px);
+      border-radius: var(--cv-radius);
+      border: 1px solid var(--cv-border);
+      background: var(--cv-panel);
+      box-shadow: var(--cv-shadow);
+    }
+    .taxonomy-section h2 {
+      margin: 0;
+      color: var(--cv-title);
+      font-size: clamp(1.15rem, 2vw, 1.55rem);
+    }
+    .lineage {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+    .lineage-node {
+      min-width: 0;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--cv-border);
+      background: var(--cv-soft-surface);
+      display: grid;
+      gap: 8px;
+    }
+    .lineage-node strong {
+      color: var(--cv-title);
+      font-size: 1rem;
+    }
+    .lineage-node span {
+      color: var(--cv-muted);
+      line-height: 1.56;
+      overflow-wrap: anywhere;
+    }
+    .taxonomy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .taxonomy-card {
+      min-width: 0;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--cv-border);
+      background: var(--cv-control-bg);
+    }
+    .taxonomy-card h3 {
+      margin: 0 0 10px;
+      color: var(--cv-title);
+      font-size: 1rem;
+    }
+    .taxonomy-card ul {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    .status-note {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--cv-accent) 28%, var(--cv-border));
+      background: color-mix(in srgb, var(--cv-accent) 8%, var(--cv-panel));
+    }
+    @media (max-width: 720px) {
+      .taxonomy-page { width: min(100% - 24px, var(--cv-page-max, 1580px)); }
+    }
+  </style>
+</head>
+<body>
+<main class="taxonomy-page">
+  <a class="back-link" href="detection_segmentation.html?task=all">返回 AI之眼演示</a>
+
+  <header class="taxonomy-hero">
+    <p class="eyebrow">网络谱系 / Network Lineage</p>
+    <h1>检测与分割网络谱系</h1>
+    <p>这页回答一个最基础的问题：目标检测、语义分割、实例分割到底是按什么思路分出来的？先从应用看，检测用于“找到每个物体在哪”，语义分割用于“给每个像素贴类别”，实例分割用于“既知道类别，又把同类里的每个个体分开”。</p>
+    <div class="quick-map">
+      <a href="#detection">目标检测：R-CNN 到 YOLO</a>
+      <a href="#semantic">语义分割：FCN 到 DeepLabV3 / U-Net</a>
+      <a href="#instance">实例分割：Mask R-CNN</a>
+    </div>
+  </header>
+
+  <section id="detection" class="taxonomy-section">
+    <h2>目标检测：回答“有什么，在什么位置”</h2>
+    <div class="lineage">
+      <div class="lineage-node"><strong>R-CNN</strong><span>Region-based CNN，功能是“先找可能有物体的小区域，再判断区域里是什么”。它把分类网络变成检测器的关键桥梁。</span></div>
+      <div class="lineage-node"><strong>Fast R-CNN</strong><span>整张图先提一次特征，再在特征图上裁出候选区域，速度更快。</span></div>
+      <div class="lineage-node"><strong>Faster R-CNN</strong><span>把候选区域生成也交给网络里的 RPN，形成常见两阶段检测器。</span></div>
+      <div class="lineage-node"><strong>RetinaNet / FCOS</strong><span>不再先挑候选区域，直接在特征图位置上预测框，用损失设计解决正负样本不平衡。</span></div>
+      <div class="lineage-node"><strong>YOLO</strong><span>一次前向传播直接输出很多格子的框、类别和置信度，适合讲实时检测思想。</span></div>
+    </div>
+    <div class="taxonomy-grid">
+      <article class="taxonomy-card">
+        <h3>R-CNN 为什么能做检测</h3>
+        <p>普通 CNN 分类只回答“整张图像像什么”，不知道物体在哪里。R-CNN 先用候选区域算法找出约两千个可能含有物体的框，再把每个框裁剪、缩放，送进 CNN 提特征，最后用分类器判断类别，并用边界框回归把框修准。所以它能把“分类”升级成“分类 + 定位”。</p>
+      </article>
+      <article class="taxonomy-card">
+        <h3>为什么后来有 Faster R-CNN / Mask R-CNN</h3>
+        <p>原始 R-CNN 对每个候选框都跑一次 CNN，太慢。Fast R-CNN 改成整图只提一次特征；Faster R-CNN 又用 RPN 学习生成候选框。Mask R-CNN 在 Faster R-CNN 的每个候选区域后面再加一个 mask head，于是可以从目标检测扩展到实例分割。</p>
+      </article>
+      <article class="taxonomy-card">
+        <h3>检测网络为什么要多尺度</h3>
+        <ul>
+          <li>图片里物体大小差异很大，所以常用 FPN 这类多尺度特征。</li>
+          <li>最终输出是矩形框，不负责精确轮廓。</li>
+          <li>两阶段方法通常定位更稳；一阶段方法通常速度更直接。</li>
+        </ul>
+      </article>
+      <article class="taxonomy-card">
+        <h3>本系统当前状态</h3>
+        <p>AI之眼的 Faster R-CNN 使用 torchvision 官方预训练权重做真实推理；YOLO 页面展示本地机制实现，包括网格预测、置信度筛选和 NMS，不声称使用官方大模型权重。</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="semantic" class="taxonomy-section">
+    <h2>语义分割：回答“每个像素属于哪一类”</h2>
+    <div class="lineage">
+      <div class="lineage-node"><strong>FCN</strong><span>把分类网络改成全卷积网络，让它输出一张类别地图，而不是一个类别。</span></div>
+      <div class="lineage-node"><strong>DeepLabV3</strong><span>用空洞卷积和 ASPP 扩大视野，让像素判断时能参考更大范围上下文。</span></div>
+      <div class="lineage-node"><strong>U-Net</strong><span>编码器看全局，解码器恢复分辨率，跳跃连接把边缘细节送回去。</span></div>
+    </div>
+    <div class="taxonomy-grid">
+      <article class="taxonomy-card">
+        <h3>为什么不是画框</h3>
+        <p>语义分割关心的是区域类别，例如道路、天空、建筑、人体。它会把同类像素连成一片，因此两辆车如果挨得很近，语义图只会说“这里都是车”，不会区分第一辆和第二辆。</p>
+      </article>
+      <article class="taxonomy-card">
+        <h3>本系统当前状态</h3>
+        <p>AI之眼的 DeepLabV3 使用 torchvision 官方预训练权重做真实推理；U-Net 页面展示本地实现的编码、解码、跳跃连接和像素分类流程，用于讲清机制。</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="instance" class="taxonomy-section">
+    <h2>实例分割：回答“每个独立个体的轮廓是什么”</h2>
+    <div class="lineage">
+      <div class="lineage-node"><strong>Faster R-CNN</strong><span>先得到候选框和类别，为每个可能物体建立独立区域。</span></div>
+      <div class="lineage-node"><strong>Mask Head</strong><span>在每个候选区域内部预测一张小 mask，表示这个个体的像素轮廓。</span></div>
+      <div class="lineage-node"><strong>Mask R-CNN</strong><span>把检测框、类别和每个实例的 mask 组合起来，解决同类物体分离问题。</span></div>
+    </div>
+    <div class="taxonomy-grid">
+      <article class="taxonomy-card">
+        <h3>它和语义分割的区别</h3>
+        <p>语义分割只说“这些像素是人”；实例分割会进一步说“这是第一个人，那是第二个人”。因此它更适合抠图、遮挡分析、计数和独立物体轮廓展示。</p>
+      </article>
+      <article class="taxonomy-card">
+        <h3>本系统当前状态</h3>
+        <p>AI之眼的 Mask R-CNN 使用 torchvision 官方预训练权重做真实推理；前端只负责把后端返回的框、类别、置信度和 mask 清晰画出来。</p>
+      </article>
+    </div>
+  </section>
+
+  <p class="status-note">保证说明：本系统展示页中的核心机制代码以“步骤实现”为准，例如候选筛选、NMS、像素分类流程、mask 后处理、可视化数据组织等都在本项目中实现；涉及 torchvision 的页面会明确标注使用官方预训练模型和权重，不把权重训练或模型定义冒充为本地从零训练。</p>
+</main>
+</body>
+</html>

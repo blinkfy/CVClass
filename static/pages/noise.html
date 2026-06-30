@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>噪声模型 - Cvtoolkits</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .page { max-width: 1240px; margin: 0 auto; padding: 24px 22px 46px; }
+    .lab-hero {
+      display: grid;
+      grid-template-columns: minmax(0, .92fr) minmax(360px, 1.08fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .hero-copy, .scope, .control-deck, .image-board, .model-card, .strategy-card, .step-strip {
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-panel);
+      box-shadow: var(--cv-shadow);
+      color: var(--cv-text);
+    }
+    .hero-copy { padding: 20px; display: grid; align-content: center; }
+    .eyebrow { color: var(--cv-warning); font-size: .78rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; color: var(--cv-title); font-size: clamp(1.55rem, 2.7vw, 2.45rem); line-height: 1.15; }
+    .subtitle { margin: 0; color: var(--cv-muted); line-height: 1.7; font-size: .96rem; }
+    .formula { margin-top: 13px; padding: 11px 12px; border-radius: var(--cv-radius-sm); border: 1px solid var(--cv-border); background: var(--cv-code-bg); color: var(--cv-text); font: .8rem/1.5 Consolas, monospace; }
+    .scope { padding: 14px; display: grid; grid-template-rows: 1fr auto; gap: 10px; overflow: hidden; }
+    #noiseScope { width: 100%; min-height: 250px; border-radius: var(--cv-radius); background: var(--cv-media-bg); border: 1px solid var(--cv-border); }
+    .scope p { margin: 0; color: var(--cv-muted); font-size: .82rem; line-height: 1.55; }
+    .control-deck { margin-top: 16px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+    .upload-zone { border: 1.5px dashed var(--cv-border-strong); border-radius: var(--cv-radius); padding: 13px; background: var(--cv-control-bg); }
+    .upload-zone.dragover { border-color: var(--cv-warning); background: var(--cv-soft-surface); }
+    .upload-row { display: flex; gap: 12px; align-items: center; }
+    button { min-height: 40px; border: 0; border-radius: var(--cv-radius-sm); cursor: pointer; font: inherit; }
+    .upload-btn, .run-btn { padding: 10px 14px; color: #111827; font-weight: 900; background: linear-gradient(135deg, #fbbf24, var(--cv-accent)); }
+    .ghost-btn { padding: 10px 13px; color: var(--cv-text); border: 1px solid var(--cv-border); background: var(--cv-soft-surface); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .file-meta { color: var(--cv-muted); font-size: .84rem; line-height: 1.5; }
+    .file-meta strong { color: var(--cv-title); }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: flex-end; }
+    .loading, .error { display: none; margin-top: 10px; padding: 10px 12px; border-radius: var(--cv-radius-sm); border: 1px solid var(--cv-border); background: var(--cv-panel-2); color: var(--cv-muted); }
+    .error { color: var(--cv-danger-text); border-color: color-mix(in srgb, var(--cv-danger) 42%, transparent); }
+    .image-board { margin-top: 16px; padding: 16px; }
+    .image-board h2, .model-card h2, .strategy-card h2 { margin: 0 0 10px; color: var(--cv-title); font-size: 1rem; }
+    .image-grid { display: grid; grid-template-columns: 1.12fr .88fr .88fr; grid-auto-rows: minmax(180px, auto); gap: 12px; }
+    .view { border: 1px solid var(--cv-border); border-radius: var(--cv-radius); background: var(--cv-panel-2); overflow: hidden; min-width: 0; }
+    .view.large { grid-row: span 2; }
+    .view img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; display: block; background: var(--cv-media-bg); border-bottom: 1px solid var(--cv-border); }
+    .view.large img { aspect-ratio: 4 / 3.25; }
+    .view strong { display: block; padding: 10px 12px 3px; color: var(--cv-title); font-size: .9rem; }
+    .view p { margin: 0; padding: 0 12px 12px; color: var(--cv-muted); font-size: .76rem; line-height: 1.45; }
+    .model-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .model-card { padding: 14px; background: var(--cv-panel-2); position: relative; overflow: hidden; }
+    .model-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--accent-line, var(--cv-accent)); }
+    .model-card .tag { display: inline-flex; margin-bottom: 9px; padding: 4px 8px; border-radius: 999px; background: var(--cv-soft-surface); border: 1px solid var(--cv-border); color: var(--cv-muted); font-size: .72rem; }
+    .model-card p { margin: 0 0 10px; color: var(--cv-muted); font-size: .8rem; line-height: 1.55; }
+    .model-card code { display: block; padding: 8px; border-radius: var(--cv-radius-sm); background: var(--cv-code-bg); border: 1px solid var(--cv-border); color: var(--cv-text); font-size: .72rem; overflow-wrap: anywhere; }
+    .statbar { margin-top: 10px; height: 8px; border-radius: 999px; background: var(--cv-media-bg); overflow: hidden; border: 1px solid var(--cv-border); }
+    .statbar span { display: block; height: 100%; width: 0; background: var(--accent-line, var(--cv-accent)); transition: width .5s ease; }
+    .strategy-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .strategy-card { padding: 13px; background: var(--cv-panel-2); }
+    .strategy-card p { margin: 0; color: var(--cv-muted); font-size: .76rem; line-height: 1.5; }
+    .step-strip { margin-top: 16px; padding: 14px; }
+    .step-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .mini-step { border: 1px solid var(--cv-border); border-radius: var(--cv-radius); background: var(--cv-soft-surface); overflow: hidden; }
+    .mini-step img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: var(--cv-media-bg); display: block; border-bottom: 1px solid var(--cv-border); }
+    .mini-step strong { display: block; padding: 9px 10px 3px; color: var(--cv-title); font-size: .82rem; }
+    .mini-step p { margin: 0; padding: 0 10px 10px; color: var(--cv-muted); font-size: .72rem; line-height: 1.45; }
+    @media(max-width: 980px) { .lab-hero, .control-deck, .image-grid, .model-row, .strategy-grid { grid-template-columns: 1fr; } .actions { justify-content: flex-start; } .view.large { grid-row: auto; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="lab-hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Noise Model Lab</div>
+        <h1>噪声模型：看见图像里的随机破坏方式</h1>
+        <p class="subtitle">噪声不是一种东西。椒盐噪声像随机坏点，高斯噪声像每个像素都在抖，泊松噪声来自光子计数的不确定性。理解噪声形态，才知道为什么中值、高斯、双边滤波适合不同问题。</p>
+        <div class="formula">I_noisy = I + n; 关键不是“变脏了”，而是 n 的分布、位置和强度。</div>
+      </div>
+      <aside class="scope">
+        <canvas id="noiseScope"></canvas>
+        <p>粒子越密，表示随机扰动越强；突发亮点对应坏点，连续雾状颗粒对应加性噪声。</p>
+      </aside>
+    </section>
+
+    <section class="control-deck">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="upload-row">
+          <button class="upload-btn" id="uploadBtn" type="button">选择图片</button>
+          <div class="file-meta"><strong id="fileName">未选择</strong><br>上传一张干净图，观察三种噪声怎样破坏它。</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="run-btn" id="runBtn" type="button" disabled>生成噪声</button>
+        <button class="ghost-btn" id="sampleBtn" type="button">使用内置示例</button>
+      </div>
+      <div class="loading" id="loading">正在生成噪声模型和统计残差...</div>
+      <div class="error" id="errorBox"></div>
+    </section>
+
+    <section class="image-board">
+      <h2>同一张图的三种破坏方式</h2>
+      <div class="image-grid" id="imageGrid"></div>
+    </section>
+
+    <section class="model-row">
+      <article class="model-card" style="--accent-line:#f97316"><span class="tag">Impulse</span><h2>椒盐噪声</h2><p>稀疏像素被直接打成黑或白。它最像“坏点”，不是整体模糊。</p><code>I'=0 or 255 with probability p</code><div class="statbar"><span id="spBar"></span></div></article>
+      <article class="model-card" style="--accent-line:#8b5cf6"><span class="tag">Additive</span><h2>高斯噪声</h2><p>每个像素都加一个随机误差，误差集中在 0 附近，画面变成细颗粒。</p><code>I'=clip(I+epsilon), epsilon~N(0,sigma^2)</code><div class="statbar"><span id="gnBar"></span></div></article>
+      <article class="model-card" style="--accent-line:#22c55e"><span class="tag">Photon</span><h2>泊松噪声</h2><p>由光子计数波动引起，亮度和噪声强度相关，低光照时很常见。</p><code>I'~Poisson(lambda=I)</code><div class="statbar"><span id="pnBar"></span></div></article>
+    </section>
+
+    <section class="strategy-grid">
+      <article class="strategy-card"><h2>中值滤波</h2><p>对椒盐噪声特别有效，因为它能抹掉孤立极端点。</p></article>
+      <article class="strategy-card"><h2>高斯平滑</h2><p>适合轻微高斯噪声，但会牺牲边缘锐度。</p></article>
+      <article class="strategy-card"><h2>双边滤波</h2><p>在降噪时尽量保留边缘，适合细节比较重要的图。</p></article>
+      <article class="strategy-card"><h2>风险提醒</h2><p>增强对比度、锐化或阈值化前，要先判断噪声类型。</p></article>
+    </section>
+
+    <section class="step-strip">
+      <h2>后端真实步骤</h2>
+      <div class="step-list" id="stepList"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var selectedFile = null;
+      var fileInput = document.getElementById('fileInput');
+      var uploadZone = document.getElementById('uploadZone');
+      var uploadBtn = document.getElementById('uploadBtn');
+      var runBtn = document.getElementById('runBtn');
+      var sampleBtn = document.getElementById('sampleBtn');
+      var fileName = document.getElementById('fileName');
+      var loading = document.getElementById('loading');
+      var errorBox = document.getElementById('errorBox');
+      var imageGrid = document.getElementById('imageGrid');
+      var stepList = document.getElementById('stepList');
+      var htmlEsc = window.esc || function (s) { return String(s == null ? '' : s); };
+      function setBusy(v) { loading.style.display = v ? 'block' : 'none'; errorBox.style.display = 'none'; runBtn.disabled = v || !selectedFile; sampleBtn.disabled = v; uploadBtn.disabled = v; }
+      function setFile(f) { selectedFile = f || null; fileName.textContent = selectedFile ? selectedFile.name : '未选择'; runBtn.disabled = !selectedFile; }
+      function byId(data, id) { return (data.steps || []).find(function (s) { return s.id === id; }) || null; }
+      function src(s) { return s && s.image_base64 ? 'data:image/png;base64,' + s.image_base64 : ''; }
+      function run(file) {
+        setBusy(true);
+        var fd = new FormData();
+        if (file) fd.append('file', file);
+        fetch('/api/demo/noise', { method: 'POST', body: fd })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status); return j; }); })
+          .then(render)
+          .catch(function (err) { setBusy(false); errorBox.textContent = err.message || String(err); errorBox.style.display = 'block'; });
+      }
+      function render(data) {
+        setBusy(false);
+        var cards = [
+          [byId(data, 'original'), '原图', '干净信号，作为比较基准。', 'large'],
+          [byId(data, 'salt_pepper'), '椒盐噪声', '随机黑白坏点。', ''],
+          [byId(data, 'gaussian_noise'), '高斯噪声', '连续颗粒抖动。', ''],
+          [byId(data, 'poisson_noise'), '泊松噪声', '光子计数波动。', ''],
+          [byId(data, 'residual_map'), '残差热度', '越亮表示改动越大。', '']
+        ];
+        imageGrid.innerHTML = cards.map(function (c) {
+          return '<article class="view ' + c[3] + '"><img src="' + src(c[0]) + '" alt="' + htmlEsc(c[1]) + '"><strong>' + htmlEsc(c[1]) + '</strong><p>' + htmlEsc(c[2]) + '</p></article>';
+        }).join('');
+        stepList.innerHTML = (data.steps || []).map(function (s) {
+          return '<article class="mini-step"><img src="' + src(s) + '" alt="' + htmlEsc(s.name || '') + '"><strong>' + htmlEsc(s.name || s.id) + '</strong><p>' + htmlEsc(s.explanation || '') + '</p></article>';
+        }).join('');
+        var metrics = data.metrics || {};
+        setBar('spBar', metrics.salt_pepper_psnr_db);
+        setBar('gnBar', metrics.gaussian_psnr_db);
+        setBar('pnBar', metrics.poisson_psnr_db);
+      }
+      function setBar(id, psnr) {
+        var pct = Math.max(8, Math.min(100, Number(psnr || 0) / 45 * 100));
+        document.getElementById(id).style.width = pct + '%';
+      }
+      function animateScope() {
+        var c = document.getElementById('noiseScope'), rect = c.getBoundingClientRect(), ratio = window.devicePixelRatio || 1;
+        c.width = Math.max(320, Math.floor(rect.width * ratio)); c.height = Math.max(220, Math.floor(rect.height * ratio));
+        var ctx = c.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        var particles = Array.from({ length: 120 }, function (_, i) { return { x: Math.random() * rect.width, y: Math.random() * rect.height, r: 1 + Math.random() * 2.8, v: .25 + Math.random() * .8, hot: i % 13 === 0 }; });
+        function tick() {
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cv-media-bg') || '#0f172a'; ctx.fillRect(0, 0, rect.width, rect.height);
+          ctx.strokeStyle = 'rgba(148,163,184,.18)'; for (var x = 20; x < rect.width; x += 34) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke(); }
+          particles.forEach(function (p) { p.y += p.v; if (p.y > rect.height + 8) p.y = -8; ctx.fillStyle = p.hot ? '#f97316' : 'rgba(102,242,194,.58)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); });
+          requestAnimationFrame(tick);
+        }
+        tick();
+      }
+      uploadBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function (e) { setFile(e.target.files[0]); });
+      runBtn.addEventListener('click', function () { run(selectedFile); });
+      sampleBtn.addEventListener('click', function () { setFile(null); fileName.textContent = '内置示例'; fetch('../images/demo-street.jpg').then(function (r) { return r.blob(); }).then(function (b) { var f = new File([b], 'demo-street.jpg', { type: b.type || 'image/jpeg' }); setFile(f); run(f); }).catch(function () { run(null); }); });
+      uploadZone.addEventListener('dragover', function (e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+      uploadZone.addEventListener('dragleave', function () { uploadZone.classList.remove('dragover'); });
+      uploadZone.addEventListener('drop', function (e) { e.preventDefault(); uploadZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
+      animateScope();
+      sampleBtn.click();
+    })();
+  </script>
+</body>
+</html>

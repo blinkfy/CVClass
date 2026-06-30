@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN 基础 - Cvtoolkits</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --border: #334155; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  .hub { max-width: 960px; margin: 0 auto; padding: 28px 20px; }
+  .hub h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
+  .hub .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; cursor: pointer; transition: border-color .15s, transform .1s; text-decoration: none; color: inherit; display: block; }
+  .card:hover { border-color: #3b82f6; transform: translateY(-1px); }
+  .card .icon { font-size: 1.8rem; margin-bottom: 10px; display: block; }
+  .card h3 { font-size: 1rem; margin-bottom: 6px; }
+  .card p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .card .tag { display: inline-block; margin-top: 10px; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .back-link { display: inline-block; margin-top: 20px; color: var(--muted); font-size: 0.82rem; }
+</style>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="hub">
+  <h1>CNN 卷积神经网络基础</h1>
+  <p class="sub">三个交互实验，从卷积运算到网络训练，逐层理解CNN的每个组件。</p>
+
+  <div class="cards">
+    <a class="card" href="conv_basic.html" target="_self">
+      <span class="icon">&#x1F9EE;</span>
+      <h3>卷积运算可视化</h3>
+      <p>在2D网格上直观拖拽调整卷积核，实时观察滑窗、padding、stride 对输出特征图的影响。理解卷积为什么能提取边缘和纹理。</p>
+      <span class="tag">交互实验</span>
+    </a>
+
+    <a class="card" href="conv_lenet.html" target="_self">
+      <span class="icon">&#x270F;&#xFE0F;</span>
+      <h3>LeNet-5 实时手写识别</h3>
+      <p>在画布上手写一个数字，TensorFlow.js 实时运行 LeNet-5 前向传播，展示每一层的输出特征图和最终分类概率。</p>
+      <span class="tag">实时推理</span>
+    </a>
+
+    <a class="card" href="lenet_backprop.html" target="_self">
+      <span class="icon">&#x1F4C8;</span>
+      <h3>LeNet-5 训练与反向传播</h3>
+      <p>观察完整的训练过程：损失曲线下降、权重更新、每层梯度回传。加载预训练权重后可以看到收敛后的参数分布。</p>
+      <span class="tag">训练可视化</span>
+    </a>
+  </div>
+
+  <a class="back-link" href="#" onclick="window.parent.postMessage({type:'closeDetail'},'*');return false;">← 返回主界面</a>
+</main>
+<script>
+// If postMessage isn't handled (direct access), navigate to main gallery
+window.addEventListener('load', function() {
+  if (window.parent === window) {
+    document.querySelector('.back-link').href = '/';
+    document.querySelector('.back-link').onclick = null;
+  }
+});
+</script>
+</body>
+</html>

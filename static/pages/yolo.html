@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YOLO 范式 - CV 通识教育</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <link rel="stylesheet" href="../css/model-demo-page.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div class="hero-main">
+      <div class="eyebrow">AI之眼 / 单阶段检测</div>
+      <h1 id="pageTitle">YOLO 范式</h1>
+      <p class="subtitle" id="subtitle"></p>
+      <p class="intro" id="introText"></p>
+      <div class="problem-statement" id="problemStatement"></div>
+      <span class="status" id="statusPill"></span>
+    </div>
+    <aside class="panel controls">
+      <h2>运行真实后端</h2>
+      <input id="fileInput" type="file" accept="image/*" hidden>
+      <div class="control-row">
+        <button id="chooseBtn" type="button">选择图片</button>
+        <button id="sampleBtn" type="button">使用示例</button>
+        <button id="runBtn" class="primary" type="button">运行单阶段检测</button>
+      </div>
+      <div class="file-line" id="fileName">未选择文件，将使用内置示例</div>
+      <div id="paramsPanel" class="params"></div>
+    </aside>
+  </section>
+  <section class="info-grid">
+    <div class="panel"><h2>算法流程</h2><ul id="pipelineList"></ul></div>
+    <div class="panel"><h2>应用场景</h2><ul id="applicationsList"></ul></div>
+    <div class="panel"><h2>局限说明</h2><ul id="limitationsList"></ul></div>
+  </section>
+  <div id="loading" class="loading" hidden>后端正在计算网格、目标性和候选框...</div>
+  <div id="errorBox" class="error" hidden></div>
+  <section id="metricsGrid" class="metrics"></section>
+  <section class="panel"><h2>后端步骤证据</h2><div id="stepsGrid" class="steps"></div></section>
+</main>
+<script>
+window.ModelDemoConfig = {
+  moduleId: 'yolo',
+  title: 'YOLO 范式：一次前向完成检测',
+  subtitle: '把检测看成密集网格上的一次性框回归，而不是先提候选区域再分类。',
+  intro: '本页运行后端 NumPy/Pillow 单阶段网格检测机制，真实展示输入、网格、目标性图、候选框、重叠抑制和最终框。它用于解释 YOLO 的算法范式，不冒充官方 YOLO 预训练权重。',
+  status: '真实后端机制计算',
+  params: [
+    { name: 'grid_size', label: '网格数', type: 'range', min: 4, max: 12, step: 1, value: 7 },
+    { name: 'score_threshold', label: '目标性阈值', type: 'range', min: 20, max: 70, step: 1, value: 34, scale: 100, fixed: 2 },
+    { name: 'iou_threshold', label: '重叠抑制阈值', type: 'range', min: 20, max: 70, step: 1, value: 35, scale: 100, fixed: 2 }
+  ],
+  pipeline: ['输入图像', '划分空间网格', '计算目标性特征图', '每个高分网格预测候选框', '按分数和重叠关系筛选', '输出最终检测框'],
+  applications: ['理解 YOLO 的单阶段检测思想', '实时检测系统入门', '和 Faster R-CNN 两阶段流程做对比', '讲解 objectness、grid cell 和后处理'],
+  limitations: ['这是本地机制实现，不是官方 YOLO 权重', '类别统一显示为 object，不做真实语义分类', '复杂自然图像上的检测质量不能代表训练模型指标']
+};
+</script>
+<script src="../js/interactive-teaching-stage.js"></script>
+<script src="../js/model-demo-page.js"></script>
+</body>
+</html>

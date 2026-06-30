@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>直方图均衡化 - Cvtoolkits</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .page { max-width: 1240px; margin: 0 auto; padding: 24px 22px 46px; }
+    .hero, .workspace { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); gap: 16px; align-items: stretch; }
+    .workspace { margin-top: 16px; align-items: start; }
+    .panel, .hero-main, .flow-panel, .step-card, .app-card {
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-panel);
+      box-shadow: var(--cv-shadow);
+      color: var(--cv-text);
+    }
+    .hero-main { padding: 20px; }
+    .eyebrow { color: var(--cv-accent); font-weight: 900; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; color: var(--cv-title); font-size: clamp(1.55rem, 2.7vw, 2.45rem); line-height: 1.15; }
+    .subtitle { margin: 0; color: var(--cv-muted); line-height: 1.7; font-size: .96rem; }
+    .formula {
+      margin-top: 13px;
+      padding: 11px 12px;
+      border-radius: var(--cv-radius-sm);
+      border: 1px solid var(--cv-border);
+      background: var(--cv-code-bg);
+      color: var(--cv-text);
+      font: .8rem/1.5 Consolas, "SFMono-Regular", monospace;
+      overflow-wrap: anywhere;
+    }
+    .flow-panel { padding: 16px; display: grid; gap: 12px; }
+    .flow-title { display: flex; justify-content: space-between; gap: 12px; align-items: center; color: var(--cv-title); font-weight: 900; }
+    .mapping-demo {
+      height: 220px;
+      width: 100%;
+      border-radius: var(--cv-radius);
+      background: var(--cv-media-bg);
+      border: 1px solid var(--cv-border);
+    }
+    .flow-caption { margin: 0; color: var(--cv-muted); font-size: .82rem; line-height: 1.55; }
+    .controls { padding: 16px; }
+    .upload-zone {
+      border: 1.5px dashed var(--cv-border-strong);
+      border-radius: var(--cv-radius);
+      padding: 14px;
+      background: var(--cv-control-bg);
+    }
+    .upload-zone.dragover { border-color: var(--cv-accent); background: var(--cv-soft-surface); }
+    .upload-row { display: flex; gap: 12px; align-items: center; }
+    button {
+      min-height: 40px;
+      border: 0;
+      border-radius: var(--cv-radius-sm);
+      cursor: pointer;
+      font: inherit;
+    }
+    .upload-btn, .run-btn {
+      padding: 10px 14px;
+      font-weight: 900;
+      color: #04111f;
+      background: linear-gradient(135deg, var(--cv-accent), var(--cv-accent-2));
+    }
+    .ghost-btn {
+      padding: 10px 13px;
+      color: var(--cv-text);
+      border: 1px solid var(--cv-border);
+      background: var(--cv-soft-surface);
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .file-meta { color: var(--cv-muted); font-size: .84rem; line-height: 1.5; }
+    .file-meta strong { color: var(--cv-title); }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
+    .metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .metric {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--cv-border);
+      background: var(--cv-soft-surface);
+      color: var(--cv-muted);
+      font-size: .78rem;
+    }
+    .metric strong { color: var(--cv-title); }
+    .loading, .error {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: var(--cv-radius-sm);
+      border: 1px solid var(--cv-border);
+      background: var(--cv-panel-2);
+      color: var(--cv-muted);
+    }
+    .error { color: var(--cv-danger-text); border-color: color-mix(in srgb, var(--cv-danger) 42%, transparent); }
+    .panel h2 { margin: 0 0 10px; color: var(--cv-title); font-size: 1.05rem; }
+    .compare-panel { padding: 16px; }
+    .compare-box {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      border-radius: var(--cv-radius);
+      overflow: hidden;
+      background: var(--cv-media-bg);
+      border: 1px solid var(--cv-border);
+    }
+    .compare-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .compare-after { clip-path: inset(0 0 0 50%); }
+    .compare-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--cv-accent); box-shadow: 0 0 18px color-mix(in srgb, var(--cv-accent) 70%, transparent); }
+    .compare-slider { width: 100%; margin-top: 12px; accent-color: var(--cv-accent); }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .chart-card { padding: 13px; border: 1px solid var(--cv-border); border-radius: var(--cv-radius); background: var(--cv-panel-2); }
+    .chart-card h3 { margin: 0 0 8px; color: var(--cv-title); font-size: .92rem; }
+    .chart-card p { margin: 8px 0 0; color: var(--cv-muted); font-size: .78rem; line-height: 1.5; }
+    canvas.chart { width: 100%; height: 190px; display: block; border-radius: var(--cv-radius-sm); background: var(--cv-media-bg); border: 1px solid var(--cv-border); }
+    .process { display: grid; gap: 12px; margin-top: 16px; }
+    .step-card { display: grid; grid-template-columns: 190px minmax(0, 1fr); overflow: hidden; }
+    .step-media { min-height: 140px; display: grid; place-items: center; background: var(--cv-media-bg); border-right: 1px solid var(--cv-border); }
+    .step-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .step-body { padding: 13px 14px; }
+    .step-body strong { display: block; color: var(--cv-title); font-size: .94rem; margin-bottom: 6px; }
+    .step-body p { margin: 0 0 9px; color: var(--cv-muted); font-size: .8rem; line-height: 1.55; }
+    .step-body code { display: block; padding: 8px; border-radius: var(--cv-radius-sm); background: var(--cv-code-bg); border: 1px solid var(--cv-border); color: var(--cv-text); font-size: .72rem; overflow-wrap: anywhere; }
+    .apps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .app-card { padding: 13px; background: var(--cv-panel-2); }
+    .app-card strong { display: block; color: var(--cv-title); margin-bottom: 6px; font-size: .88rem; }
+    .app-card span { color: var(--cv-muted); font-size: .76rem; line-height: 1.48; }
+    @media (max-width: 940px) { .hero, .workspace, .chart-grid, .apps { grid-template-columns: 1fr; } .step-card { grid-template-columns: 1fr; } .step-media { border-right: 0; border-bottom: 1px solid var(--cv-border); } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">Histogram Equalization</div>
+        <h1>直方图均衡化：把挤在一起的亮度拉开</h1>
+        <p class="subtitle">直方图统计“有多少像素这么亮”，CDF 累积这些数量并生成映射表。均衡化不是凭空加细节，而是把原本拥挤的亮度段重新铺开，让暗部、亮部或低对比区域更容易分辨。</p>
+        <div class="formula">T(k)=round((CDF(k)-CDF_min)/(N-CDF_min)*255), Y'(x,y)=T(Y(x,y))</div>
+      </div>
+      <aside class="flow-panel">
+        <div class="flow-title"><span>像素亮度搬家示意</span><span id="flowStatus">等待数据</span></div>
+        <canvas id="mappingDemo" class="mapping-demo"></canvas>
+        <p class="flow-caption">上方点从“旧亮度”移动到“新亮度”。曲线越陡，说明这一段像素越拥挤，均衡化会把它拉得更开。</p>
+      </aside>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel controls">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*" hidden>
+          <div class="upload-row">
+            <button class="upload-btn" id="uploadBtn" type="button">选择图片</button>
+            <div class="file-meta"><strong id="fileName">未选择</strong><br>上传低对比、偏暗或偏亮图片，效果最明显。</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="run-btn" id="runBtn" type="button" disabled>运行均衡化</button>
+          <button class="ghost-btn" id="sampleBtn" type="button">使用内置示例</button>
+        </div>
+        <div class="metrics" id="metrics"></div>
+        <div class="loading" id="loading">正在统计亮度、计算 CDF 和映射表...</div>
+        <div class="error" id="errorBox"></div>
+      </aside>
+
+      <section class="panel compare-panel">
+        <h2>直观效果：拖动查看前后变化</h2>
+        <div class="compare-box">
+          <img id="beforeImg" alt="均衡化前">
+          <img id="afterImg" class="compare-after" alt="均衡化后">
+          <span class="compare-line" id="compareLine"></span>
+        </div>
+        <input class="compare-slider" id="compareSlider" type="range" min="0" max="100" value="50">
+      </section>
+    </section>
+
+    <section class="chart-grid" style="margin-top:16px">
+      <article class="chart-card"><h3>原始直方图</h3><canvas id="histCanvas" class="chart"></canvas><p>看亮度是否挤在很窄的一段。</p></article>
+      <article class="chart-card"><h3>CDF 累积曲线</h3><canvas id="cdfCanvas" class="chart"></canvas><p>曲线越陡，表示该亮度附近像素越密集。</p></article>
+      <article class="chart-card"><h3>灰度映射函数</h3><canvas id="mapCanvas" class="chart"></canvas><p>旧亮度沿曲线查表得到新亮度。</p></article>
+      <article class="chart-card"><h3>均衡后直方图</h3><canvas id="eqHistCanvas" class="chart"></canvas><p>结果通常占用更宽的亮度范围。</p></article>
+    </section>
+
+    <section class="process" id="process"></section>
+
+    <section class="apps">
+      <article class="app-card"><strong>低光照照片增强</strong><span>暗部细节被拉开，画面层次更容易辨认。</span></article>
+      <article class="app-card"><strong>医学与工业图像</strong><span>增强微弱纹理和边界，但要警惕噪声同时被放大。</span></article>
+      <article class="app-card"><strong>扫描文档改善</strong><span>让文字和纸张背景更分离，便于后续阈值化。</span></article>
+      <article class="app-card"><strong>遥感图像增强</strong><span>扩展地物亮度差异，帮助观察地表结构。</span></article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var selectedFile = null;
+      var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var fileInput = document.getElementById('fileInput');
+      var uploadZone = document.getElementById('uploadZone');
+      var fileName = document.getElementById('fileName');
+      var uploadBtn = document.getElementById('uploadBtn');
+      var runBtn = document.getElementById('runBtn');
+      var sampleBtn = document.getElementById('sampleBtn');
+      var loading = document.getElementById('loading');
+      var errorBox = document.getElementById('errorBox');
+      var process = document.getElementById('process');
+      var metrics = document.getElementById('metrics');
+      var beforeImg = document.getElementById('beforeImg');
+      var afterImg = document.getElementById('afterImg');
+      var compareSlider = document.getElementById('compareSlider');
+      var compareLine = document.getElementById('compareLine');
+      var htmlEsc = window.esc || function (s) { return String(s == null ? '' : s); };
+
+      function setBusy(value) {
+        loading.style.display = value ? 'block' : 'none';
+        errorBox.style.display = 'none';
+        runBtn.disabled = value || !selectedFile;
+        sampleBtn.disabled = value;
+        uploadBtn.disabled = value;
+      }
+      function setFile(file) {
+        selectedFile = file || null;
+        fileName.textContent = selectedFile ? selectedFile.name : '未选择';
+        runBtn.disabled = !selectedFile;
+      }
+      function src(step) { return step && step.image_base64 ? 'data:image/png;base64,' + step.image_base64 : ''; }
+      function byId(data, id) { return (data.steps || []).find(function (s) { return s.id === id; }) || null; }
+      function run(file) {
+        setBusy(true);
+        var fd = new FormData();
+        if (file) fd.append('file', file);
+        fetch('/api/demo/histogram', { method: 'POST', body: fd })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status); return j; }); })
+          .then(render)
+          .catch(function (err) { setBusy(false); errorBox.textContent = err.message || String(err); errorBox.style.display = 'block'; });
+      }
+      function render(data) {
+        setBusy(false);
+        var histStep = byId(data, 'histogram');
+        var d = (histStep && histStep.data) || {};
+        var stats = (d.stats || {});
+        var before = stats.before || {};
+        var after = stats.after || {};
+        metrics.innerHTML = [
+          ['均衡前标准差', before.std],
+          ['均衡后标准差', after.std],
+          ['对比度增益', stats.contrast_gain],
+          ['原始动态范围', before.dynamic_range]
+        ].map(function (x) { return '<span class="metric"><strong>' + htmlEsc(x[0]) + '</strong> ' + htmlEsc(x[1] == null ? '-' : x[1]) + '</span>'; }).join('');
+
+        beforeImg.src = src(byId(data, 'gray'));
+        afterImg.src = src(byId(data, 'equalized'));
+        drawBars('histCanvas', d.histogram || []);
+        drawLine('cdfCanvas', d.cdf || [], '#22c55e', 1);
+        drawMapping('mapCanvas', d.mapping || []);
+        drawBars('eqHistCanvas', d.equalized_histogram || [], '#14b8a6');
+        drawFlow(d.mapping || []);
+        renderSteps(data.steps || []);
+      }
+      function renderSteps(steps) {
+        process.innerHTML = steps.map(function (s, i) {
+          return '<article class="step-card"><div class="step-media"><img src="' + src(s) + '" alt="' + htmlEsc(s.name || '') + '" loading="lazy"></div><div class="step-body"><strong>' +
+            htmlEsc((i + 1) + '. ' + (s.name || s.id)) + '</strong><p>' + htmlEsc(s.explanation || '') + '</p><code>' + htmlEsc(s.formula || '') + '</code></div></article>';
+        }).join('');
+      }
+      function canvas(id) {
+        var c = document.getElementById(id);
+        var rect = c.getBoundingClientRect();
+        var ratio = window.devicePixelRatio || 1;
+        c.width = Math.max(320, Math.floor(rect.width * ratio));
+        c.height = Math.max(160, Math.floor(rect.height * ratio));
+        var ctx = c.getContext('2d');
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return { c: c, ctx: ctx, w: rect.width, h: rect.height };
+      }
+      function drawFrame(ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cv-media-bg') || '#0f172a';
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(148,163,184,.35)';
+        ctx.strokeRect(34, 16, w - 48, h - 42);
+      }
+      function drawBars(id, values, color) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h;
+        drawFrame(ctx, w, h);
+        var max = Math.max.apply(null, values.concat([1]));
+        var left = 34, right = w - 14, bottom = h - 26, top = 16;
+        ctx.fillStyle = color || '#3b82f6';
+        values.forEach(function (v, i) {
+          var x0 = left + i / values.length * (right - left);
+          var x1 = left + (i + 1) / values.length * (right - left);
+          var bh = v / max * (bottom - top);
+          ctx.fillRect(x0, bottom - bh, Math.max(1, x1 - x0), bh);
+        });
+      }
+      function drawLine(id, values, color, scaleMax) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h;
+        drawFrame(ctx, w, h);
+        var left = 34, right = w - 14, bottom = h - 26, top = 16;
+        var max = scaleMax || Math.max.apply(null, values.concat([1]));
+        ctx.strokeStyle = color || '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        values.forEach(function (v, i) {
+          var x = left + i / Math.max(values.length - 1, 1) * (right - left);
+          var y = bottom - v / max * (bottom - top);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      function drawMapping(id, mapping) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h;
+        drawFrame(ctx, w, h);
+        var left = 34, right = w - 14, bottom = h - 26, top = 16;
+        ctx.strokeStyle = 'rgba(148,163,184,.45)';
+        ctx.beginPath();
+        ctx.moveTo(left, bottom);
+        ctx.lineTo(right, top);
+        ctx.stroke();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        mapping.forEach(function (v, i) {
+          var x = left + i / Math.max(mapping.length - 1, 1) * (right - left);
+          var y = bottom - v / 255 * (bottom - top);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      function drawFlow(mapping) {
+        var c = document.getElementById('mappingDemo');
+        var rect = c.getBoundingClientRect();
+        var ratio = window.devicePixelRatio || 1;
+        c.width = Math.floor(rect.width * ratio);
+        c.height = Math.floor(rect.height * ratio);
+        var ctx = c.getContext('2d');
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        var w = rect.width, h = rect.height;
+        var points = [24, 48, 76, 104, 132, 160, 192, 224].map(function (x, i) { return { old: x, next: mapping[x] == null ? x : mapping[x], y: 64 + (i % 3) * 28 }; });
+        var start = performance.now();
+        function frame(now) {
+          var t = reducedMotion ? 1 : ((Math.sin((now - start) / 850) + 1) / 2);
+          ctx.clearRect(0, 0, w, h);
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cv-media-bg') || '#0f172a';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = 'rgba(148,163,184,.75)';
+          ctx.fillText('旧亮度', 24, 24);
+          ctx.fillText('新亮度', w - 72, 24);
+          points.forEach(function (p) {
+            var x0 = 42 + p.old / 255 * (w - 96);
+            var x1 = 42 + p.next / 255 * (w - 96);
+            var x = x0 + (x1 - x0) * t;
+            ctx.strokeStyle = 'rgba(102,242,194,.22)';
+            ctx.beginPath(); ctx.moveTo(x0, p.y); ctx.lineTo(x1, p.y + 70); ctx.stroke();
+            ctx.fillStyle = '#66f2c2';
+            ctx.beginPath(); ctx.arc(x, p.y + 70 * t, 5, 0, Math.PI * 2); ctx.fill();
+          });
+          document.getElementById('flowStatus').textContent = reducedMotion ? '静态映射' : '映射中';
+          if (!reducedMotion) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      compareSlider.addEventListener('input', function () {
+        var v = compareSlider.value;
+        afterImg.style.clipPath = 'inset(0 0 0 ' + v + '%)';
+        compareLine.style.left = v + '%';
+      });
+      uploadBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function (e) { setFile(e.target.files[0]); });
+      runBtn.addEventListener('click', function () { run(selectedFile); });
+      sampleBtn.addEventListener('click', function () {
+        setFile(null);
+        fileName.textContent = '内置示例';
+        fetch('../images/demo-street.jpg').then(function (r) { return r.blob(); }).then(function (b) { run(new File([b], 'demo-street.jpg', { type: b.type || 'image/jpeg' })); }).catch(function () { run(null); });
+      });
+      uploadZone.addEventListener('dragover', function (e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+      uploadZone.addEventListener('dragleave', function () { uploadZone.classList.remove('dragover'); });
+      uploadZone.addEventListener('drop', function (e) { e.preventDefault(); uploadZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
+      sampleBtn.click();
+    })();
+  </script>
+</body>
+</html>

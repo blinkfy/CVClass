@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阈值化 - Cvtoolkits</title>
+  <link rel="stylesheet" href="../css/iframe-theme.css">
+  <script src="../js/theme-sync.js"></script>
+  <script src="../js/page-utils.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .page { max-width: 1240px; margin: 0 auto; padding: 24px 22px 46px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); gap: 16px; align-items: stretch; }
+    .panel, .hero-main, .stage-card, .step-card, .app-card {
+      border: 1px solid var(--cv-border);
+      border-radius: var(--cv-radius);
+      background: var(--cv-panel);
+      box-shadow: var(--cv-shadow);
+      color: var(--cv-text);
+    }
+    .hero-main { padding: 20px; }
+    .eyebrow { color: var(--cv-accent-3); font-size: .78rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; color: var(--cv-title); font-size: clamp(1.55rem, 2.6vw, 2.42rem); line-height: 1.16; }
+    .subtitle { margin: 0; color: var(--cv-muted); line-height: 1.7; font-size: .96rem; }
+    .formula { margin-top: 13px; padding: 11px 12px; border-radius: var(--cv-radius-sm); border: 1px solid var(--cv-border); background: var(--cv-code-bg); color: var(--cv-text); font: .8rem/1.5 Consolas, monospace; overflow-wrap: anywhere; }
+    .threshold-stage { padding: 16px; display: grid; gap: 12px; }
+    .stage-canvas { width: 100%; height: 220px; border-radius: var(--cv-radius); background: var(--cv-media-bg); border: 1px solid var(--cv-border); }
+    .stage-note { margin: 0; color: var(--cv-muted); font-size: .82rem; line-height: 1.55; }
+    .controls { margin-top: 16px; padding: 16px; }
+    .upload-zone { border: 1.5px dashed var(--cv-border-strong); border-radius: var(--cv-radius); padding: 14px; background: var(--cv-control-bg); }
+    .upload-zone.dragover { border-color: var(--cv-accent-3); background: var(--cv-soft-surface); }
+    .upload-row { display: flex; gap: 12px; align-items: center; }
+    button { min-height: 40px; border: 0; border-radius: var(--cv-radius-sm); cursor: pointer; font: inherit; }
+    .upload-btn, .run-btn { padding: 10px 14px; color: #04111f; font-weight: 900; background: linear-gradient(135deg, var(--cv-accent-3), var(--cv-accent-2)); }
+    .ghost-btn { padding: 10px 13px; color: var(--cv-text); border: 1px solid var(--cv-border); background: var(--cv-soft-surface); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .file-meta { color: var(--cv-muted); font-size: .84rem; line-height: 1.5; }
+    .file-meta strong { color: var(--cv-title); }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
+    .param { margin-top: 12px; }
+    .param label { display: flex; justify-content: space-between; gap: 12px; color: var(--cv-muted); font-size: .82rem; }
+    .param b { color: var(--cv-title); }
+    input[type=range] { width: 100%; accent-color: var(--cv-accent-3); }
+    .metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .metric { padding: 7px 10px; border-radius: 999px; border: 1px solid var(--cv-border); background: var(--cv-soft-surface); color: var(--cv-muted); font-size: .78rem; }
+    .metric strong { color: var(--cv-title); }
+    .loading, .error { display: none; margin-top: 12px; padding: 12px; border-radius: var(--cv-radius-sm); border: 1px solid var(--cv-border); background: var(--cv-panel-2); color: var(--cv-muted); }
+    .error { color: var(--cv-danger-text); border-color: color-mix(in srgb, var(--cv-danger) 42%, transparent); }
+    .visual-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .stage-card { padding: 13px; background: var(--cv-panel-2); }
+    .stage-card h2 { margin: 0 0 8px; color: var(--cv-title); font-size: .95rem; }
+    .stage-card p { margin: 8px 0 0; color: var(--cv-muted); font-size: .78rem; line-height: 1.5; }
+    canvas.chart { width: 100%; height: 190px; display: block; border-radius: var(--cv-radius-sm); background: var(--cv-media-bg); border: 1px solid var(--cv-border); }
+    .compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .image-card { border: 1px solid var(--cv-border); border-radius: var(--cv-radius); background: var(--cv-panel-2); overflow: hidden; }
+    .image-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; display: block; background: var(--cv-media-bg); border-bottom: 1px solid var(--cv-border); }
+    .image-card strong { display: block; padding: 10px 12px 2px; color: var(--cv-title); font-size: .9rem; }
+    .image-card p { margin: 0; padding: 0 12px 12px; color: var(--cv-muted); font-size: .76rem; line-height: 1.45; }
+    .process { display: grid; gap: 12px; margin-top: 16px; }
+    .step-card { display: grid; grid-template-columns: 190px minmax(0, 1fr); overflow: hidden; }
+    .step-media { min-height: 138px; display: grid; place-items: center; background: var(--cv-media-bg); border-right: 1px solid var(--cv-border); }
+    .step-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .step-body { padding: 13px 14px; }
+    .step-body strong { display: block; color: var(--cv-title); font-size: .94rem; margin-bottom: 6px; }
+    .step-body p { margin: 0 0 9px; color: var(--cv-muted); font-size: .8rem; line-height: 1.55; }
+    .step-body code { display: block; padding: 8px; border-radius: var(--cv-radius-sm); background: var(--cv-code-bg); border: 1px solid var(--cv-border); color: var(--cv-text); font-size: .72rem; overflow-wrap: anywhere; }
+    .apps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .app-card { padding: 13px; background: var(--cv-panel-2); }
+    .app-card strong { display: block; color: var(--cv-title); margin-bottom: 6px; font-size: .88rem; }
+    .app-card span { color: var(--cv-muted); font-size: .76rem; line-height: 1.48; }
+    @media(max-width: 960px) { .hero, .visual-grid, .compare, .apps { grid-template-columns: 1fr; } .step-card { grid-template-columns: 1fr; } .step-media { border-right: 0; border-bottom: 1px solid var(--cv-border); } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">Thresholding</div>
+        <h1>阈值化：用一条线把连续灰度切成前景和背景</h1>
+        <p class="subtitle">阈值化是最朴素的分割：亮度小于 T 的像素变黑，大于等于 T 的像素变白。Otsu 的任务不是随便选一刀，而是在直方图上搜索，让切开的两类差异最大。</p>
+        <div class="formula">B(x,y)=255 if Y(x,y)>=T else 0; Otsu: maximize sigma_b^2=w0 w1 (mu0-mu1)^2</div>
+      </div>
+      <aside class="threshold-stage panel">
+        <canvas id="decisionCanvas" class="stage-canvas"></canvas>
+        <p class="stage-note">红线是阈值。拖动手动阈值时，你会看到哪些灰度被归为背景，哪些被归为前景。</p>
+      </aside>
+    </section>
+
+    <section class="panel controls">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="upload-row">
+          <button class="upload-btn" id="uploadBtn" type="button">选择图片</button>
+          <div class="file-meta"><strong id="fileName">未选择</strong><br>强光照差、文档、目标与背景亮度分离明显时效果最好。</div>
+        </div>
+      </div>
+      <div class="param"><label>手动阈值 <b id="manualValue">128</b></label><input id="manualThreshold" type="range" min="0" max="255" value="128"></div>
+      <div class="actions">
+        <button class="run-btn" id="runBtn" type="button" disabled>Otsu 自动阈值</button>
+        <button class="ghost-btn" id="manualBtn" type="button" disabled>用手动阈值重算</button>
+        <button class="ghost-btn" id="sampleBtn" type="button">使用内置示例</button>
+      </div>
+      <div class="metrics" id="metrics"></div>
+      <div class="loading" id="loading">正在统计直方图并搜索最佳阈值...</div>
+      <div class="error" id="errorBox"></div>
+    </section>
+
+    <section class="visual-grid">
+      <article class="stage-card"><h2>亮度直方图</h2><canvas id="histCanvas" class="chart"></canvas><p>红线左侧通常是背景，右侧通常是前景。</p></article>
+      <article class="stage-card"><h2>Otsu 搜索分数</h2><canvas id="scoreCanvas" class="chart"></canvas><p>最高点对应自动阈值。</p></article>
+      <article class="stage-card"><h2>阈值判定带</h2><canvas id="stripCanvas" class="chart"></canvas><p>连续灰度被切成两个标签。</p></article>
+    </section>
+
+    <section class="compare" id="compare"></section>
+    <section class="process" id="process"></section>
+
+    <section class="apps">
+      <article class="app-card"><strong>文档二值化</strong><span>把纸张背景和文字分开，方便 OCR 和版面分析。</span></article>
+      <article class="app-card"><strong>工业缺陷检测</strong><span>当缺陷与背景亮度差明显时，阈值能快速定位区域。</span></article>
+      <article class="app-card"><strong>医学区域粗分割</strong><span>适合亮度分布有清楚峰谷的初步分割。</span></article>
+      <article class="app-card"><strong>作为后续算法前处理</strong><span>轮廓、形态学、连通域分析常从二值图开始。</span></article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var selectedFile = null;
+      var lastSample = null;
+      var fileInput = document.getElementById('fileInput');
+      var uploadZone = document.getElementById('uploadZone');
+      var uploadBtn = document.getElementById('uploadBtn');
+      var runBtn = document.getElementById('runBtn');
+      var manualBtn = document.getElementById('manualBtn');
+      var sampleBtn = document.getElementById('sampleBtn');
+      var fileName = document.getElementById('fileName');
+      var thresholdInput = document.getElementById('manualThreshold');
+      var manualValue = document.getElementById('manualValue');
+      var loading = document.getElementById('loading');
+      var errorBox = document.getElementById('errorBox');
+      var metrics = document.getElementById('metrics');
+      var compare = document.getElementById('compare');
+      var process = document.getElementById('process');
+      var htmlEsc = window.esc || function (s) { return String(s == null ? '' : s); };
+      function setBusy(v) { loading.style.display = v ? 'block' : 'none'; errorBox.style.display = 'none'; runBtn.disabled = v || !selectedFile; manualBtn.disabled = v || !selectedFile; sampleBtn.disabled = v; uploadBtn.disabled = v; }
+      function setFile(f) { selectedFile = f || null; fileName.textContent = selectedFile ? selectedFile.name : '未选择'; runBtn.disabled = !selectedFile; manualBtn.disabled = !selectedFile; }
+      function run(method) {
+        setBusy(true);
+        var fd = new FormData();
+        if (selectedFile) fd.append('file', selectedFile);
+        if (method === 'global') { fd.append('method', 'global'); fd.append('threshold', thresholdInput.value); }
+        else fd.append('method', 'otsu');
+        fetch('/api/demo/threshold', { method: 'POST', body: fd })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status); return j; }); })
+          .then(render)
+          .catch(function (err) { setBusy(false); errorBox.textContent = err.message || String(err); errorBox.style.display = 'block'; });
+      }
+      function byId(data, id) { return (data.steps || []).find(function (s) { return s.id === id; }) || null; }
+      function src(step) { return step && step.image_base64 ? 'data:image/png;base64,' + step.image_base64 : ''; }
+      function render(data) {
+        setBusy(false);
+        var m = data.metrics || {};
+        var histStep = byId(data, 'histogram');
+        var d = (histStep && histStep.data) || {};
+        thresholdInput.value = m.threshold || 128;
+        manualValue.textContent = thresholdInput.value;
+        metrics.innerHTML = [
+          ['阈值', m.threshold],
+          ['前景比例', (m.foreground_pct || 0) + '%'],
+          ['背景均值', m.background_mean],
+          ['前景均值', m.foreground_mean]
+        ].map(function (x) { return '<span class="metric"><strong>' + htmlEsc(x[0]) + '</strong> ' + htmlEsc(x[1]) + '</span>'; }).join('');
+        drawDecision('decisionCanvas', m.threshold || 128);
+        drawHistogram('histCanvas', d.histogram || [], m.threshold || 128);
+        drawScore('scoreCanvas', d.otsu_scores || [], m.threshold || 128);
+        drawDecision('stripCanvas', m.threshold || 128);
+        renderCompare(data);
+        renderSteps(data.steps || []);
+      }
+      function renderCompare(data) {
+        var cards = [
+          [byId(data, 'gray'), '灰度输入', '阈值比较基于这张亮度图。'],
+          [byId(data, 'result'), '二值结果', '白色是前景，黑色是背景。'],
+          [byId(data, 'overlay'), '叠加检查', '把前景覆盖回原图，检查分割是否合理。']
+        ];
+        compare.innerHTML = cards.map(function (c) { return '<article class="image-card"><img src="' + src(c[0]) + '" alt="' + htmlEsc(c[1]) + '"><strong>' + htmlEsc(c[1]) + '</strong><p>' + htmlEsc(c[2]) + '</p></article>'; }).join('');
+      }
+      function renderSteps(steps) {
+        process.innerHTML = steps.map(function (s, i) {
+          return '<article class="step-card"><div class="step-media"><img src="' + src(s) + '" alt="' + htmlEsc(s.name || '') + '" loading="lazy"></div><div class="step-body"><strong>' + htmlEsc((i + 1) + '. ' + (s.name || s.id)) + '</strong><p>' + htmlEsc(s.explanation || '') + '</p><code>' + htmlEsc(s.formula || '') + '</code></div></article>';
+        }).join('');
+      }
+      function canvas(id) {
+        var c = document.getElementById(id), rect = c.getBoundingClientRect(), ratio = window.devicePixelRatio || 1;
+        c.width = Math.max(320, Math.floor(rect.width * ratio)); c.height = Math.max(150, Math.floor(rect.height * ratio));
+        var ctx = c.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); return { ctx: ctx, w: rect.width, h: rect.height };
+      }
+      function frame(ctx, w, h) { ctx.clearRect(0, 0, w, h); ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cv-media-bg') || '#0f172a'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(148,163,184,.35)'; ctx.strokeRect(34, 16, w - 48, h - 42); }
+      function drawHistogram(id, values, t) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h; frame(ctx, w, h);
+        var left = 34, right = w - 14, bottom = h - 26, top = 16, max = Math.max.apply(null, values.concat([1]));
+        values.forEach(function (v, i) { var x0 = left + i / values.length * (right - left); var x1 = left + (i + 1) / values.length * (right - left); var bh = v / max * (bottom - top); ctx.fillStyle = i < t ? '#3b82f6' : '#93c5fd'; ctx.fillRect(x0, bottom - bh, Math.max(1, x1 - x0), bh); });
+        var tx = left + t / 255 * (right - left); ctx.fillStyle = '#ef4444'; ctx.fillRect(tx - 2, top, 4, bottom - top);
+      }
+      function drawScore(id, values, t) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h; frame(ctx, w, h);
+        var left = 34, right = w - 14, bottom = h - 26, top = 16, max = Math.max.apply(null, values.concat([1]));
+        ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 2; ctx.beginPath();
+        values.forEach(function (v, i) { var x = left + i / Math.max(values.length - 1, 1) * (right - left); var y = bottom - v / max * (bottom - top); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke();
+        var tx = left + t / 255 * (right - left); ctx.fillStyle = '#ef4444'; ctx.fillRect(tx - 2, top, 4, bottom - top);
+      }
+      function drawDecision(id, t) {
+        var o = canvas(id), ctx = o.ctx, w = o.w, h = o.h; ctx.clearRect(0, 0, w, h);
+        var grad = ctx.createLinearGradient(20, 0, w - 20, 0); grad.addColorStop(0, '#020617'); grad.addColorStop(1, '#f8fafc'); ctx.fillStyle = grad; ctx.fillRect(20, h * .35, w - 40, h * .28);
+        var tx = 20 + t / 255 * (w - 40); ctx.fillStyle = 'rgba(37,99,235,.35)'; ctx.fillRect(20, h * .35, tx - 20, h * .28); ctx.fillStyle = 'rgba(34,197,94,.32)'; ctx.fillRect(tx, h * .35, w - 20 - tx, h * .28);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(tx - 2, h * .24, 4, h * .58); ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cv-text') || '#fff'; ctx.fillText('背景: Y<T', 28, h * .28); ctx.fillText('前景: Y>=T', w - 112, h * .28); ctx.fillText('T=' + t, tx + 7, h * .82);
+      }
+      thresholdInput.addEventListener('input', function () { manualValue.textContent = thresholdInput.value; drawDecision('decisionCanvas', Number(thresholdInput.value)); drawDecision('stripCanvas', Number(thresholdInput.value)); });
+      uploadBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function (e) { setFile(e.target.files[0]); });
+      runBtn.addEventListener('click', function () { run('otsu'); });
+      manualBtn.addEventListener('click', function () { run('global'); });
+      sampleBtn.addEventListener('click', function () { setFile(null); fileName.textContent = '内置示例'; fetch('../images/demo-street.jpg').then(function (r) { return r.blob(); }).then(function (b) { lastSample = new File([b], 'demo-street.jpg', { type: b.type || 'image/jpeg' }); setFile(lastSample); run('otsu'); }).catch(function () { selectedFile = null; run('otsu'); }); });
+      uploadZone.addEventListener('dragover', function (e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+      uploadZone.addEventListener('dragleave', function () { uploadZone.classList.remove('dragover'); });
+      uploadZone.addEventListener('drop', function (e) { e.preventDefault(); uploadZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
+      sampleBtn.click();
+    })();
+  </script>
+</body>
+</html>

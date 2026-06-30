@@ -1,0 +1,759 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>频域滤波 - Cvtoolkits</title>
+<link rel="stylesheet" href="../css/style.css">
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['\\(', '\\)']],
+            displayMath: [['\\[', '\\]']]
+        },
+        svg: {
+            fontCache: 'global'
+        }
+    };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    
+    .page {
+        width: min(1360px, 100%);
+        margin: 0 auto;
+        padding: 18px 16px 24px;
+    }
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    h1 {
+        margin: 0;
+        font-size: clamp(1.25rem, 2vw, 1.7rem);
+        letter-spacing: 0;
+    }
+    .subtitle {
+        margin-top: 6px;
+        color: #64748b;
+        font-size: 0.86rem;
+    }
+    .pill {
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        padding: 7px 11px;
+        color: #334155;
+        background: rgba(255,255,255,0.78);
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+    .workspace {
+        display: grid;
+        grid-template-columns: 310px minmax(360px, 1fr) 330px;
+        gap: 12px;
+        align-items: stretch;
+    }
+    .panel {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid #d8e1ee;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+    }
+    .panel h2 {
+        margin: 0 0 12px;
+        color: #172033;
+        font-size: 0.98rem;
+    }
+    .preset-list {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 14px;
+    }
+    .preset-btn {
+        width: 100%;
+        min-height: 36px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: #334155;
+        cursor: pointer;
+        text-align: left;
+        padding: 7px 10px;
+        font: 700 0.8rem/1.25 ui-sans-serif, system-ui, sans-serif;
+    }
+    .preset-btn.active {
+        color: #fff;
+        border-color: #0ea5e9;
+        background: #0ea5e9;
+    }
+    .kernel-grid {
+        display: grid;
+        gap: 4px;
+        width: fit-content;
+        margin: 0 auto;
+        padding: 10px;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        background: #fbfdff;
+    }
+    .kernel-cell {
+        width: 44px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background: #fff;
+        color: #172033;
+        font: 700 0.72rem/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .formula {
+        margin-top: 12px;
+        padding: 9px;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        background: #f8fbff;
+        color: #475569;
+        font: 0.78rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .formula-box {
+        margin-top: 16px;
+        padding: 2px 2px 0;
+        color: #334155;
+    }
+    .formula-title {
+        margin: 0 0 8px;
+        color: #172033;
+        font-size: 0.94rem;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+    .formula-main {
+        font-family: "Cambria Math", "Times New Roman", "Microsoft YaHei", "微软雅黑", serif;
+        font-size: 1.02rem;
+        font-weight: 600;
+        line-height: 1.55;
+        color: #0f172a;
+        padding: 0 0 8px;
+        letter-spacing: 0;
+    }
+    .formula-main mjx-container {
+        margin: 0 !important;
+        text-align: left !important;
+    }
+    .formula-main svg {
+        max-width: 100%;
+    }
+    .formula-main .sum {
+        font-size: 1.28rem;
+        color: #2563eb;
+    }
+    .formula-main sup {
+        font-size: 0.72rem;
+        color: #64748b;
+    }
+    .formula-main sub {
+        font-size: 0.7rem;
+        color: #475569;
+    }
+    .formula-desc {
+        display: grid;
+        gap: 7px;
+        padding-top: 4px;
+        color: #475569;
+        font-size: 0.78rem;
+        line-height: 1.65;
+    }
+    .formula-desc .term {
+        display: grid;
+        gap: 2px;
+    }
+    .formula-desc b {
+        color: #1e293b;
+        font-family: "Cambria Math", "Times New Roman", "Microsoft YaHei", "微软雅黑", serif;
+        font-weight: 700;
+    }
+    .formula-desc mjx-container {
+        font-size: 104% !important;
+    }
+    .formula-key {
+        margin-top: 5px;
+        color: #1e40af;
+        font-weight: 700;
+        font-size: 0.8rem;
+        line-height: 1.6;
+    }
+    .formula-key mjx-container {
+        margin: 0 !important;
+    }
+    .visual-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
+    }
+    .canvas-card {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        background: #fbfdff;
+    }
+    .canvas-card h3 {
+        margin: 0 0 8px;
+        color: #172033;
+        font-size: 0.86rem;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        border: 1px solid #d7e0ee;
+        border-radius: 8px;
+        background: #fff;
+    }
+    #freqCanvas { aspect-ratio: 1 / 1; image-rendering: pixelated; }
+    #inputCanvas, #outputCanvas { aspect-ratio: 1 / 1; image-rendering: pixelated; }
+    .legend {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 0.74rem;
+    }
+    .explain {
+        display: grid;
+        gap: 10px;
+        color: #475569;
+        font-size: 0.84rem;
+        line-height: 1.65;
+    }
+    .explain-card {
+        padding: 11px;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        background: #fbfdff;
+    }
+    .explain-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #172033;
+    }
+    .response-bar {
+        height: 10px;
+        overflow: hidden;
+        border-radius: 999px;
+        border: 1px solid #cbd5e1;
+        background: #e2e8f0;
+    }
+    .response-fill {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #38bdf8, #10b981);
+    }
+    .note {
+        color: #64748b;
+        font-size: 0.76rem;
+        line-height: 1.55;
+    }
+    @media (max-width: 1080px) {
+        .workspace { grid-template-columns: 1fr; }
+        .visual-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 680px) {
+        .topbar { align-items: flex-start; flex-direction: column; }
+        .visual-grid { grid-template-columns: 1fr; }
+        .kernel-cell { width: 40px; }
+    }
+</style>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+</head>
+<body>
+<main class="page">
+    <header class="topbar">
+        <div>
+            <h1>空域卷积核与频域滤波器</h1>
+            <div class="subtitle">卷积定理：空域的卷积等价于频域的乘积 — 每个卷积核本质上都是一个频域滤波器</div>
+        </div>
+    </header>
+
+    <section class="workspace">
+        <aside class="panel">
+            <h2>空域卷积核</h2>
+            <div class="preset-list" id="presetList"></div>
+            <div class="kernel-grid" id="kernelGrid"></div>
+            <div class="formula-box" id="formulaBox">
+                <div class="formula-title">卷积定理</div>
+                <div class="formula-main">H(u, v) = <span class="sum">Σ</span><sub>x</sub><span class="sum">Σ</span><sub>y</sub> k(x, y) · e<sup>−j2π(ux + vy)</sup></div>
+                <div class="formula-desc">
+                    <div class="term"><b>k(x, y)</b><span>空域卷积核在位置 (x, y) 的权重。</span></div>
+                    <div class="term"><b>e<sup>−j2π(ux+vy)</sup></b><span>频率 (u, v) 的复正弦基，由 cos 分量与 j·sin 分量共同描述。</span></div>
+                    <div class="term"><b>|H(u, v)|</b><span>幅度响应，值越大说明卷积核对该频率越敏感。</span></div>
+                    <div class="formula-key">空域卷积 ∗ 输入 = 频域乘积 · 输入频谱</div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="panel">
+            <h2>频域响应与图像效果</h2>
+            <div class="visual-grid">
+                <div class="canvas-card">
+                    <h3>频域响应</h3>
+                    <canvas id="freqCanvas" width="160" height="160"></canvas>
+                    <div class="legend"><span>边缘：高频</span><span>中心：低频</span><span>越亮响应越强</span></div>
+                </div>
+                <div class="canvas-card">
+                    <h3>示例滤波</h3>
+                    <canvas id="inputCanvas" width="160" height="160"></canvas>
+                    <div class="legend"><span>原图👆</span><span>卷积输出👇</span></div>
+                    <canvas id="outputCanvas" width="160" height="160" style="margin-top:10px;"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <aside class="panel">
+            <h2>直观解释</h2>
+            <div class="explain">
+                <div class="explain-card">
+                    <strong id="kernelName">恒等核</strong>
+                    <div id="kernelDesc">几乎不改变图像，各频率基本按原样通过。</div>
+                </div>
+                <div class="explain-card">
+                    <strong>低频保留</strong>
+                    <div class="response-bar"><div class="response-fill" id="lowFill"></div></div>
+                </div>
+                <div class="explain-card">
+                    <strong>高频增强</strong>
+                    <div class="response-bar"><div class="response-fill" id="highFill"></div></div>
+                </div>
+                <div class="explain-card">
+                    <strong>方向选择</strong>
+                    <div id="directionText">无明显方向偏好。</div>
+                </div>
+                <div class="note">频域响应由当前空域核直接计算得到。低通核会让中心更亮，高通/边缘核会让远离中心的区域更亮，方向核会呈现方向性条带。</div>
+            </div>
+        </aside>
+    </section>
+</main>
+
+<script>
+(function() {
+    function renderFormulaBlock() {
+        var formulaBox = document.getElementById('formulaBox');
+        if (!formulaBox) return;
+        formulaBox.innerHTML = [
+            '<div class="formula-title">卷积定理</div>',
+            '<div class="formula-main">\\[',
+            'H(u,v)=\\sum_x\\sum_y k(x,y)\\,e^{-j2\\pi(ux+vy)}',
+            '\\]</div>',
+            '<div class="formula-desc">',
+            '<div class="term"><b>\\(k(x,y)\\)</b><span>空域卷积核在位置 \\((x,y)\\) 的权重。</span></div>',
+            '<div class="term"><b>\\(e^{-j2\\pi(ux+vy)}\\)</b><span>频率 \\((u,v)\\) 的复正弦基，由 \\(\\cos\\) 分量与 \\(j\\sin\\) 分量共同描述。</span></div>',
+            '<div class="term"><b>\\(\\lvert H(u,v)\\rvert\\)</b><span>幅度响应，值越大说明卷积核对该频率越敏感。</span></div>',
+            '<div class="formula-key">\\[',
+            '(k * x)(m,n)\\ \\Longleftrightarrow\\ H(u,v)\\,X(u,v)',
+            '\\]</div>',
+            '</div>'
+        ].join('');
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise([formulaBox]);
+        }
+    }
+
+    var presets = [
+        {
+            id: 'identity',
+            name: '恒等',
+            desc: '只保留中心像素，输出几乎等于输入。',
+            direction: '无明显方向偏好。',
+            kernel: [[0,0,0],[0,1,0],[0,0,0]]
+        },
+        {
+            id: 'mean',
+            name: '均值平滑',
+            desc: '平均邻域像素，削弱细节和噪声，是典型低通滤波。',
+            direction: '各方向平滑一致。',
+            kernel: [[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]]
+        },
+        {
+            id: 'gaussian',
+            name: '高斯平滑',
+            desc: '中心权重大、边缘权重小，比均值平滑更自然地保留轮廓。',
+            direction: '各方向平滑一致。',
+            kernel: [[1/16,2/16,1/16],[2/16,4/16,2/16],[1/16,2/16,1/16]]
+        },
+        {
+            id: 'sobelx',
+            name: 'Sobel X',
+            desc: '增强水平方向的亮度变化，用来检测竖直边缘。',
+            direction: '对左右变化最敏感。',
+            kernel: [[-1,0,1],[-2,0,2],[-1,0,1]]
+        },
+        {
+            id: 'sobely',
+            name: 'Sobel Y',
+            desc: '增强垂直方向的亮度变化，用来检测水平边缘。',
+            direction: '对上下变化最敏感。',
+            kernel: [[-1,-2,-1],[0,0,0],[1,2,1]]
+        },
+        {
+            id: 'laplacian',
+            name: 'Laplacian',
+            desc: '增强各方向的快速变化，常用于边缘和细节检测。',
+            direction: '各方向高频变化都会增强。',
+            kernel: [[0,-1,0],[-1,4,-1],[0,-1,0]]
+        },
+        {
+            id: 'sharpen',
+            name: '锐化',
+            desc: '保留原图，同时增强周围差异，让边缘更清楚。',
+            direction: '各方向细节都会增强。',
+            kernel: [[0,-1,0],[-1,5,-1],[0,-1,0]]
+        }
+    ];
+
+    var presetList = document.getElementById('presetList');
+    var kernelGrid = document.getElementById('kernelGrid');
+    var freqCanvas = document.getElementById('freqCanvas');
+    var inputCanvas = document.getElementById('inputCanvas');
+    var outputCanvas = document.getElementById('outputCanvas');
+    var kernelName = document.getElementById('kernelName');
+    var kernelDesc = document.getElementById('kernelDesc');
+    var directionText = document.getElementById('directionText');
+    var lowFill = document.getElementById('lowFill');
+    var highFill = document.getElementById('highFill');
+    var current = presets[0];
+    var sourceImage = makeSourceImage(160, 160);
+
+    function formatValue(value) {
+        if (Math.abs(value) < 1e-8) return '0';
+        if (Math.abs(value - Math.round(value)) < 1e-8) return String(Math.round(value));
+        return Number(value).toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    function initPresets() {
+        presets.forEach(function(preset) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'preset-btn';
+            btn.dataset.id = preset.id;
+            btn.textContent = preset.name;
+            btn.addEventListener('click', function() {
+                current = preset;
+                render();
+            });
+            presetList.appendChild(btn);
+        });
+    }
+
+    function renderKernel() {
+        kernelGrid.innerHTML = '';
+        kernelGrid.style.gridTemplateColumns = 'repeat(' + current.kernel[0].length + ', 44px)';
+        current.kernel.forEach(function(row) {
+            row.forEach(function(value) {
+                var cell = document.createElement('div');
+                cell.className = 'kernel-cell';
+                cell.textContent = formatValue(value);
+                kernelGrid.appendChild(cell);
+            });
+        });
+    }
+
+    function renderFrequency() {
+        var size = freqCanvas.width;
+        var ctx = freqCanvas.getContext('2d');
+        var image = ctx.createImageData(size, size);
+        var values = new Float32Array(size * size);
+        var max = 0;
+        for (var y = 0; y < size; y++) {
+            var fy = (y - size / 2) / size;
+            for (var x = 0; x < size; x++) {
+                var fx = (x - size / 2) / size;
+                var mag = responseMagnitude(current.kernel, fx, fy);
+                var v = Math.log1p(mag);
+                values[y * size + x] = v;
+                if (v > max) max = v;
+            }
+        }
+        var low = averageBand(values, size, 0, 0.14);
+        var high = averageBand(values, size, 0.34, 0.7);
+        lowFill.style.width = Math.min(100, low / Math.max(low, high, 1e-6) * 100).toFixed(0) + '%';
+        highFill.style.width = Math.min(100, high / Math.max(low, high, 1e-6) * 100).toFixed(0) + '%';
+
+        for (var i = 0; i < values.length; i++) {
+            var n = max > 0 ? values[i] / max : 0;
+            var color = freqColor(n);
+            var p = i * 4;
+            image.data[p] = color[0];
+            image.data[p + 1] = color[1];
+            image.data[p + 2] = color[2];
+            image.data[p + 3] = 255;
+        }
+        ctx.putImageData(image, 0, 0);
+        drawCenterMarks(ctx, size);
+    }
+
+    function responseMagnitude(kernel, fx, fy) {
+        var rows = kernel.length;
+        var cols = kernel[0].length;
+        var cy = (rows - 1) / 2;
+        var cx = (cols - 1) / 2;
+        var real = 0;
+        var imag = 0;
+        for (var y = 0; y < rows; y++) {
+            for (var x = 0; x < cols; x++) {
+                var phase = -2 * Math.PI * (fx * (x - cx) + fy * (y - cy));
+                var v = kernel[y][x];
+                real += v * Math.cos(phase);
+                imag += v * Math.sin(phase);
+            }
+        }
+        return Math.sqrt(real * real + imag * imag);
+    }
+
+    function averageBand(values, size, minR, maxR) {
+        var sum = 0;
+        var count = 0;
+        for (var y = 0; y < size; y++) {
+            for (var x = 0; x < size; x++) {
+                var dx = (x - size / 2) / (size / 2);
+                var dy = (y - size / 2) / (size / 2);
+                var r = Math.sqrt(dx * dx + dy * dy);
+                if (r >= minR && r < maxR) {
+                    sum += values[y * size + x];
+                    count++;
+                }
+            }
+        }
+        return count ? sum / count : 0;
+    }
+
+    function freqColor(n) {
+        var r = Math.round(8 + 32 * n);
+        var g = Math.round(30 + 185 * n);
+        var b = Math.round(58 + 110 * n);
+        if (n > 0.78) {
+            var t = (n - 0.78) / 0.22;
+            r = Math.round(r + (245 - r) * t);
+            g = Math.round(g + (158 - g) * t);
+            b = Math.round(b + (11 - b) * t);
+        }
+        return [r, g, b];
+    }
+
+    function drawCenterMarks(ctx, size) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.48)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(size / 2, 0);
+        ctx.lineTo(size / 2, size);
+        ctx.moveTo(0, size / 2);
+        ctx.lineTo(size, size / 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function makeSourceImage(w, h) {
+        var data = new Float32Array(w * h);
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var v = 0.18 + 0.28 * x / w;
+                if (Math.abs(x - 45) < 4 && y > 18 && y < 136) v = 0.92;
+                if (Math.abs(y - 95) < 4 && x > 25 && x < 138) v = 0.82;
+                var dx = x - 105;
+                var dy = y - 55;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 25 && dist < 31) v = 0.88;
+                if (((x + y) % 18) < 3 && x > 86 && y > 100) v = 0.65;
+                data[y * w + x] = v;
+            }
+        }
+        return { width: w, height: h, data: data };
+    }
+
+    function renderExample() {
+        drawGray(inputCanvas, sourceImage.data, sourceImage.width, sourceImage.height, false);
+        var filtered = convolve(sourceImage, current.kernel);
+        drawGray(outputCanvas, filtered, sourceImage.width, sourceImage.height, true);
+    }
+
+    function convolve(image, kernel) {
+        var w = image.width;
+        var h = image.height;
+        var rows = kernel.length;
+        var cols = kernel[0].length;
+        var cy = Math.floor(rows / 2);
+        var cx = Math.floor(cols / 2);
+        var out = new Float32Array(w * h);
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var sum = 0;
+                for (var ky = 0; ky < rows; ky++) {
+                    for (var kx = 0; kx < cols; kx++) {
+                        var px = Math.max(0, Math.min(w - 1, x + kx - cx));
+                        var py = Math.max(0, Math.min(h - 1, y + ky - cy));
+                        sum += image.data[py * w + px] * kernel[ky][kx];
+                    }
+                }
+                out[y * w + x] = sum;
+            }
+        }
+        return out;
+    }
+
+    function drawGray(canvas, values, w, h, normalize) {
+        var ctx = canvas.getContext('2d');
+        var image = ctx.createImageData(w, h);
+        var min = normalize ? Infinity : 0;
+        var max = normalize ? -Infinity : 1;
+        if (normalize) {
+            for (var i = 0; i < values.length; i++) {
+                if (values[i] < min) min = values[i];
+                if (values[i] > max) max = values[i];
+            }
+            if (Math.abs(max - min) < 1e-8) max = min + 1;
+        }
+        for (var j = 0; j < values.length; j++) {
+            var n = (values[j] - min) / (max - min);
+            n = Math.max(0, Math.min(1, n));
+            var g = Math.round(n * 255);
+            var p = j * 4;
+            image.data[p] = g;
+            image.data[p + 1] = g;
+            image.data[p + 2] = g;
+            image.data[p + 3] = 255;
+        }
+        ctx.putImageData(image, 0, 0);
+    }
+
+    function render() {
+        presetList.querySelectorAll('.preset-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.id === current.id);
+        });
+        kernelName.textContent = current.name;
+        kernelDesc.textContent = current.desc;
+        directionText.textContent = current.direction;
+        renderKernel();
+        renderFrequency();
+        renderExample();
+    }
+
+    renderFormulaBlock();
+    initPresets();
+    render();
+})();
+</script>
+
+  <hr style="margin:24px 0;border:none;border-top:1px solid var(--sidebar-border);">
+
+  <h2>算法演示</h2>
+  <div class="demo-area">
+    <div class="demo-controls">
+      <label class="demo-upload-btn">
+        <input type="file" id="demoFile" accept="image/*" style="display:none">
+        选择图片
+      </label>
+      <button class="demo-run-btn" id="demoRun">运行算法</button>
+      <span class="demo-status" id="demoStatus"></span>
+    </div>
+    <div class="demo-results" id="demoResults">
+      <p class="demo-hint">上传一张图片,点击"运行算法"查看中间步骤结果。</p>
+    </div>
+  </div>
+
+  <style>
+    .demo-controls { display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+    .demo-upload-btn, .demo-run-btn {
+      padding:8px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; border:none;
+      transition: all 0.2s;
+    }
+    .demo-upload-btn { background:var(--sidebar-bg); border:1px solid var(--sidebar-border); color:var(--text-primary); }
+    .demo-upload-btn:hover { border-color:var(--accent); }
+    .demo-run-btn { background:var(--accent); color:#fff; font-weight:600; }
+    .demo-run-btn:hover { opacity:0.9; }
+    .demo-run-btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .demo-status { font-size:0.85rem; color:var(--text-muted); }
+    .demo-results { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+    .demo-hint { grid-column:1/-1; color:var(--text-muted); font-size:0.9rem; text-align:center; padding:20px; }
+    .demo-step-card {
+      background:#fff; border:1px solid var(--sidebar-border); border-radius:10px;
+      overflow:hidden; box-shadow:var(--card-shadow);
+    }
+    .demo-step-card img { width:100%; display:block; border-bottom:1px solid var(--sidebar-border); }
+    .demo-step-card .step-info { padding:8px 12px; }
+    .demo-step-card .step-name { font-weight:600; font-size:0.85rem; }
+    .demo-step-card .step-desc { font-size:0.78rem; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+    .demo-metrics {
+      grid-column:1/-1; background:var(--sidebar-bg); border-radius:8px; padding:12px 16px;
+      font-size:0.85rem; color:var(--text-secondary);
+    }
+    .demo-metrics strong { color:var(--text-primary); }
+  </style>
+
+  <script>
+  (function(){
+    var fileInput=document.getElementById('demoFile');
+    var runBtn=document.getElementById('demoRun');
+    var status=document.getElementById('demoStatus');
+    var results=document.getElementById('demoResults');
+    var selectedFile=null;
+
+    fileInput.addEventListener('change',function(e){
+      selectedFile=e.target.files[0];
+      if(selectedFile){
+        var label=document.querySelector('.demo-upload-btn');
+        status.textContent=selectedFile.name;
+      }
+    });
+
+    runBtn.addEventListener('click',function(){
+      if(!selectedFile){status.textContent='请先选择图片';return;}
+      runBtn.disabled=true; runBtn.textContent='计算中...';
+      status.textContent='正在处理...';
+      results.innerHTML='<p class="demo-hint">算法运行中...</p>';
+
+      var form=new FormData();
+      form.append('file',selectedFile);
+      fetch('/api/demo/frequency',{method:'POST',body:form})
+        .then(function(r){return r.json();})
+        .then(function(data){
+          runBtn.disabled=false; runBtn.textContent='运行算法';
+          status.textContent='完成!';
+          if(data.error){results.innerHTML='<p class="demo-hint">错误:'+data.error+'</p>';return;}
+          var html='';
+          if(data.metrics && Object.keys(data.metrics).length){
+            html+='<div class="demo-metrics">';
+            for(var k in data.metrics){
+              html+='<span style="margin-right:16px">'+k+': <strong>'+data.metrics[k]+'</strong></span>';
+            }
+            html+='</div>';
+          }
+          (data.steps||[]).forEach(function(s){
+            html+='<div class="demo-step-card">';
+            if(s.image_b64) html+='<img src="data:image/png;base64,'+s.image_b64+'" alt="'+s.name+'">';
+            html+='<div class="step-info"><div class="step-name">'+s.name+'</div>';
+            if(s.explanation) html+='<div class="step-desc">'+s.explanation+'</div>';
+            if(s.formula) html+='<code class="step-formula">'+s.formula+'</code>';
+            html+='</div></div>';
+          });
+          results.innerHTML=html;
+        })
+        .catch(function(err){
+          runBtn.disabled=false; runBtn.textContent='运行算法';
+          status.textContent='出错'; results.innerHTML='<p class="demo-hint">请求失败:'+err.message+'</p>';
+        });
+    });
+  })();
+  </script>
+
+</body>
+</html>

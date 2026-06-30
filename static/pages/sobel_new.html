@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sobel 梯度 - Cvtoolkits</title>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+<script src="../js/card-anims.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;color:var(--cv-text);background:var(--cv-bg);font-family:Inter,"Microsoft YaHei",system-ui,sans-serif}
+.page{max-width:1540px;margin:0 auto;padding:20px 24px 42px}
+.hero,.panel,.story-card,.formula-card,.step-card{border:1px solid var(--cv-border);background:var(--cv-panel);box-shadow:var(--cv-shadow)}
+.hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:16px;border-radius:18px;padding:18px;margin-bottom:16px}
+.eyebrow{font-size:.78rem;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:var(--cv-accent)}
+h1{margin:6px 0 10px;color:var(--cv-title);font-size:clamp(1.7rem,3vw,2.55rem);line-height:1.12;letter-spacing:0}
+.subtitle{max-width:900px;margin:0;color:var(--cv-muted);font-size:.96rem;line-height:1.72}
+.intuition{margin-top:14px;padding:13px 14px;border:1px solid var(--cv-border);border-radius:12px;background:var(--cv-soft-surface);color:var(--cv-muted);font-size:.88rem;line-height:1.7}
+.intuition strong{color:var(--cv-title)}
+.upload-panel{border-radius:16px;padding:16px;background:var(--cv-soft-surface);border:1px solid var(--cv-border)}
+.upload-panel h2{margin:0 0 10px;color:var(--cv-title);font-size:1rem}
+.upload-zone{display:grid;gap:10px;min-height:136px;padding:16px;border-radius:14px;border:1.5px dashed var(--cv-border);background:var(--cv-control-bg);cursor:pointer;color:var(--cv-muted);transition:.18s}
+.upload-zone.dragover{border-color:var(--cv-accent);background:var(--cv-media-bg)}
+.upload-zone strong{color:var(--cv-title)}
+.upload-zone span{font-size:.84rem;line-height:1.55}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{font:inherit;border:0;border-radius:10px;cursor:pointer}
+.run-btn,.sample-btn{padding:10px 14px;font-weight:850}
+.run-btn{color:#06121f;background:linear-gradient(135deg,#67e8f9,#818cf8)}
+.sample-btn{color:var(--cv-text);background:var(--cv-control-bg);border:1px solid var(--cv-border)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.story-card{border-radius:16px;padding:15px;background:var(--cv-soft-surface)}
+.story-card h2{margin:0 0 8px;color:var(--cv-title);font-size:1.04rem}
+.story-card p{margin:10px 0 0;color:var(--cv-muted);font-size:.84rem;line-height:1.62}
+.card-anim-wrap{width:min(100%,300px);aspect-ratio:1/1;margin:0 auto;background:var(--cv-media-bg);border:1px solid var(--cv-border);border-radius:12px;overflow:hidden;display:grid;place-items:center}
+.card-anim-wrap canvas{display:block;width:100%;height:100%}
+.formula-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.formula-card{border-radius:14px;padding:14px;background:var(--cv-soft-surface)}
+.formula-card b{display:block;margin-bottom:8px;color:var(--cv-title);font-size:.92rem}
+.formula-card p{margin:0;color:var(--cv-muted);font-size:.8rem;line-height:1.55}
+.formula-card code{display:block;margin-top:9px;padding:9px;border-radius:8px;background:var(--cv-code-bg);color:var(--cv-code-text);font-size:.78rem;line-height:1.48;white-space:pre-wrap;overflow-wrap:anywhere}
+.kernel-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:86px;margin:0 0 10px}
+.kernel-mini i{display:grid;place-items:center;aspect-ratio:1;border-radius:5px;background:var(--cv-control-bg);color:var(--cv-text);font-style:normal;font-size:.76rem;font-weight:850;border:1px solid var(--cv-border)}
+.kernel-mini i.pos{color:#fecaca;background:rgba(239,68,68,.18)}
+.kernel-mini i.neg{color:#bfdbfe;background:rgba(37,99,235,.18)}
+.pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.pipe-item{position:relative;min-height:108px;padding:13px;border-radius:14px;border:1px solid var(--cv-border);background:var(--cv-soft-surface)}
+.pipe-item span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--cv-media-bg);color:var(--cv-accent);font-size:.75rem;font-weight:900}
+.pipe-item b{display:block;margin:9px 0 5px;color:var(--cv-title);font-size:.86rem}
+.pipe-item p{margin:0;color:var(--cv-muted);font-size:.76rem;line-height:1.5}
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.status{color:var(--cv-muted);font-size:.9rem}
+.loading,.error{display:none;padding:16px;border-radius:14px;border:1px solid var(--cv-border);background:var(--cv-soft-surface);color:var(--cv-muted)}
+.error{color:var(--cv-danger-text);background:var(--cv-danger-bg)}
+.panel{border-radius:18px;padding:16px;margin-top:14px}
+.panel-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.panel-head h2{margin:0;color:var(--cv-title);font-size:1.12rem}
+.panel-head p{margin:4px 0 0;color:var(--cv-muted);font-size:.84rem;line-height:1.55}
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px}
+.step-card{overflow:hidden;border-radius:13px;background:var(--cv-soft-surface)}
+.step-img{min-height:152px;display:grid;place-items:center;background:var(--cv-media-bg)}
+.step-img img{width:100%;display:block}
+.step-body{padding:12px}
+.step-body strong{display:block;color:var(--cv-title);font-size:.9rem;line-height:1.35}
+.step-body p{margin:6px 0 0;color:var(--cv-muted);font-size:.78rem;line-height:1.55}
+.step-formula{display:block;margin-top:8px;padding:8px;border-radius:8px;background:var(--cv-code-bg);color:var(--cv-code-text);font-size:.76rem;line-height:1.45;overflow-wrap:anywhere}
+.data-mini{margin-top:8px;color:var(--cv-subtle);font-size:.72rem;line-height:1.45}
+@media(max-width:980px){.hero,.story-grid,.formula-grid,.pipeline{grid-template-columns:1fr}.page{padding:16px 6px 34px}.panel-head{display:block}}
+@media(prefers-reduced-motion:reduce){.card-anim-wrap canvas{animation:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Sobel Operator</div>
+      <h1>Sobel 梯度：把亮度变化拆成 X 与 Y</h1>
+      <p class="subtitle">Sobel 用两个 3x3 卷积核扫描图像：Gx 对左右亮度差敏感，主要突出竖直边缘；Gy 对上下亮度差敏感，主要突出水平边缘。最后用幅值和方向把两路梯度合成一张边缘强度图。</p>
+      <div class="intuition"><strong>直观理解：</strong>如果把图像看成一张有高低起伏的地形图，Sobel 就是在问“这里往左右走变化大不大、往上下走变化大不大”。变化越陡，边缘响应越强；两个方向合起来，就是完整的局部坡度。</div>
+    </div>
+    <aside class="upload-panel">
+      <h2>上传并查看真实中间结果</h2>
+      <div class="upload-zone" id="uploadZone">
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <strong id="fileName">使用内置示例</strong>
+        <span>点击或拖拽上传图片。页面会返回原图、Gx、Gy、梯度幅值和方向角，每一步都来自后端本地 Sobel 计算。</span>
+      </div>
+      <div class="actions">
+        <button class="run-btn" id="runBtn">运行 Sobel</button>
+        <button class="sample-btn" id="sampleBtn">恢复内置示例</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="story-grid" aria-label="Canny Sobel 动画">
+    <article class="story-card">
+      <h2>Gx：横向差分，突出竖边</h2>
+      <div class="card-anim-wrap">
+        <canvas data-step="sobel_x" aria-label="Canny Sobel X 动画"></canvas>
+      </div>
+      <p>这个动画直接复用 Canny 页面中的 Sobel X：卷积窗口从左到右移动，左侧权重为负、右侧权重为正。当窗口跨过竖直亮度边界时，响应会突然变强。</p>
+    </article>
+    <article class="story-card">
+      <h2>Gy：纵向差分，突出横边</h2>
+      <div class="card-anim-wrap">
+        <canvas data-step="sobel_y" aria-label="Canny Sobel Y 动画"></canvas>
+      </div>
+      <p>这个动画直接复用 Canny 页面中的 Sobel Y：卷积窗口从上到下移动，上方权重为负、下方权重为正。当窗口跨过水平亮度边界时，响应会突然变强。</p>
+    </article>
+  </section>
+
+  <section class="formula-grid" aria-label="Sobel 公式拆解">
+    <article class="formula-card">
+      <b>Gx 卷积核</b>
+      <div class="kernel-mini"><i class="neg">-1</i><i>0</i><i class="pos">+1</i><i class="neg">-2</i><i>0</i><i class="pos">+2</i><i class="neg">-1</i><i>0</i><i class="pos">+1</i></div>
+      <p>左右两侧相减，中间行权重更大，所以它既做差分，也带一点垂直方向平滑。</p>
+      <code>Gx = Kx * I</code>
+    </article>
+    <article class="formula-card">
+      <b>Gy 卷积核</b>
+      <div class="kernel-mini"><i class="neg">-1</i><i class="neg">-2</i><i class="neg">-1</i><i>0</i><i>0</i><i>0</i><i class="pos">+1</i><i class="pos">+2</i><i class="pos">+1</i></div>
+      <p>上下两侧相减，中间列权重更大，所以它突出水平边缘，同时在水平方向稍微抗噪。</p>
+      <code>Gy = Ky * I</code>
+    </article>
+    <article class="formula-card">
+      <b>幅值</b>
+      <p>把两个方向的响应合成边缘强度。越亮表示局部亮度变化越强，越可能是边缘。</p>
+      <code>|G| = sqrt(Gx^2 + Gy^2)</code>
+    </article>
+    <article class="formula-card">
+      <b>方向</b>
+      <p>方向角表示“亮度上升最快”的方向。它常用于 Canny 的非极大值抑制，决定沿哪个方向比较邻居。</p>
+      <code>theta = atan2(Gy, Gx)</code>
+    </article>
+  </section>
+
+  <section class="pipeline" aria-label="Sobel 处理流程">
+    <article class="pipe-item"><span>1</span><b>输入图像</b><p>上传图像或内置示例，统一转成可计算数组。</p></article>
+    <article class="pipe-item"><span>2</span><b>灰度亮度</b><p>Sobel 处理亮度变化，彩色图像先压到单通道。</p></article>
+    <article class="pipe-item"><span>3</span><b>Gx / Gy</b><p>分别卷积得到左右变化和上下变化。</p></article>
+    <article class="pipe-item"><span>4</span><b>幅值合成</b><p>用欧氏长度合并两个方向的梯度强度。</p></article>
+    <article class="pipe-item"><span>5</span><b>方向编码</b><p>把 atan2 得到的方向角映射成灰度图，便于查看。</p></article>
+  </section>
+
+  <div class="status-row">
+    <div class="status" id="statusText">准备运行内置示例。</div>
+  </div>
+  <div class="loading" id="loading">正在计算 Sobel 中间结果...</div>
+  <div class="error" id="errorBox"></div>
+
+  <section class="panel" id="resultPanel">
+    <div class="panel-head">
+      <div>
+        <h2>后端真实输出</h2>
+        <p id="resultHint">原图 -> Gx -> Gy -> 梯度幅值 -> 方向角。上传图片后这里会整体刷新。</p>
+      </div>
+    </div>
+    <div class="steps-grid" id="stepsGrid"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var file=null;
+  var fileInput=document.getElementById('fileInput');
+  var uploadZone=document.getElementById('uploadZone');
+  var fileName=document.getElementById('fileName');
+  var runBtn=document.getElementById('runBtn');
+  var sampleBtn=document.getElementById('sampleBtn');
+  var loading=document.getElementById('loading');
+  var errorBox=document.getElementById('errorBox');
+  var statusText=document.getElementById('statusText');
+  var stepsGrid=document.getElementById('stepsGrid');
+  var resultHint=document.getElementById('resultHint');
+  var escapeHtml=window.esc||function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});};
+  var stepTitles={
+    original:'原始图像',
+    gray:'灰度亮度图：Sobel 的输入',
+    gx:'Gx：横向差分响应（突出竖边）',
+    gy:'Gy：纵向差分响应（突出横边）',
+    magnitude:'梯度幅值：边缘强度',
+    angle:'梯度方向角：变化方向编码'
+  };
+  var stepNotes={
+    original:'输入图像是后续亮度转换和卷积的来源。',
+    gray:'Sobel 在亮度图上计算变化，因此彩色图像先被压成单通道。',
+    gx:'Gx 使用 [-1,0,1] 的左右差分与 [1,2,1] 的垂直平滑，亮处代表左右变化强。',
+    gy:'Gy 使用上下差分与水平平滑，亮处代表上下变化强。',
+    magnitude:'幅值把 Gx 和 Gy 合成为总边缘强度。',
+    angle:'方向角用于描述梯度朝向，也能服务于 Canny 后续的非极大值抑制。'
+  };
+
+  uploadZone.addEventListener('click',function(){fileInput.click();});
+  uploadZone.addEventListener('dragover',function(e){e.preventDefault();uploadZone.classList.add('dragover');});
+  uploadZone.addEventListener('dragleave',function(){uploadZone.classList.remove('dragover');});
+  uploadZone.addEventListener('drop',function(e){
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change',function(){if(fileInput.files[0]) setFile(fileInput.files[0]);});
+  runBtn.addEventListener('click',function(){runDemo(file);});
+  sampleBtn.addEventListener('click',function(){
+    file=null;
+    fileInput.value='';
+    fileName.textContent='使用内置示例';
+    runDemo(null);
+  });
+
+  function setFile(f){
+    file=f;
+    fileName.textContent=f.name;
+    statusText.textContent='已选择 '+f.name+'，点击运行后会重新计算 Gx、Gy、幅值和方向角。';
+  }
+
+  function setBusy(b){
+    loading.style.display=b?'block':'none';
+    errorBox.style.display='none';
+    runBtn.disabled=b;
+    sampleBtn.disabled=b;
+  }
+
+  function runDemo(f){
+    setBusy(true);
+    statusText.textContent=f?'正在处理上传图片...':'正在处理内置示例...';
+    var fd=new FormData();
+    if(f) fd.append('file',f);
+    fetch('/api/demo/sobel',{method:'POST',body:fd})
+      .then(function(r){return r.json().catch(function(){return{};}).then(function(j){if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j;});})
+      .then(render)
+      .catch(function(err){
+        setBusy(false);
+        errorBox.textContent=err.message;
+        errorBox.style.display='block';
+        statusText.textContent='处理失败。';
+      });
+  }
+
+  function render(payload){
+    setBusy(false);
+    var steps=payload.steps||[];
+    statusText.textContent='已完成：Sobel 的两个方向梯度、幅值和方向角都已生成。';
+    resultHint.textContent='当前结果来自 '+(payload.implementation&&payload.implementation.backend?payload.implementation.backend:'本地 NumPy Sobel')+'。';
+    stepsGrid.innerHTML=steps.map(stepCard).join('');
+  }
+
+  function stepCard(step){
+    var id=step.id||'step';
+    var img=step.image_base64?'<img src="data:image/png;base64,'+step.image_base64+'" alt="'+escapeHtml(step.name||id)+'" loading="lazy">':'<span style="color:var(--cv-muted)">暂无图像</span>';
+    var explanation=step.explanation||stepNotes[id]||'该步骤是 Sobel 流水线中的真实中间结果。';
+    return '<article class="step-card"><div class="step-img">'+img+'</div><div class="step-body">'+
+      '<strong>'+escapeHtml(stepTitles[id]||step.name||id)+'</strong>'+
+      '<p>'+escapeHtml(explanation)+'</p>'+
+      '<code class="step-formula">'+escapeHtml(step.formula||fallbackFormula(id))+'</code>'+dataMini(step.data)+
+      '</div></article>';
+  }
+
+  function fallbackFormula(id){
+    if(id==='gx') return 'Gx = Kx * I';
+    if(id==='gy') return 'Gy = Ky * I';
+    if(id==='gray') return 'Y = 0.299R + 0.587G + 0.114B';
+    if(id==='magnitude') return '|G| = sqrt(Gx^2 + Gy^2)';
+    if(id==='angle') return 'theta = atan2(Gy, Gx)';
+    return 'I(x,y)';
+  }
+
+  function dataMini(data){
+    if(!data) return '';
+    var keys=Object.keys(data).slice(0,3);
+    if(!keys.length) return '';
+    return '<div class="data-mini">'+keys.map(function(k){
+      var v=data[k];
+      if(Array.isArray(v)) return escapeHtml(k)+': '+v.length+' 项';
+      if(v&&typeof v==='object') return escapeHtml(k)+': '+Object.keys(v).length+' 字段';
+      return escapeHtml(k)+': '+escapeHtml(v);
+    }).join(' / ')+'</div>';
+  }
+
+  var animStates=[];
+  var animRaf=0;
+  var animLast=0;
+
+  function initSobelCardAnimations(){
+    if(!window.CardAnims) return;
+    animStates=[];
+    document.querySelectorAll('.card-anim-wrap canvas[data-step]').forEach(function(canvas){
+      var stepId=canvas.getAttribute('data-step');
+      var initFn=window.CardAnims.init[stepId];
+      var tickFn=window.CardAnims.tick[stepId];
+      if(!initFn||!tickFn) return;
+      var ctx=window.CardAnims.setupCanvas(canvas);
+      var state={canvas:canvas,ctx:ctx,cycleTime:0};
+      initFn(state);
+      tickFn(state,ctx,0);
+      animStates.push({canvas:canvas,ctx:ctx,state:state,tick:tickFn});
+    });
+    if(animStates.length && !(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      animRaf=requestAnimationFrame(animLoop);
+    }
+  }
+
+  function animLoop(ts){
+    if(!animLast) animLast=ts;
+    var dt=Math.min(80,ts-animLast);
+    animLast=ts;
+    animStates.forEach(function(anim){anim.tick(anim.state,anim.ctx,dt);});
+    animRaf=requestAnimationFrame(animLoop);
+  }
+
+  window.addEventListener('resize',function(){
+    if(!window.CardAnims) return;
+    animStates.forEach(function(anim){
+      anim.ctx=window.CardAnims.setupCanvas(anim.canvas);
+      anim.tick(anim.state,anim.ctx,0);
+    });
+  });
+  window.addEventListener('beforeunload',function(){if(animRaf) cancelAnimationFrame(animRaf);});
+
+  initSobelCardAnimations();
+  runDemo(null);
+})();
+</script>
+</body>
+</html>

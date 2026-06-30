@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>平滑与去噪 - Cvtoolkits</title>
+<link rel="stylesheet" href="../css/iframe-theme.css">
+<script src="../js/theme-sync.js"></script>
+<script src="../js/page-utils.js"></script>
+<script src="../js/card-anims.js"></script>
+<style>
+:root{--sm-blue:#3b82f6;--sm-orange:#f59e0b;--sm-green:#22c55e;--sm-cyan:#06b6d4}
+*{box-sizing:border-box}
+body{margin:0;color:var(--cv-text);background:var(--cv-bg);font-family:Inter,"Microsoft YaHei",system-ui,sans-serif}
+.page{max-width:1540px;margin:0 auto;padding:22px 24px 48px}
+.hero,.panel,.algo-section,.compare-table,.step-card{border:1px solid var(--cv-border);background:var(--cv-panel);box-shadow:var(--cv-shadow)}
+.hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:18px;border-radius:18px;padding:20px;margin-bottom:18px}
+.eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--cv-accent)}
+h1{margin:6px 0 10px;color:var(--cv-title);font-size:clamp(1.7rem,3vw,2.55rem);line-height:1.12}
+.subtitle{max-width:780px;margin:0;color:var(--cv-muted);font-size:.96rem;line-height:1.7}
+.upload-panel{border-radius:16px;padding:16px;background:var(--cv-soft-surface);border:1px solid var(--cv-border)}
+.upload-zone{display:grid;gap:10px;place-items:center;min-height:142px;padding:16px;border-radius:14px;border:1.5px dashed var(--cv-border);background:var(--cv-control-bg);cursor:pointer;text-align:center;color:var(--cv-muted);transition:.18s}
+.upload-zone.dragover{border-color:var(--cv-accent);background:var(--cv-media-bg)}
+.upload-zone strong{color:var(--cv-title)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{font:inherit;border:0;border-radius:10px;cursor:pointer}
+.run-btn,.sample-btn{padding:10px 14px;font-weight:800}
+.run-btn{color:#06121f;background:linear-gradient(135deg,#67e8f9,#22c55e)}
+.sample-btn{color:var(--cv-text);background:var(--cv-control-bg);border:1px solid var(--cv-border)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.scenario-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.scenario-card{min-height:142px;padding:15px;border-radius:14px;background:var(--cv-soft-surface);border:1px solid var(--cv-border)}
+.scenario-card b{display:block;margin-bottom:8px;color:var(--cv-title)}
+.scenario-card span{display:inline-block;margin-bottom:8px;padding:4px 8px;border-radius:999px;background:var(--cv-media-bg);color:var(--cv-accent);font-size:.75rem;font-weight:800}
+.scenario-card p{margin:0;color:var(--cv-muted);font-size:.84rem;line-height:1.55}
+.concept-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.concept-card{min-height:210px;padding:15px;border-radius:14px;background:var(--cv-soft-surface);border:1px solid var(--cv-border);overflow:hidden}
+.concept-card h3{margin:0 0 10px;color:var(--cv-title);font-size:1rem}
+.concept-card p{margin:10px 0 0;color:var(--cv-muted);font-size:.82rem;line-height:1.55}
+.card-anim-wrap{width:min(100%,260px);aspect-ratio:1/1;margin:0 auto;background:var(--cv-media-bg);border:1px solid var(--cv-border);border-radius:12px;overflow:hidden;display:grid;place-items:center}
+.card-anim-wrap canvas{display:block;width:100%;height:100%}
+.median-anim{height:108px;display:grid;align-items:center;gap:10px;background:var(--cv-media-bg);border-radius:12px;padding:10px}
+.median-cells,.median-sort{display:flex;gap:6px;align-items:center;justify-content:center}
+.median-cells i,.median-sort i{min-width:25px;height:25px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;font-style:normal;font-weight:800;background:var(--cv-control-bg);color:var(--cv-text)}
+.median-cells i.hot{background:#ef4444;color:#fff;animation:pulse 2.2s ease-in-out infinite}
+.median-sort i.mid{background:var(--sm-orange);color:#111827;animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.12)}}
+.bilateral-anim{height:108px;border-radius:12px;background:linear-gradient(90deg,rgba(34,197,94,.22) 0 47%,rgba(245,158,11,.22) 53% 100%);position:relative;overflow:hidden}
+.bilateral-anim b{position:absolute;left:48%;top:0;width:4px;height:100%;background:var(--cv-border)}
+.bilateral-anim i{position:absolute;border-radius:50%;background:var(--sm-green);opacity:.7;animation:gate 3s ease-in-out infinite}
+.bilateral-anim i:nth-child(2){width:18px;height:18px;left:30%;top:38%}
+.bilateral-anim i:nth-child(3){width:24px;height:24px;left:38%;top:55%;animation-delay:.25s}
+.bilateral-anim i:nth-child(4){width:20px;height:20px;left:62%;top:42%;background:var(--sm-orange);animation-delay:.45s}
+@keyframes gate{50%{transform:translateX(18px) scale(.72);opacity:.38}}
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0}
+.status{color:var(--cv-muted);font-size:.9rem}
+.loading,.error{display:none;padding:18px;border-radius:14px;border:1px solid var(--cv-border);background:var(--cv-soft-surface);color:var(--cv-muted)}
+.error{color:var(--cv-danger-text);background:var(--cv-danger-bg)}
+.algo-section{border-radius:18px;padding:18px;margin:16px 0}
+.algo-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;margin-bottom:14px}
+.algo-head h2{margin:0;color:var(--cv-title);font-size:1.22rem}
+.algo-head p{margin:5px 0 0;color:var(--cv-muted);line-height:1.55;font-size:.9rem}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;background:var(--cv-media-bg);color:var(--cv-accent);font-size:.76rem;font-weight:900}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.step-card{overflow:hidden;border-radius:13px;background:var(--cv-soft-surface)}
+.step-img{min-height:144px;display:grid;place-items:center;background:var(--cv-media-bg)}
+.step-img img{width:100%;display:block}
+.step-body{padding:12px}
+.step-body strong{display:block;color:var(--cv-title);font-size:.9rem;line-height:1.35}
+.step-body p{margin:6px 0 0;color:var(--cv-muted);font-size:.78rem;line-height:1.55}
+.formula{display:block;margin-top:8px;padding:8px;border-radius:8px;background:var(--cv-code-bg);color:var(--cv-code-text);font-size:.76rem;line-height:1.45;overflow-wrap:anywhere}
+.data-mini{margin-top:8px;color:var(--cv-subtle);font-size:.72rem;line-height:1.45}
+.compare-table{border-radius:16px;overflow:hidden;margin-top:18px}
+.compare-table table{width:100%;border-collapse:collapse}
+.compare-table th,.compare-table td{padding:12px;border-bottom:1px solid var(--cv-border);text-align:left;vertical-align:top;font-size:.84rem}
+.compare-table th{background:var(--cv-soft-surface);color:var(--cv-title)}
+.compare-table td{color:var(--cv-muted)}
+.compare-table tr:last-child td{border-bottom:0}
+@media(max-width:900px){.hero,.scenario-grid,.concept-strip{grid-template-columns:1fr}.algo-head{grid-template-columns:1fr}.page{padding:16px 14px 36px}}
+@media(prefers-reduced-motion:reduce){.median-cells i.hot,.median-sort i.mid,.bilateral-anim i{animation:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Smoothing And Denoising</div>
+      <h1>平滑与去噪：高斯、中值、双边放在同一张图里比较</h1>
+      <p class="subtitle">三种滤波器都在“重算中心像素”，但判断邻居是否可信的方式不同：高斯看距离，中值看排序，双边同时看距离和颜色相似度。这个页面用同一张图片、同一组噪声场景展示它们的过程和取舍。</p>
+    </div>
+    <aside class="upload-panel">
+      <div class="upload-zone" id="uploadZone">
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <strong id="fileName">使用内置示例</strong>
+        <span>点击或拖拽上传图片，三种算法会一起重跑</span>
+      </div>
+      <div class="actions">
+        <button class="run-btn" id="runBtn">运行统一对比</button>
+        <button class="sample-btn" id="sampleBtn">恢复内置示例</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="scenario-grid" aria-label="噪声场景推荐">
+    <article class="scenario-card"><span>高斯噪声</span><b>连续颗粒和传感器抖动</b><p>优先看高斯平滑；如果边缘也很重要，再看双边滤波。</p></article>
+    <article class="scenario-card"><span>椒盐噪声</span><b>孤立黑白坏点</b><p>中值滤波最合适，因为极端值会在排序中被挤到两端。</p></article>
+    <article class="scenario-card"><span>边缘敏感</span><b>人像、物体边界、分割预处理</b><p>双边滤波会拒绝颜色差异大的邻居，减少跨边缘抹糊。</p></article>
+    <article class="scenario-card"><span>快速预处理</span><b>Canny、SIFT、梯度前处理</b><p>高斯平滑代价低、稳定，是很多经典视觉流水线的第一步。</p></article>
+  </section>
+
+  <section class="concept-strip">
+    <article class="concept-card">
+      <h3>高斯：滑窗加权平均</h3>
+      <div class="card-anim-wrap smoothing-gaussian-canny">
+        <canvas data-step="gaussian" aria-label="Canny 高斯平滑动画"></canvas>
+      </div>
+      <p>中心权重大，远处权重小。它能平滑连续颗粒，但也会让边缘变软。</p>
+    </article>
+    <article class="concept-card">
+      <h3>中值：排序后取中间</h3>
+      <div class="median-anim">
+        <div class="median-cells"><i>34</i><i>36</i><i class="hot">255</i><i>38</i><i>40</i><i>41</i><i>42</i><i>43</i><i>44</i></div>
+        <div class="median-sort"><i>34</i><i>36</i><i>38</i><i>40</i><i class="mid">41</i><i>42</i><i>43</i><i>44</i><i>255</i></div>
+      </div>
+      <p>极端坏点不是被平均进结果，而是在排序里自然掉到两端。</p>
+    </article>
+    <article class="concept-card">
+      <h3>双边：空间近且颜色像</h3>
+      <div class="bilateral-anim"><b></b><i></i><i></i><i></i></div>
+      <p>边缘另一侧虽然离得近，但颜色差异大，范围核会把它的权重压低。</p>
+    </article>
+  </section>
+
+  <div class="status-row">
+    <div class="status" id="statusText">准备运行内置示例。</div>
+  </div>
+  <div class="loading" id="loading">正在生成噪声、计算三个滤波器和中间可视化...</div>
+  <div class="error" id="errorBox"></div>
+
+  <section class="algo-section" id="overviewSection" style="display:none">
+    <div class="algo-head">
+      <div><h2>输入与最终对比</h2><p>先看同一输入被不同噪声破坏，再看三种滤波器各自解决什么问题。</p></div>
+      <span class="badge">same image, three filters</span>
+    </div>
+    <div class="steps" id="overviewSteps"></div>
+  </section>
+
+  <div id="algorithmSections"></div>
+
+  <section class="compare-table" id="compareTable" style="display:none">
+    <table>
+      <thead><tr><th>算法</th><th>最适合</th><th>平滑强度</th><th>边缘保留</th><th>计算代价</th><th>风险</th></tr></thead>
+      <tbody id="compareBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+(function(){
+  var file=null;
+  var fileInput=document.getElementById('fileInput');
+  var uploadZone=document.getElementById('uploadZone');
+  var fileName=document.getElementById('fileName');
+  var runBtn=document.getElementById('runBtn');
+  var sampleBtn=document.getElementById('sampleBtn');
+  var loading=document.getElementById('loading');
+  var errorBox=document.getElementById('errorBox');
+  var statusText=document.getElementById('statusText');
+  var overviewSection=document.getElementById('overviewSection');
+  var overviewSteps=document.getElementById('overviewSteps');
+  var algorithmSections=document.getElementById('algorithmSections');
+  var compareTable=document.getElementById('compareTable');
+  var compareBody=document.getElementById('compareBody');
+  var names={gaussian:'高斯平滑',median:'中值滤波',bilateral:'双边滤波'};
+  var badges={gaussian:'适合连续颗粒',median:'适合椒盐坏点',bilateral:'适合保边去噪'};
+  var desc={
+    gaussian:'用高斯核做局部加权平均。它速度快、稳定，是 Canny 和 SIFT 等经典算法常见的降噪前处理。',
+    median:'把局部窗口排序后取中位数。它不是线性平均，所以能把孤立黑白坏点自然排除。',
+    bilateral:'空间核和颜色核相乘。它在同质区域内平滑，在边缘两侧自动降低跨界平均。'
+  };
+
+  var gaussianAnim = null;
+  var gaussianAnimRaf = 0;
+  var gaussianAnimLast = 0;
+
+  function initCannyGaussianAnim(){
+    var canvas=document.querySelector('.smoothing-gaussian-canny canvas[data-step="gaussian"]');
+    if(!canvas || !window.CardAnims || !window.CardAnims.init.gaussian || !window.CardAnims.tick.gaussian) return;
+    var ctx=window.CardAnims.setupCanvas(canvas);
+    var state={canvas:canvas,ctx:ctx,cycleTime:0};
+    window.CardAnims.init.gaussian(state);
+    window.CardAnims.tick.gaussian(state,ctx,0);
+    gaussianAnim={canvas:canvas,ctx:ctx,state:state,tick:window.CardAnims.tick.gaussian};
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gaussianAnimRaf=requestAnimationFrame(gaussianAnimLoop);
+  }
+
+  function gaussianAnimLoop(ts){
+    if(!gaussianAnim) return;
+    if(!gaussianAnimLast) gaussianAnimLast=ts;
+    var dt=Math.min(80,ts-gaussianAnimLast);
+    gaussianAnimLast=ts;
+    gaussianAnim.tick(gaussianAnim.state,gaussianAnim.ctx,dt);
+    gaussianAnimRaf=requestAnimationFrame(gaussianAnimLoop);
+  }
+
+  window.addEventListener('resize',function(){
+    if(!gaussianAnim || !window.CardAnims) return;
+    gaussianAnim.ctx=window.CardAnims.setupCanvas(gaussianAnim.canvas);
+    gaussianAnim.tick(gaussianAnim.state,gaussianAnim.ctx,0);
+  });
+  window.addEventListener('beforeunload',function(){
+    if(gaussianAnimRaf) cancelAnimationFrame(gaussianAnimRaf);
+  });
+  initCannyGaussianAnim();
+
+  uploadZone.addEventListener('click',function(){fileInput.click()});
+  uploadZone.addEventListener('dragover',function(e){e.preventDefault();uploadZone.classList.add('dragover')});
+  uploadZone.addEventListener('dragleave',function(){uploadZone.classList.remove('dragover')});
+  uploadZone.addEventListener('drop',function(e){
+    e.preventDefault();uploadZone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change',function(){if(fileInput.files[0]) setFile(fileInput.files[0])});
+  runBtn.addEventListener('click',function(){runDemo(file)});
+  sampleBtn.addEventListener('click',function(){file=null;fileInput.value='';fileName.textContent='使用内置示例';runDemo(null)});
+
+  function setFile(f){
+    file=f;
+    fileName.textContent=f.name;
+    statusText.textContent='已选择 '+f.name+'，点击运行会用它生成三种滤波对比。';
+  }
+
+  function setBusy(b){
+    loading.style.display=b?'block':'none';
+    errorBox.style.display='none';
+    runBtn.disabled=b;
+    sampleBtn.disabled=b;
+  }
+
+  function runDemo(f){
+    setBusy(true);
+    statusText.textContent=f?'正在处理上传图片...':'正在处理内置示例...';
+    var fd=new FormData();
+    if(f) fd.append('file',f);
+    fetch('/api/demo/smoothing',{method:'POST',body:fd})
+      .then(function(r){return r.json().catch(function(){return{};}).then(function(j){if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j;});})
+      .then(render)
+      .catch(function(err){setBusy(false);errorBox.textContent=err.message;errorBox.style.display='block';statusText.textContent='处理失败。';});
+  }
+
+  function render(payload){
+    setBusy(false);
+    statusText.textContent='已完成：三种滤波器使用同一输入完成对比。';
+    var steps=payload.steps||[];
+    overviewSection.style.display='block';
+    overviewSteps.innerHTML=steps.filter(function(s){return ['original','gaussian_input_noise','median_input_noise','comparison'].indexOf(s.id)>=0;}).map(stepCard).join('');
+    var algorithms=payload.algorithms||{};
+    algorithmSections.innerHTML=['gaussian','median','bilateral'].map(function(id){
+      var alg=algorithms[id]||{steps:[]};
+      return '<section class="algo-section" id="section-'+id+'">'+
+        '<div class="algo-head"><div><h2>'+esc(names[id])+'</h2><p>'+esc(desc[id])+'</p></div><span class="badge">'+esc(badges[id])+'</span></div>'+
+        '<div class="steps">'+(alg.steps||[]).map(stepCard).join('')+'</div>'+
+      '</section>';
+    }).join('');
+    renderCompare(payload.metrics&&payload.metrics.comparison);
+  }
+
+  function stepCard(step){
+    var img=step.image_base64?'<img src="data:image/png;base64,'+step.image_base64+'" alt="'+esc(step.name||step.id)+'" loading="lazy">':'';
+    var mini=dataMini(step.data);
+    return '<article class="step-card"><div class="step-img">'+img+'</div><div class="step-body">'+
+      '<strong>'+esc(step.name||step.id)+'</strong>'+
+      '<p>'+esc(step.explanation||'')+'</p>'+
+      '<code class="formula">'+esc(step.formula||'')+'</code>'+mini+
+      '</div></article>';
+  }
+
+  function dataMini(data){
+    if(!data) return '';
+    var keys=Object.keys(data).slice(0,3);
+    if(!keys.length) return '';
+    return '<div class="data-mini">'+keys.map(function(k){
+      var v=data[k];
+      if(Array.isArray(v)) return esc(k)+': '+v.length+' 项';
+      if(v&&typeof v==='object') return esc(k)+': '+Object.keys(v).length+' 字段';
+      return esc(k)+': '+esc(v);
+    }).join(' / ')+'</div>';
+  }
+
+  function renderCompare(rows){
+    rows=rows||[];
+    compareTable.style.display=rows.length?'block':'none';
+    compareBody.innerHTML=rows.map(function(r){
+      return '<tr><td>'+esc(r.name||r.algorithm)+'</td><td>'+esc(r.best_for)+'</td><td>'+esc(r.smooth_strength)+'</td><td>'+esc(r.edge_preservation)+'</td><td>'+esc(r.cost)+'</td><td>'+esc(r.risk)+'</td></tr>';
+    }).join('');
+  }
+
+  runDemo(null);
+})();
+</script>
+</body>
+</html>
