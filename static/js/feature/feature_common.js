@@ -23,7 +23,7 @@
         if (!box || !input) return;
         box.innerHTML = samples.map((item, idx) => `
             <button class="feature-sample-btn ${idx === 0 ? "is-active" : ""}" type="button" data-example="${item.key}" title="${item.label}">
-                <img src="${assetsBase}${item.file}" alt="${item.label}">
+                <img src="${window.cvclassUrl(assetsBase + item.file)}" alt="${item.label}">
             </button>
         `).join("");
         box.addEventListener("click", (event) => {

@@ -497,7 +497,7 @@
         if (!els.sampleGrid) return;
         els.sampleGrid.innerHTML = samples.map((item) => `
             <button type="button" class="vis-sample-picker__card${item.id === state.sampleId ? " is-active" : ""}" data-inst-sample-card="${esc(item.id)}">
-                <img src="${esc(item.image)}" alt="${esc(item.name)}" loading="lazy">
+                <img src="${esc(window.cvclassUrl(item.image))}" alt="${esc(item.name)}" loading="lazy">
                 <span>${esc(item.name)}</span>
             </button>
         `).join("");

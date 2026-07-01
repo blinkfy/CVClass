@@ -129,6 +129,8 @@
 
     function cvUrl(path) {
         if (!path || /^(https?:|data:|blob:)/i.test(path)) return path;
+        // 避免双重前缀：若路径已含 basePath 则直接返回（来自 url_for 的路径已包含 basePath）
+        if (basePath && path.startsWith(basePath + "/")) return path;
         return `${basePath}${path}`;
     }
 

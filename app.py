@@ -22,6 +22,11 @@ mimetypes.add_type("application/wasm", ".wasm")
 
 app = Flask(__name__)
 CVCLASS_PREFIX = os.environ.get("CVCLASS_PREFIX", "/cvclass")
+# 无论反向代理是否剥离前缀，确保 Flask 始终知道部署路径
+# SCRIPT_NAME 使 url_for 和 request.script_root 包含正确前缀
+os.environ.setdefault("SCRIPT_NAME", CVCLASS_PREFIX)
+
+app = Flask(__name__)
 app.config["APPLICATION_ROOT"] = CVCLASS_PREFIX
 app.config["SESSION_COOKIE_PATH"] = CVCLASS_PREFIX
 

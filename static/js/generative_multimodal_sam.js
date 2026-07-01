@@ -10,7 +10,7 @@
             {
                 id: "street_vehicle",
                 title: "街道车辆",
-                image: "/static/assets/generative_multimodal/sam/street_vehicle.svg",
+                image: "static/assets/generative_multimodal/sam/street_vehicle.svg",
                 scene: "street",
                 size: [640, 420],
                 defaultObjectId: "car_1",
@@ -30,7 +30,7 @@
             {
                 id: "desktop_objects",
                 title: "桌面物体",
-                image: "/static/assets/generative_multimodal/sam/desktop_objects.svg",
+                image: "static/assets/generative_multimodal/sam/desktop_objects.svg",
                 scene: "desktop",
                 size: [640, 420],
                 defaultObjectId: "laptop_1",
@@ -50,7 +50,7 @@
             {
                 id: "animal_subject",
                 title: "动物主体",
-                image: "/static/assets/generative_multimodal/sam/animal_subject.svg",
+                image: "static/assets/generative_multimodal/sam/animal_subject.svg",
                 scene: "animal",
                 size: [640, 420],
                 defaultObjectId: "animal_1",
@@ -569,7 +569,11 @@
         if (!path) return "";
         if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
         const basePath = window.CVCLASS_BASE_PATH || "";
-        if (path.startsWith("/")) return `${basePath}${path}`;
+        // 若路径已包含 basePath 前缀（url_for 生成的路径），直接返回，避免双重前缀
+        if (path.startsWith("/")) {
+            if (basePath && path.startsWith(basePath + "/")) return path;
+            return `${basePath}${path}`;
+        }
         return `${basePath}/static/${path.replace(/^static\//, "")}`;
     }
 
@@ -938,8 +942,9 @@
         if (typeof window.createSamInferenceClient !== "function") {
             throw new Error("SAM 推理客户端未加载");
         }
+        const defaultWorkerUrl = window.cvclassUrl ? window.cvclassUrl("/static/js/generative_multimodal_sam_worker.js") : (window.CVCLASS_BASE_PATH || "") + "/static/js/generative_multimodal_sam_worker.js";
         state.inferenceClient = window.createSamInferenceClient({
-            workerUrl: root.dataset.workerUrl || "/static/js/generative_multimodal_sam_worker.js",
+            workerUrl: root.dataset.workerUrl || defaultWorkerUrl,
             onStatus: handleWorkerStatus,
         });
         return state.inferenceClient;

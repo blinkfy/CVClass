@@ -5,7 +5,7 @@
     const MOTION_MS = 680;
     const CHECKERBOARD_IMAGE_URL = window.cvclassUrl
         ? window.cvclassUrl("/static/assets/img/checkerboard.png")
-        : "/static/assets/img/checkerboard.png";
+        : (window.CVCLASS_BASE_PATH||"")+"/static/assets/img/checkerboard.png";
     const CHECKERBOARD_SOURCE_SQUARES = 10;
     const $ = (selector, base = root) => base.querySelector(selector);
     const $$ = (selector, base = root) => [...base.querySelectorAll(selector)];

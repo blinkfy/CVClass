@@ -1,4 +1,4 @@
-const INSTANCE_WORKER_URL = "/static/js/inference/instance_inference_worker.js";
+const INSTANCE_WORKER_URL = window.cvclassUrl("/static/js/inference/instance_inference_worker.js");
 
 let instanceSequence = 0;
 

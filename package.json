@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@fontsource/noto-sans-sc": "^5.2.9"
-  },
-  "scripts": {
-    "postinstall": "node scripts/sync-vendor-assets.js"
-  }
-}

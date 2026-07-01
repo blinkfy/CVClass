@@ -1,4 +1,4 @@
-const SEMANTIC_WORKER_URL = "/static/js/inference/semantic_inference_worker.js?v=20260621-sem-restore-512";
+const SEMANTIC_WORKER_URL = window.cvclassUrl("/static/js/inference/semantic_inference_worker.js?v=20260621-sem-restore-512");
 
 let semanticSequence = 0;
 

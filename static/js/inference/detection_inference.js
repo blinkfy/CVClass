@@ -1,4 +1,4 @@
-const WORKER_URL = "/static/js/inference/vision_inference_worker.js?v=20260625-det-flowdiff1";
+const WORKER_URL = window.cvclassUrl("/static/js/inference/vision_inference_worker.js?v=20260625-det-flowdiff1");
 
 let sequence = 0;
 

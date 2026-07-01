@@ -1,7 +1,8 @@
 (function () {
-    const ORT_SCRIPT = "/static/vendor/onnxruntime-web/ort.min.js";
-    const ORT_WASM_PATH = "/static/vendor/onnxruntime-web/";
-    const DEFAULT_MODEL_URL = "/static/assets/data/detection/yolo_detection.onnx";
+    const basePath = self.location.pathname.substring(0, self.location.pathname.indexOf("/static"));
+    const ORT_SCRIPT = basePath + "/static/vendor/onnxruntime-web/ort.min.js";
+    const ORT_WASM_PATH = basePath + "/static/vendor/onnxruntime-web/";
+    const DEFAULT_MODEL_URL = basePath + "/static/assets/data/detection/yolo_detection.onnx";
 
     let session = null;
     let activeBackend = null;

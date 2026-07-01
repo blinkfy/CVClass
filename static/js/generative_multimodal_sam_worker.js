@@ -1,6 +1,9 @@
-const ORT_SCRIPT = "/static/vendor/onnxruntime-web/ort.min.js";
-const ORT_WASM_PATH = "/static/vendor/onnxruntime-web/";
-const DEFAULT_MANIFEST_URL = "/static/assets/models/generative_multimodal/sam/sam_model_manifest.json";
+var basePath = "";
+try { basePath = self.location.pathname.substring(0, self.location.pathname.indexOf("/static")); } catch (e) {}
+
+const ORT_SCRIPT = basePath + "/static/vendor/onnxruntime-web/ort.min.js";
+const ORT_WASM_PATH = basePath + "/static/vendor/onnxruntime-web/";
+const DEFAULT_MANIFEST_URL = basePath + "/static/assets/models/generative_multimodal/sam/sam_model_manifest.json";
 const DEFAULT_MASK_INPUT_SHAPE = [1, 1, 256, 256];
 const DEFAULT_ENCODER_LONG_SIDE = 1024;
 
@@ -55,9 +58,15 @@ async function fetchArrayBuffer(url, label) {
     return response.arrayBuffer();
 }
 
-function resolveUrl(path, baseUrl = self.location.href) {
+function resolveUrl(path, baseUrl) {
     if (!path) return "";
-    return new URL(path, baseUrl).toString();
+    if (/^(https?:)?\/\//.test(path)) return path;
+    if (path.startsWith("/")) {
+        // 避免双重前缀：若路径已含 basePath 则直接返回
+        if (basePath && path.startsWith(basePath + "/")) return path;
+        return basePath + path;
+    }
+    return new URL(path, baseUrl || self.location.href).toString();
 }
 
 async function createSession(modelBytes, backend) {

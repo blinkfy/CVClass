@@ -570,7 +570,7 @@
             title: "图像级分类",
             subtitle: "Image-level Classification",
             principle: "将整张图像映射为一个类别概率分布，强调全局语义理解。",
-            image: "/static/assets/img/classfication.webp",
+            image: window.cvclassUrl("/static/assets/img/classfication.webp"),
             figure: `
                 <svg class="tk-figure-svg tk-figure--classification" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -624,7 +624,7 @@
             title: "目标检测",
             subtitle: "Object Detection",
             principle: "在图像中定位并分类所有感兴趣目标，输出带置信度的边界框。",
-            image: "/static/assets/img/detection.webp",
+            image: window.cvclassUrl("/static/assets/img/detection.webp"),
             figure: `
                 <svg class="tk-figure-svg tk-figure--detection" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -680,7 +680,7 @@
             title: "语义分割",
             subtitle: "语义分割",
             principle: "为每个像素预测类别标签，获得与输入等分辨率的稠密类别图。",
-            image: "/static/assets/img/semantic-segment.webp",
+            image: window.cvclassUrl("/static/assets/img/semantic-segment.webp"),
             figure: `
                 <svg class="tk-figure-svg tk-figure--semantic" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>
@@ -735,7 +735,7 @@
             title: "实例分割",
             subtitle: "实例分割",
             principle: "同时为每个目标实例生成检测框和像素级掩码，并赋予独立身份。",
-            image: "/static/assets/img/instance-segment.webp",
+            image: window.cvclassUrl("/static/assets/img/instance-segment.webp"),
             figure: `
                 <svg class="tk-figure-svg tk-figure--instance" viewBox="0 0 280 140" aria-hidden="true">
                     <defs>

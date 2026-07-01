@@ -1,7 +1,13 @@
-importScripts("/static/js/inference/ort_loader.js", "/static/js/inference/image_preprocess.js");
+// 自动从当前脚本的 URL 中解析出 basePath (例如 "/cvclass")
+const basePath = self.location.pathname.substring(0, self.location.pathname.indexOf("/static"));
 
-const MODEL_URL = "/static/assets/data/detection/yolo_detection.onnx";
-const LABELS_URL = "/static/assets/data/detection/labels_coco.json";
+importScripts(
+    basePath + "/static/js/inference/ort_loader.js", 
+    basePath + "/static/js/inference/image_preprocess.js"
+);
+
+const MODEL_URL = basePath + "/static/assets/data/detection/yolo_detection.onnx";
+const LABELS_URL = basePath + "/static/assets/data/detection/labels_coco.json";
 const INPUT_SIZE = 640;
 const MODEL_SCORE_THRESHOLD = 0.25;
 const MODEL_NMS_IOU_THRESHOLD = 0.45;

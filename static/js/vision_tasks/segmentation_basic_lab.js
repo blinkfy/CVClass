@@ -305,7 +305,7 @@
         if (!els.sampleGrid) return;
         els.sampleGrid.innerHTML = samples.map((item) => `
             <button type="button" data-segb-sample-card="${escapeHtml(item.id)}">
-                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
+                <img src="${escapeHtml(window.cvclassUrl(item.image))}" alt="${escapeHtml(item.name)}">
                 <span>${escapeHtml(item.name)}</span>
             </button>
         `).join("");
@@ -381,7 +381,7 @@
                 resolve(image);
             };
             image.onerror = () => reject(new Error(`image load failed: ${src}`));
-            image.src = src;
+            image.src = window.cvclassUrl(src);
         });
     }
 

@@ -779,7 +779,7 @@
                 resolve(state.imageBitmap);
             };
             image.onerror = () => resolve(null);
-            image.src = item.image;
+            image.src = window.cvclassUrl(item.image);
         });
     }
 
@@ -832,6 +832,17 @@
     }
 
     function normalizeCnnConfig(config = {}) {
+        let modelUrl = config.model_url || config.modelUrl || "";
+        let labelsUrl = config.labels_url || config.labelsUrl || "";
+        
+        // 处理 URL 路径：若以 / 开头则应用 window.cvclassUrl 处理
+        if (modelUrl && modelUrl.startsWith("/") && window.cvclassUrl) {
+            modelUrl = window.cvclassUrl(modelUrl);
+        }
+        if (labelsUrl && labelsUrl.startsWith("/") && window.cvclassUrl) {
+            labelsUrl = window.cvclassUrl(labelsUrl);
+        }
+        
         return {
             inputSize: Number(config.input_size || config.inputSize || 224),
             mean: Array.isArray(config.mean) ? config.mean : [0.485, 0.456, 0.406],
@@ -839,8 +850,8 @@
             topK: Number(config.top_k || config.topK || 5),
             inputLayout: config.input_layout || config.inputLayout || "NCHW",
             modelName: config.model_name || config.modelName || "CNN ONNX",
-            modelUrl: config.model_url || config.modelUrl || "",
-            labelsUrl: config.labels_url || config.labelsUrl || "",
+            modelUrl: modelUrl,
+            labelsUrl: labelsUrl,
             inputName: config.input_name || config.inputName || "",
             outputName: config.output_name || config.outputName || "",
         };
@@ -1109,7 +1120,7 @@
                 resolve(new window.ort.Tensor("float32", input, [1, 3, size, size]));
             };
             image.onerror = () => reject(new Error(`CNN image failed to load: ${item?.image || ""}`));
-            image.src = item.image;
+            image.src = window.cvclassUrl(item.image);
         });
     }
 
@@ -1603,7 +1614,7 @@
             { label: "Softmax 概率值", score: 0.12 },
             { label: "次高置信类别", score: 0.08 },
         ];
-        const image = item?.image || "";
+        const image = item?.image ? window.cvclassUrl(item.image) : "";
         const classCount = state.cnnModelKind === "flowers17" ? 17 : state.cnnModelKind === "imagenet" ? 1000 : "--";
         const tensorSize = state.cnnOnnxConfig?.inputSize || 224;
         
@@ -2252,7 +2263,7 @@
     }
 
     function setImage(img, missing, item) {
-        img.src = item.image;
+        img.src = window.cvclassUrl(item.image);
         if (missing) missing.textContent = item.image;
     }
 

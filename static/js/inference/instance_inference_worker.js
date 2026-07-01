@@ -1,10 +1,13 @@
-importScripts("/static/js/inference/image_preprocess.js");
+// 自动从当前脚本的 URL 中解析出 basePath (例如 "/cvclass")
+const basePath = self.location.pathname.substring(0, self.location.pathname.indexOf("/static"));
 
-const ORT_SCRIPT = "/static/vendor/onnxruntime-web/ort.min.js";
-const ORT_WASM_PATH = "/static/vendor/onnxruntime-web/";
-const MODEL_URL = "/static/assets/data/instance/yolo11n-seg.onnx";
-const LABELS_URL = "/static/assets/data/instance/labels_coco.json";
-const CONFIG_URL = "/static/assets/data/instance/model_config.json";
+importScripts(basePath + "/static/js/inference/image_preprocess.js");
+
+const ORT_SCRIPT = basePath + "/static/vendor/onnxruntime-web/ort.min.js";
+const ORT_WASM_PATH = basePath + "/static/vendor/onnxruntime-web/";
+const MODEL_URL = basePath + "/static/assets/data/instance/yolo11n-seg.onnx";
+const LABELS_URL = basePath + "/static/assets/data/instance/labels_coco.json";
+const CONFIG_URL = basePath + "/static/assets/data/instance/model_config.json";
 const INPUT_SIZE = 640;
 const MAX_CANDIDATES = 260;
 const MAX_INSTANCES = 14;

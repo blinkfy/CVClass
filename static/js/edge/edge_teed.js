@@ -5,9 +5,10 @@
     if (!root) return;
 
     const assetsBase = root.dataset.assetsBase || "";
-    const modelUrl = root.dataset.modelUrl || "/static/assets/data/edge/teed_debug_352.onnx";
+    const _bp = window.CVCLASS_BASE_PATH || "";
+    const modelUrl = root.dataset.modelUrl || (_bp+"/static/assets/data/edge/teed_debug_352.onnx");
     const ortScriptUrl = root.dataset.ortScriptUrl || "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js";
-    const ortWasmBase = root.dataset.ortWasmBase || "/static/vendor/onnxruntime-web/";
+    const ortWasmBase = root.dataset.ortWasmBase || (_bp+"/static/vendor/onnxruntime-web/");
     const inputSize = 352;
     const refineStride = 176;
     const refineMaxLongSide = 1408;

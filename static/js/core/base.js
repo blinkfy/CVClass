@@ -2,6 +2,8 @@
     window.cvclassUrl = function cvclassUrl(path) {
         const basePath = window.CVCLASS_BASE_PATH || "";
         const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+        // 避免双重前缀：若路径已含 basePath 则直接返回
+        if (basePath && normalizedPath.startsWith(basePath + "/")) return normalizedPath;
         return `${basePath}${normalizedPath}`;
     };
 

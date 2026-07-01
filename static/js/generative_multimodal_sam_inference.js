@@ -4,7 +4,8 @@
     let sequence = 0;
 
     function createSamInferenceClient(options = {}) {
-        const workerUrl = options.workerUrl || "/static/js/generative_multimodal_sam_worker.js";
+        const defaultWorkerUrl = window.cvclassUrl ? window.cvclassUrl("/static/js/generative_multimodal_sam_worker.js") : (window.CVCLASS_BASE_PATH || "") + "/static/js/generative_multimodal_sam_worker.js";
+        const workerUrl = options.workerUrl || defaultWorkerUrl;
         const worker = new Worker(workerUrl);
         const pending = new Map();
         const onStatus = typeof options.onStatus === "function" ? options.onStatus : null;

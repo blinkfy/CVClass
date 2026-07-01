@@ -1,6 +1,9 @@
-const ORT_SCRIPT = "/static/vendor/onnxruntime-web/ort.min.js";
-const ORT_WASM_PATH = "/static/vendor/onnxruntime-web/";
-const DEFAULT_MODEL_BASE = "/static/assets/data/segformer_b0_ade/";
+// 自动从当前脚本的 URL 中解析出 basePath (例如 "/cvclass")
+const basePath = self.location.pathname.substring(0, self.location.pathname.indexOf("/static"));
+
+const ORT_SCRIPT = basePath + "/static/vendor/onnxruntime-web/ort.min.js";
+const ORT_WASM_PATH = basePath + "/static/vendor/onnxruntime-web/";
+const DEFAULT_MODEL_BASE = basePath + "/static/assets/data/segformer_b0_ade/";
 const UNKNOWN_CLASS = 65535;
 const FALLBACK_PALETTE = [
     "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#8B5CF6", "#06B6D4",
