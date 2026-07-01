@@ -1,4 +1,6 @@
-from flask import redirect, render_template, request, url_for
+import os
+
+from flask import Response, redirect, render_template, request, url_for
 
 
 def register_page_routes(app, get_model_status):
@@ -380,6 +382,19 @@ def register_page_routes(app, get_model_status):
     @app.route("/")
     def home():
         return render_template("pages/home.html", active_page="home")
+
+    @app.route("/principles", methods=["GET"])
+    def algorithm_principles_page():
+        return render_template("pages/algorithm_principles.html", active_page="principles")
+
+    @app.route("/api/docs/algorithm-principles", methods=["GET"])
+    def api_algorithm_principles_doc():
+        doc_path = os.path.join(app.root_path, "docs", "算法原理详解.md")
+        if not os.path.exists(doc_path):
+            return Response("# 算法原理详解\n\n文档尚未生成。\n", content_type="text/markdown; charset=utf-8")
+        with open(doc_path, "r", encoding="utf-8") as doc_file:
+            content = doc_file.read()
+        return Response(content, content_type="text/markdown; charset=utf-8")
 
     @app.route("/learning-path", methods=["GET"])
     def learning_path_page():

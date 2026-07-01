@@ -7,6 +7,14 @@
         return `${basePath}${normalizedPath}`;
     };
 
+    (function routeLegacyHashEntry() {
+        const hash = window.location.hash || "";
+        const match = hash.match(/^#\/principles(?:\/([^?]+))?/);
+        if (!match) return;
+        const anchor = match[1] ? `#${encodeURIComponent(decodeURIComponent(match[1]))}` : "";
+        window.location.replace(window.cvclassUrl(`/principles${anchor}`));
+    })();
+
     const toggle = document.getElementById("sidebarToggle");
     const overlay = document.getElementById("sidebarOverlay");
 
@@ -87,6 +95,7 @@
         "frontier:overview": ["frontier"],
         "frontier:vision_banana": ["frontier-vision-banana", "level-39-vision-banana"],
         frontier: ["frontier"],
+        principles: ["principles"],
     };
     const pathModuleMap = {
         "/object-detection": ["object-detection", "level-16-object-detection"],

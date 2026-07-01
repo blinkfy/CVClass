@@ -13,7 +13,7 @@
     {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }} {{ 'human-pose-page-shell' if active_page|default('') == 'human_pose' else '' }} {{ 'vision-transformer-page-shell' if active_page|default('') == 'vision_transformer' else '' }} {{ 'vision-language-page-shell' if active_page|default('') == 'vision_language' else '' }}">
+<body class="cv-shell sidebar-collapsed {{ 'home-page-shell' if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author', 'principles'] else '' }} {{ 'knowledge-page-shell' if active_page|default('') == 'knowledge_graph' else '' }} {{ 'frontier-page-shell' if active_page|default('') == 'frontier' else '' }} {{ 'author-page-shell' if active_page|default('') == 'author' else '' }} {{ 'human-pose-page-shell' if active_page|default('') == 'human_pose' else '' }} {{ 'vision-transformer-page-shell' if active_page|default('') == 'vision_transformer' else '' }} {{ 'vision-language-page-shell' if active_page|default('') == 'vision_language' else '' }}">
     <script>
         window.CVCLASS_BASE_PATH = "{{ request.script_root or '' }}";
         window.CVCLASS_COMPUTE_CONFIG = {{ compute_config|tojson }};
@@ -21,7 +21,7 @@
         window.CVCLASS_ACTIVE_SUB_PAGE = {{ active_sub_page|default('')|tojson }};
         window.CVCLASS_AI_ENABLED = {{ ai_assistant_enabled|tojson }};
     </script>
-    {% if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author'] %}
+    {% if active_page|default('') in ['home', 'learning_path', 'knowledge_graph', 'frontier', 'author', 'principles'] %}
     <header class="site-header" aria-label="主页导航">
         <a class="site-brand" href="{{ url_for('home') }}" aria-label="计算机视觉教学平台首页">
             <span class="site-brand-icon" aria-hidden="true">
@@ -37,6 +37,7 @@
             <a href="{{ url_for('home') }}#featured-modules">实验模块</a>
             <a class="{{ 'active' if active_page|default('') == 'learning_path' else '' }}" href="{{ url_for('learning_path_page') }}">学习路径</a>
             <a class="{{ 'active' if active_page|default('') == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">知识图谱</a>
+            <a class="{{ 'active' if active_page|default('') == 'principles' else '' }}" href="{{ url_for('algorithm_principles_page') }}">算法原理</a>
             <a class="{{ 'active' if active_page|default('') == 'frontier' else '' }}" href="{{ url_for('frontier_page') }}">前沿探索</a>
             <a class="{{ 'active' if active_page|default('') == 'author' else '' }}" href="{{ url_for('author_page') }}">关于作者</a>
         </nav>
@@ -59,6 +60,7 @@
             <a class="{{ 'active' if active_page == 'home' else '' }}" href="{{ url_for('home') }}">首页</a>
             <a class="{{ 'active' if active_page == 'learning_path' else '' }}" href="{{ url_for('learning_path_page') }}">完整学习路径</a>
             <a class="{{ 'active' if active_page == 'knowledge_graph' else '' }}" href="{{ url_for('knowledge_graph_page') }}">CV 算法知识图谱</a>
+            <a class="{{ 'active' if active_page == 'principles' else '' }}" href="{{ url_for('algorithm_principles_page') }}">算法原理文档</a>
 
             <div class="sidebar-category">基础视觉</div>
             <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础</a>

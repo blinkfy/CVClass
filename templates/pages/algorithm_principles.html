@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+{% block title %}算法原理文档 - 计算机视觉教学平台{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+.principles-page {
+    --doc-sidebar: clamp(240px, 24vw, 330px);
+    display: grid;
+    gap: 18px;
+}
+.principles-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: end;
+    padding: 22px;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+.principles-kicker {
+    margin-bottom: 7px;
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
+}
+.principles-hero h1 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: clamp(1.7rem, 2.7vw, 2.5rem);
+    line-height: 1.12;
+}
+.principles-hero p {
+    max-width: 860px;
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    line-height: 1.75;
+}
+.principles-status {
+    display: grid;
+    gap: 5px;
+    justify-items: end;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+.principles-status strong {
+    color: var(--blue);
+    font-size: 2rem;
+    line-height: 1;
+}
+.phase-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.phase-tab {
+    min-width: 0;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-muted);
+    padding: 12px;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+.phase-tab span {
+    display: block;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+.phase-tab small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+.phase-tab.active {
+    border-color: rgba(37, 99, 235, 0.42);
+    background: #eff6ff;
+    color: var(--text-main);
+}
+.principles-shell {
+    display: grid;
+    grid-template-columns: var(--doc-sidebar) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+.doc-toc {
+    position: sticky;
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    overflow: auto;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+.doc-toc-head {
+    display: grid;
+    gap: 9px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+.doc-toc-head strong {
+    color: var(--text-main);
+}
+.doc-search {
+    width: 100%;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #fff;
+    color: var(--text-main);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+}
+.doc-search:focus {
+    border-color: var(--blue);
+}
+.toc-tree,
+.toc-phase,
+.toc-topic {
+    display: grid;
+    gap: 7px;
+}
+.toc-tree {
+    padding: 10px;
+}
+.toc-phase-title {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-main);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 900;
+    text-align: left;
+    padding: 8px;
+    cursor: pointer;
+}
+.toc-phase-title.active,
+.toc-phase-title:hover {
+    border-color: rgba(37, 99, 235, 0.28);
+    background: #eff6ff;
+}
+.toc-topic {
+    padding-left: 9px;
+    border-left: 1px solid #e2e8f0;
+}
+.toc-topic strong {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 2px 0 2px 6px;
+}
+.toc-topic a {
+    display: block;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 6px 8px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.28;
+    overflow-wrap: anywhere;
+}
+.toc-topic a:hover,
+.toc-topic a.active {
+    border-color: rgba(37, 99, 235, 0.28);
+    background: #eff6ff;
+    color: var(--text-main);
+}
+.toc-phase.hidden,
+.toc-topic.hidden,
+.toc-topic a.hidden {
+    display: none;
+}
+.doc-content {
+    min-width: 0;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+    padding: clamp(18px, 2.2vw, 32px);
+}
+.doc-empty {
+    padding: 30px;
+    color: var(--text-muted);
+    text-align: center;
+}
+.markdown-body {
+    color: var(--text-main);
+    font-size: 16px;
+    line-height: 1.78;
+}
+.markdown-body h1 {
+    margin: 0 0 16px;
+    color: var(--text-main);
+    font-size: 1.65rem;
+    line-height: 1.18;
+}
+.markdown-body h2 {
+    scroll-margin-top: 24px;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--text-main);
+    font-size: 1.55rem;
+    line-height: 1.22;
+}
+.markdown-body h3 {
+    scroll-margin-top: 24px;
+    margin: 28px 0 8px;
+    color: var(--text-main);
+    font-size: 1.2rem;
+}
+.markdown-body h4 {
+    scroll-margin-top: 24px;
+    margin: 28px 0 10px;
+    padding: 9px 11px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: var(--text-main);
+    font-size: 1.06rem;
+}
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol {
+    color: var(--text-muted);
+}
+.markdown-body p {
+    margin: 0 0 12px;
+}
+.markdown-body ul,
+.markdown-body ol {
+    margin: 0 0 14px;
+    padding-left: 22px;
+}
+.markdown-body li {
+    margin: 4px 0;
+}
+.markdown-body strong {
+    color: var(--text-main);
+}
+.markdown-body a {
+    color: var(--blue);
+    text-decoration: none;
+}
+.markdown-body a:hover {
+    text-decoration: underline;
+}
+.markdown-body code {
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    background: #f1f5f9;
+    color: var(--text-main);
+    padding: 1px 5px;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: .86em;
+}
+.markdown-body pre {
+    overflow: auto;
+    margin: 0 0 16px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+.markdown-body pre code {
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+.markdown-body blockquote {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-left: 3px solid var(--blue);
+    border-radius: 0 8px 8px 0;
+    background: #f8fafc;
+    color: var(--text-muted);
+}
+.markdown-body table {
+    display: block;
+    width: 100%;
+    overflow: auto;
+    border-collapse: collapse;
+    margin: 0 0 16px;
+}
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+.markdown-body th {
+    background: #f8fafc;
+    color: var(--text-main);
+}
+.markdown-body .mermaid {
+    display: grid;
+    place-items: center;
+    overflow: auto;
+    margin: 14px 0 18px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+@media (max-width: 980px) {
+    .principles-hero,
+    .principles-shell {
+        grid-template-columns: 1fr;
+    }
+    .principles-status {
+        justify-items: start;
+    }
+    .phase-tabs {
+        grid-template-columns: 1fr 1fr;
+    }
+    .doc-toc {
+        position: relative;
+        top: auto;
+        max-height: 360px;
+    }
+}
+@media (max-width: 560px) {
+    .phase-tabs {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+{% block content %}
+<section class="principles-page">
+    <header class="principles-hero">
+        <div>
+            <div class="principles-kicker">ALGORITHM PRINCIPLES</div>
+            <h1>算法原理详解</h1>
+            <p>按学习路径组织已实现算法：从像素原语到经典几何，再到深度学习和前沿基础模型。每章包含问题、直觉、流程、图示、公式和项目实现对应关系。</p>
+        </div>
+        <div class="principles-status" aria-live="polite">
+            <strong id="chapterCount">--</strong>
+            <span id="loadState">正在加载文档</span>
+        </div>
+    </header>
+    <nav class="phase-tabs" id="phaseTabs" aria-label="阶段切换"></nav>
+    <section class="principles-shell">
+        <aside class="doc-toc" aria-label="算法原理目录">
+            <div class="doc-toc-head">
+                <strong>分阶段目录</strong>
+                <input class="doc-search" id="docSearch" type="search" placeholder="搜索算法或主题">
+            </div>
+            <nav class="toc-tree" id="tocList"></nav>
+        </aside>
+        <article class="doc-content">
+            <div class="doc-empty" id="docEmpty">正在准备文档...</div>
+            <div class="markdown-body" id="markdownBody"></div>
+        </article>
+    </section>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+{% raw %}
+(function () {
+    "use strict";
+
+    const body = document.getElementById("markdownBody");
+    const empty = document.getElementById("docEmpty");
+    const toc = document.getElementById("tocList");
+    const phaseTabs = document.getElementById("phaseTabs");
+    const search = document.getElementById("docSearch");
+    const chapterCount = document.getElementById("chapterCount");
+    const loadState = document.getElementById("loadState");
+    const state = { phases: [], activePhase: "", activeAnchor: "" };
+    const esc = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[ch]);
+    const mathTokenPrefix = "@@CVCLASS_MATH_";
+
+    function rewriteMarkdownAnchors(md) {
+        return String(md || "").replace(/^(#{1,6})\s+(.+?)\s+\{#([^}]+)\}\s*$/gm, (_, marks, title, id) => {
+            const level = marks.length;
+            return `<h${level} id="${esc(id)}">${esc(title)}</h${level}>`;
+        });
+    }
+
+    function protectMath(md) {
+        const store = [];
+        const text = String(md || "").replace(/\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$\$[\s\S]*?\$\$/g, (match) => {
+            const token = `${mathTokenPrefix}${store.length}@@`;
+            store.push(match);
+            return token;
+        });
+        return { text, store };
+    }
+
+    function restoreMath(html, store) {
+        return store.reduce((result, value, index) => (
+            result.replaceAll(`${mathTokenPrefix}${index}@@`, esc(value))
+        ), html);
+    }
+
+    function parseDocument(md) {
+        const lines = String(md || "").split(/\r?\n/);
+        const phases = [];
+        let current = null;
+        lines.forEach((line) => {
+            const phaseMatch = line.match(/^##\s+(.+?)\s+\{#(phase-[^}]+)\}\s*$/);
+            if (phaseMatch) {
+                current = { id: phaseMatch[2], title: phaseMatch[1], lines: [line], topics: [] };
+                phases.push(current);
+                return;
+            }
+            if (!current) return;
+            current.lines.push(line);
+            const topicMatch = line.match(/^###\s+(.+?)\s+\{#(topic-[^}]+)\}\s*$/);
+            if (topicMatch) {
+                current.topics.push({ id: topicMatch[2], title: topicMatch[1], algos: [] });
+                return;
+            }
+            const algoMatch = line.match(/^####\s+(.+?)\s+\{#(algo-[^}]+)\}\s*$/);
+            if (algoMatch) {
+                if (!current.topics.length) current.topics.push({ id: `${current.id}-other`, title: "其他算法", algos: [] });
+                current.topics[current.topics.length - 1].algos.push({ id: algoMatch[2], title: algoMatch[1] });
+            }
+        });
+        phases.forEach((phase) => {
+            phase.markdown = phase.lines.join("\n");
+            phase.count = phase.topics.reduce((sum, topic) => sum + topic.algos.length, 0);
+        });
+        return phases;
+    }
+
+    function phaseForAnchor(anchor) {
+        if (!anchor) return "";
+        const found = state.phases.find((phase) => phase.id === anchor || phase.topics.some((topic) => (
+            topic.id === anchor || topic.algos.some((algo) => algo.id === anchor)
+        )));
+        return found ? found.id : "";
+    }
+
+    function renderTabs() {
+        phaseTabs.innerHTML = state.phases.map((phase) => (
+            `<button type="button" class="phase-tab" data-phase="${esc(phase.id)}"><span>${esc(phase.title)}</span><small>${phase.count} 个算法章节</small></button>`
+        )).join("");
+    }
+
+    function renderToc() {
+        toc.innerHTML = state.phases.map((phase) => {
+            const topics = phase.topics.map((topic) => {
+                const links = topic.algos.map((algo) => (
+                    `<a href="#${esc(algo.id)}" data-phase="${esc(phase.id)}" data-anchor="${esc(algo.id)}">${esc(algo.title)}</a>`
+                )).join("");
+                return `<div class="toc-topic" data-topic="${esc(topic.id)}"><strong>${esc(topic.title)}</strong>${links}</div>`;
+            }).join("");
+            return `<section class="toc-phase" data-phase="${esc(phase.id)}"><button type="button" class="toc-phase-title" data-phase-switch="${esc(phase.id)}">${esc(phase.title)}</button>${topics}</section>`;
+        }).join("");
+    }
+
+    function renderMarkdown(md) {
+        if (!window.marked || !window.DOMPurify) throw new Error("Markdown 渲染器不可用");
+        marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
+        const protectedMath = protectMath(rewriteMarkdownAnchors(md));
+        const html = marked.parse(protectedMath.text);
+        const safeHtml = DOMPurify.sanitize(html, { ADD_TAGS: ["mjx-container"], ADD_ATTR: ["id", "target", "class"] });
+        body.innerHTML = restoreMath(safeHtml, protectedMath.store);
+        body.querySelectorAll("pre code.language-mermaid").forEach((code, index) => {
+            const host = document.createElement("div");
+            host.className = "mermaid";
+            host.id = `mermaid-${state.activePhase}-${index}`;
+            host.textContent = code.textContent;
+            code.closest("pre").replaceWith(host);
+        });
+        renderDiagrams();
+        renderMath();
+    }
+
+    function renderDiagrams() {
+        if (!window.mermaid) return;
+        try {
+            mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral" });
+            mermaid.run({ nodes: body.querySelectorAll(".mermaid") });
+        } catch (err) {
+            console.warn("[principles] Mermaid 渲染失败", err);
+        }
+    }
+
+    function renderMath() {
+        if (!window.renderMathInElement) return;
+        try {
+            renderMathInElement(body, {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "\\[", right: "\\]", display: true },
+                    { left: "\\(", right: "\\)", display: false }
+                ],
+                throwOnError: false
+            });
+        } catch (err) {
+            console.warn("[principles] 公式渲染失败", err);
+        }
+    }
+
+    function setActiveUi(anchor) {
+        phaseTabs.querySelectorAll("[data-phase]").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.phase === state.activePhase);
+        });
+        toc.querySelectorAll("[data-phase-switch]").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.phaseSwitch === state.activePhase);
+        });
+        toc.querySelectorAll("a[data-anchor]").forEach((link) => {
+            link.classList.toggle("active", link.dataset.anchor === anchor);
+        });
+    }
+
+    function activatePhase(phaseId, anchor, options) {
+        const phase = state.phases.find((item) => item.id === phaseId) || state.phases[0];
+        if (!phase) return;
+        state.activePhase = phase.id;
+        state.activeAnchor = anchor || phase.id;
+        renderMarkdown(phase.markdown);
+        setActiveUi(anchor || phase.id);
+        if (options && options.updateHash) {
+            history.replaceState(null, "", `#${encodeURIComponent(anchor || phase.id)}`);
+        }
+        if (anchor) {
+            setTimeout(() => {
+                const target = document.getElementById(anchor);
+                if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+                setActiveUi(anchor);
+            }, 100);
+        } else {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }
+
+    function openHash() {
+        const anchor = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+        const phaseId = phaseForAnchor(anchor) || state.activePhase || (state.phases[0] && state.phases[0].id);
+        activatePhase(phaseId, anchor || phaseId);
+    }
+
+    function applySearch() {
+        const q = search.value.toLowerCase().trim();
+        toc.querySelectorAll(".toc-phase").forEach((phaseNode) => {
+            const phaseHit = phaseNode.textContent.toLowerCase().includes(q);
+            phaseNode.querySelectorAll(".toc-topic").forEach((topicNode) => {
+                const topicHit = topicNode.textContent.toLowerCase().includes(q);
+                topicNode.classList.toggle("hidden", Boolean(q && !topicHit));
+                topicNode.querySelectorAll("a").forEach((link) => {
+                    link.classList.toggle("hidden", Boolean(q && !link.textContent.toLowerCase().includes(q) && !topicHit));
+                });
+            });
+            phaseNode.classList.toggle("hidden", Boolean(q && !phaseHit));
+        });
+    }
+
+    phaseTabs.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-phase]");
+        if (!btn) return;
+        activatePhase(btn.dataset.phase, btn.dataset.phase, { updateHash: true });
+    });
+
+    toc.addEventListener("click", (event) => {
+        const switcher = event.target.closest("[data-phase-switch]");
+        if (switcher) {
+            activatePhase(switcher.dataset.phaseSwitch, switcher.dataset.phaseSwitch, { updateHash: true });
+            return;
+        }
+        const link = event.target.closest("a[data-anchor]");
+        if (!link) return;
+        event.preventDefault();
+        activatePhase(link.dataset.phase, link.dataset.anchor, { updateHash: true });
+    });
+
+    search.addEventListener("input", applySearch);
+    window.addEventListener("hashchange", openHash);
+
+    fetch(window.cvclassUrl("/api/docs/algorithm-principles"), { cache: "no-cache" })
+        .then((resp) => {
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return resp.text();
+        })
+        .then((md) => {
+            state.phases = parseDocument(md);
+            if (!state.phases.length) throw new Error("文档缺少阶段标题");
+            chapterCount.textContent = state.phases.reduce((sum, phase) => sum + phase.count, 0);
+            renderTabs();
+            renderToc();
+            empty.style.display = "none";
+            loadState.textContent = "文档已加载";
+            openHash();
+        })
+        .catch((err) => {
+            empty.textContent = `文档加载失败：${err.message}`;
+            loadState.textContent = "加载失败";
+        });
+}());
+{% endraw %}
+</script>
+{% endblock %}
