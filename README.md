@@ -1,258 +1,138 @@
-# Cvtoolkits
+# 计算机视觉教学实验系统
 
-> AI之眼重点页现在使用 torchvision 官方预训练模型实现目标检测、语义分割和实例分割。权重不提交到仓库；运行 `python prepare_ai_eye_assets.py --list` 查看缓存状态，运行 `python prepare_ai_eye_assets.py --all` 准备全部可切换模型。详细说明见 [docs/AI_EYE_SETUP.md](docs/AI_EYE_SETUP.md)。
+这是一个面向计算机视觉课程教学的交互式 Web 实验平台，覆盖从经典图像处理、CNN 学习与分类、检测与分割，到几何运动、三维视觉和多模态前沿的完整 CV 知识体系。系统以"逐步可视化"为核心设计理念，将算法原理、计算过程和真实推理结果以可交互、可动画、可调试的方式呈现。
 
-# 计算机视觉通识教育系统 — Cvtoolkits
+## 系统定位
 
-## 项目简介
+- **完整课程体系**：从像素级操作到前沿多模态模型，形成 4 大学习世界、40+ 交互页面。
+- **前端为主的重推理体验**：目标检测、语义分割、实例分割等视觉任务基于 ONNX Runtime Web 在浏览器端完成真实推理，不依赖后端 GPU。
+- **NumPy 手动实现**：传统图像处理、卷积、特征提取等核心计算不使用 OpenCV/cv2，而是用 NumPy 逐步完成，便于教学讲解。
+- **可视化优先**：每个算法都配备步骤拆解、公式展示、中间结果可视化和参数实时调节。
 
-一个**沉浸式计算机视觉算法可视化通识教育平台**。让对 CV 完全不懂的人，通过视觉化的交互探索，直观理解每个算法从输入到输出的完整流程。
+## 四大学习世界
 
-核心理念：**零黑盒、直觉优先、纯手写算法**。
+### World 01 · 基础算法主线
 
----
+- **图像基础** (`/grayscale`)：灰度化、二值化、通道分离、颜色反转、翻转旋转、直方图均衡化。
+- **卷积与滤波** (`/convolution`)：卷积核、padding、stride、dilation、1×1 卷积、空洞卷积、蛇形卷积。
+- **图像卷积应用** (`/image-convolution`)：将卷积操作应用于真实图像。
+- **边缘、轮廓与形态学** (`/edge-detection`)：Sobel、Prewitt、Roberts、Laplacian、LoG、Canny、TEED 及应用实践。
+- **角点、特征与图像拼接** (`/feature-detection`)：Harris、FAST、SIFT、ORB、特征匹配、全景拼接。
 
-## 环境要求
+### World 02 · CNN 学习与分类
 
-### 必需
+- **CNN 如何学习 / 图像分类** (`/cnn-visualization`)：6×6 教学 CNN 的前向传播、反向传播和参数更新。
+- **CNN 数据传播细节** (`/cnn-explainer`)：更细粒度的数据流展示。
+- **卷积梯度显微镜** (`/conv-gradient-lab`)：卷积层梯度计算可视化。
+- **手写数字识别** (`/digit-recognition`)：基于 NumPy CNN 的 MNIST 在线推理。
+- **图像分类实验** (`/vision-tasks/classification`)：BoVW、CNN Top-K 等分类任务。
 
-| 依赖 | 最低版本 | 用途 |
-|---|---|---|
-| Python | 3.10+ | 后端计算服务 |
-| Node.js | 18+ | 字体安装（npm） |
-| pip | 23+ | Python 包管理 |
+### World 03 · 几何运动与三维视觉
 
-### 操作系统
+- **相机几何与标定** (`/camera-geometry`)：针孔模型、内外参、投影矩阵、棋盘格标定。
+- **运动估计与光流** (`/motion-estimation`)：光流约束、Lucas-Kanade、金字塔追踪、真实视频光流。
+- **双目视觉与深度** (`/stereo-depth`)：平行双目、极线约束、视差三角关系、块匹配。
+- **多视图几何与三维重建** (`/multiview-reconstruction`)：对极几何、本质矩阵、相机位姿、三角测量。
+- **人体姿态估计** (`/human-pose`)：关键点骨架、姿态估计机制、动作识别。
 
-- Windows 10/11（主要开发与测试平台）
-- macOS 13+ / Linux（理论兼容，未经测试）
+### World 04 · 生成式与多模态前沿
 
-### 浏览器
+- **Vision Transformer** (`/vision-transformer`)：ViT、DINO 自监督蒸馏。
+- **CLIP 图文对齐** (`/frontier/clip`)
+- **VLM 视觉语言模型** (`/frontier/vlm`)
+- **多模态理解** (`/frontier/multimodal`)
+- **生成式多模态** (`/generative-multimodal`)：SAM、GAN、Diffusion
+- **Vision Banana 案例** (`/frontier/vision-banana`)：统一视觉任务接口
 
-- Chrome 90+ / Edge 90+ / Firefox 90+
-- 需支持 CSS Grid、CSS Variables、backdrop-filter、WebP 图像格式
+### 视觉任务实验台
 
----
-
-## 安装步骤
-
-### 1. 克隆项目
-
-```bash
-git clone <repo-url> cv_comprehensive
-cd cv_comprehensive
-```
-
-### 2. 创建 Python 虚拟环境（推荐）
-
-```bash
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### 3. 安装 Python 依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-`requirements.txt` 内容：
-
-```
-flask>=2.3.0
-flask-cors>=4.0.0
-numpy>=1.24.0
-imageio>=2.31.0
-Pillow>=10.0.0
-torch>=2.0.0
-torchvision>=0.15.0
-transformers>=4.30.0
-timm>=0.9.0
-segment-anything>=1.0
-```
-
-> **注意**：不依赖 OpenCV (cv2) 或 scikit-image。所有算法均使用纯 NumPy 手写实现。
-> 深度学习与基础模型页面会使用 PyTorch/torchvision/transformers/segment-anything 运行真实预训练模型；权重大文件不提交到仓库。
-
-准备 AI之眼 torchvision 权重：
-
-```bash
-python prepare_ai_eye_assets.py --list
-python prepare_ai_eye_assets.py --all
-```
-
-准备 ViT / DETR / CLIP / SAM 相关资产：
-
-```bash
-python prepare_foundation_assets.py --list
-python prepare_foundation_assets.py --all-hf
-python prepare_foundation_assets.py --download-sam
-```
-
-### 4. 安装字体（Node.js 方式）
-
-项目使用 Noto Sans SC 作为界面字体。字体文件通过 npm 管理，安装后自动复制到 `static/fonts/`。
-
-```bash
-npm install
-```
-
-此命令会：
-1. 下载 `@fontsource/noto-sans-sc` 到 `node_modules/`
-2. 自动运行 `postinstall` 脚本，将简体中文 woff2 字体文件复制到 `static/fonts/`
-
-> 如果无法运行 npm（如未安装 Node.js），可手动下载 [Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC)，将 `.ttf` 文件放入 `static/fonts/` 目录，并修改 `static/css/main.css` 中的 `@font-face` 路径。
-
-### 5. 验证安装
-
-```bash
-# 启动 Flask 开发服务器
-python run.py
-```
-
-打开浏览器访问 [http://localhost:5000](http://localhost:5000)，应看到：
-- 顶部导航栏显示 "Cvtoolkits · 计算机视觉通识教育"
-- 搜索框
-- 5 个阶段的算法地铁图（阶段一 ~ 阶段五）
-- 页面上方「算法模块」显示 **77**，「已可体验」显示 24+
-
-### 6. 启动命令参考
-
-```bash
-# 开发模式（默认 5000 端口，debug 模式）
-python run.py
-
-# 指定端口
-python run.py --port 8080
-
-# 生产模式
-flask run --host=0.0.0.0 --port=5000
-```
-
----
-
-## 项目结构
-
-```
-cv_comprehensive/
-├── run.py                         # Flask 启动入口
-├── config.py                      # 全局配置
-├── requirements.txt               # Python 依赖
-├── package.json                   # npm 依赖（字体）
-├── package-lock.json              # npm 锁文件
-│
-├── app/                           # 后端
-│   ├── __init__.py                # Flask 应用工厂
-│   ├── routes.py                  # 路由中枢
-│   └── modules/                   # 算法模块（32 个已注册）
-│       ├── base.py                # AlgorithmModule 基类
-│       ├── phase1_fundamentals/   # 阶段一：基础原语 (5个)
-│       ├── phase2_classical/      # 阶段二：经典特征检测 (6个)
-│       ├── phase3_intermediate/   # 阶段三：中级视觉 (8个)
-│       ├── phase4_deep_learning/  # 阶段四：深度学习时代 (7个)
-│       └── phase5_frontier/       # 阶段五：前沿论文算法 (6个)
-│
-├── static/                        # 前端静态资源
-│   ├── css/
-│   │   └── main.css               # 全局样式表
-│   ├── js/
-│   │   ├── app.js                 # 主应用逻辑（Metro Map + 蓝图）
-│   │   ├── router.js              # Hash 路由器
-│   │   └── utils.js               # 纯函数工具集
-│   ├── fonts/                     # 字体文件（npm install 生成, gitignored）
-│   ├── pages/                     # 各算法模块的 HTML 页面
-│   └── uploads/                   # 用户上传图片
-│
-├── templates/
-│   └── index.html                 # SPA 外壳（Jinja2 模板）
-│
-└── docs/
-    ├── ARCHITECTURE.md            # 总体架构设计文档
-    ├── ASSIGNMENT_REQUIREMENTS.md # 作业要求
-    └── coverage_gap_analysis.md   # Hands-on-CV 覆盖分析
-```
-
----
-
-## 算法覆盖范围
-
-共规划 **77 个** 算法模块，分 5 个阶段。当前已实现 **24 个**（有算法核心代码），其余为已注册骨架待开发。
-
-| 阶段 | 规划数 | 已实现 | 说明 |
-|---|---|---|---|
-| 阶段一 · 基础原语 | 9 | 4 | 色彩空间、直方图、阈值化、卷积等 |
-| 阶段二 · 经典特征检测 | 9 | 6 | Canny、Harris、SIFT、Hough、形态学、轮廓等 |
-| 阶段三 · 中级视觉 | 14 | 8 | 分割、传统识别、运动估计、几何视觉 |
-| 阶段四 · 深度学习时代 | 9 | 6 | CNN、ResNet、FCN、GAN、扩散模型等 |
-| 阶段五 · 基础模型与前沿感知 | 36 | 0 | ViT、DETR、SAM、NeRF、Diffusion 家族等 |
-
-详细规划见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 第六节。
-
----
+- **目标检测** (`/object-detection`)：YOLO 真实推理、R-CNN 机制拆解。
+- **语义分割** (`/semantic-segmentation`)：基于 SegFormer 的全景像素级分类。
+- **实例分割** (`/instance-segmentation`)：YOLO-seg / Mask R-CNN 机制、Prototype Blender。
+- **语义 vs 实例对比** (`/segmentation-lab`)
+- **传统分割与区域提取** (`/segmentation-basic`)：K-means、Graph Cut、Watershed、区域属性分析。
 
 ## 技术栈
 
-### 前端
+- **前端**：原生 HTML、CSS、JavaScript
+- **后端**：Python Flask
+- **核心计算**：NumPy（手动实现，不依赖 OpenCV）
+- **深度学习推理**：ONNX Runtime Web（浏览器端 WASM/WebGL/WebGPU）
+- **可视化**：ECharts、Three.js、自定义 Canvas/SVG 动画
+- **公式渲染**：KaTeX
 
-| 层面 | 选型 | 约束 |
-|---|---|---|
-| 框架 | **无框架** — 原生 HTML/CSS/JS | 禁止 React/Vue 等 |
-| 样式 | CSS Grid + CSS Variables | 无预处理器 |
-| 可视化 | Canvas 2D API + SVG | 禁止 ECharts/D3.js |
-| 字体 | Noto Sans SC（自托管 woff2） | 免费开源 |
+## 运行方式
 
-### 后端
-
-| 层面 | 选型 | 约束 |
-|---|---|---|
-| Web 框架 | Flask 3.x + Flask-CORS | 同步模型 |
-| 算法计算 | **纯 NumPy** 手写 | 禁止 OpenCV / scikit-image |
-| 图像 I/O | imageio（读取）+ Pillow（编码） | — |
-| 模块发现 | importlib + `__init_subclass__` | 零配置注册 |
-
----
-
-## 常见问题
-
-### Q: 启动后页面空白？
-
-- 检查 Flask 是否正常启动（终端应显示 `Running on http://127.0.0.1:5000`）
-- 打开浏览器开发者工具（F12）→ Console 查看是否有 JS 错误
-- 确认 `npm install` 已运行（字体文件是否存在 `static/fonts/`）
-
-### Q: 字体显示为默认宋体？
-
-- 运行 `npm install`，确认 `static/fonts/` 下有 9 个 `.woff2` 文件
-- 如果 npm 不可用，手动从 [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Sans+SC) 下载，将 `*.ttf` 放入 `static/fonts/`，并修改 `main.css` 中 `@font-face` 的 `url()` 路径
-
-### Q: 某些算法卡片点击后提示"尚未实现"？
-
-- 该算法处于规划阶段，后端模块骨架已注册但算法核心代码尚未编写
-- 已实现的算法卡片左侧有绿色边框和 ✓ 标记
-
-### Q: 如何添加新算法模块？
-
-1. 在对应阶段目录下创建 `{module_id}/` 文件夹
-2. 编写 `__init__.py`（继承 `AlgorithmModule`）
-3. 编写 `algorithm.py`（纯 NumPy 实现）
-4. 可选：编写 `processor.py`（流水线构建器）
-5. 重启 Flask，模块自动注册
-
-### Q: 如何运行单元测试？
+1. 安装依赖：
 
 ```bash
-python -m pytest app/modules/
+pip install flask numpy pillow numba
 ```
 
----
+1. 启动服务：
 
-## 许可与致谢
+```bash
+python app.py
+```
 
-- 算法实现参考：`Hands-on-CV` 课程讲义、经典论文原始公式
-- 字体：Noto Sans SC — SIL Open Font License 1.1
-- 项目为课程作业用途
+1. 在浏览器中访问：
+
+```text
+http://127.0.0.1:5000/
+```
+
+## 项目结构
+
+```text
+CVClass/
+├─ app.py                          # Flask 应用入口
+├─ page_routes.py                  # 页面路由注册
+├─ ai_routes.py                    # AI 助手导航目录与 API
+├─ README.md                       # 本文件
+├─ templates/                      # Jinja2 模板
+│  ├─ base.html                    # 站点基础布局
+│  ├─ pages/                       # 首页、学习路径、知识图谱等
+│  ├─ vision_tasks/                # 视觉任务实验台页面
+│  ├─ frontier/                    # 前沿模型页面
+│  ├─ human_pose/                  # 姿态估计页面
+│  ├─ camera_geometry/             # 相机几何页面
+│  ├─ motion_estimation/           # 光流页面
+│  ├─ stereo_depth/                # 双目深度页面
+│  ├─ multiview_reconstruction/    # 多视图重建页面
+│  ├─ cnn/                         # CNN 可视化页面
+│  ├─ edge/                        # 边缘检测页面
+│  ├─ feature/                     # 特征检测页面
+│  └─ convolution/                 # 卷积可视化页面
+├─ static/
+│  ├─ css/                         # 样式文件
+│  ├─ js/                          # 前端脚本
+│  │  ├─ pages/                    # 页面级脚本
+│  │  ├─ vision_tasks/             # 视觉任务脚本
+│  │  ├─ inference/                # ONNX 推理封装
+│  │  └─ ...                       # 其他模块脚本
+│  └─ assets/                      # 图片、数据、模型配置
+├─ models/                         # 后端 NumPy 算法实现
+│  ├─ image_utils.py               # 图像处理核心
+│  ├─ edge_visualization.py        # 边缘检测
+│  ├─ feature_utils.py             # 特征提取与匹配
+│  ├─ digit_infer_numpy.py         # MNIST 推理
+│  ├─ multiview_real.py            # 多视图重建
+│  └─ mycnn.py                     # NumPy CNN 实现
+└─ reference/                      # 参考资料与工具
+```
+
+## 主要功能特性
+
+- **闯关式学习路径** (`/learning-path`)：以 World/Level 地图形式串联所有知识点。
+- **知识图谱** (`/knowledge-graph`)：展示模块间的前置与演进关系。
+- **AI 学习助手**：每个页面内置算法解释、参数分析和结果诊断能力。
+- **真实模型推理**：YOLO11n、SegFormer、YOLO11n-seg 等模型在浏览器端运行。
+- **教学动画**：NMS、ROI Align、Mask Prototype、光流约束、对极几何等均配备分步动画。
+- **参数实时调节**：几乎所有可视化都支持滑块、下拉、开关等交互控制。
+
+## 浏览器要求
+
+- 推荐 Chrome / Edge / Firefox 最新版
+- 视觉任务真实推理需要支持 WebAssembly，WebGPU 后端可获得最佳性能
+- 部分 Three.js 可视化需要 WebGL 支持
+
