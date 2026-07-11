@@ -328,6 +328,24 @@
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
+.topic-page-link {
+    display: inline-block;
+    margin: 4px 0 14px;
+    padding: 5px 12px;
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    border-radius: 7px;
+    background: #eff6ff;
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background .15s, border-color .15s;
+}
+.topic-page-link:hover {
+    background: #dbeafe;
+    border-color: rgba(37, 99, 235, 0.6);
+    text-decoration: none;
+}
 .markdown-body .mermaid {
     display: grid;
     place-items: center;
@@ -498,6 +516,53 @@
         }).join("");
     }
 
+    const topicPageLinks = {
+        "topic-part2-1": "convolution",
+        "topic-part2-2": "convolution",
+        "topic-part2-3": "image-convolution",
+        "topic-part2-4": "image-convolution",
+        "topic-part3-1": "edge-detection",
+        "topic-part3-2": "edge-detection",
+        "topic-part3-3": "edge-detection",
+        "topic-part3-4": "edge-detection",
+        "topic-part5-1": "feature-detection",
+        "topic-part5-4": "feature-detection",
+        "topic-part5-5": "feature-detection",
+        "topic-part7-6": "cnn-visualization",
+        "topic-part7-7": "cnn-visualization",
+        "topic-part8-2": "classification-lab",
+        "topic-part9-2": "object-detection/rcnn",
+        "topic-part9-3": "object-detection/yolo",
+        "topic-part10-1": "semantic-segmentation",
+        "topic-part10-2": "semantic-segmentation",
+        "topic-part10-3": "semantic-segmentation",
+        "topic-part11-1": "instance-segmentation",
+        "topic-part11-2": "instance-segmentation",
+        "topic-part16-2": "human-pose",
+        "topic-part17-2": "vision-transformer/vit",
+        "topic-part17-3": "vision-transformer/vit",
+        "topic-part17-4": "frontier/dino",
+        "topic-part18-1": "frontier/clip",
+        "topic-part18-2": "frontier/vlm",
+        "topic-part19-1": "generative-multimodal/sam",
+        "topic-part20-1": "generative-multimodal/gan",
+        "topic-part20-2": "generative-multimodal/diffusion",
+        "topic-part20-3": "generative-multimodal/diffusion",
+        "topic-part20-4": "generative-multimodal/diffusion",
+    };
+
+    function addTopicPageLinks() {
+        Object.entries(topicPageLinks).forEach(([id, path]) => {
+            const heading = document.getElementById(id);
+            if (!heading) return;
+            const link = document.createElement("a");
+            link.href = path;
+            link.className = "topic-page-link";
+            link.textContent = "→ 进入对应实验";
+            heading.insertAdjacentElement("afterend", link);
+        });
+    }
+
     function renderMarkdown(md) {
         if (!window.marked || !window.DOMPurify) throw new Error("Markdown 渲染器不可用");
         marked.setOptions({ gfm: true, breaks: false, headerIds: false, mangle: false });
@@ -511,6 +576,7 @@
                 img.src = window.cvclassUrl(src);
             }
         });
+        addTopicPageLinks();
         body.querySelectorAll("pre code.language-mermaid").forEach((code, index) => {
             const host = document.createElement("div");
             host.className = "mermaid";
