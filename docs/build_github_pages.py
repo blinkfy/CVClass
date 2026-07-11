@@ -1,18 +1,20 @@
 """Build and promote the GitHub Pages edition into docs/.
 
-The Pages edition intentionally omits the two SDXS browser ONNX files because
-GitHub rejects individual repository files above 100 MiB and Pages sites above
-1 GiB. All other static lessons and the configurable AI assistant are kept.
+Large SDXS ONNX files remain outside GitHub Pages. When a public Hugging Face
+repository is supplied, the browser downloads them directly from that pinned
+revision; otherwise the Diffusion lesson uses its explicit teaching mode.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 
 DOCS_ROOT = Path(__file__).resolve().parent
@@ -70,22 +72,51 @@ def promote_stage(base_path: str) -> dict[str, object]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-path", default="/CVClass")
+    parser.add_argument(
+        "--sdxs-hf-repo",
+        default="",
+        help="Public Hugging Face model repo containing the browser ONNX bundle, e.g. blinkfy/CVClass-SDXS-ONNX.",
+    )
+    parser.add_argument(
+        "--sdxs-hf-revision",
+        default="main",
+        help="Hugging Face branch, tag, or preferably immutable commit SHA (default: main).",
+    )
+    parser.add_argument(
+        "--sdxs-remote-base-url",
+        default="",
+        help="Advanced: direct public model directory URL (mutually exclusive with --sdxs-hf-repo).",
+    )
     args = parser.parse_args()
     base_path = "/" + args.base_path.strip("/") if args.base_path.strip("/") else ""
 
+    hf_repo = args.sdxs_hf_repo.strip().strip("/")
+    hf_revision = args.sdxs_hf_revision.strip()
+    valid_repo = re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*", hf_repo)
+    if hf_repo and (not valid_repo or not hf_revision):
+        parser.error("--sdxs-hf-repo must be namespace/name and revision must not be empty")
+    remote_base_url = args.sdxs_remote_base_url.strip().rstrip("/")
+    if hf_repo and remote_base_url:
+        parser.error("Choose either --sdxs-hf-repo or --sdxs-remote-base-url, not both")
+    if hf_repo:
+        repo_path = "/".join(quote(part, safe="-._") for part in hf_repo.split("/"))
+        revision_path = quote(hf_revision, safe="-._")
+        remote_base_url = f"https://huggingface.co/{repo_path}/resolve/{revision_path}"
+
     no_models = DOCS_ROOT / ".github-pages-no-sdxs-models"
-    subprocess.run(
-        [
-            sys.executable,
-            str(DOCS_ROOT / "build_static.py"),
-            "--base-path",
-            base_path,
-            "--sdxs-model-dir",
-            str(no_models),
-        ],
-        check=True,
-    )
+    command = [
+        sys.executable,
+        str(DOCS_ROOT / "build_static.py"),
+        "--base-path",
+        base_path,
+        "--sdxs-model-dir",
+        str(no_models),
+    ]
+    if remote_base_url:
+        command.extend(("--sdxs-remote-base-url", remote_base_url))
+    subprocess.run(command, check=True)
     report = promote_stage(base_path)
+    report["sdxs_remote_base_url"] = remote_base_url
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

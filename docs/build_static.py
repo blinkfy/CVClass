@@ -67,7 +67,15 @@ def parse_args() -> argparse.Namespace:
         default=OPTIONAL_MODEL_ROOT,
         help=(
             "Directory containing unet/model.fp16.onnx and "
-            "text_encoder/model.fp16.onnx (default: static_site/model-assets/sdxs-512-dreamshaper)."
+            "text_encoder/model.fp16.onnx (default: docs/model-assets/sdxs-512-dreamshaper)."
+        ),
+    )
+    parser.add_argument(
+        "--sdxs-remote-base-url",
+        default="",
+        help=(
+            "Public HTTP(S) directory containing the browser SDXS ONNX bundle. "
+            "Mutually exclusive with a complete --sdxs-model-dir."
         ),
     )
     return parser.parse_args()
@@ -78,6 +86,20 @@ def normalize_base_path(value: str) -> str:
     if not value or value == "/":
         return ""
     return "/" + value.strip("/")
+
+
+def normalize_remote_model_url(value: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        return ""
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("--sdxs-remote-base-url must be an absolute HTTP(S) URL")
+    if parsed.username or parsed.password:
+        raise ValueError("Credentials must not be embedded in --sdxs-remote-base-url")
+    if parsed.query or parsed.fragment:
+        raise ValueError("--sdxs-remote-base-url must not contain a query string or fragment")
+    return value.rstrip("/")
 
 
 def prepare_environment(base_path: str) -> None:
@@ -202,8 +224,41 @@ def configure_sdxs_runtime_logging() -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
-def configure_diffusion_mode(models_bundled: bool) -> None:
+def configure_remote_sdxs(remote_base_url: str) -> None:
+    script_path = OUTPUT_ROOT / "static" / "js" / "generative_multimodal" / "diffusion_text_to_image.js"
+    script = script_path.read_text(encoding="utf-8")
+    local_marker = (
+        'const MODEL_BASE_PATH = '
+        '"/static/assets/data/generative_multimodal/diffusion/sdxs-512-dreamshaper";'
+    )
+    remote_marker = f"const MODEL_BASE_PATH = {json.dumps(remote_base_url)};"
+    if local_marker not in script:
+        raise RuntimeError("Could not locate the SDXS model base path")
+    script = script.replace(local_marker, remote_marker, 1)
+    app_url_marker = "function appUrl(path) {\n"
+    if app_url_marker not in script:
+        raise RuntimeError("Could not locate the prefix-aware appUrl helper")
+    script = script.replace(
+        app_url_marker,
+        app_url_marker + '    if (/^https?:\\/\\//i.test(path)) return new URL(path).href;\n',
+        1,
+    )
+    script_path.write_text(script, encoding="utf-8", newline="\n")
+
+    html_path = OUTPUT_ROOT / "generative-multimodal" / "diffusion" / "index.html"
+    html = html_path.read_text(encoding="utf-8")
+    html = html.replace(
+        "浏览器加载约 0.9 GB · UNet、VAE 与 CLIP 均在本机运行",
+        "模型由 Hugging Face 托管 · 约 0.9 GB 按需下载 · 推理仍在浏览器本机运行",
+    )
+    html_path.write_text(html, encoding="utf-8", newline="\n")
+
+
+def configure_diffusion_mode(models_bundled: bool, remote_base_url: str) -> None:
     if models_bundled:
+        return
+    if remote_base_url:
+        configure_remote_sdxs(remote_base_url)
         return
     script_path = OUTPUT_ROOT / "static" / "js" / "generative_multimodal" / "diffusion.js"
     script = script_path.read_text(encoding="utf-8")
@@ -338,7 +393,12 @@ def validate_runtime_assets(models_bundled: bool) -> int:
     return len(required)
 
 
-def validate_static_contract(base_path: str, routes: list[str], models_bundled: bool) -> dict[str, object]:
+def validate_static_contract(
+    base_path: str,
+    routes: list[str],
+    models_bundled: bool,
+    remote_base_url: str,
+) -> dict[str, object]:
     for route in routes:
         if not output_path_for(route).is_file():
             raise RuntimeError(f"Missing rendered route: {route}")
@@ -365,6 +425,12 @@ def validate_static_contract(base_path: str, routes: list[str], models_bundled: 
     validate_no_secrets()
     runtime_asset_count = validate_runtime_assets(models_bundled)
 
+    diffusion_loader = (
+        OUTPUT_ROOT / "static" / "js" / "generative_multimodal" / "diffusion_text_to_image.js"
+    ).read_text(encoding="utf-8")
+    if remote_base_url and remote_base_url not in diffusion_loader:
+        raise RuntimeError("Remote SDXS base URL was not written to the browser loader")
+
     ai_text = (OUTPUT_ROOT / "static" / "js" / "core" / "ai_assistant.js").read_text(encoding="utf-8")
     for required_text in (
         "chat/completions",
@@ -382,13 +448,21 @@ def validate_static_contract(base_path: str, routes: list[str], models_bundled: 
     if "/api/multiview-reconstruction/real-run" in multiview or "fetchLiveRealData" in multiview:
         raise RuntimeError("Multiview static bundle still references its Flask fallback")
 
+    if models_bundled:
+        sdxs_mode = "full-browser-inference"
+    elif remote_base_url:
+        sdxs_mode = "remote-browser-inference"
+    else:
+        sdxs_mode = "teaching-only-explicit-degradation"
+
     return {
         "routes": len(routes),
         "html_resource_refs_checked": checked_refs,
         "missing_required_refs": 0,
         "secret_findings": 0,
         "runtime_assets_checked": runtime_asset_count,
-        "sdxs_mode": "full-browser-inference" if models_bundled else "teaching-only-explicit-degradation",
+        "sdxs_mode": sdxs_mode,
+        "sdxs_remote_host": urlsplit(remote_base_url).netloc if remote_base_url else "",
         "base_path": base_path,
     }
 
@@ -396,6 +470,7 @@ def validate_static_contract(base_path: str, routes: list[str], models_bundled: 
 def main() -> int:
     args = parse_args()
     base_path = normalize_base_path(args.base_path)
+    remote_base_url = normalize_remote_model_url(args.sdxs_remote_base_url)
     prepare_environment(base_path)
     ensure_safe_output_path()
 
@@ -409,12 +484,16 @@ def main() -> int:
     manifest = render_routes(app, routes)
     copy_assets()
     models_bundled = overlay_optional_sdxs_models(args.sdxs_model_dir)
+    if models_bundled and remote_base_url:
+        raise RuntimeError(
+            "Choose either a complete --sdxs-model-dir or --sdxs-remote-base-url, not both."
+        )
     configure_sdxs_runtime_logging()
     export_algorithm_document()
     disable_multiview_backend_fallback()
-    configure_diffusion_mode(models_bundled)
+    configure_diffusion_mode(models_bundled, remote_base_url)
     create_404()
-    report = validate_static_contract(base_path, routes, models_bundled)
+    report = validate_static_contract(base_path, routes, models_bundled, remote_base_url)
 
     (OUTPUT_ROOT / "build-manifest.json").write_text(
         json.dumps({"summary": report, "pages": manifest}, ensure_ascii=False, indent=2) + "\n",
