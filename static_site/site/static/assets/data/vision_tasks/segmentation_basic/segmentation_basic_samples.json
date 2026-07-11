@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "defaultSample": "crosswalk_people",
+  "samples": [
+    {
+      "id": "crosswalk_people",
+      "name": "Crosswalk People",
+      "image": "/static/assets/img/crosswalk_people.jpg",
+      "width": 640,
+      "height": 427,
+      "methods": {
+        "kmeans": {
+          "name": "K-means",
+          "feature": "RGB/Lab color vectors",
+          "objective": "minimize within-cluster color distance",
+          "regions": [
+            {"id": 1, "name": "road", "ratio": 0.34, "color": "#6366f1", "polygon": [[0, 68], [100, 60], [100, 100], [0, 100]]},
+            {"id": 2, "name": "building", "ratio": 0.28, "color": "#94a3b8", "polygon": [[0, 0], [100, 0], [100, 44], [0, 36]]},
+            {"id": 3, "name": "people / signs", "ratio": 0.12, "color": "#f97316", "polygon": [[10, 42], [84, 35], [88, 96], [5, 98]]},
+            {"id": 4, "name": "sky", "ratio": 0.26, "color": "#38bdf8", "polygon": [[0, 0], [100, 0], [100, 18], [0, 22]]}
+          ]
+        },
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "foreground/background seeds + edge contrast",
+          "objective": "minimize unary + pairwise energy",
+          "regions": [
+            {"id": 1, "name": "foreground instances", "ratio": 0.29, "color": "#10b981", "polygon": [[8, 38], [86, 30], [92, 96], [4, 98]]},
+            {"id": 2, "name": "background", "ratio": 0.71, "color": "#60a5fa", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}
+          ],
+          "seeds": [
+            {"x": 22, "y": 62, "type": "fg"},
+            {"x": 52, "y": 58, "type": "fg"},
+            {"x": 78, "y": 22, "type": "bg"},
+            {"x": 18, "y": 18, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "classroom_students",
+      "name": "Classroom Students",
+      "image": "/static/assets/img/classroom_students.jpg",
+      "width": 640,
+      "height": 426,
+      "methods": {
+        "kmeans": {
+          "name": "K-means",
+          "feature": "Lab color + xy position",
+          "objective": "cluster compact color-position groups",
+          "regions": [
+            {"id": 1, "name": "vegetation", "ratio": 0.31, "color": "#22c55e", "polygon": [[0, 36], [44, 28], [58, 100], [0, 100]]},
+            {"id": 2, "name": "walkway", "ratio": 0.30, "color": "#64748b", "polygon": [[36, 50], [100, 45], [100, 100], [42, 100]]},
+            {"id": 3, "name": "building", "ratio": 0.24, "color": "#f59e0b", "polygon": [[0, 0], [100, 0], [100, 44], [0, 35]]},
+            {"id": 4, "name": "sky", "ratio": 0.15, "color": "#38bdf8", "polygon": [[0, 0], [100, 0], [100, 18], [0, 20]]}
+          ]
+        },
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "user trimap + boundary contrast",
+          "objective": "separate foreground walkway from background",
+          "regions": [
+            {"id": 1, "name": "walkway foreground", "ratio": 0.36, "color": "#2563eb", "polygon": [[38, 45], [100, 42], [100, 100], [40, 100]]},
+            {"id": 2, "name": "background", "ratio": 0.64, "color": "#a3e635", "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]}
+          ],
+          "seeds": [
+            {"x": 62, "y": 72, "type": "fg"},
+            {"x": 86, "y": 65, "type": "fg"},
+            {"x": 16, "y": 28, "type": "bg"},
+            {"x": 34, "y": 20, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "traffic_scene",
+      "name": "Traffic Street",
+      "image": "/static/assets/img/bangkok_traffic.jpg",
+      "width": 640,
+      "height": 427,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "vehicle seeds + road/background contrast",
+          "objective": "separate foreground vehicles from street context",
+          "seeds": [
+            {"x": 50, "y": 58, "type": "fg"},
+            {"x": 65, "y": 62, "type": "fg"},
+            {"x": 18, "y": 20, "type": "bg"},
+            {"x": 86, "y": 18, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "boat_water",
+      "name": "Boat & Water",
+      "image": "/static/assets/img/boat_1.jpeg",
+      "width": 640,
+      "height": 427,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "boat foreground + water background",
+          "objective": "cut along high color-contrast hull edges",
+          "seeds": [
+            {"x": 45, "y": 52, "type": "fg"},
+            {"x": 58, "y": 56, "type": "fg"},
+            {"x": 16, "y": 22, "type": "bg"},
+            {"x": 82, "y": 24, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "peppers_color",
+      "name": "Color Peppers",
+      "image": "/static/assets/img/peppers_color.png",
+      "width": 512,
+      "height": 384,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "warm object colors + dark gaps",
+          "objective": "segment compact color regions",
+          "seeds": [
+            {"x": 40, "y": 48, "type": "fg"},
+            {"x": 58, "y": 46, "type": "fg"},
+            {"x": 16, "y": 16, "type": "bg"},
+            {"x": 86, "y": 84, "type": "bg"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "classroom_equipment",
+      "name": "Classroom Equipment",
+      "image": "/static/assets/img/classroom_equipment.jpg",
+      "width": 640,
+      "height": 426,
+      "methods": {
+        "graphcut": {
+          "name": "Graph Cut",
+          "feature": "object/table seeds + wall background",
+          "objective": "separate tabletop objects from room context",
+          "seeds": [
+            {"x": 47, "y": 60, "type": "fg"},
+            {"x": 61, "y": 56, "type": "fg"},
+            {"x": 18, "y": 20, "type": "bg"},
+            {"x": 86, "y": 18, "type": "bg"}
+          ]
+        }
+      }
+    }
+  ]
+}

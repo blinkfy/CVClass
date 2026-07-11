@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图像分割与区域提取</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/segmentation_basic.css?v=20260628-remove-sem-grid">
+
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "segmentation_basic";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "segmentation_basic";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="active" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab" data-vision-page="segmentation_basic" data-vision-module="segmentation_basic">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 07 · TRADITIONAL SEGMENTATION</span>
+            <h1 class="station-title">图像分割与区域提取</h1>
+            <p class="station-summary">从传统分割方法出发，展示 K-means、Graph Cut、Watershed、GrabCut、mask 与区域 label map，连接阈值、边缘、轮廓和后续语义分割任务。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">CLUSTER · GRAPH CUT · REGION MAP</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="图像分割与区域提取内部导航">
+        
+        <a class="is-active" href="/segmentation-basic/cluster">聚类分割</a>
+        
+        <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+        
+        <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench method-lab-workbench segmentation-basic-workbench" data-seg-basic-lab aria-label="传统图像分割实验台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>输入与参数</h3><p>Traditional Segmentation</p></div>
+        </div>
+
+        <div class="vision-field seg-basic-sample-field">
+            <span>示例图选择</span>
+            <div class="seg-basic-selector-wrapper" data-segb-selector-wrapper>
+                <button type="button" class="seg-basic-selector-trigger" data-segb-selector-trigger>
+                    <span data-segb-selected-label>选择示例图</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="seg-basic-dropdown-panel" data-segb-dropdown-panel>
+                    <div class="seg-basic-sample-grid" data-segb-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vision-field">
+            <span>上传图片</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="segBasicUploadInput">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span data-segb-upload-name>选择文件</span>
+                </label>
+                <input id="segBasicUploadInput" class="sr-only" type="file" accept="image/*" data-segb-upload>
+            </div>
+        </div>
+
+        <div class="seg-basic-method-groups" aria-label="分割方法选择">
+            <section data-segb-family-group="cluster">
+                <strong>聚类分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button class="is-active" type="button" data-segb-method="kmeans-rgb">K-means RGB</button>
+                    <button type="button" data-segb-method="kmeans-rgbxy">K-means RGB + XY</button>
+                    <button type="button" data-segb-method="kmeans-compare">RGB / RGB+XY 对比</button>
+                </div>
+            </section>
+            <section data-segb-family-group="graph">
+                <strong>图切割分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button type="button" data-segb-method="graphcut">Graph Cut 算法演示</button>
+                    <button type="button" data-segb-method="ncut">Normalized Cut 算法演示</button>
+                    <button type="button" data-segb-method="grabcut">GrabCut 前景提取</button>
+                </div>
+            </section>
+            <section data-segb-family-group="region">
+                <strong>区域分割</strong>
+                <div class="overview-segmented-control method-segmented-control seg-basic-methods">
+                    <button type="button" data-segb-method="watershed">Watershed 分水岭</button>
+                    <button type="button" data-segb-method="regions">区域属性 label map</button>
+                </div>
+            </section>
+        </div>
+
+        <div class="seg-basic-kmeans-controls" data-segb-kmeans-controls>
+            <label class="vision-field">
+                <span>K 聚类数</span>
+                <select data-segb-k>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4" selected>4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                </select>
+            </label>
+
+            <label class="vision-field">
+                <span>最大迭代次数 <output data-segb-iter-output>10</output></span>
+                <input type="range" min="2" max="20" step="1" value="10" data-segb-max-iter>
+            </label>
+
+            <label class="vision-field">
+                <span>空间权重 xyWeight <output data-segb-xy-output>0.35</output></span>
+                <input type="range" min="0" max="1.2" step="0.05" value="0.35" data-segb-xy-weight>
+            </label>
+
+            <label class="vision-field">
+                <span>初始化方式</span>
+                <select data-segb-init>
+                    <option value="fixed" selected>固定示例中心</option>
+                    <option value="random">随机</option>
+                </select>
+            </label>
+
+            <label class="vision-toggle-row"><span>显示聚类中心</span><input type="checkbox" data-segb-show-centers checked></label>
+            <label class="vision-toggle-row"><span>显示迭代过程</span><input type="checkbox" data-segb-show-iterations checked></label>
+        </div>
+
+        <div class="seg-basic-action-row">
+            <button class="det-play-btn" type="button" data-segb-run>运行分割</button>
+            <button type="button" data-segb-play>播放迭代</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前方法</span><strong data-segb-active-method>K-means RGB</strong></div>
+            <div><span>教学尺寸</span><strong data-segb-size>--</strong></div>
+            <div><span>当前迭代</span><strong data-segb-current-iter>--</strong></div>
+            <div><span>区域数量</span><strong data-segb-region-count>--</strong></div>
+            <div><span>计算耗时</span><strong data-segb-time>--</strong></div>
+            <div><span>状态</span><strong data-segb-status-text>等待运行</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel method-stage-panel seg-basic-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>SEGMENTATION PLAYGROUND</span><h3 data-segb-stage-title>当前实验模式：K-means RGB</h3></div>
+            <span class="vision-status-chip" data-segb-status>Canvas K-means</span>
+        </div>
+
+        <div class="method-stage-strip">
+            <span>Mode: <strong data-segb-strip-method>K-means RGB</strong></span>
+            <span>Feature: <strong data-segb-strip-feature>RGB</strong></span>
+            <span>K / Nodes: <strong data-segb-strip-k>4</strong></span>
+            <span>Iteration: <strong data-segb-strip-iter>--</strong></span>
+            <span>Output: <strong data-segb-strip-output>label map</strong></span>
+        </div>
+
+        <div class="seg-basic-playground" data-segb-kmeans-view>
+            <div class="seg-basic-canvas-grid">
+                <figure class="seg-basic-input-card">
+                    <figcaption><strong>输入图像</strong><small>Image pixels</small></figcaption>
+                    <canvas data-segb-original width="256" height="180"></canvas>
+                </figure>
+                <figure class="seg-basic-output-card">
+                    <figcaption><strong data-segb-result-title>分割结果 overlay + 边界</strong><small>mask overlay</small></figcaption>
+                    <canvas data-segb-result width="256" height="180"></canvas>
+                    <div class="seg-basic-region-popover" data-segb-region-popover hidden></div>
+                </figure>
+            </div>
+
+            <!-- K-means 专用步骤流程条：提前到大图下面 -->
+            <div class="seg-basic-frame-strip" data-segb-frame-strip aria-label="算法步骤预览"></div>
+
+            <div class="seg-basic-flow-band" aria-hidden="true">
+                <div class="flow-node is-image">Input Image</div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node is-feature" data-segb-flow-feature>RGB Vector</div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node is-score">Overlay Mask</div>
+            </div>
+
+            <div class="seg-mode-lens" data-segb-mode-lens aria-label="RGB 与 RGB+XY K-means 的距离度量差异" hidden>
+                <section class="seg-mode-lens-card is-rgb">
+                    <div>
+                        <strong>RGB color metric</strong>
+                        <span>f(x) = [R,G,B]</span>
+                    </div>
+                    <div class="seg-mode-lens-visual">
+                        <i class="is-a"></i><i class="is-b"></i><i class="is-c"></i>
+                        <b class="is-link-one"></b><b class="is-link-two"></b>
+                    </div>
+                    <p>颜色相近就容易合并，位置相隔很远也会互相吸引。</p>
+                </section>
+                <section class="seg-mode-lens-card is-rgbxy">
+                    <div>
+                        <strong>RGB + XY spatial metric</strong>
+                        <span>f(x) = [R,G,B,λx,λy]</span>
+                    </div>
+                    <div class="seg-mode-lens-visual">
+                        <i class="is-a"></i><i class="is-b"></i><i class="is-c"></i>
+                        <b class="is-ring-one"></b><b class="is-ring-two"></b>
+                    </div>
+                    <p>颜色相近还要空间接近，远距离同色区域会被分开。</p>
+                </section>
+            </div>
+
+            <div class="seg-basic-process-row">
+                <figure class="seg-basic-process-card" data-segb-compare-card>
+                    <div class="seg-basic-process-grid">
+                        <section class="seg-process-mini-card seg-process-feature-card">
+                            <div class="seg-process-card-head">
+                                <strong data-segb-third-title>RGB 特征空间</strong>
+                                <small data-segb-feature-iteration>iteration --</small>
+                            </div>
+                            <div class="seg-basic-feature-space" data-segb-feature-space></div>
+                        </section>
+                        <section class="seg-process-mini-card seg-process-iteration-card">
+                            <div class="seg-process-card-head">
+                                <strong>聚类迭代状态</strong>
+                                <small data-segb-process-convergence>waiting</small>
+                            </div>
+                            <div class="seg-iteration-story" data-segb-iteration-visual aria-label="K-means assignment and centroid update process">
+                                <div class="seg-iteration-orbit" aria-hidden="true">
+                                    <span class="seg-iter-sample">x</span>
+                                    <span class="seg-iter-center is-c1">C1</span>
+                                    <span class="seg-iter-center is-c2">C2</span>
+                                    <span class="seg-iter-center is-c3">C3</span>
+                                    <i class="seg-iter-ray is-r1"></i>
+                                    <i class="seg-iter-ray is-r2"></i>
+                                    <i class="seg-iter-ray is-r3"></i>
+                                </div>
+                                <div class="seg-iteration-move" aria-hidden="true">
+                                    <i class="seg-move-dot is-old"></i>
+                                    <b></b>
+                                    <i class="seg-move-dot is-new"></i>
+                                </div>
+                                <div class="seg-iteration-progress" aria-hidden="true">
+                                    <span>iteration</span>
+                                    <b><i></i></b>
+                                </div>
+                            </div>
+                            <div class="seg-process-metrics">
+                                <div><span>Iteration</span><strong data-segb-process-iteration>-- / --</strong></div>
+                                <div><span>Mean distance</span><strong data-segb-process-distance>--</strong></div>
+                                <div><span>Final movement</span><strong data-segb-process-movement>--</strong></div>
+                                <div><span>Stop rule</span><strong data-segb-process-stop>movement &lt; 0.35</strong></div>
+                            </div>
+                        </section>
+                        <section class="seg-process-mini-card seg-process-output-card" data-segb-process-output-card>
+                            <div class="seg-process-card-head">
+                                <strong>当前输出解释</strong>
+                                <small data-segb-process-output>overlay mask</small>
+                            </div>
+                            <div class="seg-output-story" data-segb-output-visual aria-label="label map 到 overlay mask 的输出解码过程">
+                                <div class="seg-output-labelmap" aria-hidden="true">
+                                    <i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i>
+                                    <i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i><i style="--i:16"></i>
+                                    <i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i><i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i><i style="--i:24"></i>
+                                    <i style="--i:25"></i><i style="--i:26"></i><i style="--i:27"></i><i style="--i:28"></i><i style="--i:29"></i><i style="--i:30"></i><i style="--i:31"></i><i style="--i:32"></i>
+                                </div>
+                                <div class="seg-output-decode-arrow" aria-hidden="true">
+                                    <span>decode</span>
+                                    <b></b>
+                                </div>
+                                <div class="seg-output-overlay-demo" aria-hidden="true">
+                                    <span class="seg-demo-photo"></span>
+                                    <span class="seg-demo-mask"></span>
+                                    <span class="seg-demo-boundary"></span>
+                                </div>
+                            </div>
+                            <div class="seg-process-output-list">
+                                <div><span>Output</span><strong data-segb-process-output-type>overlay mask</strong></div>
+                                <div><span>Decode</span><strong data-segb-process-decode>color mask + boundary</strong></div>
+                                <div><span>Regions</span><strong data-segb-process-regions>4</strong></div>
+                            </div>
+                            <p data-segb-process-output-note>Label map 被解码为半透明颜色 mask，并在标签变化处绘制区域边界。</p>
+                        </section>
+                    </div>
+                </figure>
+                <div class="seg-basic-step-focus" data-segb-step-focus>
+                    <section class="seg-basic-step-visual" data-segb-step-visual></section>
+                    <section class="seg-basic-step-matrix" data-segb-step-matrix></section>
+                    <section class="seg-basic-step-detail" data-segb-step-detail></section>
+                </div>
+            </div>
+
+            <details class="seg-basic-kmeans-support" data-segb-support>
+                <summary>辅助输出：label map / 迭代曲线 / 区域统计</summary>
+                <div class="seg-basic-kmeans-summary seg-basic-analysis-grid">
+                    <section class="seg-basic-label-card">
+                        <div class="method-result-head">
+                            <strong>Pure Label Map</strong>
+                            <span data-segb-label-subtitle>cluster id only</span>
+                        </div>
+                        <canvas data-segb-compare width="256" height="180"></canvas>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Iteration Monitor</strong>
+                            <span data-segb-center-subtitle>center movement</span>
+                        </div>
+                        <div class="seg-basic-iteration-monitor" data-segb-iteration-monitor></div>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Cluster Distribution</strong>
+                            <span data-segb-ratio-subtitle>pixel count ratio</span>
+                        </div>
+                        <div class="seg-basic-region-list" data-segb-region-list></div>
+                    </section>
+                    <section>
+                        <div class="method-result-head">
+                            <strong>Feature Space</strong>
+                            <span data-segb-feature-subtitle>RGB centers</span>
+                        </div>
+                        <div class="seg-basic-center-list" data-segb-center-list></div>
+                    </section>
+                </div>
+            </details>
+
+            <div class="vision-info-callout seg-basic-compare-note" data-segb-compare-note>
+                RGB + XY 把像素坐标加入特征向量，颜色相近但空间分散的像素更难被合并，通常能减少离散噪点并增强区域连续性。
+            </div>
+        </div>
+
+        <div class="seg-basic-concept-view" data-segb-graph-view hidden>
+            <div class="seg-basic-concept-result" data-segb-concept-result>
+                <figure>
+                    <div class="seg-concept-figure-head">
+                        <figcaption>输入图像</figcaption>
+                        <div class="seg-grabcut-toolbar" data-segb-grabcut-toolbar hidden>
+                            <button class="is-active" type="button" data-segb-grabcut-tool="box">框选</button>
+                            <button type="button" data-segb-grabcut-tool="fg">前景笔</button>
+                            <button type="button" data-segb-grabcut-tool="bg">背景笔</button>
+                            <button type="button" data-segb-grabcut-reset>重置</button>
+                        </div>
+                    </div>
+                    <canvas data-segb-concept-source width="256" height="180"></canvas>
+                </figure>
+                <figure>
+                    <div class="seg-concept-figure-head">
+                        <figcaption data-segb-concept-result-title>分割结果 label map</figcaption>
+                        <p data-segb-concept-result-caption>算法输出的区域标签会在这里显示。</p>
+                    </div>
+                    <canvas data-segb-concept-mask width="256" height="180"></canvas>
+                </figure>
+            </div>
+            <div class="seg-basic-compare-view" data-segb-compare-view hidden>
+                <figure class="seg-compare-slider-figure">
+                    <figcaption>左右拖动滑块对比 RGB 与 RGB+XY 分割结果</figcaption>
+                    <div class="seg-compare-slider" data-segb-compare-slider>
+                        <canvas class="seg-compare-slider-left" data-segb-compare-slider-left width="256" height="180" aria-label="RGB 聚类结果"></canvas>
+                        <canvas class="seg-compare-slider-right" data-segb-compare-slider-right width="256" height="180" aria-label="RGB+XY 聚类结果"></canvas>
+                        <div class="seg-compare-slider-divider" data-segb-compare-slider-divider></div>
+                        <div class="seg-compare-slider-handle" data-segb-compare-slider-handle tabindex="0" role="slider" aria-label="对比滑块" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="seg-compare-label seg-compare-label-left">RGB</span>
+                        <span class="seg-compare-label seg-compare-label-right">RGB + XY</span>
+                    </div>
+                </figure>
+                <div class="seg-compare-cards">
+                    <div class="seg-compare-card is-rgb">
+                        <h4>RGB K-means <button type="button" class="seg-lens-btn" data-seg-lens-trigger="rgb" title="查看特征度量差异">🔍 度量原理</button></h4>
+                        <ul>
+                            <li><strong>优点</strong>仅使用颜色信息，计算简单，对颜色均匀、边界清晰的区域分割效果好。</li>
+                            <li><strong>缺点</strong>缺少空间约束，空间上不相邻的相似颜色像素容易被分到同一类，容易产生噪声和碎片化区域。</li>
+                            <li><strong>适用</strong>颜色区分明显、目标空间连续的场景。</li>
+                        </ul>
+                    </div>
+                    <div class="seg-compare-card is-rgbxy">
+                        <h4>RGB + XY K-means <button type="button" class="seg-lens-btn" data-seg-lens-trigger="rgbxy" title="查看空间度量差异">🔍 空间原理</button></h4>
+                        <ul>
+                            <li><strong>优点</strong>加入像素坐标约束，使空间相邻像素更容易聚为一类，结果更连贯、边界更规整，能有效抑制离散噪点。</li>
+                            <li><strong>缺点</strong>特征维度增加，计算量略大；空间权重过大时会过度惩罚颜色差异，导致颜色相近但位置分离的对象被错误分开。</li>
+                            <li><strong>适用</strong>需要区域连续性、目标在空间上较为聚拢的场景。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="seg-basic-frame-strip" data-segb-frame-strip aria-label="算法步骤预览"></div>
+            <div class="seg-basic-graph-stage" data-segb-graph-stage></div>
+            <div class="seg-basic-matrix-stage" data-segb-matrix-stage></div>
+            <div class="seg-basic-concept-detail" data-segb-concept-detail></div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel method-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>算法原理</h3><p data-segb-notes-subtitle>K-means 聚类分配</p></div>
+        </div>
+        <div class="vision-formula-card">
+            <span data-segb-formula-label>K-means</span>
+            <strong data-segb-formula>cluster(x) = argmin_k ||f(x) - c_k||²</strong>
+            <small data-segb-formula-note>RGB 模式使用颜色向量；RGB+XY 模式额外加入归一化像素坐标。</small>
+        </div>
+        <div class="method-notes-data seg-basic-notes-data" data-segb-notes></div>
+    </aside>
+
+    <!-- 弹出式特征度量毛玻璃 Dialog -->
+    <div class="seg-lens-modal-backdrop" id="segLensModal" hidden>
+        <div class="seg-lens-modal-content">
+            <button class="seg-modal-close" type="button" id="segLensCloseBtn" aria-label="关闭弹窗">×</button>
+            <div id="segModalBody"></div>
+        </div>
+    </div>
+</section>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script src="/static/js/vision_tasks/vision_tasks_common.js?v=20260626-titlescn1"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+<script src="/static/js/vision_tasks/segmentation_basic_lab.js?v=20260627-regionpie2"></script>
+
+
+</body>
+</html>

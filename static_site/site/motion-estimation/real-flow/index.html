@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真实视频光流可视化 - 运动估计与光流</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/geometry_vision/motion_estimation.css?v=20260628-motion-aifab1">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "motion_estimation";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "real_flow";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="active" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="active" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab geometry-lab motion-lab" data-motion-page="real_flow">
+    <header class="vision-hero station-hero motion-hero">
+        <div>
+            <span class="section-label station-eyebrow">MODULE 02 · WORLD 03 MOTION ESTIMATION</span>
+            <h1 class="station-title">真实视频光流可视化</h1>
+            <p class="station-summary">从本地交通视频逐帧读取像素，在浏览器中实时计算稠密采样光流和稀疏特征轨迹。</p>
+        </div>
+        <div class="station-hero-actions motion-hero-actions">
+            <span class="motion-state">真实视频帧 · 浏览器端计算</span>
+            <strong class="station-badge">Ix u + Iy v + It = 0 · LK · PYRAMID</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs motion-tabs" aria-label="运动估计与光流内部导航">
+        
+        <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+        
+        <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+        
+        <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+        
+        <a class="is-active" href="/motion-estimation/real-flow">真实视频光流</a>
+        
+    </nav>
+
+    
+<section
+    class="vision-workbench motion-workbench motion-real-workbench"
+    data-motion-real
+    data-video-src="/static/assets/data/motion_estimation/pexels_traffic_2103099_640x360.mp4"
+    aria-label="真实视频光流可视化工作台"
+>
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>实时计算参数</h3><p>Browser Optical Flow</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>算法视图</span>
+            <select data-motion-real-input="mode">
+                <option value="both" selected>稠密采样 + 稀疏轨迹</option>
+                <option value="dense">仅稠密采样光流</option>
+                <option value="sparse">仅稀疏 LK 轨迹</option>
+            </select>
+        </label>
+
+        <label class="vision-field">
+            <span>计算分辨率</span>
+            <select data-motion-real-input="resolution">
+                <option value="360x202">360 × 202 · 快速</option>
+                <option value="480x270" selected>480 × 270 · 平衡</option>
+                <option value="640x360">640 × 360 · 清晰</option>
+            </select>
+        </label>
+
+        <label class="vision-field">
+            <span>矢量密度 <output data-motion-real-output="density">18</output> px</span>
+            <input type="range" min="12" max="30" step="2" value="18" data-motion-real-input="density">
+        </label>
+
+        <label class="vision-field">
+            <span>矢量增益 <output data-motion-real-output="gain">3.0</output>x</span>
+            <input type="range" min="1.5" max="5" step="0.5" value="3" data-motion-real-input="gain">
+        </label>
+
+        <label class="vision-field">
+            <span>轨迹长度 <output data-motion-real-output="trail">18</output> 帧</span>
+            <input type="range" min="8" max="36" step="2" value="18" data-motion-real-input="trail">
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示 HSV 光流图</span><input type="checkbox" data-motion-real-input="showHsv" checked></label>
+            <label class="vision-toggle-row"><span>显示采样箭头</span><input type="checkbox" data-motion-real-input="showArrows" checked></label>
+            <label class="vision-toggle-row"><span>显示稀疏轨迹</span><input type="checkbox" data-motion-real-input="showTracks" checked></label>
+            <label class="vision-toggle-row"><span>自动重检角点</span><input type="checkbox" data-motion-real-input="autoFeatures" checked></label>
+        </div>
+
+        <div class="motion-button-row motion-real-buttons">
+            <button type="button" data-motion-real-action="play">播放</button>
+            <button type="button" data-motion-real-action="step">单步</button>
+            <button type="button" data-motion-real-action="reset">重置轨迹</button>
+        </div>
+
+        <div class="vision-kv-grid motion-real-metrics">
+            <div><span>计算耗时</span><strong data-motion-real-metric="compute">--</strong></div>
+            <div><span>处理 FPS</span><strong data-motion-real-metric="fps">--</strong></div>
+            <div><span>平均幅值</span><strong data-motion-real-metric="magnitude">--</strong></div>
+            <div><span>有效轨迹</span><strong data-motion-real-metric="tracks">--</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel motion-real-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>REAL VIDEO FLOW PLAYGROUND</span>
+                <h3 data-motion-real-title>从交通视频帧实时估计运动方向</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-real-chip="status">等待视频</span>
+                <span data-motion-real-chip="resolution">480 × 270</span>
+                <span data-motion-real-chip="backend">轻量实现 · 非完整 OpenCV.js</span>
+            </div>
+        </div>
+
+        <div class="motion-vector-microscope" data-motion-real-inspector>
+            <span>当前向量显微镜 / Current Vector</span>
+            <div><strong>采样点</strong><em data-motion-real-vector="point">--</em></div>
+            <div><strong>Frame t</strong><em data-motion-real-vector="gray0">--</em></div>
+            <div><strong>Frame t+1</strong><em data-motion-real-vector="gray1">--</em></div>
+            <div><strong>位移</strong><em data-motion-real-vector="uv">--</em></div>
+            <div><strong>magnitude</strong><em data-motion-real-vector="mag">--</em></div>
+            <div><strong>angle</strong><em data-motion-real-vector="angle">--</em></div>
+            <div><strong>track</strong><em data-motion-real-vector="track">--</em></div>
+            <div><strong>status</strong><em data-motion-real-vector="status">等待选择</em></div>
+        </div>
+
+        <div class="motion-real-stage-grid" data-motion-real-layout data-flow-mode="both">
+            <section class="motion-view-card motion-real-source-card" data-motion-real-view="source">
+                <div class="geometry-section-head">
+                    <strong>原始交通视频</strong>
+                    <span>Frame Pair · Pexels 2103099 · H.264</span>
+                </div>
+                <div class="motion-real-video-shell">
+                    <video data-motion-real-video muted playsinline loop preload="auto"></video>
+                    <canvas data-motion-real-canvas="source" aria-label="当前视频帧"></canvas>
+                </div>
+            </section>
+
+            <section class="motion-view-card" data-motion-real-view="dense">
+                <div class="geometry-section-head">
+                    <strong>稠密采样光流</strong>
+                    <span>Dense Flow · HSV Magnitude + Vectors</span>
+                </div>
+                <canvas class="motion-real-canvas" data-motion-real-canvas="dense" aria-label="稠密采样光流"></canvas>
+            </section>
+
+            <section class="motion-view-card" data-motion-real-view="sparse">
+                <div class="geometry-section-head">
+                    <strong>稀疏特征轨迹</strong>
+                    <span>Sparse Tracks · Shi-Tomasi + Iterative LK</span>
+                </div>
+                <canvas class="motion-real-canvas" data-motion-real-canvas="sparse" aria-label="稀疏光流轨迹"></canvas>
+            </section>
+        </div>
+
+        <div class="motion-flow-preview motion-real-log" data-motion-real-log aria-label="真实光流算法来源链">
+            <article class="is-active" data-motion-real-chain="brightness"><span>1</span><div><strong>亮度恒定</strong><small>Brightness Constancy</small></div></article>
+            <article data-motion-real-chain="window"><span>2</span><div><strong>局部窗口</strong><small>Local Window</small></div></article>
+            <article data-motion-real-chain="pyramid"><span>3</span><div><strong>轻量迭代</strong><small>Browser Flow</small></div></article>
+            <article data-motion-real-chain="video"><span>4</span><div><strong>视频帧光流</strong><small>Dense Flow / Sparse Tracks</small></div></article>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>实现说明</h3><p>真实帧 · 前端计算</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>视频帧光流 / Dense Flow</span>
+            <strong>\(I_t(x,y)\rightarrow I_{t+1}(x+u,y+v)\)</strong>
+            <small data-motion-real-vector-note>页面读取真实视频帧，而不是使用合成 SVG 位移。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>诚实状态 / Implementation</span>
+            <strong>不加载 11MB 全量 OpenCV.js</strong>
+            <small>当前环境缺少 Emscripten/CMake，无法产出裁剪版 OpenCV.js；本页使用小型原生 JS 实现实时演示。</small>
+        </div>
+
+        <div class="motion-reference-card motion-assumption-card">
+            <span>当前算法</span>
+            <article><strong>稠密采样</strong><small>在规则网格上做局部块匹配，得到方向、幅值和箭头。</small></article>
+            <article><strong>稀疏追踪</strong><small>先检测角点，再在局部窗口中迭代求最小二乘位移。</small></article>
+            <article><strong>质量门槛</strong><small>该视频已用 OpenCV 离线评估，车流方向和轨迹可视化清楚。</small></article>
+        </div>
+
+        <div class="vision-output-schema">
+            <span>当前状态</span>
+            <code data-motion-real-state>等待初始化</code>
+        </div>
+    </aside>
+</section>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/js/geometry_vision/motion_estimation.js?v=20260628-autoplay"></script>
+
+</body>
+</html>

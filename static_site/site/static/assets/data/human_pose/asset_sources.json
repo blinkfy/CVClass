@@ -1,0 +1,195 @@
+{
+  "pageStatus": "骨架页：真实推理 · 本地 MoveNet MultiPose / Thunder；动作页：真实推理 · 本地姿态序列分类器；机制页：预设样例 · 机制拆解",
+  "modelStatus": "Skeleton page defaults to local MoveNet MultiPose for multi-person pose inference. It keeps local MoveNet Thunder as a single-person high-accuracy mode and local MoveNet Lightning as the final single-pose fallback. Action page can extract uploaded or preset video frames, run local MoveNet Lightning keypoint inference in a Worker, then feed the pose sequence into the local softmax action classifier. Preset motion parameters are fallback only; mechanism page remains preset teaching data.",
+  "modelResearch": "/static/assets/data/human_pose/model_research.json",
+  "runtimeModels": [
+    {
+      "id": "tensorflow_js_movenet_multipose_lightning_local",
+      "label": "TensorFlow.js MoveNet MultiPose Lightning",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
+      "usedFor": ["/human-pose/skeleton", "/human-pose/action"],
+      "status": "default_real_inference_local_model",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/movenet-multipose.bin"
+      ],
+      "source": "https://tfhub.dev/google/tfjs-model/movenet/multipose/lightning/1",
+      "downloadMirror": "https://github.com/vladmandic/movenet/tree/main/models",
+      "note": "Loaded automatically from the local Flask static route on /human-pose/skeleton. This is the default model for detecting up to 6 people."
+    },
+    {
+      "id": "tensorflow_js_movenet_singlepose_thunder_local",
+      "label": "TensorFlow.js MoveNet SinglePose Thunder",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
+      "usedFor": ["/human-pose/skeleton"],
+      "status": "single_person_high_accuracy_mode",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/movenet-thunder.bin"
+      ],
+      "source": "https://tfhub.dev/google/movenet/singlepose/thunder/4",
+      "downloadMirror": "https://github.com/vladmandic/movenet/tree/main/models",
+      "note": "Used by the single-person high-accuracy mode on /human-pose/skeleton. MultiPose remains the default when the page is opened."
+    },
+    {
+      "id": "tensorflow_js_movenet_singlepose_lightning_local",
+      "label": "TensorFlow.js MoveNet SinglePose Lightning",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
+      "usedFor": ["/human-pose/skeleton"],
+      "status": "real_inference_local_model_fallback",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard1of2.bin",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard2of2.bin"
+      ],
+      "source": "https://www.tensorflow.org/hub/tutorials/movenet",
+      "note": "Used only as a local fallback when the Thunder detector cannot be created. If both local models fail, the page labels the state as preset fallback and keeps preset samples visible."
+    },
+    {
+      "id": "pose_sequence_action_classifier_v1",
+      "label": "Local Pose Sequence Action Classifier",
+      "runtime": "Vanilla JavaScript linear softmax over pose-sequence features",
+      "usedFor": ["/human-pose/action"],
+      "status": "default_real_inference_local_model",
+      "localModelRoute": "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json"
+      ],
+      "source": "Project-trained lightweight classifier from synthetic teaching pose sequences",
+      "note": "The page loads local weights and runs a real forward pass for probability bars. It is not presented as a pretrained C3D/MoViNet video classifier."
+    }
+  ],
+  "assets": [
+    {
+      "id": "crosswalk_people",
+      "file": "/static/assets/img/crosswalk_people.jpg",
+      "source": "Wikimedia Commons, File: CrossWalk (5465840138).jpg",
+      "author": "Alex Proimos",
+      "license": "CC BY 2.0",
+      "usedFor": ["pose_sample_01", "pose_sample_02"],
+      "note": "The keypoints and bbox values in this module are hand-authored teaching annotations over this image, not model inference output."
+    },
+    {
+      "id": "standing_person",
+      "file": "/static/assets/examples/human_pose/pose_sample_standing.jpg",
+      "source": "Wikimedia Commons, File: Free use human standing simple.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Free_use_human_standing_simple.jpg",
+      "author": "Irawanthea92",
+      "license": "CC BY-SA 4.0; recorded source, not used as a classroom-assignment blocker",
+      "usedFor": ["pose_sample_standing", "movenet_real_inference_test"],
+      "note": "Clear single-person standing image. The default overlay is a hand-authored teaching annotation; MoveNet mode can run real browser inference on the same image for comparison."
+    },
+    {
+      "id": "standing_person_preset_video",
+      "file": "/static/assets/examples/human_pose/action_standing_preset.webm",
+      "source": "Generated locally from /static/assets/examples/human_pose/pose_sample_standing.jpg",
+      "author": "Project-generated derivative",
+      "license": "Classroom assignment asset; source image record kept above",
+      "usedFor": ["legacy_action_sample_standing_preset_video"],
+      "note": "Earlier generated fallback clip. The current /human-pose/action presets now use downloaded real video clips."
+    },
+    {
+      "id": "action_waving_real_video",
+      "file": "/static/assets/examples/human_pose/action_waving_real.mp4",
+      "source": "Pexels, Boy Waving His Hands",
+      "sourceUrl": "https://www.pexels.com/video/boy-waving-his-hands-5510480/",
+      "downloadUrl": "https://videos.pexels.com/video-files/5510480/5510480-sd_540_960_24fps.mp4",
+      "license": "Pexels video page source recorded; classroom assignment asset",
+      "usedFor": ["action_sample_waving_real_video"],
+      "note": "Replaced the earlier close-up video-call clip with a clearer single-person waving clip so keypoints and arm skeleton are readable."
+    },
+    {
+      "id": "action_jumping_real_video",
+      "file": "/static/assets/examples/human_pose/action_jumping_real.mp4",
+      "source": "Pexels, Single-person jumping jacks exercise video",
+      "sourceUrl": "https://www.pexels.com/video/4764124/",
+      "downloadUrl": "https://videos.pexels.com/video-files/4764124/4764124-sd_640_360_30fps.mp4",
+      "license": "Pexels video page source recorded; classroom assignment asset",
+      "usedFor": ["action_sample_jumping_real_video"],
+      "note": "Replaced the earlier distant warm-up clip because the person was too small and near the horizon. The current clip shows a single person doing jumping jacks with clear full-body keypoints."
+    },
+    {
+      "id": "action_running_real_video",
+      "file": "/static/assets/examples/human_pose/action_running_real.mp4",
+      "source": "Mixkit, Woman running fast on a running track",
+      "sourceUrl": "https://mixkit.co/free-stock-video/woman-running-fast-on-a-running-track-32792/",
+      "downloadUrl": "https://assets.mixkit.co/videos/32792/32792-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_running_real_video"],
+      "note": "Replaced the earlier behind-runner clip because its first segment showed mostly legs and later frames made the body too small. The current track clip keeps a single runner visible across the sampled frames for clearer pose skeleton teaching."
+    },
+    {
+      "id": "action_standing_real_video",
+      "file": "/static/assets/examples/human_pose/action_standing_real.mp4",
+      "source": "Mixkit, Woman during a sunset on a rooftop",
+      "sourceUrl": "https://mixkit.co/free-stock-video/woman-during-a-sunset-on-a-rooftop-4840/",
+      "downloadUrl": "https://assets.mixkit.co/videos/4840/4840-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_standing_real_video"],
+      "note": "Preset real video with clear full-body standing silhouette."
+    },
+    {
+      "id": "action_walking_real_video",
+      "file": "/static/assets/examples/human_pose/action_walking_real.mp4",
+      "source": "Mixkit, Young man walking listening to music from his headphones",
+      "sourceUrl": "https://mixkit.co/free-stock-video/young-man-walking-listening-to-music-from-his-headphones-4855/",
+      "downloadUrl": "https://assets.mixkit.co/videos/4855/4855-360.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_walking_real_video"],
+      "note": "Preset real video with full-body walking motion in profile."
+    },
+    {
+      "id": "action_clapping_real_video",
+      "file": "/static/assets/examples/human_pose/action_clapping_real.mp4",
+      "source": "Mixkit, Portrait of a proud young woman clapping",
+      "sourceUrl": "https://mixkit.co/free-stock-video/portrait-of-a-proud-young-woman-clapping-43813/",
+      "downloadUrl": "https://assets.mixkit.co/videos/43813/43813-720.mp4",
+      "license": "Mixkit video page download terms recorded; classroom assignment asset",
+      "usedFor": ["action_sample_clapping_real_video"],
+      "note": "Replaced the earlier audience clip because it contained multiple overlapping people and confused the single-person skeleton teaching flow. The current clip is a clearer single-person clapping example."
+    },
+    {
+      "id": "volleyball_player_jumping",
+      "file": "/static/assets/examples/human_pose/pose_sample_volleyball.jpg",
+      "source": "Wikimedia Commons, File: Volleyball player jumping.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Volleyball_player_jumping.jpg",
+      "author": "keithjj on Pixabay",
+      "license": "CC0; recorded source, not used as a classroom-assignment blocker",
+      "usedFor": ["future_pose_or_action_sample_candidate"],
+      "note": "Downloaded as a higher-motion resource candidate. It is not the default teaching sample because MoveNet confidence was weaker on this image during this round."
+    }
+  ],
+  "annotations": [
+    {
+      "id": "pose_sample_01",
+      "type": "manual_teaching_annotation",
+      "license": "Project-authored preset annotation for classroom mechanism explanation."
+    },
+    {
+      "id": "pose_sample_02",
+      "type": "manual_teaching_annotation",
+      "license": "Project-authored preset annotation for classroom mechanism explanation."
+    },
+    {
+      "id": "pose_sample_standing",
+      "type": "manual_teaching_annotation",
+      "license": "Project-authored preset annotation for classroom mechanism explanation.",
+      "note": "Uses a clear standing-person image so the default COCO-17 overlay is visually readable. It is not labeled as live inference."
+    },
+    {
+      "id": "pose_mechanism",
+      "type": "manual_teaching_mechanism_preset",
+      "license": "Project-authored DeepPose and Heatmap mechanism data for classroom explanation.",
+      "note": "The normalized coordinates, feature-map states and heatmap peaks are preset teaching values, not outputs from a connected model."
+    },
+    {
+      "id": "action_samples",
+      "type": "teaching_action_input_and_fallback",
+      "license": "Project-authored action sequence parameters for classroom explanation.",
+      "note": "Frame motion parameters are teaching inputs. Probability bars are produced by the local pose-sequence classifier when the model loads; JSON probabilities are fallback only."
+    }
+  ]
+}

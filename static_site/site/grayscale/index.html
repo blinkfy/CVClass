@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station 01 · Image Basics</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/pages/grayscale.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "grayscale";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="active" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section class="station01-page">
+    <header class="station01-hero">
+        <div class="station01-hero-copy">
+            <p class="station01-eyebrow">STATION 01 · IMAGE BASICS</p>
+            <h1>图像基础：像素、颜色空间与基础预处理</h1>
+            <p>探索图像的像素矩阵、颜色空间与基础预处理方法，理解图像灰度化、二值化与直方图均衡化的原理。</p>
+        </div>
+        <strong class="station01-badge">PIXEL · COLOR · HISTOGRAM</strong>
+    </header>
+
+    <section class="station01-grid">
+        <aside class="station01-panel station01-left" aria-label="输入与参数">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">输入和参数</span>
+                <h2>输入与参数</h2>
+            </div>
+
+            <section class="station01-block">
+                <div class="station01-block-title">1. 上传图片</div>
+                <label class="station01-drop-zone" id="dropZone" for="imageInput">
+                    <input id="imageInput" type="file" accept="image/png,image/jpeg,image/bmp">
+                    <span class="station01-upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h2v-2H5a1 1 0 0 1 0-2h4V8a3 3 0 0 1 6 0v3h4a1 1 0 0 1 0 2h-2v2h2a3 3 0 0 0 0-6h-2V8a5 5 0 0 0-5-5Z"></path>
+                            <path d="M11 11h2v7h-2z"></path>
+                            <path d="m8.5 13.5 3.5-3.5 3.5 3.5-1.4 1.4-2.1-2.1-2.1 2.1z"></path>
+                        </svg>
+                    </span>
+                    <strong>点击或拖拽图片到此处</strong>
+                    <small>支持 JPG / PNG / BMP，最大 10MB</small>
+                </label>
+                <div class="station01-samples" id="sampleStrip" aria-label="示例图"></div>
+                <button id="reloadSamplesButton" class="station01-button station01-button-ghost" type="button">重新加载示例图</button>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">2. 处理类型</div>
+                <div id="operationList" class="station01-operation-list" role="listbox" aria-label="处理类型"></div>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">3. 当前任务参数</div>
+                <div id="paramsArea" class="station01-params"></div>
+            </section>
+
+            <section class="station01-tip">
+                <p>图片上传后将自动开始处理。过程完成后，结果会自动显示在中间主舞台和右侧统计区。</p>
+            </section>
+        </aside>
+
+        <main class="station01-panel station01-center" aria-label="图像处理可视化">
+            <div class="station01-panel-head station01-panel-head-inline">
+                <div>
+                    <span class="station01-section-label">IMAGE PLAYGROUND</span>
+                    <h2>图像处理可视化</h2>
+                </div>
+                <div id="messageBar" class="station01-message" hidden>正在加载示例图...</div>
+            </div>
+
+            <section class="station01-status" aria-label="处理状态">
+                <div><span>当前任务</span><strong id="statusTask">灰度化（加权平均法）</strong></div>
+                <div><span>图像尺寸</span><strong id="statusSize">-</strong></div>
+                <div><span>处理时间</span><strong id="statusTime">-</strong></div>
+                <div><span>输出类型</span><strong id="statusOutputType">灰度图像</strong></div>
+                <div class="station01-status-actions">
+                    <button id="compareToggle" class="station01-button station01-button-ghost" type="button">对比视图</button>
+                    <button id="downloadButton" class="station01-button station01-button-primary" type="button">导出结果</button>
+                </div>
+            </section>
+
+            <section class="station01-flow" aria-label="处理流程">
+                <div id="flowSteps" class="station01-flow-steps"></div>
+            </section>
+
+            <section class="station01-stage" aria-label="Before After 图像对比">
+                <div id="compareStage" class="station01-compare is-empty" style="--split: 50%; --probe-x: -100px; --probe-y: -100px;">
+                    <div class="station01-stage-label station01-label-left">原图（RGB）</div>
+                    <div class="station01-stage-label station01-label-right" id="resultLabel">结果：灰度图</div>
+                    <div class="station01-compare-frame">
+                        <img id="beforeImage" alt="原图" class="station01-compare-image station01-before">
+                        <div id="afterLayer" class="station01-after-layer">
+                            <img id="afterImage" alt="处理结果" class="station01-compare-image station01-after">
+                        </div>
+                        <div id="probeCrosshair" class="station01-crosshair" aria-hidden="true"></div>
+                        <div id="probeBubble" class="station01-probe-bubble" aria-hidden="true">x -, y -</div>
+                    </div>
+                    <div class="station01-compare-handle" id="compareHandle" role="slider" aria-label="对比滑块" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                        <span aria-hidden="true">‹ ›</span>
+                    </div>
+                    <div class="station01-empty" id="compareEmpty">
+                        <strong>IMAGE COMPARISON</strong>
+                        <span>上传图片后将显示原图与处理结果对比</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="station01-preview-section">
+                <div class="station01-section-head">
+                    <div>
+                        <span class="station01-section-label">RESULT PREVIEW</span>
+                        <h3>结果预览</h3>
+                    </div>
+                </div>
+                <div id="previewStrip" class="station01-preview-strip"></div>
+            </section>
+
+            <section class="station01-stats-grid">
+                <article class="station01-card station01-histogram-card">
+                    <div class="station01-card-head">
+                        <h3>灰度直方图</h3>
+                        <span id="histogramMeta">Mean - · Peak -</span>
+                    </div>
+                    <div id="histogramChart" class="station01-histogram"></div>
+                </article>
+
+                <article class="station01-card">
+                    <div class="station01-card-head">
+                        <h3>图像信息</h3>
+                    </div>
+                    <dl class="station01-info-list">
+                        <div><dt>文件名</dt><dd id="infoName">-</dd></div>
+                        <div><dt>尺寸</dt><dd id="infoResolution">-</dd></div>
+                        <div><dt>通道数</dt><dd id="infoChannels">-</dd></div>
+                        <div><dt>文件大小</dt><dd id="infoSize">-</dd></div>
+                        <div><dt>像素总数</dt><dd id="infoPixels">-</dd></div>
+                        <div><dt>当前任务</dt><dd id="infoTask">-</dd></div>
+                        <div><dt>处理时间</dt><dd id="infoTimeStat">-</dd></div>
+                    </dl>
+                </article>
+
+                <article class="station01-card">
+                    <div class="station01-card-head">
+                        <h3>处理历史</h3>
+                        <button id="clearHistoryButton" class="station01-text-button" type="button">清空记录</button>
+                    </div>
+                    <div class="station01-history-head">
+                        <span>时间</span><span>任务</span><span>参数</span><span>耗时</span>
+                    </div>
+                    <div id="historyList" class="station01-history-list">
+                        <div class="station01-history-empty">暂无处理记录</div>
+                    </div>
+                </article>
+            </section>
+        </main>
+
+        <aside class="station01-panel station01-right" aria-label="处理说明与分析">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">PROCESS NOTES</span>
+                <h2>处理说明与分析</h2>
+            </div>
+
+            <div id="notesPanel" class="station01-notes"></div>
+
+            <section class="station01-card station01-process-viz is-grayscale" id="processViz" aria-label="计算过程可视化">
+                <div class="station01-card-head">
+                    <h3>像素计算流</h3>
+                    <span id="processVizLabel">RGB → Gray</span>
+                </div>
+                <div class="station01-process-scene">
+                    <div class="station01-process-field station01-process-field--input">
+                        <i class="station01-process-node" data-channel="r"></i>
+                        <i class="station01-process-node" data-channel="g"></i>
+                        <i class="station01-process-node" data-channel="b"></i>
+                        <i class="station01-process-node" data-channel="r2"></i>
+                        <i class="station01-process-node" data-channel="g2"></i>
+                    </div>
+                    <div class="station01-process-beams" aria-hidden="true">
+                        <i class="station01-process-beam" data-beam="r"></i>
+                        <i class="station01-process-beam" data-beam="g"></i>
+                        <i class="station01-process-beam" data-beam="b"></i>
+                    </div>
+                    <div class="station01-process-core">
+                        <div class="station01-process-core-glow"></div>
+                        <div class="station01-process-core-ring"></div>
+                        <div class="station01-process-core-ring station01-process-core-ring--outer"></div>
+                        <div class="station01-process-core-shape"></div>
+                        <div class="station01-process-core-scan"></div>
+                    </div>
+                    <div class="station01-process-field station01-process-field--output">
+                        <i class="station01-process-node" data-channel="gray"></i>
+                        <i class="station01-process-node" data-channel="gray2"></i>
+                        <i class="station01-process-node" data-channel="gray3"></i>
+                        <i class="station01-process-node" data-channel="gray4"></i>
+                        <i class="station01-process-node" data-channel="gray5"></i>
+                    </div>
+                    <div class="station01-process-dust" aria-hidden="true">
+                        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="station01-process-caption" id="processVizCaption">
+                    <span>三通道颜色流按权重汇入</span>
+                    <strong>合成单通道亮度</strong>
+                </div>
+            </section>
+
+            <section class="station01-card station01-pixel-card">
+                <div class="station01-card-head">
+                    <h3>当前像素探针</h3>
+                    <span id="probeLockState">实时</span>
+                </div>
+                <div class="station01-probe-summary">
+                    <div><span>坐标</span><strong id="probeCoord">-</strong></div>
+                    <div><span>HSV</span><strong id="probeHsv">-</strong></div>
+                </div>
+                <div class="station01-channel-bars">
+                    <div class="station01-channel-bar is-red"><span>R · 0.299</span><strong id="probeR">-</strong><i id="probeRBar"></i></div>
+                    <div class="station01-channel-bar is-green"><span>G · 0.587</span><strong id="probeG">-</strong><i id="probeGBar"></i></div>
+                    <div class="station01-channel-bar is-blue"><span>B · 0.114</span><strong id="probeB">-</strong><i id="probeBBar"></i></div>
+                    <div class="station01-channel-bar is-gray"><span>Gray</span><strong id="probeGray">-</strong><i id="probeGrayBar"></i></div>
+                </div>
+                <div class="station01-gray-calc" id="grayCalc">RGB → Gray</div>
+            </section>
+
+            <section class="station01-card">
+                <div class="station01-card-head">
+                    <h3>统计摘要</h3>
+                </div>
+                <dl class="station01-info-list station01-summary-list">
+                    <div><dt>通道数</dt><dd id="summaryChannels">-</dd></div>
+                    <div><dt>像素总数</dt><dd id="summaryPixels">-</dd></div>
+                    <div><dt>平均灰度</dt><dd id="summaryMean">-</dd></div>
+                    <div><dt>最小灰度</dt><dd id="summaryMin">-</dd></div>
+                    <div><dt>最大灰度</dt><dd id="summaryMax">-</dd></div>
+                    <div><dt>标准差</dt><dd id="summaryStd">-</dd></div>
+                    <div><dt>直方图峰值</dt><dd id="summaryPeak">-</dd></div>
+                </dl>
+            </section>
+        </aside>
+    </section>
+
+    <section class="station01-stepper" aria-label="实验流程">
+        <div class="is-active"><strong>1. 输入图像</strong><span>上传或选择示例</span></div>
+        <div><strong>2. 参数选择</strong><span>任务与参数</span></div>
+        <div><strong>3. 处理可视化</strong><span>对比与流程</span></div>
+        <div><strong>4. 统计分析</strong><span>直方图与摘要</span></div>
+        <div><strong>5. 导出结果</strong><span>下载当前结果</span></div>
+    </section>
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="/static/js/pages/grayscale.js"></script>
+
+</body>
+</html>

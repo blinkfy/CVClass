@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动场与光流约束 - 运动估计与光流</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/geometry_vision/motion_estimation.css?v=20260628-motion-aifab1">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "motion_estimation";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "constraint";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="active" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="active" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab geometry-lab motion-lab" data-motion-page="constraint">
+    <header class="vision-hero station-hero motion-hero">
+        <div>
+            <span class="section-label station-eyebrow">MODULE 02 · WORLD 03 MOTION ESTIMATION</span>
+            <h1 class="station-title">运动场与光流约束</h1>
+            <p class="station-summary">从两帧图像的亮度变化出发，观察像素运动如何被近似为二维光流向量。</p>
+        </div>
+        <div class="station-hero-actions motion-hero-actions">
+            <span class="motion-state">机制拆解 · 教学动画</span>
+            <strong class="station-badge">Ix u + Iy v + It = 0 · LK · PYRAMID</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs motion-tabs" aria-label="运动估计与光流内部导航">
+        
+        <a class="is-active" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+        
+        <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+        
+        <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+        
+        <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench motion-workbench motion-constraint-workbench" data-motion-flow aria-label="运动场与光流约束工作台">
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>两帧运动输入</h3><p>Frame Pair</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-motion-flow-input="sample">
+                <option value="block" selected>平移方块</option>
+                <option value="texture">旋转纹理</option>
+                <option value="object">前景物体移动</option>
+                <option value="camera">相机平移</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>帧间位移 dx <output data-motion-flow-output="dx">6</output></span>
+            <input type="range" min="-12" max="12" step="1" value="6" data-motion-flow-input="dx">
+        </label>
+        <label class="vision-field">
+            <span>帧间位移 dy <output data-motion-flow-output="dy">3</output></span>
+            <input type="range" min="-10" max="10" step="1" value="3" data-motion-flow-input="dy">
+        </label>
+        <label class="vision-field">
+            <span>噪声强度 <output data-motion-flow-output="noise">0.2</output></span>
+            <input type="range" min="0" max="1" step="0.1" value="0.2" data-motion-flow-input="noise">
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示亮度差分</span><input type="checkbox" data-motion-flow-input="showDiff" checked></label>
+            <label class="vision-toggle-row"><span>显示空间梯度 Ix / Iy</span><input type="checkbox" data-motion-flow-input="showSpatial" checked></label>
+            <label class="vision-toggle-row"><span>显示时间梯度 It</span><input type="checkbox" data-motion-flow-input="showTemporal" checked></label>
+            <label class="vision-toggle-row"><span>显示光流约束线</span><input type="checkbox" data-motion-flow-input="showLine" checked></label>
+            <label class="vision-toggle-row"><span>显示真实位移向量</span><input type="checkbox" data-motion-flow-input="showTruth" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-motion-step-select="constraint">
+                <option value="pair">双帧输入 / Frame Pair</option>
+                <option value="brightness">亮度恒定 / Brightness Constancy</option>
+                <option value="gradients">梯度计算 / Gradients</option>
+                <option value="constraint">光流约束 / Flow Constraint</option>
+                <option value="aperture">孔径问题 / Aperture Problem</option>
+            </select>
+        </label>
+
+        <div class="motion-button-row">
+            <button type="button" data-motion-prev="constraint">上一步</button>
+            <button type="button" data-motion-next="constraint">下一步</button>
+            <button type="button" data-motion-play="constraint">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前像素</span><strong data-motion-flow-summary="pixel">--</strong></div>
+            <div><span>真实位移</span><strong data-motion-flow-summary="truth">--</strong></div>
+            <div><span>约束方程</span><strong data-motion-flow-summary="equation">--</strong></div>
+            <div><span>观察结论</span><strong data-motion-flow-summary="note">单像素约束不足</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>MOTION FIELD & OPTICAL FLOW PLAYGROUND</span>
+                <h3 data-motion-flow-title>两帧亮度变化到光流约束</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-flow-chip="step">双帧输入 / Frame Pair</span>
+                <span data-motion-flow-chip="vector">u=6, v=3</span>
+                <span data-motion-flow-chip="gradient">Ix / Iy / It</span>
+            </div>
+        </div>
+
+        <div class="motion-frame-grid">
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>双帧输入</strong>
+                    <span>Frame t · Local Patch</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-frame="t"></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>双帧输入</strong>
+                    <span>Frame t+1 · Displaced Patch</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-frame="t1"></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>光流约束可视化</strong>
+                    <span>Flow Constraint · \(I_xu + I_yv + I_t = 0\)</span>
+                </div>
+                <div class="motion-svg-frame" data-motion-flow-constraint></div>
+            </section>
+        </div>
+
+        <div class="motion-detail-grid">
+            <section class="motion-patch-card">
+                <div class="geometry-section-head">
+                    <strong>5x5 局部窗口</strong>
+                    <span data-motion-flow-patch-caption>当前像素与邻域</span>
+                </div>
+                <div class="motion-patch-grid" data-motion-flow-patch></div>
+                <div class="motion-mini-card motion-gradient-microscope">
+                    <span>梯度计算 / Gradients</span>
+                    <div class="motion-math-output" data-motion-flow-gradient-micro>\(I_x=--,\ I_y=--,\ I_t=--\)</div>
+                </div>
+            </section>
+            <section class="motion-flow-preview" data-motion-flow-preview aria-label="光流约束步骤预览"></section>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-motion-flow-notes-title>Frame Pair</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>亮度恒定 / Brightness Constancy</span>
+            <strong data-motion-flow-brightness>\(I(x,y,t) \approx I(x+u,y+v,t+1)\)</strong>
+            <small data-motion-flow-formula-note>同一个物理点在相邻帧中亮度近似不变。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>光流约束 / Flow Constraint</span>
+            <strong data-motion-flow-formula>\(I_xu + I_yv + I_t = 0\)</strong>
+            <small data-motion-flow-current-equation>\(0.00u + 0.00v + 0.00 = 0\)</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>孔径问题 / Aperture Problem</span>
+            <strong>\(1\ \text{equation},\ 2\ \text{unknowns}\)</strong>
+            <small data-motion-flow-aperture-note>单像素只能给出一条 u-v 约束线，需要局部窗口补充更多方程。</small>
+        </div>
+
+        <div class="motion-reference-card">
+            <span>光流估计分类</span>
+            <div class="motion-reference-grid">
+                <article><strong>稀疏光流</strong><small>选择角点、纹理点等少量可跟踪特征进行估计。</small></article>
+                <article><strong>稠密光流</strong><small>对图像中尽量多的像素估计二维运动向量。</small></article>
+            </div>
+        </div>
+
+        <div class="motion-code-card motion-derivation-card">
+            <span>一阶近似</span>
+            <div class="motion-math-output motion-math-output--block">\[
+\begin{aligned}
+I(x+\Delta x,y+\Delta y,t+\Delta t) &\approx I + I_x\Delta x + I_y\Delta y + I_t\Delta t\\
+0 &= I_x\Delta x + I_y\Delta y + I_t\Delta t\\
+\Delta t=1 &\Rightarrow I_xu + I_yv = -I_t
+\end{aligned}
+\]</div>
+        </div>
+
+        <div class="motion-notes-body" data-motion-flow-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前梯度代入</span>
+            <div class="motion-math-output" data-motion-flow-substitution>\(I_x=--,\ I_y=--,\ I_t=--\)</div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper motion-stepper motion-stepper--5" aria-label="运动场与光流约束流程" data-motion-stepper="constraint">
+    <li class="is-active" data-motion-phase="pair"><span>1</span><div><strong>双帧输入</strong><small>Frame Pair</small></div></li>
+    <li data-motion-phase="brightness"><span>2</span><div><strong>亮度恒定</strong><small>Brightness Constancy</small></div></li>
+    <li data-motion-phase="gradients"><span>3</span><div><strong>梯度计算</strong><small>Gradients</small></div></li>
+    <li data-motion-phase="constraint"><span>4</span><div><strong>光流约束</strong><small>Flow Constraint</small></div></li>
+    <li data-motion-phase="aperture"><span>5</span><div><strong>孔径问题</strong><small>Aperture Problem</small></div></li>
+</ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/js/geometry_vision/motion_estimation.js?v=20260628-autoplay"></script>
+
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语义分割 vs 实例分割：真实模型对比台</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/segmentation_basic.css?v=20260628-remove-sem-grid">
+<link rel="stylesheet" href="/static/css/vision_tasks/semantic_segmentation_lab.css?v=20260626-titlescn1">
+<link rel="stylesheet" href="/static/css/vision_tasks/instance_segmentation_lab.css?v=20260626-fontup4">
+
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "segmentation_lab";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "compare";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="active" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab" data-vision-page="compare" data-vision-module="segmentation_lab">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 09 · REAL SEGMENTATION LAB</span>
+            <h1 class="station-title">语义分割 vs 实例分割：真实模型对比台</h1>
+            <p class="station-summary">在同一张图像上同时运行 SegFormer-B0 与 YOLO11n-seg，比较 H×W class map 与 N × {bbox, class, score, mask, instance_id} 的输出结构、推理流程和适用场景。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">SEGFORMER · YOLO-SEG · COMPARISON</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="语义分割 vs 实例分割：真实模型对比台内部导航">
+        
+        <a class="is-active" href="/segmentation-lab">语义 vs 实例</a>
+        
+        <a class="" href="/segmentation-lab/semantic">语义分割</a>
+        
+        <a class="" href="/segmentation-lab/instance">实例分割</a>
+        
+    </nav>
+
+    
+<section class="seg-lab-workbench" data-segmentation-lab aria-label="语义分割与实例分割真实模型对比台">
+    <aside class="vision-panel seg-lab-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div>
+                <h3>控制面板</h3>
+                <p>双模型推理控制</p>
+            </div>
+        </div>
+
+        <div class="vision-field">
+            <span>样例图选择</span>
+            <div class="vis-sample-picker" data-seg-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-seg-sample-trigger>
+                    <span class="vis-sample-picker__label" data-seg-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-seg-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vision-field">
+            <span>上传图片</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="segCompareUpload">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span data-seg-upload-name>选择图片运行双模型</span>
+                </label>
+                <input id="segCompareUpload" class="sr-only" type="file" accept="image/*" data-seg-upload>
+            </div>
+        </div>
+
+        <section class="seg-lab-control-card">
+            <div class="overview-control-title">
+                <strong>任务聚焦</strong>
+                <span>FOCUS</span>
+            </div>
+            <div class="overview-segmented-control seg-lab-focus-toggle">
+                <button class="is-active" type="button" data-seg-focus="semantic">语义分割</button>
+                <button type="button" data-seg-focus="instance">实例分割</button>
+                <button type="button" data-seg-focus="compare">差异对比</button>
+            </div>
+        </section>
+
+        <label class="vision-field">
+            <span>Mask Opacity <output data-seg-opacity-output>62%</output></span>
+            <input data-seg-opacity type="range" min="20" max="92" value="62">
+        </label>
+
+        <label class="vision-field">
+            <span>推理后端</span>
+            <select data-seg-backend>
+                <option value="webgpu" selected>WebGPU 自动回退</option>
+                <option value="wasm">WASM 稳定模式</option>
+            </select>
+        </label>
+
+        <button class="seg-lab-run-button" type="button" data-seg-run>
+            <span>运行双模型推理</span>
+            <small>SegFormer-B0 + YOLO11n-seg</small>
+        </button>
+
+        <div class="seg-lab-model-stack">
+            <article data-seg-model-card="semantic">
+                <span>Semantic</span>
+                <strong data-seg-sem-status>等待运行</strong>
+                <small data-seg-sem-meta>SegFormer-B0 · H×W class map</small>
+            </article>
+            <article data-seg-model-card="instance">
+                <span>Instance</span>
+                <strong data-seg-inst-status>等待运行</strong>
+                <small data-seg-inst-meta>YOLO11n-seg · instance masks</small>
+            </article>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel seg-lab-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>REAL MODEL COMPARISON</span>
+                <h3>同一图像下的语义 Mask 与实例 Mask</h3>
+
+            </div>
+            <span class="vision-status-chip" data-seg-status>READY</span>
+        </div>
+
+        <div class="seg-lab-stage-strip">
+            <span>Input <strong data-seg-input-name>--</strong></span>
+            <span>Semantic <strong data-seg-sem-time>--</strong></span>
+            <span>Instance <strong data-seg-inst-time>--</strong></span>
+            <span>Classes <strong data-seg-class-count>--</strong></span>
+            <span>Instances <strong data-seg-inst-count>--</strong></span>
+        </div>
+
+        <div class="seg-lab-comparison-grid" data-seg-comparison-grid>
+            <img class="seg-lab-input-proxy" data-seg-input-image alt="" aria-hidden="true">
+
+            <article class="seg-lab-result-card seg-lab-result-card--semantic is-focused" data-seg-card="semantic">
+                <header>
+                    <span>02</span>
+                    <div><h4>语义分割</h4><p>Pixel-wise Classification</p></div>
+                    <b data-seg-sem-badge>MODEL</b>
+                </header>
+                <div class="seg-lab-visual seg-lab-visual--mask" data-seg-sem-stage>
+                    <img data-seg-sem-image alt="语义分割输入图">
+                    <canvas data-seg-sem-canvas></canvas>
+                    <div class="seg-lab-scanline" aria-hidden="true"></div>
+                </div>
+                <div class="seg-lab-mini-legend" data-seg-sem-legend></div>
+                <footer>
+                    <strong>H×W class map</strong>
+                    <span>每个像素只有类别，不区分同类不同个体。</span>
+                </footer>
+            </article>
+
+            <article class="seg-lab-result-card seg-lab-result-card--instance" data-seg-card="instance">
+                <header>
+                    <span>03</span>
+                    <div><h4>实例分割</h4><p>Detection + Mask</p></div>
+                    <b data-seg-inst-badge>MODEL</b>
+                </header>
+                <div class="seg-lab-visual seg-lab-visual--mask" data-seg-inst-stage>
+                    <img data-seg-inst-image alt="实例分割输入图">
+                    <canvas data-seg-inst-canvas></canvas>
+                    <svg data-seg-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割边界框"></svg>
+                    <div class="seg-lab-scanline" aria-hidden="true"></div>
+                    <div class="seg-lab-compare-overlay" data-seg-compare-inst aria-hidden="true">
+                        <div class="seg-lab-compare-inst">
+                            <i></i><i></i><i></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="seg-lab-mini-legend" data-seg-inst-legend></div>
+                <footer>
+                    <strong>N × {bbox,class,score,mask,id}</strong>
+                    <span>同类目标被拆成独立实例，可计数、可选择、可统计。</span>
+                </footer>
+            </article>
+        </div>
+
+        <div class="seg-lab-pipeline" data-seg-pipeline aria-label="双模型推理流程">
+            <button class="is-active" type="button" data-seg-step="input"><span>1</span><strong>Image</strong><small>shared input</small></button>
+            <button type="button" data-seg-step="preprocess"><span>2</span><strong>Preprocess</strong><small>resize / normalize</small></button>
+            <button type="button" data-seg-step="semantic"><span>3</span><strong>SegFormer</strong><small>logits → argmax</small></button>
+            <button type="button" data-seg-step="instance"><span>4</span><strong>YOLO-seg</strong><small>boxes + prototypes</small></button>
+            <button type="button" data-seg-step="compare"><span>5</span><strong>Compare</strong><small>map vs set</small></button>
+        </div>
+
+        <div class="seg-lab-player" data-seg-player aria-label="推理回放控制">
+            <div class="seg-lab-step-info" data-seg-step-info>
+                <span class="seg-lab-step-name" data-seg-step-name>Image</span>
+                <span class="seg-lab-step-principle" data-seg-step-principle>共享输入图像，两个模型将分别从同一像素集合中提取不同粒度的信息。</span>
+            </div>
+            <div class="seg-lab-progress" data-seg-progress aria-label="步骤进度">
+                <button class="seg-lab-progress-dot is-current" type="button" data-seg-dot="input" aria-label="步骤1 Image"><span>1</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="preprocess" aria-label="步骤2 Preprocess"><span>2</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="semantic" aria-label="步骤3 SegFormer"><span>3</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="instance" aria-label="步骤4 YOLO-seg"><span>4</span></button>
+                <i class="seg-lab-progress-line" aria-hidden="true"></i>
+                <button class="seg-lab-progress-dot" type="button" data-seg-dot="compare" aria-label="步骤5 Compare"><span>5</span></button>
+                <span class="seg-lab-progress-text" data-seg-progress-text>步骤 1 / 5</span>
+            </div>
+            <div class="seg-lab-controls">
+                <button class="seg-lab-ctrl seg-lab-ctrl--step" type="button" data-seg-prev disabled aria-label="上一步">上一步</button>
+                <button class="seg-lab-ctrl seg-lab-ctrl--play" type="button" data-seg-play disabled aria-label="播放或暂停">播放</button>
+                <button class="seg-lab-ctrl seg-lab-ctrl--step" type="button" data-seg-next disabled aria-label="下一步">下一步</button>
+                <label class="seg-lab-speed">
+                    <span>速度</span>
+                    <input type="range" min="0.25" max="1.5" step="0.25" value="0.5" data-seg-speed>
+                    <b data-seg-speed-label>0.5×</b>
+                </label>
+            </div>
+        </div>
+
+        <section class="seg-lab-proscons-compact" aria-labelledby="segProsConsTitle">
+            <div class="overview-section-heading" style="grid-column:1/-1">
+                <div>
+                    <span>CHOOSING THE RIGHT TASK</span>
+                    <h4 id="segProsConsTitle">任务选择速查</h4>
+                </div>
+                <p>语义：全局类别 · 实例：独立对象 · 选择依据：是否需要区分个体。</p>
+            </div>
+            <article data-seg-pros-card="semantic" class="is-focused">
+                <header><span>Semantic</span><strong>语义分割</strong></header>
+                <ul>
+                    <li>全图 dense prediction，擅长连续区域</li>
+                    <li>无法区分同类个体（第几个行人）</li>
+                    <li>典型：自动驾驶可行驶区域、遥感地物</li>
+                </ul>
+            </article>
+            <article data-seg-pros-card="instance">
+                <header><span>Instance</span><strong>实例分割</strong></header>
+                <ul>
+                    <li>每对象独立 mask / id，可计数可跟踪</li>
+                    <li>依赖 NMS，拥挤场景易漏检</li>
+                    <li>典型：行人计数、机器人抓取、视频跟踪</li>
+                </ul>
+            </article>
+        </section>
+    </div>
+
+    <aside class="vision-panel seg-lab-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div>
+                <h3>输出结构</h3>
+                <p>结构、指标与选择依据</p>
+            </div>
+        </div>
+
+        <div class="seg-lab-link-modes" data-seg-link-modes role="tablist" aria-label="Mask 联动模式">
+            <button class="seg-lab-link-mode-btn is-active" type="button" data-seg-link-mode="hover" role="tab" aria-selected="true">Hover 联动</button>
+            <button class="seg-lab-link-mode-btn" type="button" data-seg-link-mode="click" role="tab" aria-selected="false">点击锁定</button>
+            <button class="seg-lab-link-mode-btn" type="button" data-seg-link-mode="blink" role="tab" aria-selected="false">差异闪烁</button>
+        </div>
+
+        <section class="seg-lab-explain-card" data-seg-explain-card>
+            <span data-seg-explain-kicker>语义分割</span>
+            <h4 data-seg-explain-title>语义分割关注“每个像素是什么类别”</h4>
+            <p data-seg-explain-copy>适合道路、天空、墙面、地面等 stuff 类别和整体场景理解，但不会把同类多个目标拆成独立对象。</p>
+        </section>
+
+        <div class="seg-lab-figure-card" data-seg-figure="semantic">
+            <img src="/static/assets/img/semantic-segment2.webp" alt="语义分割输出结构示意" loading="lazy">
+        </div>
+
+        <div class="seg-lab-figure-card" data-seg-figure="instance">
+            <img src="/static/assets/img/instance-segment2.webp" alt="实例分割输出结构示意" loading="lazy">
+        </div>
+
+        <section class="seg-lab-inspector">
+            <div class="overview-control-title">
+                <strong>当前输出摘要</strong>
+                <span>LIVE</span>
+            </div>
+            <div class="seg-lab-inspector-list" data-seg-inspector></div>
+        </section>
+    </aside>
+</section>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script src="/static/js/vision_tasks/vision_tasks_common.js?v=20260626-titlescn1"></script>
+
+
+<script type="module" src="/static/js/vision_tasks/segmentation_lab_compare.js?v=20260628-remove-sem-grid"></script>
+
+</body>
+</html>

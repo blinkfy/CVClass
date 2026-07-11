@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Banana 案例</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/frontier.css?v=20260619-frontier4">
+<link rel="stylesheet" href="/static/css/vision_banana.css?v=20260619-official11">
+
+</head>
+<body class="cv-shell sidebar-collapsed home-page-shell  frontier-page-shell    ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "frontier";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "vision_banana";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="/" aria-label="计算机视觉教学平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="/static/assets/img/icon.webp" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉教学平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="" href="/">首页</a>
+            <a href="/#featured-modules">实验模块</a>
+            <a class="" href="/learning-path">学习路径</a>
+            <a class="" href="/knowledge-graph">知识图谱</a>
+            <a class="" href="/principles">算法原理</a>
+            <a class="active" href="/frontier">前沿探索</a>
+            <a class="" href="/about-author">关于作者</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="active" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="active" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="banana-page vb-page" data-banana-page>
+    <section class="vb-hero" aria-labelledby="bananaHeroTitle">
+        <div class="vb-hero-copy">
+            <a class="vb-back-link" href="/frontier">返回 CV 前沿探索</a>
+            <h1 id="bananaHeroTitle">Vision Banana：Image Generators are Generalist Vision Learners</h1>
+            <h2>把视觉理解任务转化为图像生成</h2>
+            <p>输入图像与指令共同定义任务，模型生成 RGB 结果，再解码为分割、深度、法线或编辑结果。</p>
+            <div class="vb-hero-actions">
+                <a href="#vbCapabilities">查看能力展示</a>
+                <a href="#vbOfficialSamples">多任务样例</a>
+                <a href="#vbResearchGallery">关键技术与结果</a>
+            </div>
+        </div>
+
+        <div class="vb-hero-stage" aria-label="统一视觉接口流程">
+            <span class="vb-stage-grid" aria-hidden="true"></span>
+            <span class="vb-stage-label">统一 RGB 视觉接口</span>
+            <div class="vb-flow-card vb-flow-card--input" style="--flow-delay: 0ms">
+                <span>输入原图</span>
+                <img src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="输入图像示例">
+            </div>
+            <div class="vb-flow-card vb-flow-card--prompt" style="--flow-delay: 140ms">
+                <span>任务指令</span>
+                <strong>Render <mark>semantic regions</mark> as an RGB task image.</strong>
+            </div>
+            <span class="vb-flow-line vb-flow-line--a" aria-hidden="true"></span>
+            <div class="vb-core-node" style="--flow-delay: 280ms">
+                <span class="vb-core-ring" aria-hidden="true"></span>
+                <img src="/static/assets/frontier/vision-banana/official-logo.png" alt="">
+                <strong>Vision Banana</strong>
+                <small>共享图像生成器接口</small>
+            </div>
+            <span class="vb-flow-line vb-flow-line--b" aria-hidden="true"></span>
+            <div class="vb-flow-card vb-flow-card--output" style="--flow-delay: 420ms">
+                <span>RGB 任务图像</span>
+                <div class="vb-output-mini-grid" aria-hidden="true">
+                    <div class="vb-mini vb-mini--seg" title="Semantic Segmentation Mask">
+                        <svg viewBox="0 0 80 56" class="vb-mini-svg">
+                            <rect width="80" height="56" fill="#f8fafc" />
+                            <!-- Technical Grid overlay -->
+                            <path d="M 0 10 L 80 10 M 0 20 L 80 20 M 0 30 L 80 30 M 0 40 L 80 40 M 0 50 L 80 50 M 10 0 L 10 56 M 20 0 L 20 56 M 30 0 L 30 56 M 40 0 L 40 56 M 50 0 L 50 56 M 60 0 L 60 56 M 70 0 L 70 56" stroke="rgba(29, 92, 255, 0.07)" stroke-width="0.5" />
+                            <!-- Solid Flat Segments (Light theme compatible) -->
+                            <path d="M 5,42 L 75,42 L 70,52 L 10,52 Z" fill="#dbeafe" stroke="#3b82f6" stroke-width="0.8" />
+                            <path d="M 12,36 L 38,36 L 38,42 L 12,42 Z" fill="#ccfbf1" stroke="#0d9488" stroke-width="0.8" />
+                            <path d="M 45,25 L 68,25 L 68,42 L 45,42 Z" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="0.8" />
+                            <!-- Calibration Pointer Lines -->
+                            <path d="M 25,36 L 25,22 L 18,22" stroke="#0d9488" stroke-width="0.5" fill="none" opacity="0.8" />
+                            <text x="8" y="20" fill="#0f766e" font-size="5" font-family="monospace" font-weight="bold">c_01</text>
+                            <path d="M 56,25 L 56,14 L 48,14" stroke="#8b5cf6" stroke-width="0.5" fill="none" opacity="0.8" />
+                            <text x="38" y="12" fill="#6d28d9" font-size="5" font-family="monospace" font-weight="bold">c_02</text>
+                            <!-- Technical text overlay -->
+                            <rect x="0.5" y="0.5" width="79" height="55" fill="none" stroke="rgba(29, 92, 255, 0.15)" stroke-width="1" />
+                            <text x="5" y="49" fill="#475569" font-size="6" font-weight="bold" font-family="monospace">CLASS_MASK</text>
+                        </svg>
+                    </div>
+                    <div class="vb-mini vb-mini--depth" title="Metric Range Map">
+                        <svg viewBox="0 0 80 56" class="vb-mini-svg">
+                            <rect width="80" height="56" fill="#f8fafc" />
+                            <!-- Light theme range map (Stepped jet scale) -->
+                            <rect width="80" height="56" fill="#eff6ff" />
+                            <path d="M 0,22 Q 40,3 80,22 L 80,56 L 0,56 Z" fill="#dbeafe" stroke="rgba(29, 92, 255, 0.1)" stroke-width="0.5" />
+                            <path d="M 0,31 Q 40,12 80,31 L 80,56 L 0,56 Z" fill="#ccfbf1" stroke="rgba(13, 148, 136, 0.1)" stroke-width="0.5" />
+                            <path d="M 0,40 Q 40,25 80,40 L 80,56 L 0,56 Z" fill="#fef08a" stroke="rgba(202, 138, 4, 0.1)" stroke-width="0.5" />
+                            <path d="M 0,47 Q 40,36 80,47 L 80,56 L 0,56 Z" fill="#ffedd5" stroke="rgba(217, 119, 6, 0.1)" stroke-width="0.5" />
+                            <path d="M 0,52 Q 40,46 80,52 L 80,56 L 0,56 Z" fill="#fee2e2" stroke="rgba(220, 38, 38, 0.1)" stroke-width="0.5" />
+                            <!-- Numeric range markers (high contrast on light bands) -->
+                            <text x="4" y="20" fill="#1e40af" font-size="5" font-family="monospace" font-weight="bold">>3.2m</text>
+                            <text x="4" y="29" fill="#0f766e" font-size="5" font-family="monospace" font-weight="bold">1.8m</text>
+                            <text x="4" y="38" fill="#854d0e" font-size="5" font-family="monospace" font-weight="bold">0.9m</text>
+                            <text x="4" y="45" fill="#b91c1c" font-size="5" font-family="monospace" font-weight="bold">0.3m</text>
+                            <!-- Technical frame -->
+                            <rect x="0.5" y="0.5" width="79" height="55" fill="none" stroke="rgba(29, 92, 255, 0.15)" stroke-width="1" />
+                            <text x="5" y="12" fill="#475569" font-size="6" font-weight="bold" font-family="monospace">RANGE_MAP</text>
+                        </svg>
+                    </div>
+                    <div class="vb-mini vb-mini--normal" title="Surface Normal Field">
+                        <svg viewBox="0 0 80 56" class="vb-mini-svg">
+                            <rect width="80" height="56" fill="#f8fafc" />
+                            <!-- Technical Grid background -->
+                            <path d="M 0 10 L 80 10 M 0 20 L 80 20 M 0 30 L 80 30 M 0 40 L 80 40 M 0 50 L 80 50 M 10 0 L 10 56 M 20 0 L 20 56 M 30 0 L 30 56 M 40 0 L 40 56 M 50 0 L 50 56 M 60 0 L 60 56 M 70 0 L 70 56" stroke="rgba(29, 92, 255, 0.07)" stroke-width="0.5" />
+                            <!-- Faceted 3D Block (Lighter surface colors, clean strokes) -->
+                            <g transform="translate(40, 31)">
+                                <!-- Top: Y+ flat green -->
+                                <polygon points="0,-15 16,-7 0,1 -16,-7" fill="#86efac" stroke="#166534" stroke-width="0.6" />
+                                <!-- Right: X+ flat red -->
+                                <polygon points="0,1 16,-7 16,11 0,19" fill="#fca5a5" stroke="#991b1b" stroke-width="0.6" />
+                                <!-- Left: Z+ flat blue -->
+                                <polygon points="-16,-7 0,1 0,19 -16,11" fill="#93c5fd" stroke="#1e40af" stroke-width="0.6" />
+                                <!-- Normal Vectors pointing straight out of faces (dark blue arrows) -->
+                                <path d="M 0,-7 L 0,-19 M -2,-16 L 0,-19 L 2,-16" stroke="#1e3a8a" stroke-width="0.8" fill="none" />
+                                <path d="M 8,6 L 18,11 M 15,8 L 18,11 L 17,13" stroke="#1e3a8a" stroke-width="0.8" fill="none" />
+                                <path d="M -8,6 L -18,11 M -17,13 L -18,11 L -15,8" stroke="#1e3a8a" stroke-width="0.8" fill="none" />
+                            </g>
+                            <!-- Axis coordinates indicator -->
+                            <path d="M 68,14 L 73,14 M 68,14 L 68,9" stroke="#475569" stroke-width="0.8" fill="none" />
+                            <text x="74" y="16" fill="#475569" font-size="5" font-family="monospace">x</text>
+                            <text x="66" y="8" fill="#475569" font-size="5" font-family="monospace">y</text>
+                            <rect x="0.5" y="0.5" width="79" height="55" fill="none" stroke="rgba(29, 92, 255, 0.15)" stroke-width="1" />
+                            <text x="5" y="12" fill="#475569" font-size="6" font-weight="bold" font-family="monospace">NORMAL_VEC</text>
+                        </svg>
+                    </div>
+                    <div class="vb-mini vb-mini--edit" title="Generative Image Editing Diff">
+                        <svg viewBox="0 0 80 56" class="vb-mini-svg">
+                            <rect width="80" height="56" fill="#f8fafc" />
+                            <path d="M 0 10 L 80 10 M 0 20 L 80 20 M 0 30 L 80 30 M 0 40 L 80 40 M 0 50 L 80 50 M 10 0 L 10 56 M 20 0 L 20 56 M 30 0 L 30 56 M 40 0 L 40 56 M 50 0 L 50 56 M 60 0 L 60 56 M 70 0 L 70 56" stroke="rgba(29, 92, 255, 0.07)" stroke-width="0.5" />
+                            <!-- Region of Interest (ROI) Edit Bounding Box -->
+                            <rect x="25" y="16" width="32" height="24" fill="none" stroke="#0891b2" stroke-width="1" stroke-dasharray="2,2" />
+                            <!-- Technical Crosshair targeting the edit pixel coordinates -->
+                            <path d="M 41,23 L 41,33 M 36,28 L 46,28" stroke="#0891b2" stroke-width="0.8" />
+                            <circle cx="41" cy="28" r="3" fill="none" stroke="#0891b2" stroke-width="0.6" />
+                            <!-- Analytical readouts -->
+                            <text x="28" y="13" fill="#0891b2" font-size="5" font-family="monospace" font-weight="bold">ROI_EDIT: ok</text>
+                            <text x="28" y="47" fill="#e11d48" font-size="5" font-family="monospace" font-weight="bold">DIFF: +0.42</text>
+                            <!-- Technical frame -->
+                            <rect x="0.5" y="0.5" width="79" height="55" fill="none" stroke="rgba(29, 92, 255, 0.15)" stroke-width="1" />
+                            <text x="5" y="12" fill="#475569" font-size="6" font-weight="bold" font-family="monospace">EDIT_DIFF</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="vb-flow-card vb-flow-card--decode" style="--flow-delay: 560ms">
+                <span>解码并输出结果</span>
+                <strong>分割 · 深度 · 法线 · 编辑图像</strong>
+            </div>
+        </div>
+    </section>
+
+    <nav class="vb-anchor-nav" aria-label="Vision Banana 页面内导航">
+        <a href="#vbCapabilities">能力展示</a>
+        <a href="#vbOfficialSamples">任务展廊</a>
+        <a href="#vbPointCloud">三维点云</a>
+        <a href="#vbResultHighlights">评估指标</a>
+        <a href="#vbResearchGallery">论文图表</a>
+        <a href="#bananaSystemTitle">系统关系</a>
+    </nav>
+
+    <section class="vb-section vb-teaser-section" data-reveal-section aria-labelledby="vbTeaserTitle">
+        <div class="vb-section-head">
+            <h2 id="vbTeaserTitle">从生成式图像模型到通用视觉学习器</h2>
+            <p>官方主页把重点放在能力结果图和 hover reveal 上。本页保留这种“大图优先、结果优先”的表达方式，并适配为 CVClass 的蓝白科技风。</p>
+        </div>
+        <figure class="vb-teaser">
+            <img src="/static/assets/frontier/vision-banana/official-teaser.png" alt="Vision Banana 官方总览图">
+        </figure>
+    </section>
+
+    <section id="vbCapabilities" class="vb-section vb-capabilities" data-reveal-section aria-labelledby="vbCapabilityTitle">
+        <div class="vb-section-head">
+            <span class="vb-kicker">能力展示</span>
+            <h2 id="vbCapabilityTitle">从输入图到 RGB 任务输出</h2>
+            <p>桌面端悬停查看输出，移动端点击切换。每张卡展示同一个接口思路：Input Image + Instruction Prompt → RGB Output → Decoded Vision Result。</p>
+        </div>
+
+        <div class="vb-capability-grid">
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="Semantic segmentation input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img2-output.png" alt="Semantic segmentation RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">01</span>
+                    <h3>语义分割</h3>
+                    <p class="vb-prompt">Generate a <mark>semantic segmentation</mark> visualization with class colors for dessert, menu and background.</p>
+                    <p>把逐像素类别标签转写成可视 RGB 图，强调统一输出接口而不是专用张量头。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt="Instance segmentation input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/wine-output.png" alt="Instance segmentation RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">02</span>
+                    <h3>实例分割</h3>
+                    <p class="vb-prompt">Segment all price tags and color each <mark>instance</mark> differently.</p>
+                    <p>实例 ID 通过不同 RGB 颜色表达，后续可按颜色连通区域解码为 mask。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/refseg/controller-input.png" alt="Referring segmentation input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/controller-output.png" alt="Referring expression segmentation output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">03</span>
+                    <h3>指代性语言分割</h3>
+                    <p class="vb-prompt">Render the <mark>game control device</mark> as a solid yellow mask on a black background.</p>
+                    <p>自然语言决定分割对象，输出仍是一张 RGB mask，而不是换一个专用模型。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt="Metric depth input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/banana-output.png" alt="Metric depth RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">04</span>
+                    <h3>深度估计</h3>
+                    <p class="vb-prompt">Generate a <mark>metric depth map</mark> of the provided image.</p>
+                    <p>深度先变成彩色可视图，再通过标尺或解码规则转回稠密深度结构。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/normal/room-input.jpg" alt="Surface normal input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/room-output.jpg" alt="Surface normal RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">05</span>
+                    <h3>表面法线估计</h3>
+                    <p class="vb-prompt">Generate a <mark>surface normal</mark> map of the input image.</p>
+                    <p>RGB 三通道表示三维方向分量，让几何估计也进入同一种输出形式。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/edit-input.svg?v=20260619-cap2" alt="Image editing input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/edit-output.svg?v=20260619-cap2" alt="Image editing RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">06</span>
+                    <h3>图像编辑</h3>
+                    <p class="vb-prompt">Edit the road into a clean <mark>blue lane</mark> while preserving scene geometry.</p>
+                    <p>理解任务和生成任务共享 RGB 输出形式，体现生成式视觉接口的延展性。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/background-input.svg?v=20260619-cap2" alt="Background removal input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/background-output.svg?v=20260619-cap2" alt="Background removal RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">07</span>
+                    <h3>背景抠图</h3>
+                    <p class="vb-prompt">Remove the <mark>background</mark> and keep foreground objects with checkerboard transparency.</p>
+                    <p>前景保留、背景透明可以继续被解码成 alpha mask 或合成素材。</p>
+                </div>
+            </article>
+
+            <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
+                <div class="vb-cap-media">
+                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/edge-input.svg?v=20260619-cap2" alt="Edge map input">
+                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/edge-output.svg?v=20260619-cap2" alt="Edge structure RGB output"></div>
+                    <span class="vb-state-label vb-state-label--input">输入原图</span>
+                    <span class="vb-state-label vb-state-label--output">模型输出</span>
+                    <span class="vb-reveal-hint">悬停/点击查看</span>
+                </div>
+                <div class="vb-cap-copy">
+                    <span class="vb-cap-index">08</span>
+                    <h3>边缘与结构线提取</h3>
+                    <p class="vb-prompt">Draw crisp <mark>structure lines</mark> and object contours on a dark background.</p>
+                    <p>边缘、轮廓和结构线也可以看作生成一张可解码的视觉结果图。</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section id="vbOfficialSamples" class="vb-section vb-official-samples" data-reveal-section aria-labelledby="vbOfficialSamplesTitle">
+        <div class="vb-section-head">
+            <h2 id="vbOfficialSamplesTitle">多任务视觉结果展廊</h2>
+            <p>按任务分组展示输入图、指令与 RGB 输出结果，让同一生成式接口在分割、深度和几何估计中的表现连续呈现。桌面端悬停 reveal，移动端点击 reveal。</p>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>01</span><h3>语义分割</h3><p>同一种 RGB mask 输出，可以由不同类别集合和 prompt 约束生成。</p></header>
+            <div class="vb-sample-strip" aria-label="Semantic segmentation official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img2-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p><mark>per-pixel class labeling</mark> for dessert, menu, plates and background.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/img1-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img1-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Generate semantic colors for <mark>cat ears</mark>, exit sign and background.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/ocean-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/ocean-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Conduct per-class segmentation for people, <mark>ocean</mark>, sky and street lights.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>02</span><h3>实例分割</h3><p>颜色不再代表类别，而是代表不同实例，展示 RGB 输出如何承载实例 ID。</p></header>
+            <div class="vb-sample-strip" aria-label="Instance segmentation official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/food-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/food-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Color each <mark>garlic instance</mark> differently.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/wine-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Segment all <mark>price tags</mark> with distinct instance colors.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/tags-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/tags-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Each price tag is represented by a <mark>unique solid color</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/basketball-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/basketball-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Render each <mark>basketball</mark> as an individual circular mask.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>03</span><h3>指代性语言分割</h3><p>语言指代决定被分割对象，展示模型对自然语言 prompt 的绑定能力。</p></header>
+            <div class="vb-sample-strip" aria-label="Referring expression segmentation official samples">
+                <article class="vb-sample-card vb-sample-card--focus-bottom" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/menu-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/menu-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Highlight the chef names in <mark>Chinese and English</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/cats-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/cats-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Separate the <mark>stretching cat</mark> from another cat by color.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/controller-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/controller-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>The <mark>game control device</mark> is represented by a solid yellow mask.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/people-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/people-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Render the man in a <mark>pink t shirt</mark> as the referred mask.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>04</span><h3>深度估计</h3><p>从室内、建筑、自然场景到物体近景，深度都先以 RGB 色带输出。</p></header>
+            <div class="vb-sample-strip" aria-label="Metric depth official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/fallingwater-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/fallingwater-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Predict metric depth with a <mark>rainbow colormap</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/laguna-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/laguna-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Outdoor scene depth encoded as <mark>warm-to-cool RGB</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/banana-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Close-range object depth from a single <mark>RGB image</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/eth3d-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/eth3d-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Dense indoor geometry represented as <mark>decodable color</mark>.</p>
+                </article>
+            </div>
+        </div>
+
+        <div class="vb-sample-group">
+            <header><span>05</span><h3>表面法线估计</h3><p>RGB 三通道可以承载几何方向场，把法线估计也纳入图像生成接口。</p></header>
+            <div class="vb-sample-strip" aria-label="Surface normal official samples">
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/jazz-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/jazz-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Predict <mark>surface normal</mark> of a complex indoor scene.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/desk-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/desk-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Indoor object surfaces mapped to <mark>RGB normal channels</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/room-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/room-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Room layout recovered as a <mark>direction field</mark>.</p>
+                </article>
+                <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
+                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/statue-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/statue-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <p>Object shape encoded through <mark>surface orientation</mark>.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section id="vbPointCloud" class="vb-section vb-pointcloud-section" data-reveal-section aria-labelledby="vbPointCloudTitle">
+        <div class="vb-section-head">
+            <h2 id="vbPointCloudTitle">基于标定深度的三维点云重建</h2>
+            <p>Vision Banana 的 metric depth 预测可以结合相机内参反投影为 3D 点云，用来观察完整场景几何。这里复用官方点云数据，在本页中做轻量 WebGL 可视化。</p>
+        </div>
+        <div class="vb-pointcloud-viewer" data-vb-pointcloud>
+            <div class="vb-pointcloud-canvas-wrap">
+                <canvas data-vb-pointcloud-canvas aria-label="3D point cloud viewer"></canvas>
+                <div class="vb-pointcloud-loading" data-vb-pointcloud-loading>
+                    <span class="vb-pointcloud-spinner" aria-hidden="true"></span>
+                    <strong>正在加载点云数据...</strong>
+                </div>
+            </div>
+            <div class="vb-pointcloud-controls" aria-label="点云数据与视角控制">
+                <button type="button" class="is-active" data-pc-key="nyu_500" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_500.bin">NYU 1</button>
+                <button type="button" data-pc-key="nyu_162" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_162.bin">NYU 2</button>
+                <button type="button" data-pc-key="nyu_200" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_200.bin">NYU 3</button>
+                <button type="button" data-pc-key="eth3d_20" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_20.bin">ETH3D 1</button>
+                <button type="button" data-pc-key="eth3d_110" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_110.bin">ETH3D 2</button>
+                <button type="button" data-pc-key="eth3d_205" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_205.bin">ETH3D 3</button>
+                <span class="vb-pointcloud-divider" aria-hidden="true"></span>
+                <button type="button" class="is-active" data-vb-pc-rotate>自动旋转</button>
+                <button type="button" data-vb-pc-reset>重置视角</button>
+            </div>
+        </div>
+        <p class="vb-pointcloud-hint">鼠标拖拽旋转 · 滚轮缩放 · 数据来自官方 Vision Banana pointcloud 资源</p>
+    </section>
+
+    <section id="vbResultHighlights" class="vb-section vb-result-highlights" data-reveal-section aria-labelledby="vbResultHighlightsTitle">
+        <div class="vb-section-head">
+            <h2 id="vbResultHighlightsTitle">2D 视觉理解指标评估</h2>
+            <p>基于通用生成式 RGB 接口，Vision Banana 在各类经典 2D 视觉任务中取得了与专用模型相当、甚至超越专用模型的多任务性能。</p>
+        </div>
+        <div class="vb-result-grid">
+            <!-- Chart 1: Cityscapes — Semantic Segmentation -->
+            <article class="vb-result-card">
+                <div class="vb-chart-header">
+                    <h3>Cityscapes 语义分割</h3>
+                    <span class="vb-chart-metric">mIoU ↑ 越大越好</span>
+                </div>
+                <div class="vb-chart-body">
+                    <div class="vb-chart-bars">
+                        <!-- SegMan-L (Non Zero-Shot) -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">84.2</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 84.2%"></div>
+                            </div>
+                            <span class="vb-bar-label">SegMan-L<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- APE-D -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">44.2</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 44.2%"></div>
+                            </div>
+                            <span class="vb-bar-label">APE-D</span>
+                        </div>
+                        <!-- OpenSeeD -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">47.8</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 47.8%"></div>
+                            </div>
+                            <span class="vb-bar-label">OpenSeeD</span>
+                        </div>
+                        <!-- X-Decoder -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">52.0</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 52.0%"></div>
+                            </div>
+                            <span class="vb-bar-label">X-Decoder</span>
+                        </div>
+                        <!-- SAM 3 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">65.2</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 65.2%"></div>
+                            </div>
+                            <span class="vb-bar-label">SAM 3</span>
+                        </div>
+                        <!-- Vision Banana -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val vb-bar-val--highlight">69.9</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--highlight" style="--val: 69.9%"></div>
+                            </div>
+                            <span class="vb-bar-label vb-bar-label--highlight">Vision Banana 🍌</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Chart 2: SA-Co/Gold — Instance Segmentation -->
+            <article class="vb-result-card">
+                <div class="vb-chart-header">
+                    <h3>SA-Co/Gold 实例分割</h3>
+                    <span class="vb-chart-metric">cgF1 ↑ 越大越好</span>
+                </div>
+                <div class="vb-chart-body">
+                    <div class="vb-chart-bars">
+                        <!-- SAM 3 (Non Zero-Shot) -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">54.1</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 54.1%"></div>
+                            </div>
+                            <span class="vb-bar-label">SAM 3<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- SAM 3 + Llama 3.2 (ft) -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">61.2</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 61.2%"></div>
+                            </div>
+                            <span class="vb-bar-label">SAM 3 + L3.2<br><small>(非零样本/微调)</small></span>
+                        </div>
+                        <!-- Gemini 2.5 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">13.0</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 13.0%"></div>
+                            </div>
+                            <span class="vb-bar-label">Gemini 2.5</span>
+                        </div>
+                        <!-- APE-D -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">16.4</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 16.4%"></div>
+                            </div>
+                            <span class="vb-bar-label">APE-D</span>
+                        </div>
+                        <!-- DINO-X -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">21.3</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 21.3%"></div>
+                            </div>
+                            <span class="vb-bar-label">DINO-X</span>
+                        </div>
+                        <!-- OWLv2 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">24.6</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 24.6%"></div>
+                            </div>
+                            <span class="vb-bar-label">OWLv2</span>
+                        </div>
+                        <!-- Vision Banana -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val vb-bar-val--highlight">47.5</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--highlight" style="--val: 47.5%"></div>
+                            </div>
+                            <span class="vb-bar-label vb-bar-label--highlight">Vision Banana 🍌<br><small>+ Gemini 3.1 FL</small></span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Chart 3: RefCOCOg val (UMD) -->
+            <article class="vb-result-card">
+                <div class="vb-chart-header">
+                    <h3>RefCOCOg val (UMD)</h3>
+                    <span class="vb-chart-metric">cIoU ↑ 越大越好</span>
+                </div>
+                <div class="vb-chart-body">
+                    <div class="vb-chart-bars">
+                        <!-- HyperSeg + Phi2 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">79.4</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 79.4%"></div>
+                            </div>
+                            <span class="vb-bar-label">HyperSeg + Phi2<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- X-SAM + Phi3 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">83.8</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 83.8%"></div>
+                            </div>
+                            <span class="vb-bar-label">X-SAM + Phi3<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- HybridGL -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">51.3</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 51.3%"></div>
+                            </div>
+                            <span class="vb-bar-label">HybridGL</span>
+                        </div>
+                        <!-- Kang + LLaVA -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">67.7</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 67.7%"></div>
+                            </div>
+                            <span class="vb-bar-label">Kang + LLaVA</span>
+                        </div>
+                        <!-- SAM 3 + Gemini 2.5 Pro -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">73.4</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 73.4%"></div>
+                            </div>
+                            <span class="vb-bar-label">SAM3 + Gem2.5P</span>
+                        </div>
+                        <!-- Vision Banana -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val vb-bar-val--highlight">73.8</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--highlight" style="--val: 73.8%"></div>
+                            </div>
+                            <span class="vb-bar-label vb-bar-label--highlight">Vision Banana 🍌</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Chart 4: ReasonSeg val -->
+            <article class="vb-result-card">
+                <div class="vb-chart-header">
+                    <h3>ReasonSeg val</h3>
+                    <span class="vb-chart-metric">gIoU ↑ 越大越好</span>
+                </div>
+                <div class="vb-chart-body">
+                    <div class="vb-chart-bars">
+                        <!-- X-SAM + Phi3 3.8B -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">56.6</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 56.6%"></div>
+                            </div>
+                            <span class="vb-bar-label">X-SAM + Phi3<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- LISA-13B-LLAVA1.5 -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">65.0</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--hatched" style="--val: 65.0%"></div>
+                            </div>
+                            <span class="vb-bar-label">LISA-13B<br><small>(非零样本)</small></span>
+                        </div>
+                        <!-- SegZero -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">62.6</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 62.6%"></div>
+                            </div>
+                            <span class="vb-bar-label">SegZero</span>
+                        </div>
+                        <!-- RSVP + GPT-4o -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">64.7</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 64.7%"></div>
+                            </div>
+                            <span class="vb-bar-label">RSVP + GPT-4o</span>
+                        </div>
+                        <!-- SAM 3 + Gemini 2.5 Pro -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val">77.0</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill" style="--val: 77.0%"></div>
+                            </div>
+                            <span class="vb-bar-label">SAM3 + Gem2.5P</span>
+                        </div>
+                        <!-- Vision Banana -->
+                        <div class="vb-bar-col">
+                            <span class="vb-bar-val vb-bar-val--highlight">79.3</span>
+                            <div class="vb-bar-track">
+                                <div class="vb-bar-fill vb-bar-fill--highlight" style="--val: 79.3%"></div>
+                            </div>
+                            <span class="vb-bar-label vb-bar-label--highlight">Vision Banana 🍌<br><small>+ Gem2.5P</small></span>
+                        </div>
+                    </div>
+                    <div class="vb-chart-footer">结合多模态大语言模型 (MLLM) 进行推理分割的方法。</div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="vb-section vb-convergence" data-reveal-section data-vb-converge aria-labelledby="vbConvergeTitle">
+        <div class="vb-section-head">
+            <h2 id="vbConvergeTitle">从专用任务头到统一 RGB 接口</h2>
+            <p>传统系统为每类任务维护独立任务头；Vision Banana 的思想是把任务定义交给指令，把结果表达收束为可解码的 RGB 图像。</p>
+        </div>
+        <div class="vb-converge-map" aria-label="专用模型汇聚到统一模型">
+            <div class="vb-specialist-column">
+                <span><b>Segmentation head</b><small>mask logits / class map</small></span>
+                <span><b>Depth head</b><small>metric depth / scale</small></span>
+                <span><b>Normal head</b><small>surface orientation</small></span>
+                <span><b>Editing branch</b><small>image-to-image output</small></span>
+            </div>
+            <div class="vb-converge-lines" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+            </div>
+            <div class="vb-generalist-core">
+                <span>shared generator weights</span>
+                <strong>Vision Banana</strong>
+                <small>Image + Instruction -> RGB task image</small>
+            </div>
+            <div class="vb-unified-output">
+                <span>decoded outputs</span>
+                <strong>mask / depth / normal / edit</strong>
+            </div>
+        </div>
+    </section>
+
+    <section id="vbResearchGallery" class="vb-section vb-research-gallery" data-reveal-section aria-labelledby="bananaFiguresTitle">
+        <div class="vb-section-head">
+            <h2 id="bananaFiguresTitle">关键技术与结果</h2>
+            <p>保留官方主页和论文资源中的关键图，使用 research gallery 形式聚焦核心机制、语言条件分割、深度重建与图像编辑。</p>
+        </div>
+        <div class="vb-figure-grid">
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" data-vb-lightbox-title="Official Results Mosaic · Multi-task RGB Outputs">
+                    <img src="/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" alt="Vision Banana 多任务 RGB 输出矩阵">
+                </button>
+                <div>
+                    <span>官方结果样例 · 来源 Vision Banana 官方主页资源</span>
+                    <h3>多任务 RGB 输出矩阵</h3>
+                    <p>用官方样例输出拼成能力矩阵，展示分割、深度与法线等任务如何统一成 RGB 结果图。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-1.webp" data-vb-lightbox-title="Figure 01 · Unified RGB Interface">
+                    <img src="/static/assets/frontier/paper-figure-1.webp" alt="Vision Banana unified RGB interface figure">
+                </button>
+                <div>
+                    <span>Figure 01 · 来源 arXiv:2604.20329v1</span>
+                    <h3>统一 RGB 任务接口</h3>
+                    <p>输入图像和 prompt 共同定义任务，输出被统一为可解码 RGB 结果。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-2.webp" data-vb-lightbox-title="Figure 04 · Referring Segmentation">
+                    <img src="/static/assets/frontier/paper-figure-2.webp" alt="Vision Banana referring segmentation figure">
+                </button>
+                <div>
+                    <span>Figure 04 · 来源 arXiv:2604.20329v1</span>
+                    <h3>语言条件分割能力</h3>
+                    <p>自然语言描述决定要分割的对象，输出仍是一张 RGB mask 图。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-3.webp" data-vb-lightbox-title="Figure 06 · Metric Depth">
+                    <img src="/static/assets/frontier/paper-figure-3.webp" alt="Vision Banana metric depth figure">
+                </button>
+                <div>
+                    <span>Figure 06 · 来源 arXiv:2604.20329v1</span>
+                    <h3>可解码深度与三维重建</h3>
+                    <p>深度图先以颜色可视化，再被解码并用于重建三维场景。</p>
+                </div>
+            </article>
+            <article class="vb-figure-card">
+                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-4.webp" data-vb-lightbox-title="Figure 10 · Image Editing">
+                    <img src="/static/assets/frontier/paper-figure-4.webp" alt="Vision Banana image editing figure">
+                </button>
+                <div>
+                    <span>Figure 10 · 来源 arXiv:2604.20329v1</span>
+                    <h3>生成能力保留与图像编辑</h3>
+                    <p>模型在保留生成能力的同时，也能根据视觉指令改变图像内容。</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="vb-section vb-system-route" data-reveal-section aria-labelledby="bananaSystemTitle">
+        <div class="vb-section-head vb-section-head--left">
+            <h2 id="bananaSystemTitle">Vision Banana 与本系统关系</h2>
+            <p>把基础模块中的表示、卷积、边缘、特征和深度学习任务整合到统一视觉模型接口中。</p>
+        </div>
+        <ol class="vb-route-list">
+            <li><a href="/grayscale">图像基础</a><span>像素与颜色表示</span></li>
+            <li><a href="/convolution">卷积与滤波</a><span>局部响应与特征提取</span></li>
+            <li><a href="/edge-detection">边缘轮廓</a><span>结构线和形态线索</span></li>
+            <li><a href="/feature-detection">特征几何</a><span>局部特征与匹配</span></li>
+            <li><a href="/cnn-visualization">CNN 学习</a><span>表征学习与任务头</span></li>
+            <li><a href="/classification-lab">分类与任务谱系</a><span>高层视觉任务输出</span></li>
+            <li><strong>Vision Banana</strong><span>统一 RGB 视觉接口</span></li>
+        </ol>
+    </section>
+
+    <section class="vb-bibtex-section" aria-labelledby="vbBibtexTitle">
+        <h2 id="vbBibtexTitle">文献引用与学术调研</h2>
+        <p class="vb-bibtex-intro">本案例与实验平台在“前沿探索”中引用、参考并对比了以下计算机视觉领域的代表性研究成果，向原作者致敬：</p>
+        <div class="vb-citation-list">
+            <!-- 1. Vision Banana (Core) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge vb-citation-badge--primary">核心文献</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2604.20329" target="_blank" rel="noopener noreferrer">
+                            Image Generators are Generalist Vision Learners
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Valentin Gabeur, Shangbang Long, Songyou Peng, Paul Voigtlaender, Shuyang Sun, Yanan Bao, Karen Truong, Zhicheng Wang, Wenlei Zhou, Jonathan T. Barron, Kyle Genova, Nithish Kannen, Sherry Ben, Yandong Li, Mandy Guo, Suhas Yogin, Yiming Gu, Huizhong Chen, Oliver Wang, Saining Xie, Howard Zhou, Kaiming He, Thomas Funkhouser, Jean-Baptiste Alayrac, Radu Soricut
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">arXiv preprint arXiv:2604.20329</span>
+                        <span class="vb-citation-year">2026</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2604.20329.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@article{visionbanana2026,
+  title={Image Generators are Generalist Vision Learners},
+  author={Gabeur, Valentin and Long, Shangbang and Peng, Songyou and Voigtlaender, Paul and Sun, Shuyang and Bao, Yanan and Truong, Karen and Wang, Zhicheng and Zhou, Wenlei and Barron, Jonathan T and Genova, Kyle and Kannen, Nithish and Ben, Sherry and Li, Yandong and Guo, Mandy and Yogin, Suhas and Gu, Yiming and Chen, Huizhong and Wang, Oliver and Xie, Saining and Zhou, Howard and He, Kaiming and Funkhouser, Thomas and Alayrac, Jean-Baptiste and Soricut, Radu},
+  journal={arXiv preprint arXiv:2604.20329},
+  year={2026}
+}</pre>
+            </div>
+
+            <!-- 2. Segment Anything (SAM) (Baseline) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge">基线对比</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2304.02643" target="_blank" rel="noopener noreferrer">
+                            Segment Anything
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Alexander Kirillov, Eric Mintun, Nikhila Ravi, Hanzi Mao, Chloe Rolland, Laura Gustafson, Tete Xiao, Spencer Whitehead, Alexander C. Berg, Wan-Yen Lo, Piotr Dollár, Ross Girshick
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</span>
+                        <span class="vb-citation-year">2023</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2304.02643.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{kirillov2023segment,
+  title={Segment Anything},
+  author={Kirillov, Alexander and Mintun, Eric and Ravi, Nikhila and Mao, Hanzi and Rolland, Chloe and Gustafson, Laura paces, Tete Xiao, Spencer Whitehead, Alexander C. Berg, Wan-Yen Lo, Piotr Dollar, Ross Girshick},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  pages={4015--4026},
+  year={2023}
+}</pre>
+            </div>
+
+            <!-- 3. LISA (Baseline) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge">基线对比</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2308.00692" target="_blank" rel="noopener noreferrer">
+                            LISA: Reasoning Segmentation via Large Language Models
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Xin Lai, Zhuotao Tian, Yukang Chen, Yanwei Li, Yuhui Yuan, Jiaya Liu
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</span>
+                        <span class="vb-citation-year">2024</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2308.00692.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{lai2024lisa,
+  title={LISA: Reasoning segmentation via large language models},
+  author={Lai, Xin and Tian, Zhuotao and Chen, Yukang and Li, Yanwei and Yuan, Yuhui and Liu, Jiaya},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2024}
+}</pre>
+            </div>
+
+            <!-- 4. X-Decoder (Baseline) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge">基线对比</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2212.11270" target="_blank" rel="noopener noreferrer">
+                            Generalized Decoding for Pixel, Image, and Language
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Xueyan Zou, Zi-Yi Dou, Jianwei Yang, Zhe Gan, Linjie Li, Chunyuan Li, Xiyang Dai, Jianfeng Wang, Lu Yuan, Nanyun Peng, Lijuan Wang, Yong Jae Lee, Jianfeng Gao
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</span>
+                        <span class="vb-citation-year">2023</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2212.11270.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{zou2023generalized,
+  title={Generalized decoding for pixel, image, and language},
+  author={Zou, Xueyan and Dou, Zi-Yi and Yang, Jianwei and Gan, Zhe and Li, Linjie and Li, Chunyuan and Dai, Xiyang and Wang, Jianfeng and Yuan, Lu and Peng, Nanyun and Wang, Lijuan and Lee, Yong Jae and Gao, Jianfeng},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={15133--15144},
+  year={2023}
+}</pre>
+            </div>
+
+            <!-- 5. SegFormer (Experimental Base) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge vb-citation-badge--secondary">基础实验</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2105.15203" target="_blank" rel="noopener noreferrer">
+                            SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Enze Xie, Wenhai Wang, Zhiding Yu, Anima Anandkumar, Jose M. Alvarez, Ping Luo
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Advances in Neural Information Processing Systems (NeurIPS)</span>
+                        <span class="vb-citation-year">2021</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2105.15203.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@article{xie2021segformer,
+  title={SegFormer: Simple and efficient design for semantic segmentation with transformers},
+  author={Xie, Enze and Wang, Wenhai and Yu, Zhiding and Anandkumar, Anima and Alvarez, Jose M and Luo, Ping},
+  journal={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={34},
+  pages={12077--12090},
+  year={2021}
+}</pre>
+            </div>
+
+            <!-- 6. Zuo et al. (2025) (Evaluation) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge">能力评测</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2512.15110" target="_blank" rel="noopener noreferrer">
+                            Is Nano Banana Pro a Low-Level Vision All-Rounder? A Comprehensive Evaluation on 14 Tasks and 40 Datasets
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        J. Zuo, et al.
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">arXiv preprint arXiv:2512.15110</span>
+                        <span class="vb-citation-year">2025</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2512.15110.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@article{zuo2025nano,
+  title={Is Nano Banana Pro a Low-Level Vision All-Rounder? A Comprehensive Evaluation on 14 Tasks and 40 Datasets},
+  author={Zuo, J. and et al.},
+  journal={arXiv preprint arXiv:2512.15110},
+  year={2025}
+}</pre>
+            </div>
+
+            <!-- 7. Wiedemer et al. (2025) (Frontier Exploration) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge vb-citation-badge--primary">前沿探索</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2509.20328" target="_blank" rel="noopener noreferrer">
+                            Video models are zero-shot learners and reasoners
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Thaddäus Wiedemer, Robert Geirhos, et al.
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">arXiv preprint arXiv:2509.20328</span>
+                        <span class="vb-citation-year">2025</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2509.20328.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@article{wiedemer2025video,
+  title={Video models are zero-shot learners and reasoners},
+  author={Wiedemer, Thadd{\textasciidieresis}us and Geirhos, Robert and et al.},
+  journal={arXiv preprint arXiv:2509.20328},
+  year={2025}
+}</pre>
+            </div>
+
+            <!-- 8. Painter (Generalist Vision) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge vb-citation-badge--secondary">通用视界</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2212.02499" target="_blank" rel="noopener noreferrer">
+                            Images Speak Almost Everything for Picture-in-Picture Visual Prompting
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Xinlong Wang, Wen Wang, Cao Yue, Shen Chunhua, Huang Tiejun
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</span>
+                        <span class="vb-citation-year">2023</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2212.02499.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{wang2023images,
+  title={Images Speak Almost Everything for Picture-in-Picture Visual Prompting},
+  author={Wang, Xinlong and Wang, Wen and Cao, Yue and Shen, Chunhua and Huang, Tiejun},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2023}
+}</pre>
+            </div>
+
+            <!-- 9. SegGPT (In-context Segmentation) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge vb-citation-badge--secondary">通用视界</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2304.03284" target="_blank" rel="noopener noreferrer">
+                            SegGPT: Segmenting Everything in Context
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Xinlong Wang, Xiaosong Zhang, Yue Cao, Wen Wang, Chunhua Shen, Tiejun Huang
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)</span>
+                        <span class="vb-citation-year">2023</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2304.03284.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{wang2023seggpt,
+  title={SegGPT: Segmenting Everything in Context},
+  author={Wang, Xinlong and Zhang, Xiaosong and Cao, Yue and Wang, Wen and Shen, Chunhua and Huang, Tiejun},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year={2023}
+}</pre>
+            </div>
+
+            <!-- 10. Unified-IO 2 (Unified Generalist Model) -->
+            <div class="vb-bibtex-card">
+                <span class="vb-citation-badge">多模态统一</span>
+                <div class="vb-citation-content">
+                    <h3 class="vb-citation-title">
+                        <a href="https://arxiv.org/abs/2312.17172" target="_blank" rel="noopener noreferrer">
+                            Unified-IO 2: Zero-Shot Generalist Model for Vision, Language, and Action
+                        </a>
+                    </h3>
+                    <p class="vb-citation-authors">
+                        Jiahui Lu, Clark Christopher, Luke Zettlemoyer, Hannaneh Hajishirzi, Aniruddha Gupta, et al.
+                    </p>
+                    <p class="vb-citation-meta">
+                        <span class="vb-citation-journal">Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)</span>
+                        <span class="vb-citation-year">2024</span>
+                    </p>
+                </div>
+                <div class="vb-citation-actions">
+                    <button type="button" class="vb-citation-btn" data-vb-copy-bibtex aria-label="复制 BibTeX">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"></path>
+                        </svg>
+                        <span class="vb-copy-text">复制 BibTeX</span>
+                    </button>
+                    <a href="https://arxiv.org/pdf/2312.17172.pdf" target="_blank" rel="noopener noreferrer" class="vb-citation-btn vb-citation-btn--primary">
+                        <span>PDF</span>
+                    </a>
+                </div>
+                <pre class="vb-bibtex-raw" style="display: none;">@inproceedings{lu2024unified2,
+  title={Unified-IO 2: Zero-Shot Generalist Model for Vision, Language, and Action},
+  author={Lu, Jiahui and Clark, Christopher & Zettlemoyer, Luke & Hajishirzi, Hannaneh & Gupta, Aniruddha and et al.},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2024}
+}</pre>
+            </div>
+        </div>
+    </section>
+
+    <div class="vb-lightbox" data-banana-lightbox aria-hidden="true" role="dialog" aria-modal="true" aria-label="研究图大图预览">
+        <button type="button" class="vb-lightbox-close" data-lightbox-close aria-label="关闭大图">×</button>
+        <figure>
+            <img data-lightbox-image alt="">
+            <figcaption data-lightbox-caption></figcaption>
+        </figure>
+    </div>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/vision_banana.js?v=20260619-official6"></script>
+
+</body>
+</html>

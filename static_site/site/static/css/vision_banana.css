@@ -1,0 +1,2178 @@
+.vb-page {
+    --vb-blue: #1d5cff;
+    --vb-cyan: #06b6d4;
+    --vb-green: #20b56b;
+    --vb-ink: #071536;
+    --vb-muted: #58708c;
+    --vb-line: #dbe8f8;
+    position: relative;
+    isolation: auto;
+    color: var(--vb-ink);
+}
+
+.vb-page::before {
+    content: "";
+    position: fixed;
+    inset: 70px 0 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(29, 92, 255, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 78% 12%, rgba(6, 182, 212, 0.14), transparent 30%);
+    background-size: 34px 34px, 34px 34px, auto;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 74%);
+}
+
+.vb-hero,
+.vb-section,
+.vb-note {
+    border: 1px solid rgba(191, 219, 254, 0.88);
+    border-radius: 8px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.88)),
+        radial-gradient(circle at 92% 0%, rgba(6, 182, 212, 0.1), transparent 30%);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.075), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+}
+
+.vb-hero,
+.vb-section {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    scroll-margin-top: 142px;
+}
+
+.vb-hero::before,
+.vb-section::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.24), transparent 68%);
+}
+
+.vb-hero::after,
+.vb-section::after {
+    content: "";
+    position: absolute;
+    top: -38%;
+    left: -42%;
+    width: 34%;
+    height: 176%;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+    transform: rotate(12deg) translateX(-88%);
+    animation: vbPanelSheen 8.8s ease-in-out infinite;
+}
+
+.vb-hero {
+    display: grid;
+    grid-template-columns: minmax(390px, 0.82fr) minmax(660px, 1.18fr);
+    gap: 28px;
+    min-height: 560px;
+    align-items: center;
+    padding: clamp(28px, 4vw, 56px);
+}
+
+.vb-anchor-nav {
+    position: sticky;
+    top: 70px;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 14px 0 0;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.08);
+    backdrop-filter: blur(18px);
+    scrollbar-width: none;
+}
+
+.vb-anchor-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.vb-anchor-nav a {
+    flex: 0 0 auto;
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.14);
+    border-radius: 7px;
+    padding: 0 12px;
+    color: #17345d;
+    font-size: 13px;
+    font-weight: 950;
+    text-decoration: none;
+    background: rgba(239, 246, 255, 0.74);
+    transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.vb-anchor-nav a:hover {
+    border-color: rgba(29, 92, 255, 0.42);
+    color: var(--vb-blue);
+    transform: translateY(-1px);
+    background: #ffffff;
+}
+
+.vb-hero-copy,
+.vb-hero-stage,
+.vb-section>*,
+.vb-note {
+    position: relative;
+    z-index: 1;
+}
+
+.vb-back-link,
+.vb-hero-actions a,
+.vb-route-list a {
+    text-decoration: none;
+}
+
+.vb-back-link {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 34px;
+    align-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.22);
+    border-radius: 7px;
+    padding: 0 12px;
+    color: var(--vb-blue);
+    font-size: 13px;
+    font-weight: 950;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.vb-back-link:hover {
+    border-color: rgba(29, 92, 255, 0.54);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(37, 99, 235, 0.13);
+}
+
+.vb-kicker {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 25px;
+    align-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.18);
+    border-radius: 6px;
+    padding: 0 9px;
+    color: var(--vb-blue);
+    font-size: 12px;
+    font-weight: 950;
+    letter-spacing: 0;
+    background: rgba(239, 246, 255, 0.84);
+}
+
+.vb-hero-copy {
+    display: grid;
+    gap: 14px;
+}
+
+.vb-hero-copy h1,
+.vb-hero-copy h2,
+.vb-section-head h2 {
+    margin: 0;
+    color: var(--vb-ink);
+    letter-spacing: 0;
+}
+
+.vb-hero-copy h1 {
+    max-width: 860px;
+    font-size: clamp(34px, 4.5vw, 64px);
+    line-height: 1.02;
+    font-weight: 950;
+}
+
+.vb-hero-copy h2 {
+    font-size: clamp(26px, 3vw, 42px);
+    line-height: 1.12;
+    font-weight: 950;
+}
+
+.vb-hero-copy p,
+.vb-section-head p,
+.vb-cap-copy p,
+.vb-figure-card p,
+.vb-route-list span,
+.vb-note {
+    margin: 0;
+    color: var(--vb-muted);
+    line-height: 1.72;
+    font-weight: 680;
+}
+
+.vb-hero-copy p {
+    max-width: 760px;
+    font-size: 17px;
+}
+
+.vb-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.vb-hero-actions a {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.28);
+    border-radius: 7px;
+    padding: 0 16px;
+    color: var(--vb-blue);
+    font-size: 14px;
+    font-weight: 950;
+    background: #ffffff;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+}
+
+.vb-hero-actions a:first-child {
+    color: #ffffff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--vb-blue), var(--vb-cyan));
+    box-shadow: 0 18px 34px rgba(29, 92, 255, 0.23);
+}
+
+.vb-hero-actions a::after,
+.vb-figure-card button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(110deg, transparent 0 34%, rgba(255, 255, 255, 0.76) 48%, transparent 62%);
+    transform: translateX(-115%);
+    transition: transform 0.5s ease;
+}
+
+.vb-hero-actions a:hover::after,
+.vb-figure-card button:hover::after {
+    transform: translateX(115%);
+}
+
+.vb-hero-stage {
+    display: grid;
+    grid-template-columns: minmax(118px, 0.74fr) 34px minmax(154px, 0.92fr) 34px minmax(168px, 0.98fr);
+    grid-template-rows: minmax(132px, auto) minmax(132px, auto);
+    gap: 12px;
+    align-items: center;
+    min-height: 420px;
+    border: 1px solid rgba(180, 208, 248, 0.82);
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 54px 24px 24px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(239, 247, 255, 0.74)),
+        radial-gradient(circle at 78% 16%, rgba(6, 182, 212, 0.08), transparent 32%);
+    box-shadow: 0 24px 52px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.vb-stage-grid {
+    position: absolute;
+    inset: 16px;
+    z-index: -1;
+    border: 1px solid rgba(29, 92, 255, 0.08);
+    border-radius: 8px;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.045) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.vb-stage-label {
+    position: absolute;
+    top: 18px;
+    left: 22px;
+    z-index: 2;
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    border: 1px solid rgba(29, 92, 255, 0.16);
+    border-radius: 6px;
+    padding: 0 10px;
+    color: #1d5cff;
+    font-size: 11px;
+    font-weight: 950;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
+.vb-flow-card,
+.vb-core-node {
+    position: relative;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: vbFlowAppear 0.75s ease forwards;
+    animation-delay: var(--flow-delay, 0ms);
+}
+
+.vb-flow-card {
+    display: grid;
+    gap: 10px;
+    min-height: 142px;
+    align-content: center;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    padding: 12px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.88));
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.vb-flow-card--input {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.vb-flow-card span {
+    color: var(--vb-blue);
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.vb-flow-card strong {
+    color: #0f2548;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.vb-flow-card mark,
+.vb-prompt mark {
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #065f46;
+    background: rgba(167, 243, 208, 0.96);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.vb-flow-card--input img {
+    width: 100%;
+    height: 98px;
+    border-radius: 7px;
+    object-fit: cover;
+    background: #f8fafc;
+}
+
+.vb-flow-card--prompt {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+}
+
+.vb-flow-card--output {
+    grid-column: 5;
+    grid-row: 1;
+}
+
+.vb-flow-card--decode {
+    grid-column: 5;
+    grid-row: 2;
+}
+
+.vb-flow-line {
+    position: relative;
+    display: block;
+    height: 2px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(29, 92, 255, 0.18), rgba(6, 182, 212, 0.62), rgba(32, 181, 107, 0.26));
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.16);
+}
+
+.vb-flow-line--a {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+
+.vb-flow-line--b {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+}
+
+.vb-flow-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 36px;
+    background: linear-gradient(90deg, transparent, #ffffff, transparent);
+    animation: vbLineRun 2s linear infinite;
+}
+
+.vb-core-node {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    display: grid;
+    min-height: 188px;
+    place-items: center;
+    gap: 6px;
+    border: 1px solid rgba(147, 197, 253, 0.92);
+    border-radius: 8px;
+    padding: 18px;
+    color: #0f2548;
+    text-align: center;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 247, 255, 0.9)),
+        radial-gradient(circle at 50% 12%, rgba(6, 182, 212, 0.16), transparent 32%);
+    box-shadow:
+        0 0 0 6px rgba(219, 234, 254, 0.68),
+        0 24px 52px rgba(37, 99, 235, 0.14);
+}
+
+.vb-core-node img {
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(37, 99, 235, 0.16));
+}
+
+.vb-core-node strong {
+    color: #071536;
+    font-size: 22px;
+    line-height: 1.04;
+    font-weight: 950;
+}
+
+.vb-core-node small {
+    color: #58708c;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.vb-core-ring {
+    position: absolute;
+    inset: 18px;
+    border: 1px dashed rgba(29, 92, 255, 0.22);
+    border-radius: 8px;
+    animation: none;
+}
+
+.vb-core-ring::before,
+.vb-core-ring::after {
+    content: "";
+    position: absolute;
+    inset: 20px;
+    border: 1px solid rgba(6, 182, 212, 0.14);
+    border-radius: inherit;
+}
+
+.vb-core-ring::after {
+    inset: 42px;
+}
+
+.vb-output-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.vb-mini {
+    display: block;
+    min-height: 56px;
+    border: 1px solid rgba(147, 197, 253, 0.6);
+    border-radius: 7px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    position: relative;
+    background: #f8fafc;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+}
+
+.vb-mini:hover {
+    transform: translateY(-2px) scale(1.03);
+    border-color: rgba(29, 92, 255, 0.7);
+    box-shadow: 0 8px 20px rgba(29, 92, 255, 0.12);
+}
+
+.vb-mini-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.vb-mini--seg {
+    background: #f8fafc;
+}
+
+.vb-mini--depth {
+    background: #f8fafc;
+}
+
+.vb-mini--normal {
+    background: #f8fafc;
+}
+
+.vb-mini--edit {
+    background: #f8fafc;
+}
+
+.vb-section {
+    margin-top: 22px;
+    padding: clamp(26px, 3.2vw, 44px);
+}
+
+.vb-section-head {
+    display: grid;
+    gap: 10px;
+    max-width: 900px;
+    margin: 0 auto 24px;
+    text-align: center;
+}
+
+.vb-section-head--left {
+    margin-left: 0;
+    text-align: left;
+}
+
+.vb-section-head h2 {
+    font-size: clamp(28px, 3.2vw, 44px);
+    line-height: 1.12;
+    font-weight: 950;
+}
+
+.vb-section-head p {
+    font-size: 16px;
+}
+
+.vb-teaser {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+}
+
+.vb-teaser img {
+    width: 100%;
+    max-height: 620px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    object-fit: contain;
+    background: #ffffff;
+    box-shadow: 0 22px 50px rgba(37, 99, 235, 0.1);
+}
+
+.vb-teaser figcaption {
+    color: var(--vb-muted);
+    font-size: 13px;
+    font-weight: 750;
+    text-align: center;
+}
+
+.vb-capability-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.vb-cap-card {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(250px, auto) 1fr;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.9)),
+        radial-gradient(circle at 82% 8%, rgba(29, 92, 255, 0.11), transparent 30%);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.065), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.vb-cap-card:hover,
+.vb-cap-card.is-revealed,
+.vb-cap-card:focus-visible {
+    border-color: rgba(29, 92, 255, 0.48);
+    transform: translateY(-5px);
+    box-shadow: 0 30px 64px rgba(37, 99, 235, 0.15);
+    outline: none;
+}
+
+.vb-cap-media {
+    position: relative;
+    min-height: 250px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.vb-cap-media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vb-output-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #ffffff;
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transition: opacity 0.34s ease, clip-path 0.58s cubic-bezier(.22, .61, .36, 1);
+}
+
+.vb-output-layer::before,
+.vb-output-layer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.vb-output-layer::before {
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.34) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.34) 1px, transparent 1px);
+    background-size: 16px 16px;
+}
+
+.vb-output-layer::after {
+    height: 30%;
+    background: linear-gradient(180deg, transparent, rgba(6, 182, 212, 0.28), transparent);
+    transform: translateY(-120%);
+}
+
+.vb-cap-card:hover .vb-output-layer,
+.vb-cap-card.is-revealed .vb-output-layer,
+.vb-cap-card:focus-visible .vb-output-layer,
+.vb-sample-card:hover .vb-output-layer,
+.vb-sample-card.is-revealed .vb-output-layer,
+.vb-sample-card:focus-visible .vb-output-layer {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+}
+
+.vb-cap-card:hover .vb-output-layer::before,
+.vb-cap-card.is-revealed .vb-output-layer::before,
+.vb-cap-card:hover .vb-output-layer::after,
+.vb-cap-card.is-revealed .vb-output-layer::after,
+.vb-sample-card:hover .vb-output-layer::before,
+.vb-sample-card.is-revealed .vb-output-layer::before,
+.vb-sample-card:hover .vb-output-layer::after,
+.vb-sample-card.is-revealed .vb-output-layer::after {
+    animation: vbPixelReveal 0.7s ease;
+}
+
+.vb-cap-card:hover .vb-output-layer::after,
+.vb-cap-card.is-revealed .vb-output-layer::after,
+.vb-sample-card:hover .vb-output-layer::after,
+.vb-sample-card.is-revealed .vb-output-layer::after {
+    animation-name: vbScanReveal;
+}
+
+.vb-state-label,
+.vb-reveal-hint {
+    position: absolute;
+    z-index: 3;
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(8px);
+}
+
+.vb-state-label {
+    left: 12px;
+    bottom: 12px;
+    padding: 5px 12px;
+    transition: opacity 0.22s ease;
+}
+
+.vb-state-label--output {
+    opacity: 0;
+}
+
+.vb-cap-card:hover .vb-state-label--input,
+.vb-cap-card.is-revealed .vb-state-label--input,
+.vb-sample-card:hover .vb-state-label--input,
+.vb-sample-card.is-revealed .vb-state-label--input {
+    opacity: 0;
+}
+
+.vb-cap-card:hover .vb-state-label--output,
+.vb-cap-card.is-revealed .vb-state-label--output,
+.vb-sample-card:hover .vb-state-label--output,
+.vb-sample-card.is-revealed .vb-state-label--output {
+    opacity: 1;
+}
+
+.vb-reveal-hint {
+    right: 12px;
+    top: 12px;
+    padding: 5px 10px;
+    color: #1d4ed8;
+    background: rgba(239, 246, 255, 0.86);
+}
+
+.vb-cap-copy {
+    position: relative;
+    display: grid;
+    gap: 9px;
+    padding: 16px;
+}
+
+.vb-cap-index {
+    width: fit-content;
+    border: 1px solid rgba(29, 92, 255, 0.16);
+    border-radius: 6px;
+    padding: 2px 7px;
+    color: var(--vb-blue);
+    font-size: 12px;
+    font-weight: 950;
+    background: rgba(239, 246, 255, 0.82);
+}
+
+.vb-cap-copy h3 {
+    margin: 0;
+    color: #0f2548;
+    font-size: 20px;
+    line-height: 1.18;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.vb-prompt {
+    border-left: 3px solid rgba(6, 182, 212, 0.55);
+    padding-left: 10px;
+    color: #17345d;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.vb-cap-card:hover .vb-prompt mark,
+.vb-cap-card.is-revealed .vb-prompt mark {
+    animation: vbKeywordPulse 0.9s ease;
+}
+
+.vb-official-samples {
+    background:
+        radial-gradient(circle at 8% 4%, rgba(29, 92, 255, 0.08), transparent 28%),
+        radial-gradient(circle at 92% 10%, rgba(6, 182, 212, 0.11), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 250, 255, 0.88));
+}
+
+.vb-sample-group {
+    display: grid;
+    gap: 14px;
+    margin-top: 22px;
+}
+
+.vb-sample-group:first-of-type {
+    margin-top: 0;
+}
+
+.vb-sample-group header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    align-items: center;
+    border: 1px solid rgba(191, 219, 254, 0.86);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background:
+        linear-gradient(100deg, rgba(255, 255, 255, 0.9), rgba(239, 246, 255, 0.7)),
+        repeating-linear-gradient(90deg, rgba(29, 92, 255, 0.03) 0 1px, transparent 1px 14px);
+}
+
+.vb-sample-group header span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 950;
+    background: linear-gradient(135deg, var(--vb-blue), var(--vb-cyan));
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.16);
+}
+
+.vb-sample-group header h3 {
+    margin: 0;
+    color: #0f2548;
+    font-size: 24px;
+    line-height: 1.16;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.vb-sample-group header p {
+    grid-column: 2;
+    margin: 0;
+    color: var(--vb-muted);
+    font-size: 13px;
+    line-height: 1.65;
+    font-weight: 760;
+}
+
+.vb-sample-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(310px, 0.28fr);
+    gap: 16px;
+    overflow-x: auto;
+    padding: 2px 2px 14px;
+    scroll-snap-type: x proximity;
+    scrollbar-color: rgba(29, 92, 255, 0.36) rgba(219, 234, 254, 0.8);
+}
+
+.vb-sample-card {
+    display: grid;
+    grid-template-rows: 240px auto;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.92);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vb-sample-card:hover,
+.vb-sample-card.is-revealed,
+.vb-sample-card:focus-visible {
+    border-color: rgba(29, 92, 255, 0.46);
+    transform: translateY(-4px);
+    box-shadow: 0 28px 56px rgba(37, 99, 235, 0.14);
+    outline: none;
+}
+
+.vb-sample-media {
+    position: relative;
+    min-height: 240px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.vb-sample-media>img,
+.vb-sample-media .vb-output-layer img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vb-sample-card--focus-bottom .vb-sample-media>img,
+.vb-sample-card--focus-bottom .vb-sample-media .vb-output-layer img {
+    object-position: center bottom;
+}
+
+.vb-sample-card p {
+    margin: 0;
+    padding: 13px 14px 15px;
+    color: #17345d;
+    font-size: 13px;
+    line-height: 1.65;
+    font-weight: 780;
+}
+
+.vb-sample-card mark {
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #065f46;
+    background: rgba(167, 243, 208, 0.96);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.vb-sample-card:hover mark,
+.vb-sample-card.is-revealed mark {
+    animation: vbKeywordPulse 0.9s ease;
+}
+
+.vb-result-highlights {
+    background:
+        radial-gradient(circle at 15% 8%, rgba(29, 92, 255, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.88));
+}
+
+.vb-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.vb-result-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 310px;
+    border: 1px solid rgba(191, 219, 254, 0.85);
+    border-radius: 8px;
+    padding: 20px 16px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 251, 255, 0.92)),
+        radial-gradient(circle at 92% 8%, rgba(29, 92, 255, 0.04), transparent 30%);
+    box-shadow: 0 16px 36px rgba(37, 99, 235, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.vb-result-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 0 36%, rgba(255, 255, 255, 0.62) 50%, transparent 64%);
+    transform: translateX(-120%);
+}
+
+.vb-result-highlights.is-visible .vb-result-card::after {
+    animation: vbResultSheen 2.6s ease forwards;
+}
+
+.vb-chart-header {
+    text-align: center;
+    margin-bottom: 22px;
+    display: grid;
+    gap: 3px;
+}
+
+.vb-chart-header h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 15px;
+    font-weight: 850;
+}
+
+.vb-chart-metric {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+}
+
+.vb-chart-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.vb-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 180px;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 4px;
+}
+
+.vb-bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    justify-content: flex-end;
+    padding: 0 4px;
+}
+
+.vb-bar-val {
+    font-size: 10px;
+    font-weight: bold;
+    color: #64748b;
+    margin-bottom: 4px;
+    font-family: monospace;
+}
+
+.vb-bar-val--highlight {
+    color: #ea580c;
+}
+
+.vb-bar-track {
+    width: 100%;
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.vb-bar-fill {
+    width: 82%;
+    max-width: 32px;
+    height: 0;
+    background: #64748b;
+    border-radius: 3px 3px 0 0;
+    transition: height 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    align-self: center;
+}
+
+.vb-bar-fill--hatched {
+    background: repeating-linear-gradient(45deg,
+            #cbd5e1,
+            #cbd5e1 3px,
+            #f8fafc 3px,
+            #f8fafc 6px) !important;
+    border: 1px dashed #94a3b8;
+}
+
+.vb-bar-fill--highlight {
+    background: #ea580c !important;
+    border: 1px solid #c2410c;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+}
+
+.vb-result-highlights.is-visible .vb-bar-fill {
+    height: var(--val);
+}
+
+.vb-bar-label {
+    font-size: 9px;
+    color: #64748b;
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1.15;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.vb-bar-label--highlight {
+    color: #ea580c;
+    font-weight: 900;
+}
+
+.vb-chart-footer {
+    position: absolute;
+    bottom: -18px;
+    right: 0;
+    font-size: 9px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.vb-pointcloud-section {
+    background:
+        radial-gradient(circle at 50% 18%, rgba(29, 92, 255, 0.06), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.9));
+}
+
+.vb-pointcloud-viewer {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.96);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 24px 58px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.vb-pointcloud-canvas-wrap {
+    position: relative;
+    height: clamp(420px, 34vw, 460px);
+    min-height: 420px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 46%, rgba(219, 234, 254, 0.42), transparent 38%),
+        linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.vb-pointcloud-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+}
+
+.vb-pointcloud-canvas-wrap canvas:active {
+    cursor: grabbing;
+}
+
+.vb-pointcloud-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 14px;
+    color: #17345d;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(8px);
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.vb-pointcloud-loading.is-hidden {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.vb-pointcloud-loading.is-error {
+    color: #b45309;
+}
+
+.vb-pointcloud-spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(191, 219, 254, 0.9);
+    border-top-color: var(--vb-blue);
+    border-radius: 50%;
+    animation: vbSpin 0.9s linear infinite;
+}
+
+.vb-pointcloud-controls {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid rgba(219, 234, 254, 0.95);
+    padding: 14px 16px;
+    background: rgba(248, 251, 255, 0.94);
+    backdrop-filter: blur(12px);
+}
+
+.vb-pointcloud-controls button {
+    min-height: 34px;
+    border: 1px solid rgba(191, 219, 254, 0.95);
+    border-radius: 999px;
+    padding: 0 18px;
+    color: #17345d;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    background: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.vb-pointcloud-controls button:hover {
+    border-color: rgba(29, 92, 255, 0.42);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.11);
+}
+
+.vb-pointcloud-controls button.is-active {
+    border-color: transparent;
+    color: #ffffff;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    box-shadow: 0 12px 24px rgba(249, 115, 22, 0.22);
+}
+
+.vb-pointcloud-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(191, 219, 254, 0.95);
+}
+
+.vb-pointcloud-hint {
+    margin: 12px 0 0;
+    color: var(--vb-muted);
+    font-size: 13px;
+    font-weight: 780;
+    text-align: center;
+}
+
+.vb-converge-map {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(240px, 0.74fr) minmax(170px, 0.38fr) minmax(310px, 0.9fr) minmax(260px, 0.68fr);
+    gap: 18px;
+    align-items: center;
+    min-height: 300px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    padding: 28px;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.88));
+    background-size: 28px 28px, 28px 28px, auto;
+}
+
+.vb-specialist-column {
+    display: grid;
+    gap: 12px;
+}
+
+.vb-specialist-column span,
+.vb-generalist-core,
+.vb-unified-output {
+    border: 1px solid rgba(191, 219, 254, 0.92);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
+}
+
+.vb-specialist-column span {
+    display: grid;
+    min-height: 58px;
+    align-content: center;
+    gap: 4px;
+    padding: 10px 14px;
+    color: #17345d;
+    font-size: 13px;
+    font-weight: 950;
+    opacity: 0;
+    transform: translateX(-14px);
+}
+
+.vb-specialist-column b {
+    color: #0f2548;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.vb-specialist-column small,
+.vb-generalist-core small {
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.vb-convergence.is-visible .vb-specialist-column span {
+    animation: vbNodeIn 0.5s ease forwards;
+}
+
+.vb-convergence.is-visible .vb-specialist-column span:nth-child(2) {
+    animation-delay: 90ms;
+}
+
+.vb-convergence.is-visible .vb-specialist-column span:nth-child(3) {
+    animation-delay: 180ms;
+}
+
+.vb-convergence.is-visible .vb-specialist-column span:nth-child(4) {
+    animation-delay: 270ms;
+}
+
+.vb-converge-lines {
+    position: relative;
+    display: grid;
+    gap: 21px;
+}
+
+.vb-converge-lines i {
+    position: relative;
+    display: block;
+    height: 2px;
+    overflow: hidden;
+    border-radius: 0;
+    background: linear-gradient(90deg, rgba(29, 92, 255, 0.32), rgba(29, 92, 255, 0.12));
+    transform-origin: left center;
+    transform: scaleX(0);
+}
+
+.vb-converge-lines::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: -9px;
+    bottom: 8px;
+    width: 2px;
+    background: rgba(29, 92, 255, 0.22);
+    transform: scaleY(0);
+    transform-origin: center top;
+}
+
+.vb-convergence.is-visible .vb-converge-lines::after {
+    animation: vbLineGrowY 0.75s ease 0.35s forwards;
+}
+
+.vb-convergence.is-visible .vb-converge-lines i {
+    animation: vbLineGrow 0.75s ease forwards;
+}
+
+.vb-convergence.is-visible .vb-converge-lines i:nth-child(2) {
+    animation-delay: 120ms;
+}
+
+.vb-convergence.is-visible .vb-converge-lines i:nth-child(3) {
+    animation-delay: 240ms;
+}
+
+.vb-convergence.is-visible .vb-converge-lines i:nth-child(4) {
+    animation-delay: 360ms;
+}
+
+.vb-converge-lines i::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 24px;
+    background: linear-gradient(90deg, transparent, rgba(29, 92, 255, 0.36), transparent);
+    animation: vbLineRun 2.2s linear infinite;
+}
+
+.vb-generalist-core {
+    display: grid;
+    min-height: 170px;
+    place-items: center;
+    align-content: center;
+    gap: 9px;
+    color: #0f2548;
+    text-align: center;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 247, 255, 0.92));
+    box-shadow: 0 18px 38px rgba(37, 99, 235, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.vb-generalist-core::before {
+    content: "";
+    display: block;
+    width: 92px;
+    height: 34px;
+    border: 1px solid rgba(29, 92, 255, 0.2);
+    border-radius: 6px;
+    background:
+        linear-gradient(90deg, rgba(29, 92, 255, 0.12) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+        rgba(239, 246, 255, 0.78);
+    background-size: 12px 12px;
+}
+
+.vb-generalist-core span,
+.vb-unified-output span {
+    color: #1d5cff;
+    font-size: 12px;
+    font-weight: 950;
+    opacity: 0.9;
+}
+
+.vb-generalist-core strong,
+.vb-unified-output strong {
+    color: #0f2548;
+    font-size: 22px;
+    line-height: 1.12;
+    font-weight: 950;
+}
+
+.vb-unified-output {
+    display: grid;
+    min-height: 142px;
+    align-content: center;
+    gap: 10px;
+    padding: 18px;
+    color: #0f2548;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.9));
+}
+
+.vb-unified-output::after {
+    content: "RGB image -> decoder -> task result";
+    width: fit-content;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 6px;
+    padding: 5px 8px;
+    color: #58708c;
+    font-size: 11px;
+    font-weight: 850;
+    background: rgba(239, 246, 255, 0.84);
+}
+
+.vb-figure-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.vb-figure-card {
+    position: relative;
+    display: grid;
+    grid-template-rows: 210px 1fr;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.065), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.vb-figure-card:hover {
+    border-color: rgba(29, 92, 255, 0.44);
+    transform: translateY(-5px);
+    box-shadow: 0 30px 62px rgba(37, 99, 235, 0.16);
+}
+
+.vb-figure-card button {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    cursor: zoom-in;
+    background: #f8fafc;
+}
+
+.vb-figure-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.42s ease, filter 0.42s ease;
+}
+
+.vb-figure-card:hover img {
+    transform: scale(1.035);
+    filter: saturate(1.06) contrast(1.02);
+}
+
+.vb-figure-card div {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+}
+
+.vb-figure-card span {
+    display: inline-flex;
+    width: fit-content;
+    border: 1px solid rgba(29, 92, 255, 0.16);
+    border-radius: 6px;
+    padding: 3px 7px;
+    color: var(--vb-blue);
+    font-size: 11px;
+    font-weight: 950;
+    background: rgba(239, 246, 255, 0.86);
+}
+
+.vb-figure-card h3 {
+    margin: 0;
+    color: #0f2548;
+    font-size: 18px;
+    line-height: 1.22;
+    font-weight: 950;
+}
+
+.vb-figure-card p {
+    font-size: 13px;
+}
+
+.vb-route-list {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vb-route-list li {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    min-height: 104px;
+    align-content: start;
+    border: 1px solid rgba(191, 219, 254, 0.92);
+    border-radius: 8px;
+    padding: 14px 12px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.07);
+    opacity: 0;
+    transform: translateY(14px);
+}
+
+.vb-route-list li::after {
+    content: "";
+    position: absolute;
+    top: 32px;
+    right: -9px;
+    width: 10px;
+    height: 2px;
+    background: rgba(29, 92, 255, 0.45);
+}
+
+.vb-route-list li:last-child::after {
+    display: none;
+}
+
+.vb-system-route.is-visible .vb-route-list li {
+    animation: vbNodeInY 0.5s ease forwards;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(2) {
+    animation-delay: 80ms;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(3) {
+    animation-delay: 160ms;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(4) {
+    animation-delay: 240ms;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(5) {
+    animation-delay: 320ms;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(6) {
+    animation-delay: 400ms;
+}
+
+.vb-system-route.is-visible .vb-route-list li:nth-child(7) {
+    animation-delay: 480ms;
+}
+
+.vb-route-list a,
+.vb-route-list strong {
+    color: var(--vb-blue);
+    font-size: 14px;
+    line-height: 1.25;
+    font-weight: 950;
+}
+
+.vb-route-list span {
+    font-size: 12px;
+}
+
+.vb-note {
+    margin-top: 22px;
+    padding: 16px 18px;
+    color: #7c4a03;
+    font-size: 14px;
+    font-weight: 850;
+    background: rgba(255, 251, 235, 0.92);
+}
+
+.vb-bibtex-section {
+    display: grid;
+    gap: 12px;
+
+    width: 100%;
+    margin: 32px auto 0;
+    text-align: center;
+}
+
+.vb-bibtex-intro {
+    margin: -4px 0 0;
+    color: #64748b;
+    font-size: 13.5px;
+    font-weight: 720;
+    line-height: 1.6;
+}
+
+.vb-bibtex-section h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 950;
+    letter-spacing: 0;
+}
+
+.vb-bibtex-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 24px;
+    text-align: left;
+    background: #f8fafc;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.vb-bibtex-card pre {
+    margin: 0;
+    padding-right: 34px;
+    color: #334155;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.vb-citation-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.vb-citation-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 850;
+    line-height: 1.35;
+}
+
+.vb-citation-title a {
+    color: #1d5cff;
+    text-decoration: none;
+    transition: color 0.18s ease, text-decoration 0.18s ease;
+}
+
+.vb-citation-title a:hover {
+    color: #0b45d9;
+    text-decoration: underline;
+}
+
+.vb-citation-authors {
+    margin: 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 550;
+}
+
+.vb-citation-meta {
+    margin: 0;
+    color: #64748b;
+    font-size: 13.5px;
+    font-weight: 650;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.vb-citation-journal {
+    font-style: italic;
+    color: #475569;
+}
+
+.vb-citation-year {
+    font-weight: 750;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.vb-citation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-top: none;
+    padding-top: 0;
+}
+
+.vb-citation-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.vb-citation-btn:hover {
+    transform: translateY(-1px);
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.vb-citation-btn svg {
+    flex-shrink: 0;
+}
+
+.vb-citation-btn--primary {
+    background: #1d5cff;
+    border-color: #1d5cff;
+    color: #ffffff;
+}
+
+.vb-citation-btn--primary:hover {
+    background: #0b45d9;
+    border-color: #0b45d9;
+    color: #ffffff;
+}
+
+.vb-citation-btn.is-copied {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+.vb-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: grid;
+    place-items: center;
+    padding: 34px;
+    background:
+        radial-gradient(circle at 50% 18%, rgba(29, 92, 255, 0.22), transparent 34%),
+        rgba(8, 18, 38, 0.8);
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(18px);
+    transition: opacity 0.22s ease;
+}
+
+.vb-lightbox.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.vb-lightbox figure {
+    display: grid;
+    gap: 12px;
+    width: min(1180px, 96vw);
+    max-height: 90vh;
+    margin: 0;
+    border: 1px solid rgba(191, 219, 254, 0.22);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgba(15, 23, 42, 0.36);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+    transform: translateY(14px) scale(0.98);
+    transition: transform 0.22s ease;
+}
+
+.vb-lightbox.is-open figure {
+    transform: translateY(0) scale(1);
+}
+
+.vb-lightbox img {
+    width: 100%;
+    max-height: 78vh;
+    border-radius: 8px;
+    object-fit: contain;
+    background: #ffffff;
+    box-shadow: 0 22px 68px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.vb-lightbox figcaption {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.vb-lightbox-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    z-index: 2;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 7px;
+    padding: 0;
+    color: #ffffff;
+    font: inherit;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    background: rgba(15, 23, 42, 0.72);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.vb-lightbox-close:hover {
+    transform: translateY(-1px);
+    background: rgba(29, 92, 255, 0.82);
+}
+
+[data-reveal-section] {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+[data-reveal-section].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@keyframes vbPanelSheen {
+
+    0%,
+    58% {
+        transform: rotate(12deg) translateX(-95%);
+    }
+
+    72%,
+    100% {
+        transform: rotate(12deg) translateX(360%);
+    }
+}
+
+@keyframes vbFlowAppear {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes vbLineRun {
+    from {
+        transform: translateX(-130%);
+    }
+
+    to {
+        transform: translateX(350%);
+    }
+}
+
+@keyframes vbCorePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 8px rgba(6, 182, 212, 0.08), 0 28px 64px rgba(29, 92, 255, 0.25);
+    }
+
+    50% {
+        box-shadow: 0 0 0 12px rgba(6, 182, 212, 0.12), 0 30px 72px rgba(6, 182, 212, 0.3);
+    }
+}
+
+@keyframes vbCoreSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes vbSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes vbPixelReveal {
+    0% {
+        opacity: 0;
+    }
+
+    30% {
+        opacity: 0.86;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes vbScanReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-120%);
+    }
+
+    30% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(330%);
+    }
+}
+
+@keyframes vbKeywordPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.24);
+    }
+
+    70% {
+        box-shadow: 0 0 0 8px rgba(6, 182, 212, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+    }
+}
+
+@keyframes vbNodeIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes vbNodeInY {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes vbLineGrow {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@keyframes vbLineGrowY {
+    to {
+        transform: scaleY(1);
+    }
+}
+
+@keyframes vbBarGrow {
+    to {
+        height: var(--bar);
+    }
+}
+
+@keyframes vbResultSheen {
+
+    0%,
+    20% {
+        transform: translateX(-120%);
+    }
+
+    100% {
+        transform: translateX(120%);
+    }
+}
+
+@media (max-width: 1320px) {
+
+    .vb-hero,
+    .vb-hero-stage,
+    .vb-converge-map {
+        grid-template-columns: 1fr;
+    }
+
+    .vb-flow-card--input,
+    .vb-flow-card--prompt,
+    .vb-flow-card--output,
+    .vb-flow-card--decode,
+    .vb-flow-line--a,
+    .vb-flow-line--b,
+    .vb-core-node {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .vb-flow-line {
+        width: 3px;
+        height: 38px;
+        justify-self: center;
+    }
+
+    .vb-flow-card--prompt,
+    .vb-flow-card--output,
+    .vb-flow-card--decode {
+        align-self: stretch;
+    }
+
+    .vb-capability-grid,
+    .vb-figure-grid,
+    .vb-result-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vb-sample-strip {
+        grid-auto-columns: minmax(320px, 0.42fr);
+    }
+
+    .vb-pointcloud-canvas-wrap {
+        height: 440px;
+        min-height: 400px;
+    }
+
+    .vb-route-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vb-route-list li::after {
+        display: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .vb-hero {
+        padding: 24px;
+    }
+
+    .vb-hero-copy h1 {
+        font-size: 34px;
+    }
+
+    .vb-hero-copy h2 {
+        font-size: 27px;
+    }
+
+    .vb-capability-grid,
+    .vb-figure-grid,
+    .vb-result-grid,
+    .vb-route-list {
+        grid-template-columns: 1fr;
+    }
+
+    .vb-anchor-nav {
+        position: static;
+        top: auto;
+        margin-left: -6px;
+        margin-right: -6px;
+        margin-bottom: 16px;
+    }
+
+    .vb-sample-group header {
+        grid-template-columns: 1fr;
+    }
+
+    .vb-sample-group header p {
+        grid-column: auto;
+    }
+
+    .vb-sample-strip {
+        grid-auto-flow: initial;
+        grid-auto-columns: initial;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+        overflow: visible;
+        scroll-snap-type: none;
+        padding-bottom: 2px;
+    }
+
+    .vb-sample-card {
+        grid-template-rows: minmax(230px, 58vw) auto;
+        scroll-snap-align: none;
+    }
+
+    .vb-pointcloud-canvas-wrap {
+        height: 360px;
+        min-height: 320px;
+    }
+
+    .vb-pointcloud-controls {
+        justify-content: flex-start;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 12px;
+        scrollbar-width: none;
+    }
+
+    .vb-pointcloud-controls::-webkit-scrollbar {
+        display: none;
+    }
+
+    .vb-pointcloud-controls button {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 13px;
+        font-size: 12px;
+    }
+
+    .vb-pointcloud-divider {
+        flex: 0 0 1px;
+    }
+
+    .vb-bibtex-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .vb-citation-badge {
+        align-self: flex-start;
+        margin-bottom: 4px;
+        width: auto;
+    }
+
+    .vb-citation-content {
+        margin-bottom: 16px;
+        flex: none;
+    }
+
+    .vb-citation-actions {
+        border-top: 1px solid #e2e8f0;
+        padding-top: 10px;
+        justify-content: flex-end;
+    }
+
+    .vb-cap-card {
+        grid-template-rows: minmax(230px, auto) 1fr;
+    }
+
+    .vb-lightbox {
+        padding: 18px;
+    }
+}
+
+/* Citation list and badges styling */
+.vb-citation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.vb-citation-badge {
+    align-self: center;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 850;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    width: 80px;
+    text-align: center;
+    display: inline-flex;
+    justify-content: center;
+}
+
+.vb-citation-badge--primary {
+    background: #eff6ff;
+    color: #1d5cff;
+    border-color: #bfdbfe;
+}
+
+.vb-citation-badge--secondary {
+    background: #fef3c7;
+    color: #d97706;
+    border-color: #fde68a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .vb-page *,
+    .vb-page *::before,
+    .vb-page *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}

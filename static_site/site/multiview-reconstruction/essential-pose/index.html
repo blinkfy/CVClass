@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本质矩阵与相机位姿 - 多视图几何与三维重建</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/geometry_vision/multiview_reconstruction.css?v=20260628-mv27">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "multiview_reconstruction";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "pose";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="active" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="active" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab multiview-lab" data-multiview-page="pose">
+    <header class="vision-hero station-hero multiview-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 15 · WORLD 03 MULTIVIEW RECONSTRUCTION</span>
+            <h1 class="station-title">本质矩阵与相机位姿</h1>
+            <p class="station-summary">在已知相机内参后，把基础矩阵转换为本质矩阵，并通过分解 \( \mathbf{E} \) 恢复两台相机之间的旋转 \( \mathbf{R} \) 和平移 \( \mathbf{t} \)。</p>
+        </div>
+        <div class="station-hero-actions multiview-hero-actions">
+            <span class="multiview-state">\( \mathbf{F}\rightarrow\mathbf{E} \) · \( \mathbf{R},\mathbf{t} \) · CHEIRALITY</span>
+            <span class="multiview-state multiview-state--real">真实图片 · OpenCV 双图演示</span>
+            <span class="multiview-state">机制拆解 · 多视图几何</span>
+            <span class="multiview-state">公式推导 · \( \mathbf{F} \) / \( \mathbf{E} \) / Triangulation</span>
+            <strong class="station-badge">\( \mathbf{F} \) · \( \mathbf{E} \) · \( \mathbf{R},\mathbf{t} \) · \( \mathbf{X} \)</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs multiview-tabs" aria-label="多视图几何与三维重建内部导航">
+        
+        <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+        
+        <a class="is-active" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+        
+        <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench multiview-workbench multiview-pose-workbench" data-mv-pose aria-label="本质矩阵与相机位姿工作台">
+    <aside class="vision-panel vision-control-panel multiview-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>矩阵与位姿参数</h3><p>Essential Matrix</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-mv-pose-input="sample">
+                <option value="small" selected>小基线</option>
+                <option value="large">大基线</option>
+                <option value="rotation">旋转为主</option>
+                <option value="translation">平移为主</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>算法模式</span>
+            <select data-mv-pose-input="algorithmMode">
+                <option value="synthetic" selected>教学合成 / Synthetic Demo</option>
+                <option value="real">真实样例 / Real OpenCV</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>内参模式</span>
+            <select data-mv-pose-input="intrinsics">
+                <option value="known" selected>已知 K</option>
+                <option value="normalized">归一化相机</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>噪声强度 <output data-mv-pose-output="noise">0.8 px</output></span>
+            <input type="range" min="0" max="2.8" step="0.1" value="0.8" data-mv-pose-input="noise">
+        </label>
+        <label class="vision-field">
+            <span>匹配点数量 <output data-mv-pose-output="matchCount">42</output></span>
+            <input type="range" min="12" max="90" step="3" value="42" data-mv-pose-input="matchCount">
+        </label>
+
+        <div class="multiview-toggle-grid">
+            <label class="vision-toggle-row"><span>显示 \( \mathbf{F}\rightarrow\mathbf{E} \) 转换</span><input type="checkbox" data-mv-pose-input="showFE" checked></label>
+            <label class="vision-toggle-row"><span>显示 SVD 分解</span><input type="checkbox" data-mv-pose-input="showSVD" checked></label>
+            <label class="vision-toggle-row"><span>显示四组位姿候选</span><input type="checkbox" data-mv-pose-input="showCandidates" checked></label>
+            <label class="vision-toggle-row"><span>显示正深度检查</span><input type="checkbox" data-mv-pose-input="showCheirality" checked></label>
+            <label class="vision-toggle-row"><span>显示正确位姿</span><input type="checkbox" data-mv-pose-input="showCorrect" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-mv-step-select="pose">
+                <option value="matches">特征匹配 / Matches</option>
+                <option value="f">基础矩阵 / F Matrix</option>
+                <option value="normalize">内参归一化 / Normalize with K</option>
+                <option value="e">本质矩阵 / Essential Matrix</option>
+                <option value="decompose">分解本质矩阵 / Decompose Essential Matrix</option>
+                <option value="cheirality">正深度检查 / Cheirality Check</option>
+                <option value="pose">相机位姿 / Camera Pose</option>
+            </select>
+        </label>
+
+        <div class="multiview-button-row">
+            <button type="button" data-mv-prev="pose">上一步</button>
+            <button type="button" data-mv-next="pose">下一步</button>
+            <button type="button" data-mv-play="pose">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>\( \mathbf{E} \) 奇异值</span><strong data-mv-pose-summary="singular">--</strong></div>
+            <div><span>位姿候选</span><strong data-mv-pose-summary="candidates">4 组</strong></div>
+            <div><span>正深度胜出</span><strong data-mv-pose-summary="winner">--</strong></div>
+            <div><span>尺度状态</span><strong data-mv-pose-summary="scale">\( \mathbf{t} \) 方向有尺度不定性</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel multiview-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>ESSENTIAL MATRIX & CAMERA POSE PLAYGROUND</span>
+                <h3 data-mv-pose-title>从 \( \mathbf{F} \) 与内参恢复相机相对位姿</h3>
+            </div>
+            <div class="multiview-stage-chips">
+                <span data-mv-pose-chip="step">特征匹配 / Matches</span>
+                <span data-mv-pose-chip="formula">\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</span>
+                <span data-mv-pose-chip="pose">\( \mathbf{R},\mathbf{t} \) pending</span>
+            </div>
+        </div>
+
+        <section class="multiview-view-card multiview-pipeline-card">
+            <div class="multiview-section-head">
+                <strong>矩阵流水线 <small>Matrix Pipeline</small></strong>
+                <span>特征匹配 → \( \mathbf{F} \) → \( \mathbf{K},\mathbf{K}' \) → \( \mathbf{E} \) → SVD → 位姿候选</span>
+            </div>
+            <div class="multiview-pipeline" data-mv-pose-pipeline></div>
+        </section>
+
+        <section class="multiview-view-card multiview-candidates-card">
+            <div class="multiview-section-head">
+                <strong>位姿候选 <small>Pose Candidates</small></strong>
+                <span>\( \mathbf{R}_1,+\mathbf{t} \) / \( \mathbf{R}_1,-\mathbf{t} \) / \( \mathbf{R}_2,+\mathbf{t} \) / \( \mathbf{R}_2,-\mathbf{t} \)</span>
+            </div>
+            <div class="multiview-candidate-grid" data-mv-pose-candidates></div>
+        </section>
+
+        <div class="multiview-lab-strip" data-mv-pose-status aria-label="本质矩阵与位姿当前计算状态"></div>
+        <div class="multiview-flow-preview" data-mv-pose-preview aria-label="本质矩阵与相机位姿步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel multiview-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-mv-pose-notes-title>特征匹配 / Matches</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>本质矩阵</span>
+            <strong>\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</strong>
+            <small>\( \mathbf{F} \) 在像素坐标中工作，\( \mathbf{E} \) 在归一化相机坐标中表达两相机的相对运动。</small>
+        </div>
+        <div class="vision-formula-card">
+            <span>位姿候选</span>
+            <strong>\( \mathbf{E}=[\mathbf{t}]_{\times}\mathbf{R} \)</strong>
+            <small>\( \mathbf{E} \) 的分解会产生 4 组 \( \mathbf{R},\mathbf{t} \)，需要用正深度检查选择。</small>
+        </div>
+
+        <div class="multiview-notes-body" data-mv-pose-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前分解</span>
+            <code data-mv-pose-substitution>
+                <span class="mv-formula-line">\( \mathbf{E}=\mathbf{K}'^{\mathsf T}\mathbf{F}\mathbf{K} \)</span>
+                <span class="mv-formula-line">\( \mathbf{R}=--,\ \mathbf{t}=-- \)</span>
+                <span class="mv-formula-line">\( \text{positive depth}=-- \)</span>
+            </code>
+        </div>
+
+        <div class="multiview-observation-list">
+            <article><strong>内参已知</strong><span>可以把像素匹配归一化，去除相机焦距和主点影响。</span></article>
+            <article><strong>四组候选</strong><span>代数分解不唯一，几何上的点必须位于两台相机前方。</span></article>
+            <article><strong>尺度不定</strong><span>两视图 \( \mathbf{E} \) 只能恢复平移方向，不能单独恢复绝对距离尺度。</span></article>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper multiview-stepper multiview-stepper--7" aria-label="本质矩阵与相机位姿流程" data-mv-stepper="pose">
+    <li class="is-active" data-mv-phase="matches"><span>1</span><div><strong>特征匹配</strong><small>Matches</small></div></li>
+    <li data-mv-phase="f"><span>2</span><div><strong>基础矩阵</strong><small>\( \mathbf{F} \) Matrix</small></div></li>
+    <li data-mv-phase="normalize"><span>3</span><div><strong>内参归一化</strong><small>Normalize with K</small></div></li>
+    <li data-mv-phase="e"><span>4</span><div><strong>本质矩阵</strong><small>Essential \( \mathbf{E} \)</small></div></li>
+    <li data-mv-phase="decompose"><span>5</span><div><strong>分解 \( \mathbf{E} \)</strong><small>Decompose \( \mathbf{E} \)</small></div></li>
+    <li data-mv-phase="cheirality"><span>6</span><div><strong>正深度检查</strong><small>Cheirality Check</small></div></li>
+    <li data-mv-phase="pose"><span>7</span><div><strong>相机位姿</strong><small>Camera Pose</small></div></li>
+</ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/js/geometry_vision/multiview_reconstruction.js?v=20260628-mv27"></script>
+
+</body>
+</html>

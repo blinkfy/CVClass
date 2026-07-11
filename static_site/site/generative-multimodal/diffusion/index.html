@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion：从噪声逐步生成图像</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/frontier_algorithm.css?v=20260628-module-b1">
+<link rel="stylesheet" href="/static/css/generative_multimodal/diffusion.css?v=20260711-diffusion-sdxs7">
+
+</head>
+<body class="cv-shell sidebar-collapsed       vision-language-page-shell">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "vision_language";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "diffusion";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="active" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="active" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div
+    class="vision-lab frontier-algo gm-algo gm-diffusion"
+    data-gm-diffusion
+    data-samples-url="/static/assets/data/generative_multimodal/diffusion_samples.json?v=20260711-diffusion-sdxs2"
+>
+    <header class="vision-hero station-hero frontier-algo-hero gm-hero diffusion-hero">
+        <div>
+            <span class="section-label station-eyebrow">第 10 站 · 生成式与多模态视觉</span>
+            <h1 class="station-title">Diffusion：从噪声逐步生成图像</h1>
+            <p class="station-summary">通过前向加噪和反向去噪过程，理解扩散模型如何从随机噪声逐步恢复并生成图像。</p>
+            <div class="gm-status-pills" aria-label="Diffusion 页面状态">
+                <span>机制拆解 · 教学动画</span>
+                <span>真实推理 · SDXS / WebGPU</span>
+                <span class="gm-status-honest">浏览器加载约 0.9 GB · UNet、VAE 与 CLIP 均在本机运行</span>
+            </div>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">前向加噪 Forward</strong>
+            <strong class="station-badge">反向去噪 Denoising</strong>
+            <strong class="station-badge">时间步 Timestep</strong>
+            <strong class="station-badge">文本条件 Text</strong>
+            <strong class="station-badge">采样 Sampling</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs frontier-algo-tabs gm-tabs" aria-label="生成式与多模态视觉导航">
+        <a href="/generative-multimodal/gan">GAN</a>
+        <a class="is-active" href="/generative-multimodal/diffusion">Diffusion</a>
+    </nav>
+
+    <section class="vision-workbench frontier-algo-workbench gm-workbench diffusion-workbench" aria-label="Diffusion 机制拆解教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls gm-controls" aria-label="输入与参数">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>输入与参数</h3><p>任务、prompt、timestep 与 guidance</p></div>
+            </div>
+
+            <label class="vision-field">
+                <span>示例任务</span>
+                <select data-diff-control="sample" aria-label="选择 Diffusion 示例任务"></select>
+            </label>
+
+            <label class="vision-field">
+                <span>Prompt</span>
+                <input type="text" data-diff-control="prompt" aria-label="编辑 prompt" value="a small cat">
+            </label>
+
+            <section class="diff-sidebar-real" aria-labelledby="diffRealPanelTitle">
+                <div class="diff-sidebar-real-head">
+                    <div>
+                        <span>真实图像生成</span>
+                        <strong id="diffRealPanelTitle">SDXS 真实生成</strong>
+                    </div>
+                    <div class="diff-real-badges" aria-label="真实推理状态">
+                        <span data-diff-real-meta="backend">等待检测 WebGPU</span>
+                        <span data-diff-real-meta="runtime">模型未加载</span>
+                    </div>
+                </div>
+                <label class="vision-field diff-real-seed-field">
+                    <span>Seed</span>
+                    <input type="number" data-diff-real-control="seed" value="42" step="1" aria-label="设置随机种子">
+                </label>
+                <div class="diff-real-actions">
+                    <button type="button" data-diff-real-action="load">加载模型</button>
+                    <button type="button" data-diff-real-action="generate">生成 512×512</button>
+                    <button type="button" data-diff-real-action="cancel">取消生成</button>
+                    <a href="#" download="diffusion-generated.png" data-diff-real-action="download" aria-disabled="true">下载结果</a>
+                </div>
+                <div class="diff-real-progress" aria-hidden="true">
+                    <b data-diff-real-progress></b>
+                </div>
+                <p class="diff-real-status" data-diff-real-status>页面加载后将自动在后台加载模型并生成首张真实图像。</p>
+            </section>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="Timestep">
+                <strong>Timestep</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" data-diff-timestep="0">t = 0</button>
+                    <button type="button" data-diff-timestep="25">t = 25</button>
+                    <button type="button" class="is-active" data-diff-timestep="50">t = 50</button>
+                    <button type="button" data-diff-timestep="75">t = 75</button>
+                    <button type="button" data-diff-timestep="100">t = 100</button>
+                </div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="显示模式">
+                <strong>显示模式</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" class="is-active" data-diff-display="forward">前向加噪</button>
+                    <button type="button" data-diff-display="reverse">反向去噪</button>
+                    <button type="button" data-diff-display="condition">文本条件</button>
+                    <button type="button" data-diff-display="sampling">采样时间线</button>
+                </div>
+            </div>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="Guidance Scale">
+                <strong>引导强度 Guidance</strong>
+                <div class="frontier-segmented gm-segmented">
+                    <button type="button" data-diff-guidance="1">1.0</button>
+                    <button type="button" data-diff-guidance="3">3.0</button>
+                    <button type="button" class="is-active" data-diff-guidance="7.5">7.5</button>
+                    <button type="button" data-diff-guidance="12">12.0</button>
+                </div>
+            </div>
+
+            <div class="frontier-player">
+                <div class="frontier-player-buttons">
+                    <button type="button" data-frontier-prev>上一步</button>
+                    <button type="button" data-frontier-play>播放</button>
+                    <button type="button" data-frontier-next>下一步</button>
+                    <button type="button" data-frontier-reset>重置</button>
+                </div>
+                <label class="frontier-speed-control">
+                    <span>速度</span>
+                    <select data-frontier-speed aria-label="Diffusion 播放速度">
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </label>
+                <div class="frontier-current-step">
+                    <strong data-frontier-step-name>Clean Image</strong>
+                    <span data-frontier-step-note>x0 是训练时的干净图像。</span>
+                </div>
+            </div>
+
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage gm-stage-panel diffusion-stage-panel">
+            <div class="vision-stage-header">
+                <div>
+                    <span>机制舞台</span>
+                    <h3 data-diff-stage-title>Clean Image → Forward Noise → Reverse Denoise → Generated Output</h3>
+                </div>
+                <div class="frontier-stage-chips gm-stage-chips">
+                    <span data-diff-chip="sample">生成小猫</span>
+                    <span data-diff-chip="timestep">t = 50</span>
+                    <span data-diff-chip="display">前向加噪</span>
+                </div>
+            </div>
+            <div class="gm-stage-player" aria-label="Diffusion 主舞台播放控制">
+                <button type="button" data-frontier-prev>上一步</button>
+                <button type="button" data-frontier-play>播放</button>
+                <button type="button" data-frontier-next>下一步</button>
+                <button type="button" data-frontier-reset>重置</button>
+            </div>
+
+            <div class="frontier-stage-canvas gm-stage-canvas diffusion-stage" data-diff-stage>
+                <div class="frontier-loading">正在加载 Diffusion 预设样例...</div>
+            </div>
+            <div class="frontier-pipeline gm-pipeline diffusion-pipeline" data-diff-pipeline aria-label="Diffusion 计算流程"></div>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes gm-notes" aria-label="过程笔记">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>过程笔记</h3><p>当前步骤输入、计算和输出</p></div>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary gm-status-summary diff-notes-summary">
+                <div><span>当前 prompt</span><strong data-diff-summary="prompt">--</strong></div>
+                <div><span>当前 timestep</span><strong data-diff-summary="timestep">t = 50</strong></div>
+                <div><span>当前阶段</span><strong data-diff-summary="phase">前向加噪</strong></div>
+                <div><span>噪声强度</span><strong data-diff-summary="noise">0.50</strong></div>
+                <div><span>引导强度</span><strong data-diff-summary="guidance">7.5</strong></div>
+                <div><span>采样步数</span><strong data-diff-summary="steps">30</strong></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-diff-note="step">Clean Image</strong>
+                <p data-diff-note="summary">模型学习如何从不同噪声程度恢复图像。</p>
+            </div>
+
+            <div class="frontier-note-grid gm-note-grid">
+                <div><span>输入结构</span><strong data-diff-note="input">x0，真实干净图像</strong></div>
+                <div><span>核心过程</span><strong data-diff-note="compute">学习加噪 / 去噪</strong></div>
+                <div><span>输出结构</span><strong data-diff-note="output">去噪后的 image</strong></div>
+                <div><span>当前状态</span><strong data-diff-note="state">训练样本起点</strong></div>
+                <div><span>影响因素</span><strong data-diff-note="metrics">seed, prompt, guidance scale, steps</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card gm-formula-card">
+                <span>概念公式</span>
+                <strong data-diff-note="formula">x0</strong>
+                <small data-diff-note="formulaNote">生成完成后，主舞台会使用真实最终图；模型未返回的中间帧会明确标为教学模拟。</small>
+            </div>
+        </aside>
+    </section>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/frontier_player.js?v=20260628-module-b1"></script>
+<script src="/static/js/generative_multimodal/diffusion.js?v=20260711-diffusion-sdxs9"></script>
+
+</body>
+</html>

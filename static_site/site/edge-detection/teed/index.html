@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度边缘检测拓展</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/edge/edge_detection.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "edge";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "teed";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="active" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="active" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section
+    id="edgeTeedPage"
+    class="edge-page edge-teed-page"
+    data-assets-base="/static/assets/img/"
+    data-model-url="/static/assets/data/edge/teed_debug_352.onnx"
+    data-ort-script-url="/static/vendor/onnxruntime-web/ort.min.js"
+    data-ort-wasm-base="/static/vendor/onnxruntime-web/"
+>
+    <header class="edge-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 03 · EDGES, CONTOURS &amp; MORPHOLOGY</span>
+            <h1 class="station-title">深度边缘检测拓展</h1>
+            <p class="station-summary">从手工算子到深度边缘响应：观察 TEED 在边缘检测中的可视化流程。</p>
+        </div>
+        <strong class="station-badge">EDGE · CONTOUR · HOUGH</strong>
+    </header>
+
+    <nav class="edge-tabs station-tabs" aria-label="边缘检测实验模块">
+        <a href="/edge-detection/compare">方法对比</a>
+        <a href="/edge-detection/kernel">局部卷积响应</a>
+        <a href="/edge-detection/canny">Canny 流水线</a>
+        <a class="is-active" href="/edge-detection/teed">深度边缘检测拓展</a>
+        <a href="/edge-detection/applications">应用实践</a>
+    </nav>
+
+    <section class="edge-layout edge-teed-layout">
+        <aside class="edge-panel edge-controls edge-teed-controls" aria-label="TEED 参数面板">
+            <div>
+                <span class="section-label">Deep Edge Extension</span>
+                <h2>TEED 参数</h2>
+            </div>
+
+            <label class="edge-upload">
+                <input id="edgeTeedImageInput" type="file" accept="image/*">
+                <span>上传图片</span>
+                <small id="edgeTeedImageName">当前使用示例图</small>
+            </label>
+
+            <div class="edge-samples" id="edgeTeedSamples" aria-label="TEED 示例图"></div>
+
+            <div class="edge-teed-input-size">
+                <span>输入尺寸</span>
+                <strong>352 × 352</strong>
+            </div>
+
+            <div class="edge-teed-switches" aria-label="TEED 显示开关">
+                <label class="edge-check"><input id="edgeTeedShowStages" type="checkbox" checked><span>Stage Features</span></label>
+                <label class="edge-check"><input id="edgeTeedShowSides" type="checkbox" checked><span>Side Outputs</span></label>
+                <label class="edge-check"><input id="edgeTeedShowFusion" type="checkbox" checked><span>Fusion</span></label>
+                <label class="edge-check"><input id="edgeTeedShowOriginal" type="checkbox" checked><span>原图对比</span></label>
+            </div>
+
+            <div id="edgeTeedStatus" class="edge-status edge-teed-status">未加载模型</div>
+        </aside>
+
+        <main class="edge-stage-wrap">
+            <section class="edge-panel edge-stage-card edge-teed-stage-card">
+                <div class="edge-stage-head">
+                    <div>
+                        <span class="section-label">Tiny Edge Detector · Side Outputs · Fusion</span>
+                        <h2>TEED / HED 边缘检测拓展</h2>
+                    </div>
+                    <div class="edge-play-controls" aria-label="TEED 流程控制">
+                        <button id="edgeTeedPrev" type="button">Prev</button>
+                        <button id="edgeTeedPlay" type="button">Play</button>
+                        <button id="edgeTeedNext" type="button">Next</button>
+                        <button id="edgeTeedReset" type="button">Reset</button>
+                    </div>
+                </div>
+
+                <section class="edge-teed-visual-stage">
+                    <div class="edge-teed-original-card">
+                        <span class="section-label" id="edgeTeedTopPreviewLabel">Result Preview</span>
+                        <div id="edgeTeedTopPreview" class="edge-teed-top-preview">
+                            <img id="edgeTeedOriginal" alt="TEED 输出结果预览">
+                        </div>
+                    </div>
+                    <div class="edge-teed-network" aria-label="TEED 网络流程示意">
+                        <div class="edge-teed-graph" aria-hidden="false">
+                            <svg class="edge-teed-graph-lines" viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+                                <defs>
+                                    <marker id="edgeTeedArrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(37, 99, 235, 0.62)"></path>
+                                    </marker>
+                                    <marker id="edgeTeedArrowOrange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(251, 146, 60, 0.56)"></path>
+                                    </marker>
+                                    <marker id="edgeTeedArrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                                        <path d="M0,0 L8,4 L0,8 Z" fill="rgba(16, 185, 129, 0.58)"></path>
+                                    </marker>
+                                </defs>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-1" x1="104" y1="70" x2="205" y2="70"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-2" x1="300" y1="70" x2="425" y2="70"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-main" data-flow-line="main-3" x1="520" y1="70" x2="645" y2="70"></line>
+
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-1" d="M250 103 C240 126 232 142 225 156"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-2" d="M470 103 C460 126 452 142 445 156"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-branch" data-flow-line="branch-3" d="M690 103 C680 126 672 142 665 156"></path>
+
+                                <line class="edge-teed-graph-line edge-teed-graph-line-side" data-flow-line="side-1" x1="292" y1="182" x2="425" y2="182"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-side" data-flow-line="side-2" x1="512" y1="182" x2="645" y2="182"></line>
+                                <line class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="side-3" x1="730" y1="182" x2="795" y2="182"></line>
+
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-1" d="M730 91 C752 104 772 116 800 126"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-2" d="M730 132 C752 132 772 132 800 132"></path>
+                                <path class="edge-teed-graph-line edge-teed-graph-line-fusion" data-flow-line="fusion-3" d="M730 184 C752 166 772 150 800 140"></path>
+                            </svg>
+                            <article class="edge-teed-node edge-teed-node-original" data-flow-key="original">
+                                <div class="edge-teed-node-thumb"><img id="edgeTeedNetworkOriginal" alt="TEED 网络输入图像"></div>
+                                <strong>Original</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-1" data-flow-key="stage1_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage1<br>Feature</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-2" data-flow-key="stage2_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage2<br>Feature</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-stage edge-teed-stage-3" data-flow-key="stage3_feature">
+                                <span class="edge-teed-cube"><b></b></span>
+                                <strong>Stage3<br>Feature</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-1" data-flow-key="side1">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side1</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-2" data-flow-key="side2">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side2</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-side edge-teed-side-3" data-flow-key="side3">
+                                <span class="edge-teed-side-icon"><b></b></span>
+                                <strong>Side3</strong>
+                            </article>
+
+                            <article class="edge-teed-node edge-teed-node-fusion" data-flow-key="fuse">
+                                <span class="edge-teed-fusion-icon"><b></b><b></b><b></b></span>
+                                <strong>Fusion<br>/ Final Edge</strong>
+                            </article>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="edgeTeedResults" class="edge-teed-results" aria-label="TEED 输出结果网格"></section>
+
+                <div class="edge-kernel-flow-title edge-teed-flow-card">
+                    <strong>TEED FLOW</strong>
+                    <ol id="edgeTeedTimeline" class="edge-flow-timeline edge-teed-flow-timeline" aria-label="TEED Flow 时间线"></ol>
+                </div>
+            </section>
+        </main>
+
+        <aside class="edge-panel edge-info edge-teed-info" aria-label="TEED 过程说明">
+            <div>
+                <span class="section-label">Process Notes</span>
+                <h2 id="edgeTeedInfoTitle">当前过程</h2>
+            </div>
+            <p id="edgeTeedInfoText">TEED / HED 是深度边缘检测拓展展示。Sobel / Canny 仍然是本实验核心手写算法。</p>
+
+            <article class="edge-teed-formula-card" aria-label="TEED 公式">
+                <strong>公式</strong>
+                <div id="edgeTeedFormulaText" class="edge-teed-formula-text">F_i = Conv_i(F_{i-1})</div>
+                <div id="edgeTeedFormulaParts" class="edge-teed-formula-parts">
+                    <span data-formula-token="f1">F<sub>i</sub></span>
+                    <span data-formula-token="conv">Conv<sub>i</sub></span>
+                    <span data-formula-token="fprev">F<sub>i-1</sub></span>
+                    <span data-formula-token="s1">S<sub>1</sub></span>
+                    <span data-formula-token="s2">S<sub>2</sub></span>
+                    <span data-formula-token="s3">S<sub>3</sub></span>
+                    <span data-formula-token="w1">w<sub>1</sub></span>
+                    <span data-formula-token="w2">w<sub>2</sub></span>
+                    <span data-formula-token="w3">w<sub>3</sub></span>
+                    <span data-formula-token="sum">sum</span>
+                    <span data-formula-token="sigmoid">sigmoid</span>
+                    <span data-formula-token="final">Final</span>
+                </div>
+            </article>
+
+            <article class="edge-teed-note-card">
+                <strong>侧输出说明</strong>
+                <p>Side Output 从不同深度的特征层直接产生边缘预测。浅层更关注纹理和细节，深层更关注整体轮廓。</p>
+            </article>
+            <article class="edge-teed-note-card">
+                <strong>融合说明</strong>
+                <p>Fusion 将多个 side output 融合，得到最终边缘预测图。模型文件缺失时这里只展示结构和占位，不伪装成真实推理结果。</p>
+            </article>
+            <article class="edge-boundary-card">
+                <strong>代码边界</strong>
+                <p>TEED 为公开预训练轻量模型的拓展展示，不属于 Sobel、Canny、NMS、Hysteresis 等手写核心算法范围。</p>
+            </article>
+        </aside>
+    </section>
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/edge/edge_teed.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "status": "机制拆解 · 教学动画；预设样例 · 非真实推理",
+  "imageSize": 224,
+  "defaultSample": "city",
+  "samples": [
+    {
+      "id": "city",
+      "label": "车辆场景",
+      "scene": "city",
+      "image": "assets/frontier/vision-transformer/samples/vit-city.webp",
+      "tensor": "224×224×3",
+      "summary": "真实车辆场景提供前景车辆、坡道和远处背景之间的长距离 Attention 关联。",
+      "anchors": [
+        {"label": "赛车", "x": 0.67, "y": 0.35},
+        {"label": "摩托车", "x": 0.52, "y": 0.61},
+        {"label": "草坡", "x": 0.44, "y": 0.70},
+        {"label": "围栏", "x": 0.40, "y": 0.82},
+        {"label": "天空", "x": 0.50, "y": 0.18}
+      ],
+      "predictions": [
+        {"label": "车辆场景", "score": 0.82},
+        {"label": "车辆", "score": 0.67},
+        {"label": "户外", "score": 0.54}
+      ]
+    },
+    {
+      "id": "animal",
+      "label": "动物主体",
+      "scene": "animal",
+      "image": "assets/frontier/vision-transformer/samples/vit-animal.webp",
+      "tensor": "224×224×3",
+      "summary": "真实猫图的主体轮廓、草地和石材背景清楚，适合观察不同注意力头的主体关注。",
+      "anchors": [
+        {"label": "头部", "x": 0.58, "y": 0.42},
+        {"label": "身体", "x": 0.45, "y": 0.56},
+        {"label": "腿部", "x": 0.36, "y": 0.72},
+        {"label": "草地", "x": 0.26, "y": 0.82},
+        {"label": "尾部", "x": 0.27, "y": 0.48}
+      ],
+      "predictions": [
+        {"label": "动物", "score": 0.88},
+        {"label": "哺乳动物", "score": 0.63},
+        {"label": "户外", "score": 0.51}
+      ]
+    },
+    {
+      "id": "object",
+      "label": "桌面物体",
+      "scene": "object",
+      "image": "assets/frontier/vision-transformer/samples/vit-object.webp",
+      "tensor": "224×224×3",
+      "summary": "甜点桌面包含重复物体和餐具，方便观察 CLS Token 如何聚合主体区域。",
+      "anchors": [
+        {"label": "甜点", "x": 0.54, "y": 0.35},
+        {"label": "马卡龙", "x": 0.35, "y": 0.66},
+        {"label": "盘子", "x": 0.73, "y": 0.66},
+        {"label": "菜单", "x": 0.73, "y": 0.30},
+        {"label": "桌面", "x": 0.50, "y": 0.82}
+      ],
+      "predictions": [
+        {"label": "甜点桌面", "score": 0.84},
+        {"label": "食物", "score": 0.58},
+        {"label": "室内", "score": 0.49}
+      ]
+    },
+    {
+      "id": "classroom",
+      "label": "室内书店",
+      "scene": "classroom",
+      "image": "assets/frontier/vision-transformer/samples/vit-classroom.webp",
+      "tensor": "224×224×3",
+      "summary": "真实室内书店和乐队场景包含人物、书架和乐器，适合观察位置编码与全局上下文。",
+      "anchors": [
+        {"label": "书架", "x": 0.74, "y": 0.34},
+        {"label": "乐手", "x": 0.32, "y": 0.48},
+        {"label": "鼓组", "x": 0.56, "y": 0.62},
+        {"label": "观众", "x": 0.42, "y": 0.84},
+        {"label": "吊灯", "x": 0.48, "y": 0.18}
+      ],
+      "predictions": [
+        {"label": "室内书店", "score": 0.79},
+        {"label": "室内场景", "score": 0.69},
+        {"label": "人物活动", "score": 0.48}
+      ]
+    }
+  ],
+  "heads": {
+    "head1": {"label": "第 1 头", "focus": "local", "description": "偏向临近 Patch 和局部边界。"},
+    "head2": {"label": "第 2 头", "focus": "object", "description": "偏向主体区域和语义对象。"},
+    "head3": {"label": "第 3 头", "focus": "context", "description": "偏向远距离上下文和背景结构。"},
+    "average": {"label": "平均", "focus": "mixed", "description": "融合多个注意力头的平均注意力。"}
+  }
+}

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAM：提示式图像分割</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/frontier_algorithm.css?v=20260628-module-b1">
+<link rel="stylesheet" href="/static/css/generative_multimodal_sam.css?v=20260628-sam1">
+
+</head>
+<body class="cv-shell sidebar-collapsed       vision-language-page-shell">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "vision_language";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "sam";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="active" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="active" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div
+    class="vision-lab frontier-algo generative-sam sam-lab"
+    data-generative-sam
+    data-samples-url="/static/assets/data/generative_multimodal/sam_samples.json?v=20260628-sam2"
+    data-model-manifest-url="/static/assets/data/generative_multimodal/sam/model/sam_model_manifest.json?v=20260711-data-layout1"
+    data-worker-url="/static/js/generative_multimodal_sam_worker.js?v=20260628-sam-real3"
+>
+    <header class="vision-hero station-hero frontier-algo-hero sam-hero">
+        <div>
+            <span class="section-label station-eyebrow">站点 10 · 生成式与多模态视觉</span>
+            <h1 class="station-title">SAM：提示式图像分割</h1>
+            <p class="station-summary">从点、框、mask 等用户提示出发，理解图像基础模型如何生成目标区域分割结果。</p>
+            <div class="sam-status-pills" aria-label="SAM 页面状态">
+                <span>机制拆解 · SAM</span>
+                <span data-sam-status="mode">预设样例 · Prompt Mask 演示</span>
+                <span class="sam-status-honest" data-sam-status="truth">非真实推理 · 教学动画</span>
+                <span data-sam-status="embedding">Image Embedding · 等待离线资源</span>
+            </div>
+        </div>
+        <div class="station-hero-actions frontier-algo-hero-actions">
+            <strong class="station-badge">提示编码器 Prompt Encoder</strong>
+            <strong class="station-badge">图像特征 Image Embedding</strong>
+            <strong class="station-badge">Mask Decoder</strong>
+            <strong class="station-badge">候选 Masks</strong>
+            <strong class="station-badge">交互式分割</strong>
+        </div>
+    </header>
+
+    <section class="vision-workbench frontier-algo-workbench sam-workbench" aria-label="SAM 提示式分割教学工作台">
+        <aside class="vision-panel vision-control-panel frontier-algo-controls sam-prompt" aria-label="输入与提示">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">01</span>
+                <div><h3>输入与 Prompt</h3><p>样例、提示和 mask 参数</p></div>
+            </div>
+
+            <label class="vision-field">
+                <span>示例图像</span>
+                <select data-sam-control="sample" aria-label="选择 SAM 示例图像"></select>
+            </label>
+
+            <div class="frontier-control-group sam-mode-tabs" role="tablist" aria-label="教学模式">
+                <strong>教学模式</strong>
+                <div class="frontier-segmented sam-mode-buttons">
+                    <button type="button" class="is-active" data-sam-mode="point">点提示 Point</button>
+                    <button type="button" data-sam-mode="box">框提示 Box</button>
+                    <button type="button" data-sam-mode="refine">多提示修正</button>
+                    <button type="button" data-sam-mode="output">Mask 输出结构</button>
+                </div>
+            </div>
+
+            <label class="vision-field">
+                <span>Prompt 类型</span>
+                <select data-sam-control="promptType" aria-label="选择 prompt 类型">
+                    <option value="positive">正点 Positive Point</option>
+                    <option value="negative">负点 Negative Point</option>
+                    <option value="box">框提示 Box Prompt</option>
+                    <option value="multi">多点提示 Multi-point</option>
+                    <option value="mask">Mask 提示</option>
+                </select>
+            </label>
+
+            <div class="frontier-control-group" role="radiogroup" aria-label="交互工具">
+                <strong>交互工具</strong>
+                <div class="frontier-segmented sam-tool-buttons">
+                    <button type="button" class="is-active" data-sam-tool="positive">添加正点</button>
+                    <button type="button" data-sam-tool="negative">添加负点</button>
+                    <button type="button" data-sam-tool="box">拖拽绘制 Box</button>
+                    <button type="button" data-sam-tool="mask">Mask 提示</button>
+                </div>
+                <small data-sam-operation-hint>点击主图添加正点；右键可临时添加负点。</small>
+            </div>
+
+            <div class="sam-action-row">
+                <button type="button" data-sam-action="preset">使用预设提示</button>
+                <button type="button" data-sam-action="box">使用预设 Box</button>
+                <button type="button" data-sam-action="clear">清除提示</button>
+            </div>
+
+            <div class="sam-inference-panel" aria-label="SAM 真实 Decoder 推理控制">
+                <div>
+                    <strong>真实推理 · ONNX Decoder</strong>
+                    <small data-sam-inference-status>未加载真实 Decoder，当前使用预设 polygon fallback。</small>
+                </div>
+                <div class="sam-inference-actions">
+                    <button type="button" data-sam-inference="load">加载真实 Decoder</button>
+                    <button type="button" data-sam-inference="run" disabled>运行当前提示</button>
+                </div>
+                <span data-sam-inference-backend>Backend: --</span>
+            </div>
+
+            <label class="vision-field">
+                <span>候选 Mask</span>
+                <select data-sam-control="candidate" aria-label="选择 candidate mask"></select>
+            </label>
+
+            <label class="vision-field sam-range-field">
+                <span>Mask 阈值 <b data-sam-value="threshold">0.55</b></span>
+                <input type="range" min="0.30" max="0.90" step="0.01" value="0.55" data-sam-control="threshold">
+            </label>
+
+            <label class="vision-field sam-range-field">
+                <span>叠加透明度 Alpha <b data-sam-value="alpha">0.48</b></span>
+                <input type="range" min="0.20" max="0.80" step="0.01" value="0.48" data-sam-control="alpha">
+            </label>
+
+            <div class="sam-toggle-grid">
+                <label><input type="checkbox" checked data-sam-control="contour"> 显示轮廓</label>
+                <label><input type="checkbox" checked data-sam-control="grid"> 显示 embedding 网格</label>
+            </div>
+
+            <div class="vision-kv-grid frontier-status-summary sam-status-summary">
+                <div><span>当前图像</span><strong data-sam-summary="sample">--</strong></div>
+                <div><span>Prompt 类型</span><strong data-sam-summary="promptType">--</strong></div>
+                <div><span>Prompt 数量</span><strong data-sam-summary="promptCount">0</strong></div>
+                <div><span>候选 mask</span><strong data-sam-summary="candidateCount">3</strong></div>
+                <div><span>当前 Mask</span><strong data-sam-summary="candidate">Mask 1</strong></div>
+                <div><span>IoU 预测分</span><strong data-sam-summary="score">--</strong></div>
+                <div><span>稳定性 Stability</span><strong data-sam-summary="stability">--</strong></div>
+                <div><span>Mask 面积</span><strong data-sam-summary="area">--</strong></div>
+                <div><span>轮廓长度</span><strong data-sam-summary="contour">--</strong></div>
+            </div>
+        </aside>
+
+        <div class="vision-stage-panel frontier-algo-stage sam-stage-panel">
+            <div class="vision-stage-header">
+                <div>
+                    <span>实验舞台 PLAYGROUND</span>
+                    <h3 data-sam-stage-title>图像 Image → Prompt → 候选 Masks</h3>
+                </div>
+                <div class="frontier-stage-chips sam-stage-chips">
+                    <span data-sam-chip="sample">样例</span>
+                    <span data-sam-chip="prompt">Prompt</span>
+                    <span data-sam-chip="candidate">Mask 1</span>
+                </div>
+            </div>
+
+            <div class="sam-stage" data-sam-canvas aria-label="SAM 主图交互区">
+                <div class="sam-stage-empty">正在加载 SAM 教学样例...</div>
+            </div>
+
+            <div class="sam-candidate-strip" data-sam-candidates aria-label="候选 mask 列表"></div>
+
+            <section class="sam-mechanism" aria-label="SAM 内部机制">
+                <div class="sam-mechanism-head">
+                    <span>内部机制</span>
+                    <strong>Image Encoder + Prompt Encoder → Mask Decoder</strong>
+                </div>
+                <div class="sam-flow" data-sam-flow></div>
+            </section>
+        </div>
+
+        <aside class="vision-panel vision-notes-panel frontier-algo-notes sam-notes gm-algo" aria-label="过程说明">
+            <div class="vision-panel-heading">
+                <span class="vision-panel-index">02</span>
+                <div><h3>过程说明</h3><p>当前步骤输入、计算和输出</p></div>
+            </div>
+
+            <div class="frontier-note-card">
+                <span>当前步骤</span>
+                <strong data-sam-note="step">Image</strong>
+                <p data-sam-note="summary">输入图像先建立视觉表征，再由 prompt 查询区域。</p>
+            </div>
+
+            <div class="frontier-note-grid sam-note-grid">
+                <div><span>输入结构</span><strong data-sam-note="input">Image ∈ R^(H×W×3)</strong></div>
+                <div><span>核心计算</span><strong data-sam-note="compute">Image Encoder</strong></div>
+                <div><span>输出结构</span><strong data-sam-note="output">Image Embedding</strong></div>
+                <div><span>当前状态</span><strong data-sam-note="state">等待提示输入</strong></div>
+                <div><span>指标解释</span><strong data-sam-note="metrics">IoU / 稳定性 / 面积 / 轮廓长度</strong></div>
+            </div>
+
+            <div class="vision-formula-card frontier-formula-card sam-formula-card">
+                <span>概念公式</span>
+                <strong data-sam-note="formula">ImageEmbedding = ImageEncoder(Image)</strong>
+                <small data-sam-inference-note>当前页面默认使用预设 polygon mask；加载 ONNX Decoder 且存在离线 embedding 后，才运行真实 Mask Decoder。</small>
+            </div>
+
+            <div class="frontier-note-card sam-output-card">
+                <span>当前输出结构</span>
+                <pre data-sam-output-json>{
+  "mask": "H×W 二值图",
+  "bbox": [0, 0, 0, 0],
+  "score": 0,
+  "stability": 0,
+  "areaRatio": "0%",
+  "contourLength": 0
+}</pre>
+            </div>
+
+            <div class="frontier-note-card sam-runtime-card">
+                <span>运行状态</span>
+                <p data-sam-runtime>正在加载预设样例。</p>
+            </div>
+        </aside>
+    </section>
+
+    <ol class="vision-stepper frontier-algo-stepper sam-stepper" aria-label="SAM 流程 stepper" data-frontier-stepper></ol>
+
+    <section class="frontier-bottom-player sam-bottom-player" aria-label="SAM 底部播放控制">
+        <div>
+            <span>当前流程</span>
+            <strong data-frontier-step-name>Image</strong>
+            <small data-frontier-step-note>输入图像以 H×W×3 进入视觉编码器。</small>
+        </div>
+        <div class="frontier-bottom-player-actions">
+            <button type="button" data-frontier-prev>上一步</button>
+            <button type="button" data-frontier-play>播放</button>
+            <button type="button" data-frontier-next>下一步</button>
+            <button type="button" data-frontier-reset>重置</button>
+            <label>
+                <span>速度</span>
+                <select data-frontier-speed aria-label="底部播放速度">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </label>
+        </div>
+    </section>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/frontier_player.js?v=20260628-module-b1"></script>
+<script src="/static/js/generative_multimodal_sam_inference.js?v=20260628-sam-real3"></script>
+<script src="/static/js/generative_multimodal_sam.js?v=20260628-sam-real3"></script>
+
+</body>
+</html>

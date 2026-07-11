@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "topic": "Instance Segmentation Mask R-CNN",
+  "image": {
+    "sampleId": "crosswalk_people",
+    "width": 640,
+    "height": 427
+  },
+  "fpnLevels": [
+    {"id": "P2", "stride": 4, "resolution": "160 × 107", "role": "small objects / sharp boundary", "target": "person", "activation": 0.88},
+    {"id": "P3", "stride": 8, "resolution": "80 × 54", "role": "medium instances", "target": "bicycle", "activation": 0.73},
+    {"id": "P4", "stride": 16, "resolution": "40 × 27", "role": "large objects", "target": "car", "activation": 0.69},
+    {"id": "P5", "stride": 32, "resolution": "20 × 14", "role": "large semantic context", "target": "bus", "activation": 0.91}
+  ],
+  "proposals": [
+    {"id": "r1", "class": "person", "score": 0.94, "level": "P2", "bbox": [122, 148, 188, 413], "color": "#EF4444"},
+    {"id": "r2", "class": "person", "score": 0.89, "level": "P2", "bbox": [28, 174, 105, 417], "color": "#F97316"},
+    {"id": "r3", "class": "bus", "score": 0.88, "level": "P5", "bbox": [390, 60, 566, 208], "color": "#A855F7"},
+    {"id": "r4", "class": "car", "score": 0.82, "level": "P4", "bbox": [520, 118, 636, 272], "color": "#2563EB"}
+  ],
+  "roiAlign": {
+    "roi": {"bbox": [122, 148, 188, 413], "featureLevel": "P2", "floatBox": [30.5, 37.0, 47.0, 103.25]},
+    "poolingBox": [31, 37, 47, 103],
+    "samplePoints": [
+      {"x": 32.25, "y": 39.40, "value": 0.62},
+      {"x": 36.50, "y": 39.40, "value": 0.71},
+      {"x": 42.75, "y": 39.40, "value": 0.58},
+      {"x": 32.25, "y": 58.80, "value": 0.77},
+      {"x": 36.50, "y": 58.80, "value": 0.86},
+      {"x": 42.75, "y": 58.80, "value": 0.69},
+      {"x": 32.25, "y": 86.20, "value": 0.65},
+      {"x": 36.50, "y": 86.20, "value": 0.82},
+      {"x": 42.75, "y": 86.20, "value": 0.74}
+    ],
+    "poolingError": {"dx": 0.5, "dy": 0.25, "note": "ROI Pooling rounds coordinates before binning"}
+  },
+  "maskHead": {
+    "roiFeatureSize": "14 × 14 × 256",
+    "convLayers": 4,
+    "upsample": "14 × 14 → 28 × 28",
+    "logitsShape": "K × 28 × 28",
+    "selectedClass": "person",
+    "bceExample": {"target": 1, "probability": 0.84, "loss": 0.174},
+    "logits": [
+      [0.05, 0.12, 0.18, 0.20, 0.16, 0.09, 0.04],
+      [0.10, 0.28, 0.54, 0.62, 0.51, 0.24, 0.08],
+      [0.16, 0.46, 0.78, 0.91, 0.72, 0.38, 0.12],
+      [0.13, 0.41, 0.82, 0.95, 0.86, 0.43, 0.15],
+      [0.08, 0.34, 0.68, 0.88, 0.73, 0.31, 0.10],
+      [0.04, 0.18, 0.44, 0.61, 0.47, 0.20, 0.07],
+      [0.02, 0.08, 0.16, 0.22, 0.18, 0.10, 0.03]
+    ],
+    "binaryMask": [
+      [0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 1, 0],
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0]
+    ]
+  },
+  "maskIouExamples": [
+    {"id": "m1", "class": "person", "predictionArea": 1260, "groundTruthArea": 1328, "intersection": 1136, "union": 1452, "iou": 0.782, "ap50": true, "ap75": true, "color": "#EF4444"},
+    {"id": "m2", "class": "bus", "predictionArea": 1928, "groundTruthArea": 2104, "intersection": 1558, "union": 2474, "iou": 0.630, "ap50": true, "ap75": false, "color": "#A855F7"},
+    {"id": "m3", "class": "car", "predictionArea": 812, "groundTruthArea": 904, "intersection": 474, "union": 1242, "iou": 0.382, "ap50": false, "ap75": false, "color": "#2563EB"}
+  ],
+  "metricSummary": {
+    "ap50": 0.667,
+    "ap75": 0.333,
+    "maskAP": 0.511,
+    "bboxIouContrast": "Mask IoU measures pixel overlap, not just rectangle overlap."
+  }
+}

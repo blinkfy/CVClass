@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>边缘、轮廓与形态学</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/edge/edge_detection.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "edge";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "canny";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="active" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="active" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section
+    id="edgeDetectionPage"
+    class="edge-page"
+    data-assets-base="/static/assets/img/"
+    data-edge-mode="canny"
+    data-teed-model-url="/static/assets/data/edge/teed_debug_352.onnx"
+    data-ort-script-url="/static/vendor/onnxruntime-web/ort.min.js"
+    data-ort-wasm-base="/static/vendor/onnxruntime-web/"
+>
+    <header class="edge-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 03 · EDGES, CONTOURS &amp; MORPHOLOGY</span>
+            <h1 class="station-title">边缘、轮廓与形态学</h1>
+            <p class="station-summary">Sobel、Prewitt、Scharr、Laplacian、LoG、Canny、Hough 与轮廓应用过程可视化。</p>
+        </div>
+        <strong class="station-badge">EDGE · CONTOUR · HOUGH</strong>
+    </header>
+
+    <nav class="edge-tabs station-tabs" aria-label="边缘检测实验模块">
+        <a class="" href="/edge-detection/compare">方法对比</a>
+        <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+        <a class="is-active" href="/edge-detection/canny">Canny 流水线</a>
+        <a class="" href="/edge-detection/teed">深度边缘拓展</a>
+        <a class="" href="/edge-detection/applications">应用实践</a>
+    </nav>
+
+    <section class="edge-layout">
+        <aside class="edge-panel edge-controls" aria-label="边缘检测参数面板">
+            <div>
+                <span class="section-label">输入和参数</span>
+                
+                <h2>Canny 参数</h2>
+                
+            </div>
+
+            <label class="edge-upload">
+                <input id="edgeImageInput" type="file" accept="image/*">
+                <span>上传图片</span>
+                <small id="edgeImageName">当前使用示例图</small>
+            </label>
+
+            <div class="edge-samples" id="edgeSamples" aria-label="示例图"></div>
+
+            <div class="edge-control-group" data-panel="compare" hidden>
+                <button id="edgeCompareBtn" class="edge-primary" type="button">一键生成对比</button>
+                <label>滑块左侧方法
+                    <select id="edgeCompareA">
+                        <option value="original">Original</option>
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="LoG">LoG / Marr</option>
+                        <option value="canny">Canny</option>
+                        <option value="teed">TEED</option>
+                    </select>
+                </label>
+                <label>滑块右侧方法
+                    <select id="edgeCompareB">
+                        <option value="canny">Canny</option>
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="LoG">LoG / Marr</option>
+                        <option value="teed">TEED</option>
+                    </select>
+                </label>
+                <div class="edge-compare-params">
+                    <div class="edge-compare-param-card">
+                        <strong>一阶 / 二阶导数阈值</strong>
+                        <label>threshold <strong id="edgeCompareThresholdValue">96</strong>
+                            <input id="edgeCompareThreshold" type="range" min="0" max="255" value="96">
+                        </label>
+                    </div>
+                    <div class="edge-compare-param-card">
+                        <strong>Canny 参数</strong>
+                        <label>apertureSize
+                            <select id="edgeCompareAperture">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="7">7</option>
+                            </select>
+                        </label>
+                        <label>threshold1 <strong id="edgeCompareT1Value">50</strong>
+                            <input id="edgeCompareThreshold1" type="range" min="0" max="255" value="50">
+                        </label>
+                        <label>threshold2 <strong id="edgeCompareT2Value">150</strong>
+                            <input id="edgeCompareThreshold2" type="range" min="0" max="255" value="150">
+                        </label>
+                        <label class="edge-check">
+                            <input id="edgeCompareL2" type="checkbox">
+                            <span>L2gradient</span>
+                        </label>
+                        <label class="edge-check">
+                            <input id="edgeComparePrecise" type="checkbox">
+                            <span>precise NMS</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edge-control-group" data-panel="kernel" hidden>
+                <label>卷积核算法
+                    <select id="edgeKernelMethod">
+                        <option value="sobel">Sobel</option>
+                        <option value="prewitt">Prewitt</option>
+                        <option value="roberts">Roberts</option>
+                        <option value="laplacian">Laplacian</option>
+                        <option value="scharr">Scharr</option>
+                        <option value="kirsch">Kirsch</option>
+                        <option value="LoG">LoG / Marr</option>
+                    </select>
+                </label>
+                <div id="edgeKernelCategoryNote" class="edge-kernel-category-note">
+                    <span>类别：-</span>
+                    <span>核心：-</span>
+                    <span>输出：响应图、幅值图、阈值边缘图</span>
+                </div>
+                <label>显示模式
+                    <select id="edgeKernelDisplay">
+                        <option value="current">当前步骤图</option>
+                        <option value="diff">上一步 / 当前滑动对比</option>
+                    </select>
+                </label>
+                <label>阈值 <strong id="edgeThresholdValue">96</strong>
+                    <input id="edgeThreshold" type="range" min="0" max="255" value="96">
+                </label>
+                <button id="edgeKernelBtn" class="edge-primary" type="button">运行卷积核算子</button>
+            </div>
+
+            <div class="edge-control-group" data-panel="canny" >
+                <label>apertureSize
+                    <select id="edgeAperture">
+                        <option value="3">3</option>
+                        <option value="5" selected>5</option>
+                        <option value="7">7</option>
+                    </select>
+                </label>
+                <label>threshold1 <strong id="edgeT1Value">50</strong>
+                    <input id="edgeThreshold1" type="range" min="0" max="255" value="50">
+                </label>
+                <label>threshold2 <strong id="edgeT2Value">150</strong>
+                    <input id="edgeThreshold2" type="range" min="0" max="255" value="150">
+                </label>
+                <label>显示模式
+                    <select id="edgeCannyDisplay">
+                        <option value="current">当前步骤图</option>
+                        <option value="diff">上一步 / 当前滑动对比</option>
+                    </select>
+                </label>
+                <label class="edge-check">
+                    <input id="edgeL2" type="checkbox">
+                    <span>L2gradient</span>
+                </label>
+                <label class="edge-check">
+                    <input id="edgePrecise" type="checkbox">
+                    <span>precise NMS</span>
+                </label>
+                <button id="edgeCannyBtn" class="edge-primary" type="button">运行 Canny 流水线</button>
+            </div>
+        </aside>
+
+        <main class="edge-stage-wrap">
+            <section class="edge-panel edge-stage-card">
+                <div class="edge-stage-head">
+                    <div>
+                        
+                        <span class="section-label" id="edgeStageEyebrow">Canny Pipeline</span>
+                        <h2 id="edgeStageTitle">Canny 流水线</h2>
+                        
+                    </div>
+                    <div class="edge-play-controls" aria-label="流程控制" >
+                        <button type="button" data-edge-action="prev">Prev</button>
+                        <button type="button" data-edge-action="play">Play</button>
+                        <button type="button" data-edge-action="next">Next</button>
+                        <button type="button" data-edge-action="reset">Reset</button>
+                    </div>
+                </div>
+
+                <div id="edgeStatus" class="edge-status">正在加载示例图...</div>
+
+                <section id="edgeCompareView" class="edge-compare-view" hidden>
+                    <div class="edge-slider" id="edgeCompareSlider">
+                        <img id="edgeSliderLeft" alt="左侧对比图">
+                        <div class="edge-slider-right" id="edgeSliderClip">
+                            <img id="edgeSliderRight" alt="右侧对比图">
+                        </div>
+                        <input id="edgeSliderRange" type="range" min="0" max="100" value="50" aria-label="对比滑块">
+                        <span class="edge-slider-handle" id="edgeSliderHandle"></span>
+                        <div class="edge-slider-labels">
+                            <span id="edgeSliderLeftLabel">Original</span>
+                            <span id="edgeSliderRightLabel">Canny</span>
+                        </div>
+                    </div>
+                    <div class="edge-compare-strip-head">
+                        <strong>结果速览</strong>
+                        <span>点击任一方法可作为滑块右侧结果</span>
+                    </div>
+                    <div id="edgeCompareWall" class="edge-compare-wall"></div>
+                    <section id="edgeCompareInsightsCard" class="edge-compare-insights-card">
+                        <div class="edge-compare-insights-head">
+                            <strong>算子特点对比</strong>
+                            <span>对比当前左/右方法</span>
+                        </div>
+                        <div id="edgeCompareInsights" class="edge-compare-insights"></div>
+                    </section>
+                </section>
+
+                <section id="edgePipelineView" class="edge-pipeline-view" >
+                    <div class="edge-main-stage-grid">
+                        <button id="edgeMainImageButton" class="edge-main-image" type="button" aria-label="点击图像查看局部计算探针">
+                            <img id="edgeMainBaseImage" class="edge-main-base-image" alt="上一步边缘检测步骤图">
+                            <img id="edgeMainImage" alt="当前边缘检测步骤图">
+                            <canvas id="edgeVectorCanvas" class="edge-vector-canvas" aria-label="梯度方向向量场"></canvas>
+                            <canvas id="edgeHysteresisCanvas" class="edge-hysteresis-canvas" aria-label="滞后连接动画"></canvas>
+                            <span id="edgeStageSliderHandle" class="edge-stage-slider-handle" hidden></span>
+                            <span id="edgeStageSliderLabels" class="edge-stage-slider-labels" hidden>
+                                <span id="edgeStageSliderLeftLabel">上一步</span>
+                                <span id="edgeStageSliderRightLabel">当前步骤</span>
+                            </span>
+                            <div id="edgeSampleOverlay" class="edge-sample-overlay" hidden>
+                                <span class="edge-sample-grid"></span>
+                                <span class="edge-sample-center"></span>
+                                <span id="edgeEdgeDot" class="edge-edge-dot"></span>
+                            </div>
+                        </button>
+                        <aside id="edgeStageMeta" class="edge-stage-meta" aria-label="当前算子与响应信息" hidden>
+                            <div>
+                                <span class="section-label">Current Kernel</span>
+                                <strong id="edgeStageMetaTitle">等待运行</strong>
+                            </div>
+                            <p id="edgeStageKernelExplain" class="edge-stage-kernel-explain">选择卷积核算子后显示该算子的教学说明。</p>
+                            <div id="edgeStageKernelMini" class="edge-stage-kernel-mini">选择卷积核算子后显示模板。</div>
+                            <dl class="edge-stage-response-meta">
+                                <div><dt>Response</dt><dd id="edgeStageResponseRange">-</dd></div>
+                                <div><dt>Threshold</dt><dd id="edgeStageThresholdMeta">-</dd></div>
+                                <div><dt>Edge ratio</dt><dd id="edgeStageEdgeRatio">-</dd></div>
+                            </dl>
+                            <p id="edgeStageProbePrompt">点击左侧图像像素后，下方展示该位置的局部卷积计算。</p>
+                        </aside>
+                    </div>
+                    <div id="edgeKernelFlowTitle" class="edge-kernel-flow-title" >
+                        <strong>KERNEL FLOW:</strong>
+                        <span>Image → Gray → Gx → Gy → Magnitude → Threshold</span>
+                    </div>
+                    <div id="edgeStepThumbs" class="edge-step-thumbs"></div>
+                    <section id="edgeKernelTeaching" class="edge-kernel-teaching" hidden>
+                        <div class="edge-kernel-teaching-head">
+                            <div>
+                                <span class="section-label">Animated Formula Canvas / Local Convolution Probe</span>
+                                <h3>Patch → Kernel → Product → Sum → Response → Threshold</h3>
+                            </div>
+                            <div class="edge-probe-controls" aria-label="公式动画控制">
+                                <button id="edgeProbePlay" type="button">播放计算</button>
+                                <button id="edgeProbeStep" type="button">单步</button>
+                                <button id="edgeProbeReset" type="button">重置</button>
+                                <label>速度
+                                    <select id="edgeProbeSpeed">
+                                        <option value="slow">慢</option>
+                                        <option value="medium" selected>中</option>
+                                        <option value="fast">快</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="edge-kernel-teaching-sub">
+                            <span id="edgeKernelProbeBadge" class="edge-probe-badge">点击图像像素开始</span>
+                        </div>
+                        <div id="edgeFormulaCanvas" class="edge-formula-canvas edge-animated-probe">
+                            <svg id="edgeFlowLayer" class="edge-flow-layer" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-hidden="true">
+                                <path id="edgeStrokePath" class="edge-stroke-path" d="M 70 110 L 930 110"></path>
+                                <circle id="edgeFlowDot" class="edge-flow-dot" r="5" cx="70" cy="110"></circle>
+                            </svg>
+                            <div id="edgeDrawStage" class="edge-draw-stage">
+                                <section class="edge-compute-node edge-node-patch" data-node="patch">
+                                    <span>Patch</span>
+                                    <div id="edgeDrawPatch" class="edge-draw-matrix edge-matrix-patch"></div>
+                                </section>
+                                <section class="edge-compute-node edge-node-kernel" data-node="kernel">
+                                    <span>Kernel</span>
+                                    <div id="edgeDrawKernel" class="edge-draw-matrix edge-matrix-kernel"></div>
+                                </section>
+                                <section class="edge-compute-node edge-node-product" data-node="product">
+                                    <span>Product</span>
+                                    <div id="edgeDrawProduct" class="edge-draw-matrix edge-matrix-product"></div>
+                                    <strong id="edgeCurrentMultiply" class="edge-current-multiply">点击图像选择像素</strong>
+                                </section>
+                                <div class="edge-formula-spacer" aria-hidden="true"></div>
+                                <section class="edge-compute-node edge-node-sum" data-node="sum">
+                                    <span>Sum</span>
+                                    <div class="edge-sum-pool"><b>Σ</b><strong id="edgeSumValue">0.00</strong></div>
+                                    <p id="edgeSumTrace">等待累加</p>
+                                </section>
+                                <section id="edgeNodeResponse" class="edge-compute-node edge-node-response" data-node="response">
+                                    <span>Response</span>
+                                    <strong id="edgeResponseValue">-</strong>
+                                    <p id="edgeResponseFormula">sqrt(Gx² + Gy²)</p>
+                                </section>
+                                <section id="edgeNodeThreshold" class="edge-compute-node edge-node-threshold" data-node="threshold">
+                                    <span>Threshold</span>
+                                    <strong id="edgeThresholdDecision">-</strong>
+                                    <p id="edgeThresholdFormula">Response ? Threshold</p>
+                                </section>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+            </section>
+
+            <section class="edge-panel edge-timeline-card" hidden>
+                <div id="edgeTimeline" class="edge-timeline"></div>
+            </section>
+        </main>
+
+        <aside class="edge-panel edge-info" aria-label="当前过程说明">
+            <div>
+                <span class="section-label">Process Notes</span>
+                <h2 id="edgeInfoTitle">当前选中算法说明</h2>
+            </div>
+            <div class="edge-process-note-image" aria-label="算法介绍图片">
+                <img id="edgeProcessNoteImage" src="/static/assets/img/sobel.webp" alt="Sobel 算法介绍" loading="lazy">
+            </div>
+            <p id="edgeInfoText">选择 Tab 后查看对应算法说明。</p>
+            <div id="edgeStepPreview" class="edge-step-preview-card" hidden>
+                <strong>当前步骤计算过程</strong>
+                <div id="edgeStepPreviewBody" class="edge-step-preview-body"></div>
+                <p id="edgeStepPreviewText">点击 Canny 步骤卡片查看对应计算链路。</p>
+            </div>
+            <div class="edge-formula-card" >
+                <strong>公式与阈值逻辑</strong>
+                <pre id="edgeFormula">G = sqrt(Gx² + Gy²)</pre>
+                <div class="edge-live-logic" id="edgeLiveLogic">运行流程后显示当前步骤的公式逻辑。</div>
+            </div>
+            <div class="edge-stat-grid" id="edgeStats">
+                <span>耗时：-</span>
+                <span>边缘像素占比：-</span>
+                <span>输出尺寸：-</span>
+            </div>
+            <article class="edge-boundary-card">
+                <strong>核心代码边界</strong>
+                <p>边缘检测核心计算来自项目中的手写 NumPy / Numba 函数，不调用 OpenCV 或 skimage 的边缘检测封装函数。</p>
+            </article>
+        </aside>
+    </section>
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/edge/edge_detection.js"></script>
+
+</body>
+</html>

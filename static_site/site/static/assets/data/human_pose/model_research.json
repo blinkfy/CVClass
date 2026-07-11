@@ -1,0 +1,167 @@
+{
+  "researchDate": "2026-06-27",
+  "pageStatus": "skeleton default: real inference via local MoveNet MultiPose with SinglePose Thunder mode; action default: real inference via local pose-sequence classifier; mechanism: preset teaching demo",
+  "decision": {
+    "pose": "default_local_movenet_multipose_auto_inference_on_skeleton_page",
+    "action": "default_local_pose_sequence_classifier_on_action_page",
+    "reason": "MoveNet returns COCO-style 17 keypoints directly in the browser and fits the teaching page. MultiPose Lightning is used as the skeleton page default because it can detect up to 6 people; SinglePose Thunder remains available as the higher-accuracy single-person mode and Lightning remains a local fallback. A full pretrained C3D/MoViNet browser video classifier remains heavy, so this round connects a lightweight local pose-sequence classifier that performs real model forward inference over the action frame sequence."
+  },
+  "connectedModels": [
+    {
+      "id": "tensorflow_js_movenet_multipose_lightning_local",
+      "label": "TensorFlow.js MoveNet MultiPose Lightning",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL backend script kept available for acceleration",
+      "usedOn": ["/human-pose/skeleton"],
+      "status": "default_real_inference_local_model",
+      "keypoints": "17 per person",
+      "outputSchema": "Up to 6 COCO-style poses; each pose has keypoints with x, y and score plus a bounding box",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/movenet-multipose.bin"
+      ],
+      "cdnScripts": [
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.22.0/dist/tf-backend-cpu.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"
+      ],
+      "sourceUrls": [
+        "https://github.com/tensorflow/tfjs-models/blob/master/pose-detection/src/movenet/README.md",
+        "https://tfhub.dev/google/tfjs-model/movenet/multipose/lightning/1",
+        "https://github.com/vladmandic/movenet/tree/main/models"
+      ],
+      "fallback": "If MultiPose detector creation fails, the page automatically tries local SinglePose Thunder and then local SinglePose Lightning before falling back to preset COCO-17 samples."
+    },
+    {
+      "id": "tensorflow_js_movenet_singlepose_thunder_local",
+      "label": "TensorFlow.js MoveNet SinglePose Thunder",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL backend script kept available for acceleration",
+      "usedOn": ["/human-pose/skeleton"],
+      "status": "single_person_high_accuracy_mode",
+      "keypoints": 17,
+      "outputSchema": "COCO-style keypoints with x, y and score",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/movenet-thunder.bin"
+      ],
+      "cdnScripts": [
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.22.0/dist/tf-backend-cpu.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"
+      ],
+      "sourceUrls": [
+        "https://www.tensorflow.org/hub/tutorials/movenet",
+        "https://github.com/tensorflow/tfjs-models/blob/master/pose-detection/src/movenet/README.md",
+        "https://tfhub.dev/google/movenet/singlepose/thunder/4",
+        "https://github.com/vladmandic/movenet/tree/main/models"
+      ],
+      "fallback": "Used by the single-person high-accuracy mode. If Thunder detector creation fails, the page automatically tries local MoveNet Lightning before falling back to preset COCO-17 samples."
+    },
+    {
+      "id": "tensorflow_js_movenet_singlepose_lightning_local",
+      "label": "TensorFlow.js MoveNet SinglePose Lightning",
+      "runtime": "TensorFlow.js CPU backend by default; WebGL backend script kept available for acceleration",
+      "usedOn": ["/human-pose/skeleton"],
+      "status": "real_inference_local_model_fallback",
+      "keypoints": 17,
+      "outputSchema": "COCO-style keypoints with x, y and score",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard1of2.bin",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard2of2.bin"
+      ],
+      "cdnScripts": [
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@4.22.0/dist/tf-backend-cpu.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js",
+        "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"
+      ],
+      "sourceUrls": [
+        "https://www.tensorflow.org/hub/tutorials/movenet",
+        "https://github.com/tensorflow/tfjs-models/tree/master/pose-detection",
+        "https://github.com/tensorflow/tfjs-models/blob/master/pose-detection/src/movenet/README.md"
+      ],
+      "fallback": "Used only if local Thunder detector creation fails. If runtime or both local models fail, the page keeps the preset COCO-17 sample and labels the state as preset fallback."
+    },
+    {
+      "id": "pose_sequence_action_classifier_v1",
+      "label": "Local Pose Sequence Action Classifier",
+      "runtime": "Vanilla JavaScript linear softmax over pose-sequence features",
+      "usedOn": ["/human-pose/action"],
+      "status": "default_real_inference_local_model",
+      "classes": ["waving", "jumping", "running", "standing", "walking", "clapping"],
+      "inputSchema": "14 pose-sequence motion features from generated frame keypoints",
+      "localModelRoute": "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json",
+      "localFiles": [
+        "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json"
+      ],
+      "sourceUrls": [
+        "https://onnxruntime.ai/docs/tutorials/web/",
+        "https://www.tensorflow.org/hub/tutorials/movinet"
+      ],
+      "fallback": "If the local classifier JSON fails to load, the action page keeps JSON fallback probabilities and labels the state as preset fallback.",
+      "note": "This is a lightweight local classroom classifier, not a pretrained C3D/MoViNet video model."
+    }
+  ],
+  "candidateModels": [
+    {
+      "id": "mediapipe_pose_landmarker_web",
+      "label": "MediaPipe Pose Landmarker Web",
+      "sourceUrl": "https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker/web_js",
+      "runtime": "@mediapipe/tasks-vision",
+      "outputs": "33 landmarks, normalized and world coordinates",
+      "assessment": "Good browser pose option, but it uses a 33-landmark schema and a MediaPipe task bundle. MoveNet was a closer fit for the current COCO-17 teaching page."
+    },
+    {
+      "id": "onnxruntime_web",
+      "label": "ONNX Runtime Web",
+      "sourceUrl": "https://onnxruntime.ai/docs/tutorials/web/",
+      "runtime": "onnxruntime-web",
+      "outputs": "Depends on selected ONNX model",
+      "assessment": "The browser runtime is suitable, but a small, ready, COCO-17 ONNX pose model with simple browser preprocessing/postprocessing was not selected in this round."
+    },
+    {
+      "id": "movinet_action_recognition",
+      "label": "MoViNet streaming action recognition",
+      "sourceUrl": "https://www.tensorflow.org/hub/tutorials/movinet",
+      "runtime": "TensorFlow / TF Hub / TFLite-oriented workflow",
+      "outputs": "video action classes",
+      "assessment": "Good reference for action recognition, but not directly wired into this Flask/Jinja browser page in this round. The action page now uses a local pose-sequence classifier for real probability inference while keeping the C3D/3D Conv view as a mechanism visualization."
+    }
+  ],
+  "visualResourceCandidates": [
+    {
+      "id": "crosswalk_people",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:CrossWalk_(5465840138).jpg",
+      "status": "already_used",
+      "note": "Existing page sample image; useful because it contains multiple pedestrians and works with real MoveNet inference."
+    },
+    {
+      "id": "standing_person",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Free_use_human_standing_simple.jpg",
+      "status": "downloaded_and_used_default",
+      "localFile": "/static/assets/examples/human_pose/pose_sample_standing.jpg",
+      "note": "Clear single-person full-body classroom sample. It is now the default preset sample and also works as a MoveNet real-inference comparison input."
+    },
+    {
+      "id": "people_walking_public_domain",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:People_walking.jpg",
+      "status": "candidate",
+      "note": "Good candidate for additional walking/action examples."
+    },
+    {
+      "id": "volleyball_player_jumping",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Volleyball_player_jumping.jpg",
+      "status": "downloaded_candidate",
+      "localFile": "/static/assets/examples/human_pose/pose_sample_volleyball.jpg",
+      "note": "Good candidate for a future jumping pose/action sample. MoveNet confidence was weaker than the standing sample in this round, so it remains a recorded candidate."
+    }
+  ]
+}

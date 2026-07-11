@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金字塔光流与运动追踪 - 运动估计与光流</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/geometry_vision/motion_estimation.css?v=20260628-motion-aifab1">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "motion_estimation";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "pyramid";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="active" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="active" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab geometry-lab motion-lab" data-motion-page="pyramid">
+    <header class="vision-hero station-hero motion-hero">
+        <div>
+            <span class="section-label station-eyebrow">MODULE 02 · WORLD 03 MOTION ESTIMATION</span>
+            <h1 class="station-title">金字塔光流与运动追踪</h1>
+            <p class="station-summary">通过图像金字塔从粗到细估计大位移，让 Lucas-Kanade 适用于更明显的运动。</p>
+        </div>
+        <div class="station-hero-actions motion-hero-actions">
+            <span class="motion-state">公式推导 · Optical Flow</span>
+            <strong class="station-badge">Ix u + Iy v + It = 0 · LK · PYRAMID</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs motion-tabs" aria-label="运动估计与光流内部导航">
+        
+        <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+        
+        <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+        
+        <a class="is-active" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+        
+        <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench motion-workbench motion-pyramid-workbench" data-motion-pyramid aria-label="金字塔光流与运动追踪工作台">
+    <aside class="vision-panel vision-control-panel motion-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>金字塔参数</h3><p>Coarse-to-Fine</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>样例选择</span>
+            <select data-motion-pyramid-input="sample">
+                <option value="small" selected>小位移</option>
+                <option value="large">大位移</option>
+                <option value="fast">快速运动</option>
+                <option value="rotate">旋转运动</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>金字塔层数</span>
+            <select data-motion-pyramid-input="levels">
+                <option value="1">1 层</option>
+                <option value="2">2 层</option>
+                <option value="3" selected>3 层</option>
+                <option value="4">4 层</option>
+            </select>
+        </label>
+        <label class="vision-field">
+            <span>每层迭代次数 <output data-motion-pyramid-output="iterations">3</output></span>
+            <input type="range" min="1" max="6" step="1" value="3" data-motion-pyramid-input="iterations">
+        </label>
+        <label class="vision-field">
+            <span>窗口大小</span>
+            <select data-motion-pyramid-input="windowSize">
+                <option value="5">5x5</option>
+                <option value="7" selected>7x7</option>
+                <option value="9">9x9</option>
+            </select>
+        </label>
+
+        <div class="motion-toggle-grid">
+            <label class="vision-toggle-row"><span>显示金字塔</span><input type="checkbox" data-motion-pyramid-input="showPyramid" checked></label>
+            <label class="vision-toggle-row"><span>显示粗到细路径</span><input type="checkbox" data-motion-pyramid-input="showPath" checked></label>
+            <label class="vision-toggle-row"><span>显示累计位移</span><input type="checkbox" data-motion-pyramid-input="showAccumulated" checked></label>
+            <label class="vision-toggle-row"><span>显示跟踪轨迹</span><input type="checkbox" data-motion-pyramid-input="showTrack" checked></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-motion-step-select="pyramid">
+                <option value="build">图像金字塔 / Pyramid</option>
+                <option value="coarse">粗层估计 / Coarse Estimate</option>
+                <option value="upsample">位移上采样 / Upsample Flow</option>
+                <option value="refine">细层修正 / Refine</option>
+                <option value="final">最终轨迹 / Final Track</option>
+            </select>
+        </label>
+
+        <div class="motion-button-row">
+            <button type="button" data-motion-prev="pyramid">上一步</button>
+            <button type="button" data-motion-next="pyramid">下一步</button>
+            <button type="button" data-motion-play="pyramid">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>最高层位移</span><strong data-motion-pyramid-summary="coarse">--</strong></div>
+            <div><span>累计位移</span><strong data-motion-pyramid-summary="accumulated">--</strong></div>
+            <div><span>最终残差</span><strong data-motion-pyramid-summary="residual">--</strong></div>
+            <div><span>跟踪状态</span><strong data-motion-pyramid-summary="status">等待估计</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel motion-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>PYRAMIDAL OPTICAL FLOW PLAYGROUND</span>
+                <h3 data-motion-pyramid-title>从粗到细估计大位移</h3>
+            </div>
+            <div class="motion-stage-chips">
+                <span data-motion-pyramid-chip="step">图像金字塔 / Pyramid</span>
+                <span data-motion-pyramid-chip="levels">3 levels</span>
+                <span data-motion-pyramid-chip="flow">coarse-to-fine</span>
+            </div>
+        </div>
+
+        <div class="motion-pyramid-stage-grid">
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>原始两帧与最终轨迹</strong>
+                    <span>Frame Pair · Final Track</span>
+                </div>
+                <div class="motion-svg-frame motion-pyramid-original" data-motion-pyramid-original></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>图像金字塔层级</strong>
+                    <span>Pyramid · L3 / L2 / L1 / L0</span>
+                </div>
+                <div class="motion-pyramid-stack" data-motion-pyramid-stack></div>
+            </section>
+            <section class="motion-view-card">
+                <div class="geometry-section-head">
+                    <strong>累计位移与残差</strong>
+                    <span>Flow Accumulation · Residual</span>
+                </div>
+                <div class="motion-svg-frame motion-pyramid-result" data-motion-pyramid-result></div>
+            </section>
+        </div>
+
+        <div class="motion-flow-preview motion-pyramid-flow-preview" data-motion-pyramid-preview aria-label="金字塔光流步骤预览"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel motion-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-motion-pyramid-notes-title>Build Pyramid</h3><p>当前步骤解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>小位移假设 / Small Motion</span>
+            <strong>\(\text{apparent motion}(L)=\frac{\text{large motion}}{2^L}\)</strong>
+            <small data-motion-pyramid-apparent-note>降采样后 apparent motion 变小，LK 更容易在局部窗口内收敛。</small>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>粗到细传递 / Coarse-to-Fine</span>
+            <strong>\(\mathbf g_{L-1}=2\cdot(\mathbf g_L+\mathbf d_L)\)</strong>
+            <small data-motion-pyramid-formula-note>上一层估计放大后作为下一层初值，再做局部修正。</small>
+        </div>
+
+        <div class="motion-failure-card">
+            <span>失败对比 / Failure Check</span>
+            <article><strong>单层 LK</strong><small data-motion-pyramid-single-fail>直接估计大位移，residual --</small></article>
+            <article><strong>金字塔 LK</strong><small data-motion-pyramid-success>粗到细修正，residual --</small></article>
+        </div>
+
+        <div class="motion-reference-card">
+            <span>稀疏 vs 稠密</span>
+            <div class="motion-reference-grid">
+                <article><strong>PyrLK 稀疏追踪</strong><small>只追踪角点等少量特征，输出轨迹点和误差。</small></article>
+                <article><strong>Farneback 稠密光流</strong><small>为每个像素估计 flow[...,0]=u、flow[...,1]=v。</small></article>
+            </div>
+        </div>
+
+        <div class="motion-code-card">
+            <span>OpenCV 稠密光流</span>
+            <code>flow = cv2.calcOpticalFlowFarneback(
+    prev, next, None,
+    pyr_scale=0.5, levels=3,
+    winsize=15, iterations=3,
+    poly_n=5, poly_sigma=1.2, flags=0
+)</code>
+            <small>常用 cartToPolar 把 u/v 转成幅值和方向，再映射到 HSV 可视化。</small>
+        </div>
+
+        <div class="motion-notes-body" data-motion-pyramid-notes></div>
+
+        <div class="vision-output-schema">
+            <span>当前层状态</span>
+            <div class="motion-math-output" data-motion-pyramid-layer-state>\(L_2 \rightarrow L_1 \rightarrow L_0\)</div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper motion-stepper motion-stepper--5" aria-label="金字塔光流处理流程" data-motion-stepper="pyramid">
+    <li class="is-active" data-motion-phase="build"><span>1</span><div><strong>图像金字塔</strong><small>Pyramid</small></div></li>
+    <li data-motion-phase="coarse"><span>2</span><div><strong>粗层估计</strong><small>Coarse Estimate</small></div></li>
+    <li data-motion-phase="upsample"><span>3</span><div><strong>位移上采样</strong><small>Upsample Flow</small></div></li>
+    <li data-motion-phase="refine"><span>4</span><div><strong>细层修正</strong><small>Refine</small></div></li>
+    <li data-motion-phase="final"><span>5</span><div><strong>最终轨迹</strong><small>Final Track</small></div></li>
+</ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/js/geometry_vision/motion_estimation.js?v=20260628-autoplay"></script>
+
+</body>
+</html>

@@ -1,0 +1,264 @@
+{
+  "samples": [
+    {
+      "id": "street_vehicle",
+      "title": "真实街景车辆",
+      "image": "/static/assets/data/generative_multimodal/sam/real/street_vehicle.png",
+      "fallbackImage": "/static/assets/data/generative_multimodal/sam/street_vehicle.svg",
+      "realImage": "/static/assets/data/generative_multimodal/sam/real/street_vehicle.png",
+      "embedding": "/static/assets/data/generative_multimodal/sam/model/embeddings/street_vehicle.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "street",
+      "size": [640, 420],
+      "defaultObjectId": "motorbike_1",
+      "objects": [
+        {
+          "id": "motorbike_1",
+          "label": "vehicle",
+          "bbox": [292, 142, 458, 260],
+          "positive_points": [[378, 206]],
+          "negative_points": [[520, 284]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "摩托车主体",
+              "score": 0.91,
+              "stability": 0.86,
+              "areaRatio": 0.078,
+              "contourLength": 318,
+              "polygon": [[314, 172], [382, 136], [444, 168], [456, 222], [402, 258], [318, 246], [286, 204]]
+            },
+            {
+              "id": "mask_2",
+              "name": "赛车局部",
+              "score": 0.79,
+              "stability": 0.73,
+              "areaRatio": 0.038,
+              "contourLength": 196,
+              "polygon": [[360, 84], [442, 78], [466, 126], [430, 160], [348, 150], [334, 110]]
+            },
+            {
+              "id": "mask_3",
+              "name": "草坡相邻区域",
+              "score": 0.56,
+              "stability": 0.62,
+              "areaRatio": 0.142,
+              "contourLength": 420,
+              "polygon": [[250, 178], [520, 144], [620, 246], [566, 328], [250, 306]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop_objects",
+      "title": "真实桌面设备",
+      "image": "/static/assets/data/generative_multimodal/sam/real/desktop_objects.png",
+      "fallbackImage": "/static/assets/data/generative_multimodal/sam/desktop_objects.svg",
+      "realImage": "/static/assets/data/generative_multimodal/sam/real/desktop_objects.png",
+      "embedding": "/static/assets/data/generative_multimodal/sam/model/embeddings/desktop_objects.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "desktop",
+      "size": [640, 420],
+      "defaultObjectId": "device_1",
+      "objects": [
+        {
+          "id": "device_1",
+          "label": "device",
+          "bbox": [326, 222, 496, 366],
+          "positive_points": [[416, 298]],
+          "negative_points": [[150, 318]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "桌面设备",
+              "score": 0.9,
+              "stability": 0.84,
+              "areaRatio": 0.086,
+              "contourLength": 286,
+              "polygon": [[338, 238], [470, 224], [500, 300], [464, 360], [350, 352], [322, 288]]
+            },
+            {
+              "id": "mask_2",
+              "name": "显示器区域",
+              "score": 0.81,
+              "stability": 0.76,
+              "areaRatio": 0.214,
+              "contourLength": 396,
+              "polygon": [[184, 82], [538, 86], [548, 250], [176, 252]]
+            },
+            {
+              "id": "mask_3",
+              "name": "手部相邻区域",
+              "score": 0.62,
+              "stability": 0.64,
+              "areaRatio": 0.067,
+              "contourLength": 238,
+              "polygon": [[486, 270], [626, 292], [630, 390], [512, 408], [450, 342]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "animal_subject",
+      "title": "真实猫咪主体",
+      "image": "/static/assets/data/generative_multimodal/sam/real/animal_subject.png",
+      "fallbackImage": "/static/assets/data/generative_multimodal/sam/animal_subject.svg",
+      "realImage": "/static/assets/data/generative_multimodal/sam/real/animal_subject.png",
+      "embedding": "/static/assets/data/generative_multimodal/sam/model/embeddings/animal_subject.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "animal",
+      "size": [640, 420],
+      "defaultObjectId": "cat_1",
+      "objects": [
+        {
+          "id": "cat_1",
+          "label": "cat",
+          "bbox": [276, 34, 534, 414],
+          "positive_points": [[408, 218]],
+          "negative_points": [[154, 250]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "右侧站立猫",
+              "score": 0.89,
+              "stability": 0.83,
+              "areaRatio": 0.232,
+              "contourLength": 512,
+              "polygon": [[326, 56], [464, 38], [532, 144], [512, 402], [356, 414], [282, 252]]
+            },
+            {
+              "id": "mask_2",
+              "name": "猫头和前肢",
+              "score": 0.79,
+              "stability": 0.72,
+              "areaRatio": 0.112,
+              "contourLength": 324,
+              "polygon": [[332, 46], [470, 42], [520, 180], [460, 272], [332, 236], [292, 132]]
+            },
+            {
+              "id": "mask_3",
+              "name": "左侧猫",
+              "score": 0.65,
+              "stability": 0.66,
+              "areaRatio": 0.138,
+              "contourLength": 386,
+              "polygon": [[52, 186], [212, 124], [282, 246], [230, 382], [78, 372], [24, 282]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medical_slice",
+      "title": "真实餐盘食物",
+      "image": "/static/assets/data/generative_multimodal/sam/real/medical_slice.png",
+      "fallbackImage": "/static/assets/data/generative_multimodal/sam/medical_slice.svg",
+      "realImage": "/static/assets/data/generative_multimodal/sam/real/medical_slice.png",
+      "embedding": "/static/assets/data/generative_multimodal/sam/model/embeddings/medical_slice.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "food",
+      "size": [640, 420],
+      "defaultObjectId": "pot_1",
+      "objects": [
+        {
+          "id": "pot_1",
+          "label": "food pot",
+          "bbox": [82, 78, 392, 348],
+          "positive_points": [[238, 210]],
+          "negative_points": [[520, 252]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "砂锅主体",
+              "score": 0.88,
+              "stability": 0.84,
+              "areaRatio": 0.216,
+              "contourLength": 446,
+              "polygon": [[100, 92], [338, 76], [394, 184], [342, 330], [118, 348], [70, 210]]
+            },
+            {
+              "id": "mask_2",
+              "name": "锅内食物区域",
+              "score": 0.8,
+              "stability": 0.76,
+              "areaRatio": 0.126,
+              "contourLength": 306,
+              "polygon": [[120, 128], [328, 120], [356, 226], [304, 300], [132, 284], [90, 204]]
+            },
+            {
+              "id": "mask_3",
+              "name": "右侧餐盘",
+              "score": 0.68,
+              "stability": 0.69,
+              "areaRatio": 0.128,
+              "contourLength": 334,
+              "polygon": [[404, 126], [614, 140], [634, 336], [396, 350], [360, 238]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "indoor_scene",
+      "title": "真实教室场景",
+      "image": "/static/assets/data/generative_multimodal/sam/real/indoor_scene.png",
+      "fallbackImage": "/static/assets/data/generative_multimodal/sam/indoor_scene.svg",
+      "realImage": "/static/assets/data/generative_multimodal/sam/real/indoor_scene.png",
+      "embedding": "/static/assets/data/generative_multimodal/sam/model/embeddings/indoor_scene.fp16.bin",
+      "embeddingShape": [1, 256, 64, 64],
+      "embeddingDtype": "float16",
+      "realInferenceReady": true,
+      "scene": "indoor",
+      "size": [640, 420],
+      "defaultObjectId": "student_1",
+      "objects": [
+        {
+          "id": "student_1",
+          "label": "student",
+          "bbox": [250, 232, 392, 414],
+          "positive_points": [[318, 328]],
+          "negative_points": [[116, 186]],
+          "candidates": [
+            {
+              "id": "mask_1",
+              "name": "前排学生",
+              "score": 0.86,
+              "stability": 0.8,
+              "areaRatio": 0.092,
+              "contourLength": 284,
+              "polygon": [[280, 236], [360, 242], [392, 322], [376, 414], [258, 414], [240, 320]]
+            },
+            {
+              "id": "mask_2",
+              "name": "课桌区域",
+              "score": 0.76,
+              "stability": 0.72,
+              "areaRatio": 0.164,
+              "contourLength": 372,
+              "polygon": [[202, 314], [462, 306], [544, 402], [176, 416]]
+            },
+            {
+              "id": "mask_3",
+              "name": "讲台人物",
+              "score": 0.62,
+              "stability": 0.66,
+              "areaRatio": 0.046,
+              "contourLength": 214,
+              "polygon": [[330, 112], [410, 116], [430, 214], [350, 230], [310, 174]]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

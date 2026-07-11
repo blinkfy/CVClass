@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卷积梯度显微镜</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="/static/css/cnn/conv_gradient_lab.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "cnn";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "conv_gradient_lab";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="active" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="active" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="conv-gradient-page">
+  <main class="lab-shell">
+    <header class="cnn-viz-header station-hero">
+      <div>
+        <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+        <h1 class="station-title">卷积梯度显微镜</h1>
+        <p class="station-summary">观察卷积层中梯度流动、局部响应与参数敏感性，理解 CNN 如何学习图像。</p>
+      </div>
+      <div class="station-hero-actions">
+        <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+        <strong id="cnnStepStatus">Microscope · 梯度流观测中</strong>
+      </div>
+    </header>
+
+    <nav class="cnn-third-tabs station-tabs" aria-label="CNN 实验模块">
+      <div class="cnn-mode-group">
+        <a href="/cnn-visualization">前向与反向传播</a>
+        <a href="/cnn-explainer">数据传播细节</a>
+        <a class="is-active" href="/conv-gradient-lab">卷积梯度显微镜</a>
+      </div>
+      <div class="header-legend">
+        <span><i class="dot dot-forward"></i>Forward</span>
+        <span><i class="dot dot-backward"></i>Gradient</span>
+        <span><i class="dot dot-update"></i>Update</span>
+      </div>
+    </nav>
+
+    <section class="toolbar-card">
+      <div class="mode-tabs" role="group" aria-label="演示模式">
+        <button class="mode-btn active" data-mode="forward" type="button">Forward 演示</button>
+        <button class="mode-btn" data-mode="backward" type="button">Backward 演示</button>
+        <button class="mode-btn" data-mode="update" type="button">Update 演示</button>
+      </div>
+      <div class="play-controls" role="group" aria-label="播放控制">
+        <button id="stepBtn" class="primary-btn" type="button">单步</button>
+        <button id="autoBtn" type="button">自动播放</button>
+        <button id="pauseBtn" type="button">暂停</button>
+        <button id="resetBtn" type="button">重置</button>
+        <label class="speed-control">
+          速度
+          <select id="speedSelect">
+            <option value="0.6">0.6x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+            <option value="5">5x</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="stage-card" id="stageCard">
+      <svg id="arrowLayer" class="arrow-layer" aria-hidden="true">
+        <defs>
+          <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 Z" fill="currentColor"></path>
+          </marker>
+        </defs>
+      </svg>
+      <div id="animLayer" class="animation-layer" aria-hidden="true"></div>
+
+      <div class="stage-grid">
+        <section class="matrix-panel panel-x">
+          <div class="panel-title">
+            <span>X 输入矩阵</span>
+            <em>4×4</em>
+          </div>
+          <div id="xMatrix" class="matrix-grid matrix-4" data-matrix="x"></div>
+        </section>
+
+        <section class="matrix-panel panel-k">
+          <div class="panel-title">
+            <span>K 卷积核</span>
+            <em>3×3</em>
+          </div>
+          <div id="kMatrix" class="matrix-grid matrix-3" data-matrix="k"></div>
+          <div id="biasBox" class="scalar-box" data-cell="bias">
+            <span>b</span><strong>0.05</strong>
+          </div>
+        </section>
+
+        <section class="matrix-panel panel-product">
+          <div class="panel-title">
+            <span>Product Matrix</span>
+            <em>逐元素乘积</em>
+          </div>
+          <div id="productMatrix" class="matrix-grid matrix-3 product-grid" data-matrix="product"></div>
+          <div id="sumBox" class="sum-box" data-cell="sum">
+            <span>Σ 求和器</span>
+            <strong>0.00</strong>
+          </div>
+        </section>
+
+        <section class="matrix-panel panel-z">
+          <div class="panel-title">
+            <span>Z 输出矩阵</span>
+            <em>2×2</em>
+          </div>
+          <div id="zMatrix" class="matrix-grid matrix-2" data-matrix="z"></div>
+        </section>
+
+        <section class="matrix-panel panel-dz">
+          <div class="panel-title">
+            <span>dZ 上游梯度</span>
+            <em>2×2</em>
+          </div>
+          <div id="dzMatrix" class="matrix-grid matrix-2" data-matrix="dz"></div>
+        </section>
+
+        <section class="matrix-panel panel-dk">
+          <div class="panel-title">
+            <span>dK 累加器</span>
+            <em>3×3</em>
+          </div>
+          <div id="dkMatrix" class="matrix-grid matrix-3" data-matrix="dk"></div>
+        </section>
+
+        <section class="matrix-panel panel-dx">
+          <div class="panel-title">
+            <span>dX 累加器</span>
+            <em>4×4</em>
+          </div>
+          <div id="dxMatrix" class="matrix-grid matrix-4" data-matrix="dx"></div>
+        </section>
+
+        <section class="matrix-panel panel-db">
+          <div class="panel-title">
+            <span>db 累加器</span>
+            <em>scalar</em>
+          </div>
+          <div id="dbBox" class="scalar-box scalar-large" data-cell="db">
+            <span>db</span><strong>0.00</strong>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <article class="step-card">
+        <div class="step-card-head">
+          <div>
+            <p class="eyebrow">Current Step</p>
+            <h2 id="stepTitle">准备开始</h2>
+          </div>
+          <div id="stepCounter" class="step-counter">0 / 0</div>
+        </div>
+        <div class="formula-block">
+          <span>核心公式</span>
+          <div id="formulaText" class="conv-latex-block">请选择演示模式，然后点击“单步”或“自动播放”。</div>
+        </div>
+        <div class="substitution-block">
+          <span>数值代入</span>
+          <p id="substitutionText">Forward 会展示 X 与 K 的逐格乘法；Backward 会展示 dK、db、dX 的逐格累加；Update 会展示 K 和 b 的参数更新。</p>
+        </div>
+        <div class="conclusion-block">
+          <span>本步结论</span>
+          <p id="conclusionText">每一步运算都使用飞行数值块、乘法节点和累加气泡展示。</p>
+        </div>
+      </article>
+
+      <article class="concept-card">
+        <p class="eyebrow">What to observe</p>
+        <h2>观察重点</h2>
+        <ol>
+          <li><strong>Forward：</strong>一个输出值来自一个输入 patch 与卷积核的逐元素乘加。</li>
+          <li><strong>dK：</strong>输入 patch 中每个位置与同一个 dZ 相乘，累加到卷积核同位置。</li>
+          <li><strong>dX：</strong>卷积核每个权重与 dZ 相乘，scatter-add 回输入区域。</li>
+          <li><strong>重叠累加：</strong>多个 dZ 会把梯度贡献累加到同一个 dX 位置。</li>
+          <li><strong>Update：</strong>K 和 b 是可学习参数；dX 只继续向上一层传播，不参与更新。</li>
+        </ol>
+      </article>
+    </section>
+  </main>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="/static/js/cnn/conv_gradient_lab.js"></script>
+
+</body>
+</html>

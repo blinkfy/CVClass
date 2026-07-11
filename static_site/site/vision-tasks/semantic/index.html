@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语义分割：Pixel-wise Mask</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/semantic_segmentation_lab.css?v=20260626-titlescn1">
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "segmentation_lab";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "semantic";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="active" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="active" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab" data-vision-page="semantic" data-vision-module="segmentation_lab">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 09 · SEMANTIC SEGMENTATION</span>
+            <h1 class="station-title">语义分割：Pixel-wise Mask</h1>
+            <p class="station-summary">展示逐像素分类、logits、argmax、Semantic Mask、mIoU、FCN 与 SegFormer 推理过程。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">SEMANTIC MASK · PIXEL CLASS</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="语义分割：Pixel-wise Mask内部导航">
+        
+        <a class="" href="/segmentation-lab">语义 vs 实例</a>
+        
+        <a class="is-active" href="/segmentation-lab/semantic">语义分割</a>
+        
+        <a class="" href="/segmentation-lab/instance">实例分割</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench semantic-lab-workbench" data-semantic-lab aria-label="语义分割教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>Mask 参数</h3><p>输入与参数</p></div>
+        </div>
+
+        <div class="vision-field">
+            <span>样例图选择</span>
+            <div class="vis-sample-picker" data-sem-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-sem-sample-trigger>
+                    <span class="vis-sample-picker__label" data-sem-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-sem-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="overview-segmented-control semantic-source-toggle" aria-label="语义分割结果来源">
+            <button class="is-active" type="button" data-sem-source="model">模型推理</button>
+            <button type="button" data-sem-source="fcn">FCN 原理演示</button>
+        </div>
+
+        <label class="vision-field">
+            <span>蒙版不透明度 <output data-sem-opacity-output>65%</output></span>
+            <input data-sem-opacity type="range" min="0" max="100" value="65">
+        </label>
+
+        <label class="vision-toggle-row">
+            <span>类别边界线</span>
+            <input type="checkbox" data-sem-boundaries checked>
+        </label>
+
+        <div class="vision-control-stack" data-sem-class-filter></div>
+
+        <div class="semantic-model-panel" data-sem-model-panel>
+            <div class="semantic-panel-head">
+                <span class="semantic-section-title">模型状态</span>
+                <strong data-sem-model-status>未加载</strong>
+            </div>
+            <div class="vision-kv-grid semantic-runtime-grid">
+                <div><span>模型</span><strong>SegFormer-B0 ADE20K</strong></div>
+                <div><span>后端</span><strong data-sem-active-backend>--</strong></div>
+                <div><span>输入尺寸</span><strong data-sem-input-size>512 × 512</strong></div>
+                <div><span>类别数</span><strong data-sem-class-count>--</strong></div>
+                <div><span>推理耗时</span><strong data-sem-inference-time>--</strong></div>
+                <div><span>后处理</span><strong data-sem-postprocess-time>--</strong></div>
+            </div>
+            <p class="semantic-model-message" data-sem-model-message>本地 ONNX 模型实时在浏览器端执行推理，计算完成后自动叠加油画蒙版。</p>
+        </div>
+
+        <div class="vision-shape-card">
+            <span>统一语义分割蒙版格式</span>
+            <strong>source · classMap · classes · distribution · meta</strong>
+            <small>预设 polygon 和模型输出都会转换为同一个 H × W class index map 后再渲染。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel semantic-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>分割效果呈现</span><h3>语义分割蒙版叠加</h3></div>
+            <span class="vision-status-chip" data-sem-miou>mIoU --</span>
+        </div>
+        <div class="semantic-stage-strip" data-sem-stage-strip>
+            <span>Source: <strong data-sem-strip-source>Preset Mask</strong></span>
+            <span>Model: <strong data-sem-strip-model>--</strong></span>
+            <span>Inference: <strong data-sem-strip-inference>--</strong></span>
+            <span>Postprocess: <strong data-sem-strip-postprocess>--</strong></span>
+            <span>Mask: <strong data-sem-strip-mask>--</strong></span>
+            <span>Classes: <strong data-sem-strip-classes>--</strong></span>
+        </div>
+        <section class="process-step-console semantic-process-console" aria-label="语义分割算法流程">
+            <div class="process-step-heading">
+                <span>算法流程节点</span>
+                <strong>分割前向运算流程</strong>
+            </div>
+            <div class="process-filmstrip" data-sem-process-steps></div>
+        </section>
+        <div class="vision-image-stage semantic-real-stage" data-sem-stage>
+            <img data-sem-image alt="语义分割样例图">
+            <div class="vision-image-placeholder"><strong>未检测到本地图像数据</strong><span data-sem-missing></span></div>
+            <canvas data-sem-canvas></canvas>
+            <div class="process-visual-overlay semantic-process-overlay" data-sem-process-overlay aria-hidden="true"></div>
+            <div class="semantic-probe-card" data-sem-probe></div>
+        </div>
+        <section class="process-principle-stage" data-sem-process-principle aria-live="polite"></section>
+        <div class="semantic-fcn-demo" data-sem-fcn-demo hidden>
+            <div class="semantic-fcn-demo-header">
+                <span class="semantic-fcn-demo-badge">示意数据</span>
+                <p>以下可视化仅为教学示意，不代表当前图片的真实推理中间结果。</p>
+            </div>
+            <div class="semantic-fcn-pipeline">
+                <article data-fcn-stage="image"><strong>输入图像</strong><span>H×W×3 pixels</span><i></i></article>
+                <article data-fcn-stage="preprocess"><strong>预处理</strong><span>resize / normalize</span><i></i></article>
+                <article data-fcn-stage="backbone"><strong>Backbone feature map</strong><span>低分辨率语义特征</span><i></i></article>
+                <article data-fcn-stage="logits"><strong>Pixel Logits</strong><span>C-channel logits</span><i></i></article>
+                <article data-fcn-stage="upsample"><strong>Upsampling / Deconv</strong><span>恢复空间尺寸</span><i></i></article>
+                <article data-fcn-stage="argmax"><strong>H×W class map</strong><span>argmax per pixel</span><i></i></article>
+                <article data-fcn-stage="mask"><strong>Semantic Mask Overlay</strong><span>color mask</span><i></i></article>
+                <article data-fcn-stage="miou"><strong>mIoU Metrics</strong><span>intersection / union</span><i></i></article>
+            </div>
+            <div class="semantic-fcn-visual-grid">
+                <section>
+                    <h4>1×1 卷积：融合多通道生成类别概率 logits</h4>
+                    <div class="semantic-fcn-channel-stack" data-fcn-channel-stack></div>
+                </section>
+                <section>
+                    <h4>上采样 / 反卷积 (Upsampling / Deconv)</h4>
+                    <div class="semantic-fcn-upsample" data-fcn-upsample></div>
+                </section>
+                <section>
+                    <h4>特征跳跃连接 (Skip Connection) 水平边界对比</h4>
+                    <div class="semantic-skip-compare" data-fcn-skip-compare></div>
+                </section>
+            </div>
+        </div>
+        <div class="semantic-detail-grid">
+            <div class="vision-panel-lite">
+                <h4>类别图例</h4>
+                <div class="overview-legend" data-sem-legend></div>
+            </div>
+            <div class="vision-panel-lite">
+                <h4>类别占比</h4>
+                <div class="semantic-ratio-list" data-sem-ratios></div>
+            </div>
+        </div>
+        <div class="semantic-tensor-flow" data-sem-flow>
+            <div data-flow-phase="image"><strong>Image</strong><span>H×W×3 input</span></div>
+            <b>→</b>
+            <div data-flow-phase="preprocess"><strong>Preprocess</strong><span>resize / normalize</span></div>
+            <b>→</b>
+            <div data-flow-phase="backbone"><strong>Backbone</strong><span>feature map</span></div>
+            <b>→</b>
+            <div data-flow-phase="logits"><strong>Pixel Logits</strong><span>C scores</span></div>
+            <b>→</b>
+            <div data-flow-phase="upsample"><strong>Upsample</strong><span>restore H×W</span></div>
+            <b>→</b>
+            <div data-flow-phase="argmax"><strong>Argmax</strong><span>winner class</span></div>
+            <b>→</b>
+            <div data-flow-phase="mask"><strong>Mask</strong><span>color map</span></div>
+            <b>→</b>
+            <div data-flow-phase="miou"><strong>mIoU</strong><span>metric</span></div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-sem-notes-title>算法原理</h3><p data-sem-notes-subtitle>像素探针</p></div>
+        </div>
+        <div class="semantic-notes-tutorial" data-sem-notes-tutorial></div>
+        <section class="process-formula-card" data-sem-process-card aria-live="polite">
+            <span data-process-kicker>算法步骤</span>
+            <h4 data-process-title>逐步运算说明</h4>
+            <div data-process-formula>--</div>
+            <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
+        </section>
+        <div class="semantic-notes-data" data-sem-notes></div>
+
+        <div class="semantic-fcn-notes-panel" data-fcn-notes-panel hidden>
+            <div class="semantic-fcn-mini-card">
+                <h5>logits → argmax 示例</h5>
+                <code data-fcn-logits>pixel(h,w): [0.1, 0.2, 0.7] → class=2</code>
+            </div>
+            <div class="semantic-fcn-mini-card">
+                <h5>mIoU 计算卡</h5>
+                <div class="semantic-miou-table" data-fcn-miou-table></div>
+            </div>
+            <div class="semantic-fcn-mini-card">
+                <h5>Skip Connection</h5>
+                <p>without skip：边界粗糙；with skip：融合浅层空间细节后边界更精细。</p>
+            </div>
+        </div>
+
+        <!-- 语义分割评价指标 IoU 交互实验室 -->
+        <div class="semantic-iou-toy-card">
+            <div class="toy-card-header">
+                <h5>IoU 交互评测</h5>
+                <span class="toy-badge">Metrics Lab</span>
+            </div>
+            <p class="toy-card-desc">拖动下方滑块控制<b>预测区域 (Prediction)</b> 与<b>真实标注 (Ground Truth)</b> 的重合程度，直观了解分割评价算法的数学推断过程：</p>
+            
+            <div class="toy-flex-canvas">
+                <div class="toy-canvas-grid-bg"></div>
+                <div class="toy-visual-box toy-box-gt">
+                    <span class="toy-label">GT 真实</span>
+                </div>
+                <div class="toy-visual-box toy-box-pred" data-toy-pred>
+                    <span class="toy-label">Pred 预测</span>
+                </div>
+                <div class="toy-visual-box toy-box-intersection" data-toy-intersection>
+                    <span class="toy-label">Overlap</span>
+                </div>
+            </div>
+
+            <div class="toy-slider-section">
+                <div class="toy-slider-label">
+                    <span>相交距离偏移量</span>
+                    <strong data-toy-offset-text>50%</strong>
+                </div>
+                <div class="toy-input-wrapper">
+                    <input type="range" class="toy-range-input" data-toy-slider min="0" max="100" value="50" aria-label="IoU 重叠度控制器">
+                </div>
+            </div>
+
+            <div class="toy-math-panel">
+                <div class="toy-math-row">
+                    <span>交集部分 (Intersection)</span>
+                    <code data-toy-math-inter>50 px²</code>
+                </div>
+                <div class="toy-math-row">
+                    <span>并集部分 (Union)</span>
+                    <code data-toy-math-union>150 px²</code>
+                </div>
+                <div class="toy-math-formula-card">
+                    <div class="toy-math-label-mini">数学计算公式</div>
+                    <div class="toy-math-formula-expr" data-toy-formula>
+                        $IoU = \frac{|GT \cap Pred|}{|GT \cup Pred|} = \frac{50}{150} \approx 0.333$
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vision-output-schema">
+            <span>模型输出标准结构</span>
+            <code data-sem-output-schema>H × W class index map</code>
+        </div>
+    </aside>
+</section>
+
+<section class="semantic-playback-panel" aria-label="语义分割步骤播放控制">
+    <div class="semantic-playback-head">
+        <div>
+            <span>运算步骤控制轴</span>
+            <strong data-sem-step-label>01 / 8 · Image</strong>
+        </div>
+        <div class="semantic-playback-actions">
+            <button type="button" data-sem-play>自动放映</button>
+            <button type="button" data-sem-reset>重置起点</button>
+        </div>
+    </div>
+    <div class="semantic-progress-track" data-sem-progress aria-hidden="true"></div>
+    <ol class="vision-stepper semantic-stepper" aria-label="语义分割流程" data-sem-stepper>
+        <li class="is-active" data-sem-phase="image"><span>1</span><div><strong>Image</strong><small>H×W×3</small></div></li>
+        <li data-sem-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>resize / normalize</small></div></li>
+        <li data-sem-phase="backbone"><span>3</span><div><strong>Backbone</strong><small>feature map</small></div></li>
+        <li data-sem-phase="logits"><span>4</span><div><strong>Pixel Logits</strong><small>H′×W′×C</small></div></li>
+        <li data-sem-phase="upsample"><span>5</span><div><strong>Upsample</strong><small>restore H×W</small></div></li>
+        <li data-sem-phase="argmax"><span>6</span><div><strong>Argmax</strong><small>class id</small></div></li>
+        <li data-sem-phase="mask"><span>7</span><div><strong>Semantic Mask</strong><small>overlay</small></div></li>
+        <li data-sem-phase="miou"><span>8</span><div><strong>mIoU</strong><small>mean IoU</small></div></li>
+    </ol>
+</section>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+    // 在子脚本运行前先初始化全局 auto-render 配置，支持行内公式 $...$ 的识别
+    document.addEventListener("DOMContentLoaded", function() {
+        if (window.renderMathInElement) {
+            window.renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+        }
+    });
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script src="/static/js/vision_tasks/vision_tasks_common.js?v=20260626-titlescn1"></script>
+
+<script src="/static/js/vision_tasks/semantic_segmentation_lab.js?v=20260626-titlescn1"></script>
+
+
+
+</body>
+</html>

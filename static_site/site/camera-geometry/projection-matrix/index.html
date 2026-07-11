@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内外参与投影矩阵 - 相机几何与标定</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/geometry_vision/camera_geometry.css?v=20260628-geometry14">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "geometry_vision";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "projection";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="active" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="active" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab geometry-lab" data-geometry-page="projection">
+    <header class="vision-hero station-hero geometry-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 12 · WORLD 03 CAMERA GEOMETRY</span>
+            <h1 class="station-title">内外参与投影矩阵</h1>
+            <p class="station-summary">观察世界坐标如何经过外参变换、归一化投影和内参映射，最终得到像素坐标。</p>
+        </div>
+        <div class="station-hero-actions geometry-hero-actions">
+            <span class="geometry-state">公式推导 · K[R|t]</span>
+            <strong class="station-badge">K · [R|t] · REPROJECTION</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="相机几何与标定内部导航">
+        
+        <a class="" href="/camera-geometry/model">相机成像模型</a>
+        
+        <a class="is-active" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+        
+        <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench geometry-workbench geometry-projection-workbench" data-geometry-projection aria-label="内外参与投影矩阵工作台">
+    <aside class="vision-panel vision-control-panel geometry-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>参数控制</h3><p>World → Pixel</p></div>
+        </div>
+
+        <label class="vision-field">
+            <span>点集选择</span>
+            <select data-geo-proj-input="pointSet">
+                <option value="point">单点</option>
+                <option value="cube" selected>立方体</option>
+                <option value="chessboard">棋盘格</option>
+                <option value="axes">坐标轴</option>
+            </select>
+        </label>
+
+        <div class="geometry-control-group">
+            <strong>外参 R, t</strong>
+            <label class="vision-field"><span>yaw <output data-geo-output="yaw">12°</output></span><input type="range" min="-45" max="45" step="1" value="12" data-geo-proj-input="yaw"></label>
+            <label class="vision-field"><span>pitch <output data-geo-output="pitch">-10°</output></span><input type="range" min="-35" max="35" step="1" value="-10" data-geo-proj-input="pitch"></label>
+            <label class="vision-field"><span>roll <output data-geo-output="roll">4°</output></span><input type="range" min="-30" max="30" step="1" value="4" data-geo-proj-input="roll"></label>
+            <label class="vision-field"><span>tx <output data-geo-output="tx">0.10</output></span><input type="range" min="-1.2" max="1.2" step="0.05" value="0.10" data-geo-proj-input="tx"></label>
+            <label class="vision-field"><span>ty <output data-geo-output="ty">0.00</output></span><input type="range" min="-1.0" max="1.0" step="0.05" value="0" data-geo-proj-input="ty"></label>
+            <label class="vision-field"><span>tz <output data-geo-output="tz">4.00</output></span><input type="range" min="2.2" max="7.0" step="0.1" value="4.0" data-geo-proj-input="tz"></label>
+        </div>
+
+        <div class="geometry-control-group">
+            <strong>内参 K</strong>
+            <label class="vision-field"><span>fx <output data-geo-output="fx">680</output></span><input type="range" min="360" max="1100" step="10" value="680" data-geo-proj-input="fx"></label>
+            <label class="vision-field"><span>fy <output data-geo-output="fy">650</output></span><input type="range" min="360" max="1100" step="10" value="650" data-geo-proj-input="fy"></label>
+            <label class="vision-field"><span>cx <output data-geo-output="cx">320</output></span><input type="range" min="220" max="420" step="5" value="320" data-geo-proj-input="cx"></label>
+            <label class="vision-field"><span>cy <output data-geo-output="cy">210</output></span><input type="range" min="130" max="290" step="5" value="210" data-geo-proj-input="cy"></label>
+            <label class="vision-toggle-row"><span>skew 非正交像素轴</span><input type="checkbox" data-geo-proj-input="skew"></label>
+        </div>
+
+        <label class="vision-field">
+            <span>当前步骤</span>
+            <select data-geo-step-select="projection">
+                <option value="world">世界坐标 / World Coordinate</option>
+                <option value="extrinsic">外参变换 / Extrinsic Transform</option>
+                <option value="camera">相机坐标 / Camera Coordinate</option>
+                <option value="intrinsic">内参投影 / Intrinsic Projection</option>
+                <option value="pixel">像素坐标 / Pixel Coordinate</option>
+            </select>
+        </label>
+
+        <div class="geometry-button-row">
+            <button type="button" data-geo-prev="projection">上一步</button>
+            <button type="button" data-geo-next="projection">下一步</button>
+            <button type="button" data-geo-play="projection">播放流程</button>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>当前点</span><strong data-geo-proj-summary="point">--</strong></div>
+            <div><span>相机坐标</span><strong data-geo-proj-summary="camera">--</strong></div>
+            <div><span>像素坐标</span><strong data-geo-proj-summary="pixel">--</strong></div>
+            <div><span>投影状态</span><strong data-geo-proj-summary="status">等待计算</strong></div>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel geometry-stage-panel">
+        <div class="vision-stage-header">
+            <div>
+                <span>PROJECTION MATRIX PLAYGROUND</span>
+                <h3 data-geo-stage-title>坐标变换流水线</h3>
+            </div>
+            <div class="geometry-stage-chips">
+                <span data-geo-chip="projection-step">世界坐标 / World Coordinate</span>
+                <span data-geo-chip="projection-count">8 points</span>
+                <span>\(\mathbf P=\mathbf K[\mathbf R|\mathbf t]\)</span>
+            </div>
+        </div>
+
+        <div class="geometry-pipeline" data-geo-pipeline aria-label="世界坐标到像素坐标矩阵流水线">
+            <article class="geo-matrix-card" data-geo-stage="world">
+                <span>World Coordinate</span>
+                <strong>世界坐标</strong>
+                <code data-geo-matrix="world">\(\mathbf X_w=[X,Y,Z,1]^{\mathsf T}\)</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="extrinsic">
+                <span>Extrinsic Transform</span>
+                <strong>外参变换</strong>
+                <code data-geo-matrix="extrinsic">\(\mathbf R=\mathbf I,\ \mathbf t=\mathbf 0\)</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="camera">
+                <span>Camera Coordinate</span>
+                <strong>相机坐标</strong>
+                <code data-geo-matrix="camera">\(\mathbf X_c=\mathbf R\mathbf X_w+\mathbf t\)</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="normalized">
+                <span>Normalized Plane</span>
+                <strong>归一化平面</strong>
+                <code data-geo-matrix="normalized">\(x_n=\frac{X_c}{Z_c},\ y_n=\frac{Y_c}{Z_c}\)</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="intrinsic">
+                <span>Intrinsic Projection</span>
+                <strong>内参投影</strong>
+                <code data-geo-matrix="intrinsic">\(\mathbf K\) maps normalized points to pixels</code>
+            </article>
+            <article class="geo-matrix-card" data-geo-stage="pixel">
+                <span>Pixel Coordinate</span>
+                <strong>像素坐标</strong>
+                <code data-geo-matrix="pixel">\(s[u,v,1]^{\mathsf T}\)</code>
+            </article>
+        </div>
+
+        <div class="geometry-projection-lower">
+            <section class="geometry-projection-window">
+                <div class="geometry-section-head">
+                    <strong>像素坐标</strong>
+                    <span data-geo-proj-caption>Pixel Coordinate · ghost/current/principal</span>
+                </div>
+                <div class="geometry-svg-frame" data-geo-projection-window></div>
+            </section>
+            <section class="geometry-flow-preview" data-geo-flow-preview aria-label="当前计算状态条"></section>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel geometry-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-geo-notes-title>世界坐标</h3><p>当前阶段解释</p></div>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>核心公式</span>
+            <strong data-geo-notes-formula>\(s[u,v,1]^{\mathsf T}=\mathbf K[\mathbf R|\mathbf t]\mathbf X_w\)</strong>
+            <small data-geo-notes-formula-note>外参先把世界点转入相机坐标，内参再把归一化点映射到像素网格。</small>
+        </div>
+
+        <div class="geometry-notes-body" data-geo-notes-body></div>
+
+        <div class="vision-output-schema">
+            <span>当前点代入</span>
+            <code data-geo-substitution>\[
+\begin{aligned}
+\mathbf X_w&=[--]\\
+\mathbf X_c&=[--]\\
+(u,v)&=(--,--)
+\end{aligned}
+\]</code>
+        </div>
+
+        <div class="vision-kv-grid">
+            <div><span>参数影响</span><strong data-geo-param-impact>调整 fx 会改变水平方向放大倍率。</strong></div>
+            <div><span>当前像素</span><strong data-geo-current-pixel>u=--, v=--</strong></div>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper geometry-stepper geometry-stepper--5" aria-label="投影矩阵处理流程" data-geo-stepper="projection">
+    <li class="is-active" data-geo-phase="world"><span>1</span><div><strong>世界坐标</strong><small>World Coordinate · \(\mathbf X_w\)</small></div></li>
+    <li data-geo-phase="extrinsic"><span>2</span><div><strong>外参变换</strong><small>Extrinsic Transform · R,t</small></div></li>
+    <li data-geo-phase="camera"><span>3</span><div><strong>相机坐标</strong><small>Camera Coordinate · \(\mathbf X_c\)</small></div></li>
+    <li data-geo-phase="intrinsic"><span>4</span><div><strong>内参投影</strong><small>Intrinsic Projection · K</small></div></li>
+    <li data-geo-phase="pixel"><span>5</span><div><strong>像素坐标</strong><small>Pixel Coordinate · u,v</small></div></li>
+</ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]],
+        displayMath: [["\\[", "\\]"]]
+    },
+    options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/js/geometry_vision/camera_geometry.js?v=20260628-geometry11"></script>
+
+</body>
+</html>

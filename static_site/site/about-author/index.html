@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于作者 · 徐延飞</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/pages/author.css?v=20260627-author32">
+
+</head>
+<body class="cv-shell sidebar-collapsed home-page-shell   author-page-shell   ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "author";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="/" aria-label="计算机视觉教学平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="/static/assets/img/icon.webp" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉教学平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="" href="/">首页</a>
+            <a href="/#featured-modules">实验模块</a>
+            <a class="" href="/learning-path">学习路径</a>
+            <a class="" href="/knowledge-graph">知识图谱</a>
+            <a class="" href="/principles">算法原理</a>
+            <a class="" href="/frontier">前沿探索</a>
+            <a class="active" href="/about-author">关于作者</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="author-page">
+    <section class="author-hero" aria-labelledby="authorTitle">
+        <div class="author-photo" aria-hidden="true">
+            <img src="/static/assets/author/photo.webp" alt="">
+        </div>
+        <div class="author-hero-copy">
+            <h1 id="authorTitle">徐延飞</h1>
+            <p class="author-identity">面向计算机视觉、具身智能与智能应用系统的研究与实践</p>
+            <p class="author-summary">围绕多模态感知、计算机视觉、结构化语义理解展开，关注算法模型在机器人操作、图像分析中的可复现实现与应用闭环。</p>
+            <div class="author-stats" aria-label="作者概览">
+                <div><span class="stat-icon stat-icon--green">3</span><strong>3</strong><small>研究方向</small></div>
+                <div><span class="stat-icon stat-icon--blue">10+</span><strong>10+</strong><small>工程仓库</small></div>
+                <div><span class="stat-icon stat-icon--orange">1</span><strong>1</strong><small>论文成果</small></div>
+            </div>
+        </div>
+
+        <div class="author-map" aria-label="作者主要工作地图">
+            <svg class="map-lines" viewBox="0 0 760 250" aria-hidden="true">
+                <path class="map-line-bridge map-line-bridge--robot" data-map-line="robot" />
+                <path class="map-line-bridge map-line-bridge--pore" data-map-line="pore" />
+                <path class="map-line-bridge map-line-bridge--app" data-map-line="app" />
+                <path class="map-line-bridge map-line-bridge--future" data-map-line="future" />
+                <path class="map-line map-line--robot" data-map-line="robot" />
+                <path class="map-line map-line--pore" data-map-line="pore" />
+                <path class="map-line map-line--app" data-map-line="app" />
+                <path class="map-line map-line--future" data-map-line="future" />
+            </svg>
+            <a class="map-node map-node--robot" href="#task319Work">
+                <span class="map-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32"><path d="M10 12h12a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5v-5a5 5 0 0 1 5-5Z"/><path d="M16 12V6"/><circle cx="12" cy="19" r="1.8"/><circle cx="20" cy="19" r="1.8"/><path d="M12 24h8"/></svg>
+                </span>
+                <strong>具身智能</strong>
+                <small>协同感知 · 规划控制</small>
+            </a>
+            <a class="map-core" href="#task319Work">
+                <strong>主要工作</strong>
+            </a>
+            <a class="map-node map-node--pore" href="#poreWork">
+                <span class="map-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32"><circle cx="10" cy="10" r="4"/><circle cx="22" cy="9" r="3"/><circle cx="19" cy="21" r="6"/><path d="M13 12l4 5M20 12l-1 3"/></svg>
+                </span>
+                <strong>科学图像分析</strong>
+                <small>微结构表征 · 孔隙建模</small>
+            </a>
+            <a class="map-node map-node--app" href="#fentouxiaWork">
+                <span class="map-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32"><rect x="9" y="4" width="14" height="24" rx="3"/><path d="M13 8h6M14 24h4"/><path d="M12 15h8M12 19h5"/></svg>
+                </span>
+                <strong>多模态学习</strong>
+                <small>特征融合 · 语义校准</small>
+            </a>
+            <a class="map-node map-node--future" href="#fentouxiaWork" aria-label="待扩展工作方向占位">
+                <span class="map-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32"><path d="M7 16h18"/><path d="M16 7v18"/><circle cx="16" cy="16" r="10"/></svg>
+                </span>
+                <strong>计算机视觉</strong>
+                <small>图像分割 · 目标检测</small>
+            </a>
+        </div>
+    </section>
+
+    <div class="author-board" aria-label="主要工作">
+        <section id="task319Work" class="work-row work-row--robot" aria-labelledby="task319Title">
+            <div class="work-index">01</div>
+            <div class="work-copy">
+                <h2 id="task319Title">具身智能自主清洁机器人</h2>
+                <p class="work-subtitle">面向复杂场景的多模态感知、任务规划与机器人操作闭环</p>
+                <p>该工作基于 Isaac Sim 与 IsaacLab 构建仿真验证环境，围绕大小模型协同垃圾识别、空间定位、导航决策与机械臂抓取建立端到端流程，并将视觉语言模型、YOLO 实例分割和运动规划模块纳入统一任务框架。</p>
+                <ul class="work-bullets">
+                    <li>融合 RGB-D、相机图像与点云信息进行环境表征</li>
+                    <li>大小模型协同兼顾实时性和准确性，识别类别、位置</li>
+                    <li>构建从目标选择、导航站位到抓取投放的任务执行链</li>
+                    <li>通过仿真数据与真实样本提升模型迁移和执行稳定性</li>
+                </ul>
+            </div>
+            <figure class="media-card robot-card video-card">
+                <video class="author-hls-video" controls preload="metadata" playsinline
+                    data-hls-src="/static/assets/author/task319-hls/index.m3u8"
+                    data-fallback-src="/static/assets/author/%E5%85%B7%E8%BA%AB%E6%99%BA%E8%83%BD.mp4"
+                    aria-label="具身智能自主清洁机器人演示视频"></video>
+                <figcaption>IsaacLab 仿真环境与机器人分拣任务演示</figcaption>
+            </figure>
+            <div class="flow-card">
+                <h3>感知、规划与执行的闭环流程</h3>
+                <div class="flow-strip">
+                    <article>
+                        <img src="/static/assets/author/task319-scene.webp" alt="">
+                        <strong>场景感知</strong><span>RGB-D / 点云</span>
+                    </article>
+                    <article>
+                        <img src="/static/assets/author/task319-grasp-overlay.webp" alt="">
+                        <strong>目标定位</strong><span>目标框与位姿</span>
+                    </article>
+                    <article>
+                        <img src="/static/assets/author/task319-ik-curobo.webp" alt="">
+                        <strong>路径规划</strong><span>全局 / 局部路径</span>
+                    </article>
+                    <article>
+                        <img src="/static/assets/author/task319-control-app.webp" alt="">
+                        <strong>操作执行</strong><span>抓取与投放控制</span>
+                    </article>
+                </div>
+                <div class="tech-tags">
+                    <span>Isaac Sim</span><span>IsaacLab</span><span>PyTorch</span><span>Open3D</span><span>ROS2</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="poreWork" class="work-row work-row--pore" aria-labelledby="poreTitle">
+            <div class="work-index">02</div>
+            <div class="work-copy">
+                <h2 id="poreTitle">VLSE-Net 岩心 SEM 孔隙鲁棒分割</h2>
+                <p class="work-subtitle">面向异质岩土材料的跨域孔隙结构表征</p>
+                <p>该研究提出 VLSE-Net，通过视觉语言先验与结构增强机制提升复杂 SEM 图像中的孔隙-基质判别能力，并保持细长孔隙及连通结构，为岩石物理参数计算提供可靠分割结果。</p>
+                <div class="metric-row">
+                    <div><span>Dice 相对提升</span><strong>+3.12%</strong></div>
+                    <div><span>孔隙度误差降幅</span><strong>39.6%</strong></div>
+                </div>
+            </div>
+            <figure class="media-card module-card">
+                <img src="/static/assets/author/pore-vlse-module-white.webp" alt="VLSE-Net 结构概览">
+                <figcaption>VLSE-Net 架构示意：LSCM 语义校准与 ASRM 方向结构细化</figcaption>
+            </figure>
+            <div class="pore-result-card">
+                <h3>关键模块结构可视化</h3>
+                <div class="pore-result-grid pore-result-grid--modules">
+                    <figure class="pore-module-figure pore-module-figure--lscm">
+                        <img src="/static/assets/author/pore-lscm-module-white.webp" alt="LSCM 语义校准模块结构图">
+                        <figcaption>LSCM 语义校准模块</figcaption>
+                    </figure>
+                    <figure class="pore-module-figure pore-module-figure--asrm">
+                        <img src="/static/assets/author/pore-asrm-module-white.webp" alt="ASRM 方向结构细化模块结构图">
+                        <figcaption>ASRM 方向结构细化模块</figcaption>
+                    </figure>
+                    <div class="method-note">
+                        <strong>模块设计目标</strong>
+                        <span>LSCM 引入语义先验提升孔隙-基质判别；ASRM 通过方向敏感建模保持细长孔隙与弱边界连续性。</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="fentouxiaWork" class="work-row work-row--app" aria-labelledby="fentouxiaTitle">
+            <div class="work-index">03</div>
+            <div class="work-copy">
+                <h2 id="fentouxiaTitle">传感器-视觉多模态分类与服务系统</h2>
+                <p class="work-subtitle">面向真实场景的多模态分类与服务系统</p>
+                <p>该系统面向公众应用场景，集成视觉识别、RAG 知识服务、地理信息查询、社区激励与设备联动，实现从分类判别到回收指导、用户反馈和设备管理的应用闭环。</p>
+                <div class="feature-grid">
+                    <span>视觉识别</span><span>知识检索问答</span><span>空间投放服务</span><span>社区激励机制</span><span>设备互联</span>
+                </div>
+            </div>
+            <figure class="media-card app-card video-card">
+                <video class="author-hls-video" controls preload="metadata" playsinline
+                    poster="/static/assets/author/cover.webp"
+                    data-hls-src="/static/assets/author/fentouxia-hls/index.m3u8"
+                    data-fallback-src="/static/assets/author/%E5%9E%83%E5%9C%BE%E5%88%86%E7%B1%BB.mp4"
+                    aria-label="分投侠智能垃圾分类应用演示视频"></video>
+                <figcaption>应用端核心功能界面：识别、问答、社区与地图导航</figcaption>
+            </figure>
+            <div class="system-card app-showcase-card">
+                <h3>系统方案与应用验证</h3>
+                <div class="app-showcase-grid">
+                    <figure class="app-showcase-item app-showcase-item--architecture">
+                        <img src="/static/assets/author/fentouxia-fusion-architecture.webp" alt="多模态特征提取与融合架构图">
+                        <figcaption>多模态特征提取与融合架构</figcaption>
+                    </figure>
+                    <figure class="app-showcase-item app-showcase-item--dashboard">
+                        <img src="/static/assets/author/fentouxia-collection-dashboard.webp" alt="垃圾清运可视化调度大屏">
+                        <figcaption>清运调度可视化大屏</figcaption>
+                    </figure>
+                    <figure class="app-showcase-item app-showcase-item--device">
+                        <img src="/static/assets/author/fentouxia-device-prototype.webp" alt="智能垃圾分类设备原型">
+                        <figcaption>智能分类设备原型</figcaption>
+                    </figure>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="author-footer">
+        <div>
+            <span>邮箱：flynnxv@outlook.com</span>
+            <a href="https://github.com/blinkfy" target="_blank" rel="noopener">GitHub</a>
+        </div>
+    </footer>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/vendor/hls.min.js?v=1.6.16"></script>
+<script src="/static/js/pages/author.js?v=20260627-map1"></script>
+
+</body>
+</html>

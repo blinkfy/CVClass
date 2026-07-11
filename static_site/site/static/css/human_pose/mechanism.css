@@ -1,0 +1,1507 @@
+﻿/* Pose estimation mechanism styles. */
+
+.human-mechanism-workbench {
+    grid-template-columns: minmax(210px, 0.58fr) minmax(560px, 1.74fr) minmax(240px, 0.68fr);
+}
+
+.human-mechanism-controls {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+}
+
+.human-mode-switch {
+    display: grid;
+    gap: 8px;
+}
+
+.human-mode-switch button.is-active,
+.human-mechanism-step-list button.is-active {
+    border-color: var(--pose-blue);
+    color: #ffffff;
+    background: var(--pose-blue);
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.16);
+}
+
+.human-mechanism-controls .human-button-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.human-mechanism-controls .human-button-row button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.human-mechanism-controls.is-playing .human-button-row [data-mechanism-play],
+.human-mechanism-workbench.is-playing .human-button-row [data-mechanism-play] {
+    border-color: #f59e0b;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.mechanism-speed-control {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 9px;
+    background: #f8fbff;
+}
+
+.mechanism-speed-control span {
+    color: #475569;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.mechanism-speed-control select {
+    min-height: 34px;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 0 10px;
+    color: #1d4ed8;
+    background: #ffffff;
+    font-weight: 900;
+}
+
+.human-mechanism-step-list {
+    display: grid;
+    gap: 8px;
+}
+
+.human-mechanism-step-list button {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 8px;
+    text-align: left;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 240ms var(--pose-motion), box-shadow 240ms var(--pose-motion), transform 240ms var(--pose-motion);
+}
+
+.human-mechanism-step-list button:hover {
+    transform: translateY(-1px);
+    border-color: #93c5fd;
+}
+
+.human-mechanism-step-list button.is-done {
+    border-color: #bfdbfe;
+    background: #f8fbff;
+}
+
+.human-mechanism-step-list button span {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 999px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.human-mechanism-step-list button.is-active span {
+    color: #1d4ed8;
+    background: #ffffff;
+}
+
+.human-mechanism-step-list strong,
+.human-mechanism-step-list small {
+    grid-column: 2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.human-mechanism-step-list strong {
+    color: #172554;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.human-mechanism-step-list small {
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.human-mechanism-step-list button.is-active strong,
+.human-mechanism-step-list button.is-active small {
+    color: #ffffff;
+}
+
+.human-mechanism-stage {
+    min-height: auto;
+}
+
+.human-mechanism-canvas {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 28px 28px;
+}
+
+.human-mechanism-image-frame {
+    --pose-aspect: 640 / 427;
+    position: relative;
+    align-self: start;
+    justify-self: center;
+    width: min(100%, 980px);
+    max-height: min(56vh, 560px);
+    aspect-ratio: var(--pose-aspect);
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: #e2e8f0;
+    box-shadow: 0 18px 38px rgba(37, 99, 235, 0.12);
+}
+
+.human-mechanism-image-frame img,
+.human-mechanism-image-frame svg,
+.mechanism-operation-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.human-mechanism-image-frame img {
+    object-fit: fill;
+}
+
+.human-mechanism-image-frame svg {
+    pointer-events: none;
+}
+
+.mechanism-operation-layer {
+    z-index: 4;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.mechanism-operation-region {
+    position: absolute;
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    min-width: 124px;
+    min-height: 120px;
+    overflow: hidden;
+    border: 2px solid rgba(245, 158, 11, 0.9);
+    border-radius: 12px;
+    padding: 8px;
+    background: rgba(239, 246, 255, 0.18);
+    box-shadow:
+        0 0 0 999px rgba(15, 23, 42, 0.05),
+        0 10px 24px rgba(37, 99, 235, 0.16);
+    animation: mechanismRegionFocus 520ms var(--pose-motion) both;
+}
+
+.mechanism-operation-scan {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(18, 181, 208, 0.3) 48%, transparent 100%);
+    transform: translateY(-100%);
+    animation: mechanismScan 900ms var(--pose-motion) both;
+}
+
+.mechanism-operation-feature-grid {
+    display: none;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: auto;
+}
+
+.mechanism-operation-region.is-feature .mechanism-operation-feature-grid,
+.mechanism-operation-region.is-heatmap .mechanism-operation-feature-grid {
+    display: grid;
+}
+
+.mechanism-operation-feature-grid i {
+    display: grid;
+    min-height: 20px;
+    place-items: center;
+    border: 1px solid rgba(147, 197, 253, 0.72);
+    border-radius: 6px;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.74);
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 900;
+    animation: mechanismFeatureIn 520ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-operation-feature-grid i.is-hot {
+    border-color: rgba(245, 158, 11, 0.9);
+    color: #92400e;
+    background: rgba(254, 243, 199, 0.86);
+    animation-name: mechanismFeatureHot;
+    animation-iteration-count: infinite;
+    animation-duration: 900ms;
+}
+
+.mechanism-operation-vector {
+    display: none;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: end;
+    margin-top: auto;
+}
+
+.mechanism-operation-region.is-vector .mechanism-operation-vector,
+.mechanism-operation-region.is-skeleton .mechanism-operation-vector {
+    display: flex;
+}
+
+.mechanism-operation-region.is-step-refine .mechanism-operation-vector,
+.mechanism-operation-region.is-step-skeleton .mechanism-operation-vector {
+    display: none;
+}
+
+.mechanism-projection-dot,
+.mechanism-operation-heat {
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+.mechanism-projection-dot {
+    display: grid;
+    min-width: 44px;
+    min-height: 20px;
+    place-items: center;
+    border: 1px solid rgba(245, 158, 11, 0.86);
+    border-radius: 999px;
+    color: #92400e;
+    background: rgba(255, 251, 235, 0.92);
+    font-size: 8px;
+    font-weight: 950;
+    animation: mechanismProjectPoint 620ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-operation-heat {
+    width: 64px;
+    height: 64px;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle, var(--heat-color, #12b5d0) 0 12%, color-mix(in srgb, var(--heat-color, #12b5d0) 36%, transparent) 14% 42%, transparent 64%);
+    filter: blur(0.2px);
+    opacity: 0.58;
+    animation: mechanismHeatOnImage 900ms var(--pose-motion) infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-operation-heat.is-selected {
+    width: 78px;
+    height: 78px;
+    opacity: 0.78;
+}
+
+.mechanism-operation-region {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border-color: rgba(245, 158, 11, 0.78);
+    background:
+        radial-gradient(circle at 50% 48%, rgba(18, 181, 208, 0.16), transparent 42%),
+        linear-gradient(90deg, rgba(37, 99, 235, 0.11) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.11) 1px, transparent 1px),
+        rgba(239, 246, 255, 0.08);
+    background-size: auto, 18px 18px, 18px 18px, auto;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+        0 0 0 999px rgba(15, 23, 42, 0.035),
+        0 12px 28px rgba(37, 99, 235, 0.13);
+}
+
+.mechanism-operation-region.is-step-crop,
+.mechanism-operation-region.is-step-image {
+    background:
+        linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(18, 181, 208, 0.1)),
+        rgba(239, 246, 255, 0.08);
+}
+
+.mechanism-operation-feature-grid {
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    top: 12%;
+    bottom: 14%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+}
+
+.mechanism-operation-feature-grid i {
+    min-height: 0;
+    border-radius: 5px;
+    color: transparent;
+    background:
+        radial-gradient(circle, rgba(37, 99, 235, 0.5), rgba(18, 181, 208, 0.18) 54%, rgba(255, 255, 255, 0.24));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}
+
+.mechanism-operation-feature-grid i.is-hot {
+    color: transparent;
+    background:
+        radial-gradient(circle, rgba(245, 158, 11, 0.78), rgba(34, 211, 238, 0.3) 48%, rgba(255, 255, 255, 0.2));
+}
+
+.mechanism-operation-vector {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+}
+
+.mechanism-vector-bead {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: 9px;
+    height: 9px;
+    border: 2px solid rgba(245, 158, 11, 0.82);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.14);
+    transform: translate(-50%, -50%);
+    animation: mechanismVectorBead 620ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-vector-bead::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: 30px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.7), rgba(18, 181, 208, 0.1));
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: left;
+    animation: mechanismVectorTrail 560ms var(--pose-motion) both;
+    animation-delay: calc(var(--delay, 0ms) + 70ms);
+}
+
+.mechanism-operation-particles {
+    position: absolute;
+    inset: 0;
+    display: none;
+}
+
+.mechanism-operation-region.is-feature .mechanism-operation-particles {
+    display: block;
+}
+
+.mechanism-feature-particle {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #12b5d0;
+    box-shadow: 0 0 0 4px rgba(18, 181, 208, 0.12);
+    animation: mechanismFeatureParticle 820ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-crop-ghost {
+    position: absolute;
+    overflow: hidden;
+    border: 2px solid rgba(245, 158, 11, 0.88);
+    border-radius: 12px;
+    background-repeat: no-repeat;
+    box-shadow:
+        0 12px 26px rgba(245, 158, 11, 0.2),
+        0 0 0 6px rgba(245, 158, 11, 0.1);
+    transform-origin: center;
+    animation: mechanismCropGhost 900ms var(--pose-motion) both;
+}
+
+.mechanism-crop-path,
+.mechanism-map-line {
+    position: absolute;
+    z-index: 3;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.9), rgba(18, 181, 208, 0.7));
+    transform-origin: left center;
+}
+
+.mechanism-crop-path {
+    animation: mechanismMapLine 720ms var(--pose-motion) both;
+    transform: rotate(var(--angle, 0rad)) scaleX(0);
+}
+
+.mechanism-map-line {
+    animation: mechanismMapLine 620ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+    transform: rotate(var(--angle, 0rad)) scaleX(0);
+}
+
+.mechanism-projection-dot {
+    width: 15px;
+    height: 15px;
+    min-width: 0;
+    min-height: 0;
+    border: 2px solid rgba(245, 158, 11, 0.8);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow:
+        0 0 0 4px rgba(245, 158, 11, 0.12),
+        0 0 18px rgba(245, 158, 11, 0.24);
+}
+
+.mechanism-projection-dot::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    background: #f59e0b;
+}
+
+.mechanism-projection-dot.is-peak-drop {
+    width: 18px;
+    height: 18px;
+    border-color: rgba(245, 158, 11, 0.96);
+    box-shadow:
+        0 0 0 7px rgba(245, 158, 11, 0.18),
+        0 0 22px rgba(245, 158, 11, 0.34);
+    animation: mechanismProjectPoint 620ms var(--pose-motion) both, mechanismPeakDropPulse 900ms var(--pose-motion) infinite;
+    animation-delay: var(--delay, 0ms), calc(var(--delay, 0ms) + 620ms);
+}
+
+.mechanism-argmax-graphic {
+    position: absolute;
+    width: 126px;
+    height: 82px;
+    transform: translate(-50%, -100%);
+    animation: mechanismArgmaxPanelIn 520ms var(--pose-motion) both;
+}
+
+.mechanism-argmax-graphic::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -16px;
+    width: 72px;
+    height: 72px;
+    border: 2px solid rgba(245, 158, 11, 0.5);
+    border-radius: 999px;
+    transform: translateX(-50%) scale(0.72);
+    animation: mechanismArgmaxRing 780ms var(--pose-motion) infinite;
+}
+
+.mechanism-argmax-graphic b {
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    width: 2px;
+    height: 42px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0), rgba(245, 158, 11, 0.86));
+    transform: translateX(-50%);
+}
+
+.mechanism-argmax-graphic i {
+    position: absolute;
+    display: block;
+    width: 22px;
+    height: 22px;
+    border: 2px solid rgba(96, 165, 250, 0.8);
+    border-radius: 999px;
+    background: rgba(239, 246, 255, 0.72);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.14);
+    transform: scale(var(--candidate-scale, 0.7));
+    animation: mechanismNumberCollide 620ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-argmax-graphic i:nth-of-type(1) {
+    left: 8px;
+    top: 36px;
+}
+
+.mechanism-argmax-graphic i:nth-of-type(2) {
+    left: 38px;
+    top: 16px;
+}
+
+.mechanism-argmax-graphic i:nth-of-type(3) {
+    left: 70px;
+    top: 28px;
+}
+
+.mechanism-argmax-graphic i:nth-of-type(4) {
+    left: 96px;
+    top: 44px;
+}
+
+.mechanism-argmax-graphic i.is-winner {
+    border-color: rgba(245, 158, 11, 0.9);
+    background: #f59e0b;
+    box-shadow:
+        0 0 0 7px rgba(245, 158, 11, 0.16),
+        0 12px 26px rgba(245, 158, 11, 0.24);
+}
+
+.human-mechanism-image-frame.is-loaded .human-pose-loading {
+    display: none;
+}
+
+.human-mechanism-side {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.mechanism-compute-board {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) 28px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mechanism-data-node {
+    position: relative;
+    display: grid;
+    gap: 9px;
+    align-content: start;
+    overflow: hidden;
+    min-height: 0;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: 9px;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.88);
+    background-size: 18px 18px;
+    transition:
+        border-color 300ms var(--pose-motion),
+        box-shadow 300ms var(--pose-motion),
+        transform 300ms var(--pose-motion),
+        opacity 300ms var(--pose-motion);
+}
+
+.mechanism-node-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mechanism-node-head span {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 999px;
+    color: #ffffff;
+    background: #2563eb;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.mechanism-node-head strong {
+    flex: 1;
+    min-width: 0;
+    color: #172554;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.mechanism-crop-preview {
+    position: relative;
+    min-height: 50px;
+    overflow: hidden;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background-color: #eaf3ff;
+    background-repeat: no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    transition: transform 420ms var(--pose-motion), filter 420ms var(--pose-motion);
+}
+
+.mechanism-crop-preview span {
+    position: absolute;
+    left: 8px;
+    bottom: 7px;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.86);
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.mechanism-channel-split {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.mechanism-channel-split i {
+    height: 8px;
+    border-radius: 999px;
+    opacity: 0.72;
+}
+
+.mechanism-channel-split i:nth-child(1) {
+    background: #ef4444;
+}
+
+.mechanism-channel-split i:nth-child(2) {
+    background: #22c55e;
+}
+
+.mechanism-channel-split i:nth-child(3) {
+    background: #2563eb;
+}
+
+.mechanism-transfer-line {
+    position: relative;
+    display: block;
+    min-height: 2px;
+    align-self: start;
+    margin-top: 56px;
+}
+
+.mechanism-transfer-line::before,
+.mechanism-transfer-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+}
+
+.mechanism-transfer-line::before {
+    background: #dbeafe;
+}
+
+.mechanism-transfer-line::after {
+    background: linear-gradient(90deg, #2563eb, #12b5d0);
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: left;
+}
+
+.mechanism-compute-board[data-step="feature"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="regress"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="absolute"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="refine"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="feature_map"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="heatmaps"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="peak"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="skeleton"] [data-line="crop-feature"]::after,
+.mechanism-compute-board[data-step="regress"] [data-line="feature-output"]::after,
+.mechanism-compute-board[data-step="absolute"] [data-line="feature-output"]::after,
+.mechanism-compute-board[data-step="refine"] [data-line="feature-output"]::after,
+.mechanism-compute-board[data-step="heatmaps"] [data-line="feature-output"]::after,
+.mechanism-compute-board[data-step="peak"] [data-line="feature-output"]::after,
+.mechanism-compute-board[data-step="skeleton"] [data-line="feature-output"]::after {
+    animation: mechanismDataExtend 620ms var(--pose-motion) both;
+}
+
+.mechanism-compute-board[data-step="crop"] .mechanism-source-node,
+.mechanism-compute-board[data-step="image"] .mechanism-source-node,
+.mechanism-compute-board[data-step="feature"] .mechanism-feature-node,
+.mechanism-compute-board[data-step="feature_map"] .mechanism-feature-node,
+.mechanism-compute-board[data-step="regress"] .mechanism-output-node,
+.mechanism-compute-board[data-step="absolute"] .mechanism-output-node,
+.mechanism-compute-board[data-step="refine"] .mechanism-output-node,
+.mechanism-compute-board[data-step="heatmaps"] .mechanism-output-node,
+.mechanism-compute-board[data-step="peak"] .mechanism-output-node,
+.mechanism-compute-board[data-step="skeleton"] .mechanism-output-node {
+    border-color: #60a5fa;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
+}
+
+.mechanism-crop-dim {
+    fill: rgba(15, 23, 42, 0.34);
+    opacity: 0;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.human-mechanism-canvas[data-step="crop"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="feature"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="regress"] .mechanism-crop-dim,
+.human-mechanism-canvas[data-step="absolute"] .mechanism-crop-dim {
+    opacity: 1;
+}
+
+.mechanism-bbox {
+    fill: rgba(245, 158, 11, 0.08);
+    stroke: var(--pose-orange);
+    stroke-width: 2.4;
+    stroke-dasharray: 8 6;
+    filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.16));
+}
+
+.mechanism-feature-cell {
+    fill: rgba(37, 99, 235, 0.08);
+    stroke: rgba(147, 197, 253, 0.72);
+    stroke-width: 1;
+    opacity: 0.74;
+}
+
+.mechanism-feature-cell.is-active {
+    fill: rgba(18, 181, 208, 0.25);
+    stroke: rgba(18, 181, 208, 0.92);
+}
+
+.mechanism-skeleton-line {
+    stroke: var(--pose-cyan);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.95;
+    stroke-dasharray: var(--line-length, 1);
+    stroke-dashoffset: 0;
+    filter: drop-shadow(0 2px 5px rgba(14, 165, 233, 0.2));
+    animation: mechanismLineExtend 620ms var(--pose-motion) both;
+}
+
+.mechanism-keypoint {
+    animation: mechanismPointIn 360ms var(--pose-motion) both;
+}
+
+.mechanism-keypoint circle {
+    fill: #ffffff;
+    stroke: var(--pose-blue);
+    stroke-width: 3.5;
+    filter: drop-shadow(0 3px 8px rgba(37, 99, 235, 0.24));
+}
+
+.mechanism-keypoint text {
+    paint-order: stroke;
+    stroke: #ffffff;
+    stroke-width: 3px;
+    fill: #1d4ed8;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.mechanism-keypoint.is-vector-point circle {
+    stroke: var(--pose-orange);
+}
+
+.mechanism-keypoint.is-selected circle {
+    stroke: var(--pose-orange);
+    animation: posePulse 900ms var(--pose-motion) infinite;
+}
+
+.mechanism-heat-blob {
+    fill: var(--heat-color, var(--pose-cyan));
+    opacity: 0.2;
+    filter: blur(1px);
+    transform-origin: center;
+    animation: heatBlobPulse 900ms var(--pose-motion) infinite;
+}
+
+.mechanism-heat-blob.is-selected {
+    opacity: 0.36;
+}
+
+.human-feature-tiles {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    padding: 2px;
+    opacity: 0.5;
+    transition: opacity 360ms var(--pose-motion), border-color 300ms var(--pose-motion);
+}
+
+.human-feature-tiles.is-active {
+    border-color: #93c5fd;
+    opacity: 1;
+}
+
+.human-feature-tiles i {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid rgba(147, 197, 253, 0.56);
+    border-radius: 6px;
+    background: linear-gradient(145deg, #f8fbff, #dbeafe);
+    transform: scale(0.94);
+    transition: transform 360ms var(--pose-motion), background 360ms var(--pose-motion);
+}
+
+.human-feature-tiles i.is-active {
+    background: linear-gradient(145deg, rgba(18, 181, 208, 0.28), rgba(37, 99, 235, 0.24));
+    transform: scale(1);
+}
+
+.human-feature-tiles i.is-strong {
+    border-color: rgba(245, 158, 11, 0.78);
+    background: linear-gradient(145deg, rgba(245, 158, 11, 0.26), rgba(18, 181, 208, 0.18));
+    animation: mechanismCellPulse 760ms var(--pose-motion) infinite;
+}
+
+.human-feature-tiles i b {
+    color: #1e3a8a;
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.mechanism-feature-caption {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.mechanism-deeppose-output,
+.mechanism-heatmap-output {
+    display: none;
+    gap: 10px;
+}
+
+.mechanism-deeppose-output.is-active,
+.mechanism-heatmap-output.is-active {
+    display: grid;
+}
+
+.mechanism-vector-machine {
+    display: grid;
+    gap: 7px;
+    opacity: 0.56;
+    transition: opacity 320ms var(--pose-motion);
+}
+
+.mechanism-vector-machine.is-active {
+    opacity: 1;
+}
+
+.mechanism-vector-machine > span {
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.mechanism-vector-stream {
+    display: flex;
+    gap: 6px;
+    min-height: 34px;
+    overflow-x: auto;
+    padding: 2px 0 7px;
+}
+
+.mechanism-vector-token {
+    flex: 0 0 auto;
+    display: grid;
+    gap: 2px;
+    min-width: 78px;
+    border: 1px solid #bfdbfe;
+    border-radius: 9px;
+    padding: 5px 7px;
+    background: rgba(239, 246, 255, 0.78);
+    animation: mechanismTokenSeparate 540ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-vector-token em {
+    color: #1d4ed8;
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 950;
+}
+
+.mechanism-vector-token strong {
+    color: #172554;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.human-coordinate-grid {
+    display: none;
+    gap: 6px;
+    opacity: 0.45;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.human-coordinate-grid.is-active {
+    display: grid;
+    opacity: 1;
+}
+
+.human-coordinate-grid article {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 18px auto;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.human-coordinate-grid span {
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+}
+
+.human-coordinate-grid strong {
+    color: #172554;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.human-coordinate-grid small {
+    justify-self: end;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.human-coordinate-grid article i {
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #93c5fd, #12b5d0);
+    animation: mechanismLineGrow 560ms var(--pose-motion) both;
+}
+
+.mechanism-compute-board .mechanism-deeppose-output,
+.mechanism-compute-board .mechanism-heatmap-output {
+    gap: 6px;
+}
+
+.mechanism-compute-board .mechanism-vector-stream {
+    min-height: 28px;
+    padding-bottom: 3px;
+}
+
+.mechanism-compute-board .mechanism-vector-token {
+    min-width: 68px;
+    padding: 4px 6px;
+}
+
+.mechanism-compute-board .human-coordinate-grid {
+    gap: 4px;
+}
+
+.mechanism-compute-board .human-coordinate-grid article {
+    grid-template-columns: 58px minmax(0, 1fr) 14px;
+    padding: 5px 6px;
+}
+
+.mechanism-compute-board .human-coordinate-grid article:nth-child(n+4) {
+    display: none;
+}
+
+.mechanism-compute-board .human-coordinate-grid small {
+    display: none;
+}
+
+.human-heatmap-strip {
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.human-heatmap-strip.is-active {
+    display: grid;
+}
+
+.human-heatmap-strip button {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 6px;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.88);
+    cursor: pointer;
+}
+
+.human-heatmap-strip button.is-active {
+    border-color: var(--pose-orange);
+    box-shadow: 0 10px 20px rgba(245, 158, 11, 0.14);
+}
+
+.human-heatmap-strip i {
+    grid-row: 1 / span 2;
+    aspect-ratio: 1;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at var(--peak-x, 50%) var(--peak-y, 50%), var(--heat-color, #12b5d0) 0 8%, color-mix(in srgb, var(--heat-color, #12b5d0) 38%, transparent) 9% 24%, transparent 25%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.18), transparent 62%),
+        #f8fafc;
+    animation: heatTilePulse 900ms var(--pose-motion) infinite;
+}
+
+.human-heatmap-strip span,
+.human-heatmap-strip strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.human-heatmap-strip strong {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.mechanism-compute-board .human-heatmap-strip {
+    gap: 5px;
+}
+
+.mechanism-compute-board .human-heatmap-strip button {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 4px;
+    padding: 5px;
+}
+
+.mechanism-compute-board .human-heatmap-strip button:nth-child(n+5) {
+    display: none;
+}
+
+.mechanism-argmax-panel {
+    display: grid;
+    gap: 8px;
+    border: 1px dashed #bfdbfe;
+    border-radius: 12px;
+    padding: 9px;
+    background: rgba(239, 246, 255, 0.58);
+    color: #475569;
+    font-size: 11px;
+}
+
+.mechanism-argmax-panel > span {
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.mechanism-argmax-panel p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.mechanism-candidate-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.mechanism-candidate-row i {
+    display: grid;
+    min-width: 42px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    color: #64748b;
+    background: #ffffff;
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 950;
+    animation: mechanismNumberCollide 620ms var(--pose-motion) both;
+    animation-delay: var(--delay, 0ms);
+}
+
+.mechanism-candidate-row i.is-winner {
+    border-color: #f59e0b;
+    color: #ffffff;
+    background: #f59e0b;
+    box-shadow: 0 7px 16px rgba(245, 158, 11, 0.2);
+}
+
+.mechanism-argmax-panel strong {
+    color: #172554;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.human-mechanism-workbench[data-mode="heatmap"] .human-mechanism-vector,
+.human-mechanism-workbench[data-mode="heatmap"] .human-coordinate-grid {
+    display: none;
+}
+
+.human-mechanism-workbench[data-mode="deeppose"] .human-heatmap-strip {
+    display: none;
+}
+
+.human-mechanism-flow {
+    grid-template-columns: 1fr 14px 1fr 14px 1fr 14px 1fr 14px 1fr;
+    align-items: stretch;
+    padding: 0 14px 14px;
+}
+
+.human-process-chain b,
+.human-action-pipeline b {
+    align-self: center;
+    height: 2px;
+    border-radius: 999px;
+    background: #93c5fd;
+}
+
+.human-mechanism-flow article {
+    min-height: 104px;
+    transition: border-color 240ms var(--pose-motion), box-shadow 240ms var(--pose-motion), transform 240ms var(--pose-motion);
+}
+
+.human-mechanism-flow article.is-active {
+    border-color: var(--pose-blue);
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
+    animation: poseMerge 520ms var(--pose-motion) both;
+}
+
+.human-mechanism-flow article.is-done {
+    border-color: #bae6fd;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.human-mechanism-stepper li {
+    opacity: 0.52;
+    transition: opacity 240ms var(--pose-motion), transform 240ms var(--pose-motion);
+}
+
+.human-mechanism-stepper li.is-done,
+.human-mechanism-stepper li.is-active {
+    opacity: 1;
+}
+
+.human-mechanism-stepper li.is-done > span {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.human-mechanism-stepper li.is-active {
+    transform: translateY(-2px);
+}
+
+.human-vector-demo code,
+.vision-output-schema code,
+.vision-formula-card strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+@keyframes mechanismPointIn {
+    from {
+        opacity: 0;
+        transform: scale(0.72);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes mechanismRegionFocus {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes mechanismScan {
+    from {
+        transform: translateY(-100%);
+    }
+    to {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes mechanismFeatureIn {
+    from {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes mechanismFeatureHot {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes mechanismProjectPoint {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.6);
+    }
+    70% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes mechanismPeakDropPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 6px rgba(245, 158, 11, 0.14),
+            0 0 18px rgba(245, 158, 11, 0.28);
+    }
+    50% {
+        box-shadow:
+            0 0 0 12px rgba(245, 158, 11, 0.04),
+            0 0 28px rgba(245, 158, 11, 0.38);
+    }
+}
+
+@keyframes mechanismVectorBead {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.52);
+    }
+    70% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.16);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes mechanismVectorTrail {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) scaleX(0);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) scaleX(1);
+    }
+}
+
+@keyframes mechanismFeatureParticle {
+    from {
+        opacity: 0;
+        transform: translate(0, 0) scale(0.45);
+    }
+    48% {
+        opacity: 1;
+        transform: translate(10px, -8px) scale(1.08);
+    }
+    to {
+        opacity: 1;
+        transform: translate(24px, -14px) scale(0.78);
+    }
+}
+
+@keyframes mechanismCropGhost {
+    from {
+        opacity: 0;
+        transform: scale(1);
+        filter: saturate(1);
+    }
+    45% {
+        opacity: 0.92;
+        transform: scale(0.78);
+        filter: saturate(1.08);
+    }
+    to {
+        opacity: 0.82;
+        transform: translate(18%, -12%) scale(0.58);
+        filter: saturate(1.12);
+    }
+}
+
+@keyframes mechanismMapLine {
+    from {
+        opacity: 0;
+        transform: rotate(var(--angle, 0rad)) scaleX(0);
+    }
+    to {
+        opacity: 1;
+        transform: rotate(var(--angle, 0rad)) scaleX(1);
+    }
+}
+
+@keyframes mechanismHeatOnImage {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(0.92);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.08);
+    }
+}
+
+@keyframes mechanismArgmaxRing {
+    0%, 100% {
+        opacity: 0.44;
+        transform: translateX(-50%) scale(0.68);
+    }
+    50% {
+        opacity: 0.18;
+        transform: translateX(-50%) scale(1.02);
+    }
+}
+
+@keyframes mechanismArgmaxPanelIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -96%) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -104%) scale(1);
+    }
+}
+
+@keyframes mechanismLineExtend {
+    from {
+        stroke-dashoffset: var(--line-length, 1);
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes mechanismDataExtend {
+    from {
+        transform: translateY(-50%) scaleX(0);
+    }
+    to {
+        transform: translateY(-50%) scaleX(1);
+    }
+}
+
+@keyframes mechanismCellPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+@keyframes mechanismTokenSeparate {
+    from {
+        opacity: 0;
+        transform: translateX(-10px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes mechanismLineGrow {
+    from {
+        transform: scaleX(0);
+        transform-origin: left;
+    }
+    to {
+        transform: scaleX(1);
+        transform-origin: left;
+    }
+}
+
+@keyframes heatTilePulse {
+    0%, 100% {
+        filter: saturate(1);
+    }
+    50% {
+        filter: saturate(1.32);
+    }
+}
+
+@keyframes mechanismNumberCollide {
+    from {
+        opacity: 0;
+        transform: translateX(-12px) scale(calc(var(--candidate-scale, 0.7) * 0.78));
+    }
+    58% {
+        opacity: 1;
+        transform: translateX(5px) scale(calc(var(--candidate-scale, 0.7) * 1.08));
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(var(--candidate-scale, 0.7));
+    }
+}
+
+@keyframes heatBlobPulse {
+    0%, 100% {
+        transform: scale(0.92);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+@media (max-width: 760px) {
+    .human-mechanism-image-frame {
+        max-height: 420px;
+    }
+
+    .mechanism-compute-board {
+        grid-template-columns: 1fr;
+    }
+
+    .mechanism-transfer-line {
+        display: none;
+    }
+
+    .mechanism-data-node {
+        min-height: 0;
+    }
+
+    .mechanism-operation-feature-grid {
+        gap: 4px;
+    }
+
+    .mechanism-argmax-graphic {
+        width: 108px;
+        height: 74px;
+    }
+}
+

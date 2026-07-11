@@ -1,0 +1,359 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNN 如何学习图像</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="/static/css/cnn/cnn_visualization.css?v=landscape-lr-compare-1">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "cnn";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "cnn_train";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="active" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="active" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section id="cnnVizPage" class="cnn-viz-page">
+    <header class="cnn-viz-header station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h1 class="station-title">CNN 如何学习图像</h1>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+            <strong id="cnnStepStatus">Overview · 手写数字 CNN</strong>
+        </div>
+    </header>
+
+    <nav class="cnn-third-tabs station-tabs" aria-label="CNN 实验模块">
+        <a class="is-active" href="/cnn-visualization">前向与反向传播</a>
+        <a href="/cnn-explainer">数据传播细节</a>
+        <a href="/conv-gradient-lab">卷积梯度显微镜</a>
+    </nav>
+
+    <section class="cnn-command-bar" aria-label="第三节操作栏">
+        <div class="cnn-mode-group" role="group" aria-label="演示模式">
+            <button class="is-active" type="button" data-mode="overview">Overview</button>
+            <button type="button" data-mode="forward">Forward</button>
+            <button type="button" data-mode="backward">Backward</button>
+        </div>
+        <div class="cnn-command-group">
+            <button id="cnnResetView" class="ghost-button" type="button">Reset View</button>
+            <button id="cnnPlayPause" class="primary-button" type="button">Play</button>
+            <label class="cnn-speed-control">
+                <span>速度</span>
+                <input id="cnnSpeed" type="range" min="0.25" max="2" step="0.25" value="0.5">
+            </label>
+            <button id="cnnLandscapeToggle" class="ghost-button cnn-landscape-toggle" type="button">训练轨迹</button>
+            <a class="cnn-structure-link" href="/cnn-explainer">数据传播细节可视化</a>
+        </div>
+    </section>
+
+    <main class="cnn-workbench">
+        <aside id="cnnSceneControls" class="cnn-side-controls">
+            <div class="cnn-control-card cnn-digit-card">
+                <span class="section-label">手写输入</span>
+                <canvas id="cnnDigitCanvas" width="280" height="280" aria-label="手写数字绘图区"></canvas>
+                <div class="cnn-digit-actions">
+                    <button id="cnnDigitClear" type="button">清空</button>
+                    <button id="cnnDigitSample" type="button">示例</button>
+                </div>
+                <p id="cnnDigitStatus">写完后自动更新真实热力图</p>
+            </div>
+            <div class="cnn-control-card">
+                <span class="section-label">图例</span>
+                <p><i class="dot forward"></i>前向传播 Forward</p>
+                <p><i class="dot backward"></i>反向传播 Backward</p>
+                <p><i class="dot update"></i>参数更新 Update</p>
+                <p><i class="dot blocked"></i>阻断/无梯度</p>
+            </div>
+            <div class="cnn-control-card cnn-check-list">
+                <span class="section-label">层可见性</span>
+                <label><input type="checkbox" data-layer-group="input" checked> 输入层</label>
+                <label><input type="checkbox" data-layer-group="conv" checked> 卷积层</label>
+                <label><input type="checkbox" data-layer-group="relu" checked> 激活层</label>
+                <label><input type="checkbox" data-layer-group="pool" checked> 池化层</label>
+                <label><input type="checkbox" data-layer-group="classifier" checked> 全连接/输出</label>
+            </div>
+            <div class="cnn-control-card cnn-check-list">
+                <span class="section-label">显示设置</span>
+                <label><input type="checkbox" data-scene-option="connections" checked> 显示连接线</label>
+                <label><input type="checkbox" data-scene-option="labels" checked> 显示标签</label>
+                <label><input type="checkbox" data-scene-option="heatmap" checked> 显示热力图</label>
+            </div>
+        </aside>
+
+        <section class="cnn-stage-card" aria-label="3D CNN 主舞台">
+            <div class="cnn-stage-topbar">
+                <div>
+                    <span class="section-label">3D CNN Stage</span>
+                    <strong id="cnnActiveLayerLabel">Input 1×28×28 → Softmax 10</strong>
+                </div>
+                <button id="cnnControlToggle" type="button" aria-expanded="true">图例 / 显示控制</button>
+            </div>
+
+            <div id="cnnSceneMount" class="cnn-scene-mount">
+                <div class="cnn-scene-fallback">正在加载 Three.js 3D CNN 舞台...</div>
+            </div>
+
+            <article id="cnnProbe" class="cnn-probe-card" hidden>
+                <button id="cnnProbeClose" type="button" aria-label="关闭计算探针">×</button>
+                <section class="cnn-probe-layer">
+                    <span class="section-label">Layer Probe</span>
+                    <h2 id="cnnProbeTitle">Conv1</h2>
+                    <dl>
+                        <div><dt>输入</dt><dd id="cnnProbeInput">-</dd></div>
+                        <div><dt>输出</dt><dd id="cnnProbeOutput">-</dd></div>
+                        <div><dt>代表通道 / 位置</dt><dd id="cnnProbePosition">-</dd></div>
+                    </dl>
+                    <p id="cnnProbeRole"></p>
+                    <div class="cnn-probe-formula" id="cnnProbeFormula"></div>
+                    <p id="cnnProbeImpl"></p>
+                </section>
+                <section id="cnnStepCard" class="cnn-step-card theme-forward">
+                    <button id="cnnStepToggle" type="button" aria-expanded="true">收起</button>
+                    <span class="section-label">Calculation Chain</span>
+                    <h2 id="cnnStepTitle">手写数字 CNN 总览</h2>
+                    <div id="cnnStepBody" class="cnn-step-body"></div>
+                </section>
+            </article>
+        </section>
+
+        <section class="cnn-bottom-panel" aria-label="步骤与计算说明">
+            <div class="cnn-timeline-shell">
+                <div class="cnn-timeline-head">
+                    <span class="section-label">Step Timeline</span>
+                    <strong id="cnnTimelineMode">Overview</strong>
+                </div>
+                <div id="cnnTimeline" class="cnn-timeline"></div>
+            </div>
+
+        </section>
+    </main>
+
+    <section id="cnnLandscapeModal" class="cnn-landscape-modal" hidden aria-modal="true" role="dialog" aria-labelledby="cnnLandscapeTitle">
+        <div class="cnn-landscape-dialog">
+            <header class="cnn-landscape-header">
+                <div>
+                    <span class="section-label">Loss Landscape</span>
+                    <h2 id="cnnLandscapeTitle">梯度下降训练轨迹可视化</h2>
+                    <p>展示反向传播计算梯度后，参数如何沿低维 PCA 轨迹和 FC2 损失切片逐步下降。</p>
+                </div>
+                <div class="cnn-landscape-actions">
+                    <button id="cnnLandscapeRefresh" type="button">刷新数据</button>
+                    <button id="cnnLandscapeClose" type="button" aria-label="关闭训练轨迹面板">×</button>
+                </div>
+            </header>
+            <div id="cnnLandscapeStatus" class="cnn-landscape-status">正在准备训练轨迹数据...</div>
+            <section class="cnn-lr-compare-bar" aria-label="学习率对比控制">
+                <div>
+                    <span class="section-label">Learning Rate Compare</span>
+                    <strong>学习率对比</strong>
+                    <p>共享 FC2 PCA 坐标下比较不同学习率的下降速度与稳定性。</p>
+                </div>
+                <div class="cnn-lr-actions">
+                    <div id="cnnLrCompareButtons" class="cnn-lr-buttons" hidden></div>
+                    <button id="cnnLrCompareToggle" type="button" aria-pressed="false">开启对比</button>
+                </div>
+            </section>
+            <section class="cnn-landscape-stats" aria-label="当前训练快照">
+                <article><span>Step</span><strong id="cnnLsStep">-</strong></article>
+                <article><span>Loss</span><strong id="cnnLsLoss">-</strong></article>
+                <article><span>Accuracy</span><strong id="cnnLsAcc">-</strong></article>
+                <article><span>Learning rate</span><strong id="cnnLsLr">-</strong></article>
+                <article><span>Grad norm</span><strong id="cnnLsGrad">-</strong></article>
+                <article><span>Update norm</span><strong id="cnnLsUpdate">-</strong></article>
+            </section>
+            <section class="cnn-landscape-grid">
+                <article class="cnn-landscape-chart-card loss-chart">
+                    <div class="cnn-chart-title"><strong>Loss 曲线</strong><span>train / val</span></div>
+                    <div id="cnnLossCurve" class="cnn-landscape-chart"></div>
+                </article>
+                <article class="cnn-landscape-chart-card pca-chart">
+                    <div class="cnn-chart-title"><strong>PCA 参数轨迹</strong><span>PC1 / PC2 / loss</span></div>
+                    <div id="cnnPcaTrajectory" class="cnn-landscape-chart"></div>
+                </article>
+                <article class="cnn-landscape-chart-card surface-chart">
+                    <div class="cnn-chart-title"><strong>FC2 loss surface</strong><span>二维真实切片</span></div>
+                    <div id="cnnFc2Surface" class="cnn-landscape-chart"></div>
+                </article>
+            </section>
+            <p class="cnn-landscape-note">说明：PCA 轨迹表示训练快照在二维参数子空间中的投影；FC2 曲面仅表示最后一层参数空间的二维切片，不等同于完整 CNN 的全局损失曲面。</p>
+        </div>
+    </section>
+
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.5/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="/static/js/convolution/client_digit_model.js"></script>
+<script src="/static/js/cnn/cnn_scene.js?v=landscape-lr-compare-1"></script>
+<script src="/static/js/cnn/cnn_visualization.js?v=landscape-lr-compare-1"></script>
+
+</body>
+</html>

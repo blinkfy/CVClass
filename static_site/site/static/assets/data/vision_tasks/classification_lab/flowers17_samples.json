@@ -1,0 +1,313 @@
+{
+  "defaultSample": "flower_daffodil_01",
+  "task": "flowers17_bovw_classification",
+  "engine": "trained_frontend_bovw",
+  "samples": [
+    {
+      "id": "flower_daffodil_01",
+      "name": "Daffodil · sample 01",
+      "image": "/static/assets/img/flowers17/daffodil_01.jpg",
+      "label": "daffodil",
+      "width": 689,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_daffodil_02",
+      "name": "Daffodil · sample 02",
+      "image": "/static/assets/img/flowers17/daffodil_02.jpg",
+      "label": "daffodil",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_snowdrop_01",
+      "name": "Snowdrop · sample 01",
+      "image": "/static/assets/img/flowers17/snowdrop_01.jpg",
+      "label": "snowdrop",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_snowdrop_02",
+      "name": "Snowdrop · sample 02",
+      "image": "/static/assets/img/flowers17/snowdrop_02.jpg",
+      "label": "snowdrop",
+      "width": 500,
+      "height": 666,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_lily_of_the_valley_01",
+      "name": "Lily Of The Valley · sample 01",
+      "image": "/static/assets/img/flowers17/lily_of_the_valley_01.jpg",
+      "label": "lily_of_the_valley",
+      "width": 750,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_lily_of_the_valley_02",
+      "name": "Lily Of The Valley · sample 02",
+      "image": "/static/assets/img/flowers17/lily_of_the_valley_02.jpg",
+      "label": "lily_of_the_valley",
+      "width": 500,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_bluebell_01",
+      "name": "Bluebell · sample 01",
+      "image": "/static/assets/img/flowers17/bluebell_01.jpg",
+      "label": "bluebell",
+      "width": 635,
+      "height": 499,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_bluebell_02",
+      "name": "Bluebell · sample 02",
+      "image": "/static/assets/img/flowers17/bluebell_02.jpg",
+      "label": "bluebell",
+      "width": 500,
+      "height": 705,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_crocus_01",
+      "name": "Crocus · sample 01",
+      "image": "/static/assets/img/flowers17/crocus_01.jpg",
+      "label": "crocus",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_crocus_02",
+      "name": "Crocus · sample 02",
+      "image": "/static/assets/img/flowers17/crocus_02.jpg",
+      "label": "crocus",
+      "width": 500,
+      "height": 686,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_iris_01",
+      "name": "Iris · sample 01",
+      "image": "/static/assets/img/flowers17/iris_01.jpg",
+      "label": "iris",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_iris_02",
+      "name": "Iris · sample 02",
+      "image": "/static/assets/img/flowers17/iris_02.jpg",
+      "label": "iris",
+      "width": 543,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_tigerlily_01",
+      "name": "Tigerlily · sample 01",
+      "image": "/static/assets/img/flowers17/tigerlily_01.jpg",
+      "label": "tigerlily",
+      "width": 500,
+      "height": 608,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_tigerlily_02",
+      "name": "Tigerlily · sample 02",
+      "image": "/static/assets/img/flowers17/tigerlily_02.jpg",
+      "label": "tigerlily",
+      "width": 749,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_tulip_01",
+      "name": "Tulip · sample 01",
+      "image": "/static/assets/img/flowers17/tulip_01.jpg",
+      "label": "tulip",
+      "width": 500,
+      "height": 750,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_tulip_02",
+      "name": "Tulip · sample 02",
+      "image": "/static/assets/img/flowers17/tulip_02.jpg",
+      "label": "tulip",
+      "width": 611,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_fritillary_01",
+      "name": "Fritillary · sample 01",
+      "image": "/static/assets/img/flowers17/fritillary_01.jpg",
+      "label": "fritillary",
+      "width": 500,
+      "height": 733,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_fritillary_02",
+      "name": "Fritillary · sample 02",
+      "image": "/static/assets/img/flowers17/fritillary_02.jpg",
+      "label": "fritillary",
+      "width": 500,
+      "height": 566,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_sunflower_01",
+      "name": "Sunflower · sample 01",
+      "image": "/static/assets/img/flowers17/sunflower_01.jpg",
+      "label": "sunflower",
+      "width": 526,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_sunflower_02",
+      "name": "Sunflower · sample 02",
+      "image": "/static/assets/img/flowers17/sunflower_02.jpg",
+      "label": "sunflower",
+      "width": 500,
+      "height": 542,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_daisy_01",
+      "name": "Daisy · sample 01",
+      "image": "/static/assets/img/flowers17/daisy_01.jpg",
+      "label": "daisy",
+      "width": 546,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_daisy_02",
+      "name": "Daisy · sample 02",
+      "image": "/static/assets/img/flowers17/daisy_02.jpg",
+      "label": "daisy",
+      "width": 751,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_coltsfoot_01",
+      "name": "Coltsfoot · sample 01",
+      "image": "/static/assets/img/flowers17/coltsfoot_01.jpg",
+      "label": "coltsfoot",
+      "width": 500,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_coltsfoot_02",
+      "name": "Coltsfoot · sample 02",
+      "image": "/static/assets/img/flowers17/coltsfoot_02.jpg",
+      "label": "coltsfoot",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_dandelion_01",
+      "name": "Dandelion · sample 01",
+      "image": "/static/assets/img/flowers17/dandelion_01.jpg",
+      "label": "dandelion",
+      "width": 611,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_dandelion_02",
+      "name": "Dandelion · sample 02",
+      "image": "/static/assets/img/flowers17/dandelion_02.jpg",
+      "label": "dandelion",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_cowslip_01",
+      "name": "Cowslip · sample 01",
+      "image": "/static/assets/img/flowers17/cowslip_01.jpg",
+      "label": "cowslip",
+      "width": 500,
+      "height": 736,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_cowslip_02",
+      "name": "Cowslip · sample 02",
+      "image": "/static/assets/img/flowers17/cowslip_02.jpg",
+      "label": "cowslip",
+      "width": 666,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_buttercup_01",
+      "name": "Buttercup · sample 01",
+      "image": "/static/assets/img/flowers17/buttercup_01.jpg",
+      "label": "buttercup",
+      "width": 540,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_buttercup_02",
+      "name": "Buttercup · sample 02",
+      "image": "/static/assets/img/flowers17/buttercup_02.jpg",
+      "label": "buttercup",
+      "width": 571,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_windflower_01",
+      "name": "Windflower · sample 01",
+      "image": "/static/assets/img/flowers17/windflower_01.jpg",
+      "label": "windflower",
+      "width": 500,
+      "height": 518,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_windflower_02",
+      "name": "Windflower · sample 02",
+      "image": "/static/assets/img/flowers17/windflower_02.jpg",
+      "label": "windflower",
+      "width": 575,
+      "height": 500,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_pansy_01",
+      "name": "Pansy · sample 01",
+      "image": "/static/assets/img/flowers17/pansy_01.jpg",
+      "label": "pansy",
+      "width": 500,
+      "height": 506,
+      "source": "Oxford 17 Category Flower Dataset"
+    },
+    {
+      "id": "flower_pansy_02",
+      "name": "Pansy · sample 02",
+      "image": "/static/assets/img/flowers17/pansy_02.jpg",
+      "label": "pansy",
+      "width": 500,
+      "height": 523,
+      "source": "Oxford 17 Category Flower Dataset"
+    }
+  ]
+}

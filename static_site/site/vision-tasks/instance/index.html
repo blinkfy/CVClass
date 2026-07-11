@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实例分割：Instance Mask</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/semantic_segmentation_lab.css?v=20260626-titlescn1">
+<link rel="stylesheet" href="/static/css/vision_tasks/instance_segmentation_lab.css?v=20260626-fontup4">
+
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "segmentation_lab";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "instance";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="active" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="active" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab" data-vision-page="instance" data-vision-module="segmentation_lab">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 09 · INSTANCE SEGMENTATION</span>
+            <h1 class="station-title">实例分割：Instance Mask</h1>
+            <p class="station-summary">展示 bbox、class、score、mask、instance id 的联合输出，解释 Mask R-CNN、ROI Align、Mask Head 与 YOLO-seg 推理。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">INSTANCE MASK · YOLO-SEG</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="实例分割：Instance Mask内部导航">
+        
+        <a class="" href="/segmentation-lab">语义 vs 实例</a>
+        
+        <a class="" href="/segmentation-lab/semantic">语义分割</a>
+        
+        <a class="is-active" href="/segmentation-lab/instance">实例分割</a>
+        
+    </nav>
+
+    
+<section class="vision-workbench instance-lab-workbench" data-instance-lab aria-label="实例分割教学工作台">
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>输入与显示设置</h3><p>Input &amp; Display</p></div>
+        </div>
+
+        <div class="vision-field">
+            <span>样例图选择</span>
+            <div class="vis-sample-picker" data-inst-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-inst-sample-trigger>
+                    <span class="vis-sample-picker__label" data-inst-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-inst-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vision-field">
+            <span>上传图片（模型模式）</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="instUploadInput">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span data-inst-upload-name>选择文件</span>
+                </label>
+                <input id="instUploadInput" type="file" accept="image/*" data-inst-upload class="sr-only">
+            </div>
+        </div>
+
+        <label class="vision-toggle-row"><span>显示 instance mask</span><input data-inst-show-mask type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>显示 bbox</span><input data-inst-show-box type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>显示 instance id</span><input data-inst-show-id type="checkbox" checked></label>
+        <label class="vision-toggle-row"><span>仅显示选中实例</span><input data-inst-only-selected type="checkbox"></label>
+        <label class="vision-field">
+            <span>Mask Opacity <output data-inst-opacity-output>55%</output></span>
+            <input data-inst-opacity type="range" min="0" max="100" value="55">
+        </label>
+
+        <div class="vision-field">
+            <span>实例分割视图</span>
+            <div class="overview-segmented-control instance-source-toggle" aria-label="实例分割视图">
+                <button class="is-active" type="button" data-inst-source="model">模型推理</button>
+                <button type="button" data-inst-source="maskrcnn">Mask R-CNN 机制</button>
+                <button type="button" data-inst-source="roiAlign">ROI Align 对比</button>
+                <button type="button" data-inst-source="maskMetric">Mask IoU / Mask AP</button>
+            </div>
+        </div>
+
+        <div class="overview-segmented-control">
+            <button class="is-active" type="button" data-inst-view="instance">实例分割视图</button>
+            <button type="button" data-inst-view="semantic">语义分割对比</button>
+        </div>
+
+        <div class="instance-model-panel" data-inst-model-panel>
+            <div class="instance-panel-head">
+                <span class="instance-section-title">模型状态</span>
+                <strong data-inst-model-status>未加载</strong>
+            </div>
+            <div class="vision-kv-grid instance-runtime-grid">
+                <div><span>Model</span><strong>YOLO11n-seg</strong></div>
+                <div><span>Backend</span><strong data-inst-active-backend>--</strong></div>
+                <div><span>Input</span><strong data-inst-input-size>640 × 640</strong></div>
+                <div><span>Inference Time</span><strong data-inst-inference-time>--</strong></div>
+                <div><span>Postprocess Time</span><strong data-inst-postprocess-time>--</strong></div>
+                <div><span>Instances</span><strong data-inst-count>--</strong></div>
+            </div>
+            <label class="vision-field">
+                <span>推理后端</span>
+                <select data-inst-backend>
+                    <option value="webgpu" selected>WebGPU（自动回退）</option>
+                    <option value="wasm">WASM</option>
+                </select>
+            </label>
+            <p class="instance-model-message" data-inst-model-message>页面会自动运行本地 YOLO11n-seg；预设实例数据仅作为 fallback。</p>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel instance-stage-panel">
+        <div class="vision-stage-header">
+            <div><span>INSTANCE SEGMENTATION VISUALIZATION</span><h3>真实图像实例分割可视化</h3></div>
+            <span class="vision-status-chip" data-inst-map>Mask AP --</span>
+        </div>
+        <div class="instance-stage-strip">
+            <span>Source: <strong data-inst-strip-source>Auto Model / Fallback</strong></span>
+            <span>Model: <strong data-inst-strip-model>--</strong></span>
+            <span>Backend: <strong data-inst-strip-backend>--</strong></span>
+            <span>Inference: <strong data-inst-strip-inference>--</strong></span>
+            <span>Postprocess: <strong data-inst-strip-postprocess>--</strong></span>
+            <span>Instances: <strong data-inst-strip-count>--</strong></span>
+        </div>
+        <section class="process-step-console instance-process-console" aria-label="实例分割算法流程">
+            <div class="process-step-heading">
+                <span>ALGORITHM FLOW</span>
+                <strong>逐步运算流程</strong>
+            </div>
+            <div class="process-filmstrip" data-inst-process-steps></div>
+        </section>
+        <div class="vision-image-stage instance-real-stage" data-inst-stage>
+            <img data-inst-image alt="实例分割样例图">
+            <div class="vision-image-placeholder"><strong>图片未找到</strong><span data-inst-missing></span></div>
+            <canvas data-inst-mask-canvas aria-label="实例 mask 覆盖层"></canvas>
+            <svg data-inst-svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="实例分割覆盖层"></svg>
+            <div class="process-visual-overlay instance-process-overlay" data-inst-process-overlay aria-hidden="true"></div>
+        </div>
+        <section class="process-principle-stage" data-inst-process-principle aria-live="polite"></section>
+        <div class="instance-compare-page" data-inst-compare-page hidden></div>
+        <div class="instance-maskrcnn-demo" data-inst-maskrcnn-demo hidden></div>
+        <div class="instance-seg-flow" data-inst-flow>
+            <div data-inst-flow-phase="image"><strong>Image</strong><span>H×W×3</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="preprocess"><strong>Preprocess</strong><span>Letterbox 640</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="inference"><strong>Inference</strong><span>YOLO11n-seg</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="decode"><strong>Decode</strong><span>boxes + coeffs</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="nms"><strong>NMS</strong><span>filter overlaps</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="prototype"><strong>Prototype</strong><span>32 masks blend</span></div>
+            <b>→</b>
+            <div data-inst-flow-phase="masks"><strong>Instances</strong><span>crop + stats</span></div>
+        </div>
+        
+        <div class="instance-interactive-deck">
+            <section class="instance-current-card" data-inst-stats></section>
+            
+            <div class="instance-prototype-blender-card" data-inst-blender-container>
+                <div class="blender-header">
+                    <div class="blender-header-left">
+                        <span class="blender-title-badge">Model Feature Internals</span>
+                        <span class="blender-simulated-badge" data-inst-blender-simulated-badge hidden>模拟数据</span>
+                        <h4>YOLO11n-seg 原型特征融合演示仪 (Prototype Blender)</h4>
+                    </div>
+                    <button class="blender-play-btn" data-inst-blender-play-btn disabled>
+                        <i class="blender-icon">⚡</i> 融合过程动态解码演示
+                    </button>
+                </div>
+                <div class="blender-body">
+                    <!-- 融合过程的图示和大融合 Canvas -->
+                    <div class="blender-canvas-section">
+                        <div class="blender-canvas-wrapper">
+                            <canvas data-inst-blender-canvas width="160" height="160"></canvas>
+                            <div class="blender-canvas-overlay" data-inst-blender-overlay-text>未选择实例，请点击或激活一个实例进行融合</div>
+                        </div>
+                        <div class="blender-formula-card">
+                            <div class="blender-formula-expr" data-inst-formula-math>
+                                $$\text{Mask}(x,y)=\sigma\left(\sum_{i=1}^{32} C_i\times P_i(x,y)\right)$$
+                            </div>
+                            <span class="blender-formula-tip">用神经网络提取的32个共享原型与各自的掩膜系数进行线性组合，求和后对其经过激活函数和BBox掩盖最终截断输出</span>
+                        </div>
+                    </div>
+                    
+                    <div class="blender-grid-section">
+                        <span class="blender-grid-title" data-inst-blender-grid-title>活跃的原型通道 (Active Prototypes <span data-inst-blender-grid-math>$P_{1..8}$</span>) </span>
+                        <div class="blender-channels-grid" data-inst-blender-grid>
+                            <div class="blender-channel-placeholder">正在等待提取通道特征...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="instance-list instance-list--deck" data-inst-list></div>
+        </div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3 data-inst-notes-title>算法原理</h3><p data-inst-notes-subtitle>实例统计</p></div>
+        </div>
+        <div class="instance-notes-tutorial" data-inst-notes-tutorial></div>
+        <section class="process-formula-card" data-inst-process-card aria-live="polite">
+            <span data-process-kicker>算法步骤</span>
+            <h4 data-process-title>逐步运算说明</h4>
+            <div data-process-formula>--</div>
+            <p data-process-desc>点击中间流程条中的步骤，查看当前运算的图像变化、数据流与数学表达。</p>
+        </section>
+        <div class="instance-notes-data" data-inst-notes></div>
+        <div class="vision-output-schema">
+            <span>输出结构</span>
+            <code>N × {bbox, class, score, mask, instance_id}</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper instance-stepper" aria-label="实例分割处理流程" data-inst-stepper>
+    <li class="is-active" data-inst-phase="image"><span>1</span><div><strong>Image</strong><small>Current / Uploaded</small></div></li>
+    <li data-inst-phase="preprocess"><span>2</span><div><strong>Preprocess</strong><small>Letterbox + CHW</small></div></li>
+    <li data-inst-phase="inference"><span>3</span><div><strong>Model Inference</strong><small>ONNX Runtime Web</small></div></li>
+    <li data-inst-phase="decode"><span>4</span><div><strong>Decode Boxes</strong><small>scores + coeffs</small></div></li>
+    <li data-inst-phase="nms"><span>5</span><div><strong>NMS</strong><small>IoU suppression</small></div></li>
+    <li data-inst-phase="prototype"><span>6</span><div><strong>Mask Prototype</strong><small>coeff × proto</small></div></li>
+    <li data-inst-phase="masks"><span>7</span><div><strong>Instance Masks</strong><small>crop + statistics</small></div></li>
+</ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script src="/static/js/vision_tasks/vision_tasks_common.js?v=20260626-titlescn1"></script>
+
+<script src="/static/js/vision_tasks/instance_segmentation_lab.js?v=20260626-titlescn1"></script>
+
+
+</body>
+</html>

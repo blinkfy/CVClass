@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标检测：从候选框到最终检测</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    
+
+<link rel="stylesheet" href="/static/css/vendor/katex-lite.css?v=20260625-det-sandbox1">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260626-fontup4">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260626-fontup4">
+
+<link rel="stylesheet" href="/static/css/vision_tasks/object_detection_lab.css?v=20260626-yolostep2">
+
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "object_detection";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "detection";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="active" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="active" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab" data-vision-page="detection" data-vision-module="object_detection">
+    <header class="vision-hero station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 08 · OBJECT DETECTION</span>
+            <h1 class="station-title">目标检测：从候选框到最终检测</h1>
+            <p class="station-summary">展示 bbox、confidence、IoU、NMS 与真实 YOLO 前端推理，并补充 R-CNN 系列检测机制。</p>
+        </div>
+        <div class="station-hero-actions">
+            <strong class="station-badge">YOLO · BBOX · NMS</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="目标检测：从候选框到最终检测内部导航">
+        
+        <a class="is-active" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+        
+        <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+        
+    </nav>
+
+    
+<div data-detection-lab>
+
+<!-- ========== Source Readout (fallback hint) ========== -->
+<div data-det-source-container style="display:none">
+    <div class="vision-info-callout" data-det-source-readout>
+        <span>结果来源：</span><strong data-det-source-note></strong>
+    </div>
+</div>
+
+<!-- ========== Main Workbench ========== -->
+<section class="vision-workbench detection-workbench" aria-label="目标检测工作台">
+
+    <!-- ===== Left Control Panel ===== -->
+    <aside class="vision-panel vision-control-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>检测参数</h3><p>输入与参数</p></div>
+        </div>
+
+        <!-- Sample selector -->
+        <div class="vision-field">
+            <span>样例场景</span>
+            <div class="vis-sample-picker" data-det-sample-picker>
+                <button type="button" class="vis-sample-picker__trigger" data-det-sample-trigger>
+                    <span class="vis-sample-picker__label" data-det-sample-label>加载中…</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="vis-sample-picker__panel">
+                    <div class="vis-sample-picker__grid" data-det-sample-grid aria-label="示例图预览选择"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload -->
+        <div class="vision-field" data-yolo-only>
+                <span>上传图片（覆盖样例）</span>
+            <div class="det-upload-box">
+                <label class="det-upload-label" for="detUploadInput">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="detUploadFilename">选择文件</span>
+                </label>
+                <input id="detUploadInput" type="file" accept="image/*" data-det-upload class="sr-only">
+            </div>
+        </div>
+
+        <!-- Backend selector -->
+        <label class="vision-field" data-yolo-only>
+                <span>推理后端</span>
+            <select data-det-backend>
+                <option value="webgpu" selected>WebGPU</option>
+                <option value="wasm">WASM</option>
+                <option value="webgl">WebGL</option>
+            </select>
+        </label>
+
+        <!-- Runtime metrics -->
+        <div class="vision-kv-grid" data-yolo-only>
+            <div><span>模型状态</span><strong data-det-model-status>未加载</strong></div>
+            <div><span>输入尺寸</span><strong data-det-input-size>640 × 640</strong></div>
+            <div><span>推理耗时</span><strong data-det-inference-time>--</strong></div>
+            <div><span>后处理</span><strong data-det-postprocess-time>--</strong></div>
+            <div><span>激活后端</span><strong data-det-active-backend>--</strong></div>
+            <div><span>推理状态</span><strong data-det-inference-message>正在等待自动推理…</strong></div>
+        </div>
+
+        <!-- Sliders -->
+        <div class="det-control-group-title" data-rcnn-only>
+            <span>01</span><strong>全局核心参数</strong>
+        </div>
+        <label class="vision-field">
+            <span>置信度阈值 <output data-det-conf-output>0.25</output></span>
+            <input type="range" min="0" max="1" step="0.01" value="0.25" data-det-conf>
+        </label>
+        <label class="vision-field">
+            <span>交并比 (IoU) 阈值 <output data-det-iou-output>0.50</output></span>
+            <input type="range" min="0" max="1" step="0.01" value="0.50" data-det-iou>
+        </label>
+
+        <!-- Show low-conf toggle -->
+        <label class="vision-toggle-row">
+                <span>显示高置信度过滤框</span>
+            <input type="checkbox" data-det-show-low checked>
+        </label>
+            <p class="vision-hint">YOLO 显示真实推理候选；R-CNN 显示 proposal 生命周期。</p>
+
+        <div class="det-yolo-observer-controls" data-yolo-only>
+            <div class="det-control-group-title det-control-group-title--yolo">
+                <span>03</span><strong>观察图层</strong>
+            </div>
+            <label class="vision-field">
+                <span>热力图类型</span>
+                <select data-det-heatmap-type>
+                    <option value="auto">Auto 自动</option>
+                    <option value="objectness">Objectness 目标响应</option>
+                    <option value="class">Class Response 类别响应</option>
+                    <option value="center">Box Center 中心响应</option>
+                    <option value="suppression">Suppression 抑制响应</option>
+                </select>
+            </label>
+            <label class="vision-field">
+                <span>类别筛选</span>
+                <select data-det-heatmap-class>
+                    <option value="all">All 全部</option>
+                </select>
+            </label>
+            <label class="vision-field">
+                <span>热力图透明度 <output data-det-heatmap-alpha-output>55%</output></span>
+                <input type="range" min="0" max="0.8" step="0.05" value="0.55" data-det-heatmap-alpha>
+            </label>
+        </div>
+
+        <div class="det-control-group-title" data-rcnn-only>
+            <span>02</span><strong>当前执行步骤</strong>
+        </div>
+        <div class="det-course-step" data-rcnn-only>
+            <span data-det-course-step>图像</span>
+            <p data-det-course-goal>查看输入图像及当前活跃的候选提取区域。</p>
+            <dl>
+                <div><dt>当前框 ID</dt><dd data-det-course-active>p1</dd></div>
+                <div><dt>当前阶段</dt><dd data-det-course-state>proposal</dd></div>
+            </dl>
+        </div>
+
+        <!-- Counts -->
+        <div class="vision-metric-grid">
+            <div><span>候选框</span><strong data-det-total>0</strong></div>
+            <div><span>最终框</span><strong data-det-kept>0</strong></div>
+        </div>
+
+        <!-- Step controls -->
+        <div class="det-step-nav">
+            <button data-det-prev>上一步</button>
+            <button data-det-next>下一步</button>
+        </div>
+            <button class="det-play-btn" data-det-play>自动播放</button>
+    </aside>
+
+    <!-- ===== Center Stage ===== -->
+    <div class="vision-stage-panel detection-stage-panel">
+        <!-- Stage header -->
+        <div class="vision-stage-header">
+            <div>
+                <span>实时目标检测实验室</span>
+        <h3>实景检测可视化</h3>
+            </div>
+            <div class="det-stage-chips">
+                <span data-det-stage-source>ONNX 推理引擎</span>
+                <span data-det-stage-backend>推理后端: --</span>
+                <span data-det-stage-inference>推理耗时: --</span>
+                <span data-det-stage-candidates>总候选框: --</span>
+                <span data-det-stage-final>最终检测: --</span>
+            </div>
+        </div>
+
+        <!-- Step label -->
+            <div class="det-step-label" data-det-step-label>图像 · 步骤 1 / 7</div>
+            <div class="det-output-pipeline" data-det-pipeline aria-label="YOLO 模型输出解码流程" hidden></div>
+
+        <!-- Canvas area -->
+        <div class="det-yolo-dual-stage">
+            <div class="detection-real-stage">
+                <img data-det-image src="" alt="检测图像">
+                <div data-det-overlay class="det-overlay"></div>
+                <div class="det-missing-hint" data-det-missing></div>
+            </div>
+            <aside class="det-yolo-feature-view" data-det-feature-view aria-label="YOLO 模型内部观察窗"></aside>
+        </div>
+
+        <div class="detection-rcnn-stage" data-det-rcnn-stage hidden></div>
+
+        <!-- Candidate table -->
+        <div class="det-table-wrap detection-table-wrap">
+            <div class="det-table-header">
+                <span class="det-section-label" data-det-table-title>候选检测框队列</span>
+                <div data-det-class-filter class="det-class-filter"></div>
+                <span class="det-section-label">耗时统计</span>
+            <span class="det-section-label">排序与逻辑描述</span>
+                <span class="det-section-label">类别统计</span>
+            <span class="det-section-label">各类统计</span>
+            </div>
+            <div data-det-pair-card class="det-pair-card" hidden></div>
+            <div data-det-nms-control class="det-nms-control" hidden></div>
+            <table data-det-candidate-table class="det-candidate-table">
+                <thead><tr><th>ID</th><th>目标类别</th><th>置信度</th><th>边界框坐标</th><th>后处理状态</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div data-det-runtime-stats class="det-runtime-stats detection-stat-list"></div>
+            <div data-det-class-stats class="det-class-stats detection-class-stats"></div>
+        </div>
+    </div>
+
+    <!-- ===== Right Notes Panel ===== -->
+    <aside class="vision-panel vision-notes-panel">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div>
+            <h3 id="detNotesTitle">后处理步骤说明</h3>
+                <p id="detNotesSubtitle">后处理操作指引</p>
+            </div>
+        </div>
+        <!-- Tutorial narrative -->
+        <div class="det-notes-tutorial" data-det-notes-tutorial></div>
+        <!-- Detail data -->
+        <div class="det-notes-data" data-det-notes></div>
+
+        <div class="det-side-summary-title" data-rcnn-only>
+            <span>03</span><strong>本步骤总结</strong>
+        </div>
+        <div class="det-course-summary det-course-summary--side" data-det-course-summary data-rcnn-only></div>
+
+        <!-- Academic Info Cards for layout fill and learning -->
+        <div class="det-academic-cards">
+            <!-- IoU Card -->
+            <details class="det-academic-card">
+                <summary>
+            <span>概念解释：IoU 交并比</span>
+                    <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="det-academic-content">
+            <p class="det-academic-desc">交并比 (Intersection over Union) 衡量预测框与真实框的重合度，是 NMS 和精度评估的核心指标。</p>
+                    <div class="det-iou-diagram">
+                        <div class="det-diag-box box-a"><span>框 A</span></div>
+                        <div class="det-diag-box box-b"><span>框 B</span></div>
+            <div class="det-diag-overlap"><span>A ∩ B</span></div>
+                    </div>
+                    <div class="det-formula">
+                        <span class="det-math-frac">
+                <span class="det-math-num">重叠面积（交集）</span>
+                <span class="det-math-den">总覆盖面积（并集）</span>
+                        </span>
+                <span class="det-math-eq">= IoU 分数</span>
+                    </div>
+                </div>
+            </details>
+
+            <!-- BBox Regression Settings -->
+            <details class="det-academic-card">
+                <summary>
+            <span>概念解释：BBox 偏移修正</span>
+                    <svg class="det-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                </summary>
+                <div class="det-academic-content">
+            <p class="det-academic-desc">边界框回归 (BBox Regression) 通过预测平移与缩放参数微调候选框位置：</p>
+                    <div class="det-math-equations">
+                <div>x' = x<sub>p</sub> + d<sub>x</sub> · w<sub>p</sub> <span class="det-equation-note">横向平移</span></div>
+                <div>y' = y<sub>p</sub> + d<sub>y</sub> · h<sub>p</sub> <span class="det-equation-note">纵向平移</span></div>
+                <div>w' = w<sub>p</sub> · e<sup>d<sub>w</sub></sup> <span class="det-equation-note">宽度放缩</span></div>
+                <div>h' = h<sub>p</sub> · e<sup>d<sub>h</sub></sup> <span class="det-equation-note">高度放缩</span></div>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </aside>
+
+</section>
+
+<!-- ========== Stepper ========== -->
+        <ol class="vision-stepper" aria-label="目标检测处理流程" data-det-stepper>
+    <li data-det-phase="image"><span>1</span><div><strong>图像</strong><small>图像加载就绪</small></div></li>
+    <li data-det-phase="preprocess"><span>2</span><div><strong>预处理</strong><small>等比缩放填充</small></div></li>
+    <li data-det-phase="inference"><span>3</span><div><strong>推理</strong><small>前向推理计算</small></div></li>
+    <li data-det-phase="decode"><span>4</span><div><strong>解码</strong><small>模型输出解码</small></div></li>
+    <li data-det-phase="confidence"><span>5</span><div><strong>置信度</strong><small>置信度粗过滤</small></div></li>
+    <li data-det-phase="nms"><span>6</span><div><strong>NMS</strong><small>重叠剔除抑制</small></div></li>
+    <li data-det-phase="final"><span>7</span><div><strong>最终框</strong><small>最终检测结果</small></div></li>
+</ol>
+
+</div><!-- /data-detection-lab -->
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+
+<script src="/static/js/vendor/katex-lite.js?v=20260625-det-sandbox1"></script>
+
+<script src="/static/js/vision_tasks/vision_tasks_common.js?v=20260626-titlescn1"></script>
+
+<script src="/static/js/vision_tasks/object_detection_lab.js?v=20260626-leftfont1"></script>
+
+
+</body>
+</html>

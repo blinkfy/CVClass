@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角点、特征与图像拼接</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="/static/css/feature/feature_detection.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "feature";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "panorama";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="active" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="active" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section
+    id="featurePage"
+    class="feature-page"
+    data-feature-mode="panorama"
+    data-compute-mode="frontend"
+    data-assets-base="/static/assets/img/"
+>
+    <header class="feature-hero station-hero">
+        <div>
+            <span class="section-label">STATION 04 · Corner & SIFT Feature</span>
+            
+            <h1>图像拼接与全景拍照</h1>
+            <p>支持双图上传拼接与摄像头连续拍摄，使用几何配准和多频段融合生成全景图。</p>
+            
+        </div>
+        <strong class="station-badge">FEATURE · MATCH · PANORAMA</strong>
+    </header>
+
+    <nav class="feature-tabs station-tabs" aria-label="特征检测实验模块">
+        <a class="" href="/feature-detection/compare">方法对比</a>
+        <a class="" href="/feature-detection/corner">角点检测</a>
+        <a class="" href="/feature-detection/sift">SIFT 特征</a>
+        <a class="" href="/feature-detection/matching">特征匹配</a>
+        <a class="is-active" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+    </nav>
+
+    
+<section class="feature-layout feature-panorama-layout">
+    <aside class="feature-panel feature-controls panorama-controls">
+        <div><span class="section-label">输入和参数</span><h2>拼接参数</h2></div>
+        <form id="panoramaForm">
+            <input type="hidden" name="example" data-example-input value="book">
+            <div class="panorama-mode-switch" role="group" aria-label="全景模式">
+                <button type="button" class="is-active" data-panorama-mode="upload">双图上传拼接</button>
+                <button type="button" data-panorama-mode="camera">摄像头全景拍照</button>
+            </div>
+
+            <div data-panorama-controls="upload" class="panorama-control-set">
+                <label class="feature-upload">
+                    <input type="file" name="image_a" accept="image/*">
+                    <span>上传图像 A</span>
+                    <small data-file-name>不上传时使用示例图</small>
+                </label>
+                <label class="feature-upload">
+                    <input type="file" name="image_b" accept="image/*">
+                    <span>上传图像 B</span>
+                    <small>不上传时自动生成相邻视角</small>
+                </label>
+                <div class="feature-samples" data-samples></div>
+                <label>特征算法
+                    <select name="algorithm" id="panoramaAlgorithm">
+                        <option value="sift">SIFT</option>
+                        <option value="surf">SURF</option>
+                        <option value="orb-lite">ORB-lite</option>
+                        <option value="fast-brief">FAST + BRIEF</option>
+                    </select>
+                </label>
+                <label>Ratio Test 阈值<input name="ratio_threshold" value="0.75" type="number" min="0.4" max="0.95" step="0.05"></label>
+                <label>RANSAC 误差阈值<input name="ransac_threshold" value="4" type="number" min="1" max="20" step="0.5"></label>
+                <label>变换模型
+                    <select name="transform_model">
+                        <option value="homography">Homography</option>
+                        <option value="affine">Affine</option>
+                    </select>
+                </label>
+                <label>融合方式
+                    <select name="blend_mode">
+                        <option value="multiband">多频段金字塔融合</option>
+                        <option value="feather">Feather 融合</option>
+                        <option value="average">平均融合</option>
+                    </select>
+                </label>
+                <label>金字塔层数
+                    <select name="pyramid_levels">
+                        <option>3</option><option>4</option><option selected>5</option><option>6</option>
+                    </select>
+                </label>
+                <label class="feature-check-row"><input name="auto_crop" type="checkbox" checked> 自动裁剪黑边</label>
+                <label>输出缩放
+                    <select name="output_scale">
+                        <option value="1">100%</option>
+                        <option value="0.75">75%</option>
+                        <option value="0.5">50%</option>
+                    </select>
+                </label>
+                <button class="feature-primary" type="submit">执行图像拼接</button>
+            </div>
+
+            <div data-panorama-controls="camera" class="panorama-control-set" hidden>
+                <button class="feature-primary" type="button" data-camera-action="open">打开摄像头</button>
+                <button type="button" data-camera-action="first">拍摄第一帧</button>
+                <button type="button" data-camera-action="next">捕获下一帧</button>
+                <label class="feature-check-row"><input id="cameraAutoCapture" type="checkbox"> 自动捕获</label>
+                <button type="button" data-camera-action="stop">停止拍摄</button>
+                <button type="button" data-camera-action="reset">重置</button>
+                <button type="button" data-camera-action="export">导出全景图</button>
+                <button id="cameraAdvancedToggle" class="panorama-mobile-toggle" type="button" aria-expanded="false">高级参数</button>
+                <div id="cameraAdvancedParams" class="panorama-camera-advanced">
+                    <label>特征算法
+                        <select id="cameraAlgorithm">
+                            <option value="orb-lite">ORB-lite</option>
+                            <option value="sift">SIFT</option>
+                            <option value="surf">SURF</option>
+                            <option value="fast-brief">FAST + BRIEF</option>
+                        </select>
+                    </label>
+                    <label>最小内点数<input id="cameraMinInliers" value="6" type="number" min="4" max="80"></label>
+                    <label>最大重投影误差<input id="cameraMaxError" value="5" type="number" min="1" max="20" step="0.5"></label>
+                    <label>最小重叠比例<input id="cameraMinOverlap" value="0.35" type="number" min="0.1" max="0.8" step="0.05"></label>
+                    <label>实时预览融合
+                        <select id="cameraPreviewBlend">
+                            <option value="feather">快速 Feather（推荐）</option>
+                            <option value="multiband">多频段预览（较慢）</option>
+                            <option value="average">平均融合</option>
+                        </select>
+                    </label>
+                    <label>最终导出融合
+                        <select id="cameraExportBlend">
+                            <option value="multiband">多频段金字塔融合</option>
+                            <option value="feather">Feather 融合</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+        </form>
+    </aside>
+
+    <main class="feature-workspace">
+        <section class="feature-panel feature-stage panorama-stage">
+            <div class="feature-stage-head">
+                <div><span class="section-label">PANORAMA STITCHING</span><h2 id="panoramaStageTitle">双图拼接结果预览</h2></div>
+                <span id="panoramaElapsed" class="status-pill">等待运行</span>
+            </div>
+            <div class="match-view-toolbar panorama-view-toolbar" role="group" aria-label="全景显示视图">
+                <button type="button" class="is-active" data-panorama-view="inputs">输入图像</button>
+                <button type="button" data-panorama-view="match">匹配摘要</button>
+                <button type="button" data-panorama-view="warp">Warp 对齐</button>
+                <button type="button" data-panorama-view="blend">融合预览</button>
+                <button type="button" data-panorama-view="result">全景结果</button>
+            </div>
+            <div class="panorama-mobile-capture">
+                <button type="button" data-camera-action="first">拍第一帧</button>
+                <button type="button" data-camera-action="next">捕获下一帧</button>
+            </div>
+            <div class="feature-canvas-frame panorama-canvas-shell">
+                <canvas id="panoramaCanvas" width="1280" height="720" aria-label="全景拼接结果"></canvas>
+                <video id="panoramaVideo" playsinline muted hidden></video>
+                <div id="panoramaEmptyState" class="match-empty-state">上传两张图像或选择示例后执行拼接。</div>
+            </div>
+            <section class="panorama-result-stats" aria-label="全景结果统计">
+                <div id="panoramaStats" class="feature-stat-list"></div>
+                <button type="button" id="blendProcessToggle">查看融合过程</button>
+                <button type="button" id="panoramaDownload">导出全景图</button>
+            </section>
+            <section id="blendProcessPanel" class="panorama-blend-process" hidden>
+                <article><b>Gaussian Mask Pyramid</b><canvas width="180" height="96"></canvas></article>
+                <article><b>Laplacian Pyramid A / B</b><canvas width="180" height="96"></canvas></article>
+                <article><b>Blend Pyramid</b><canvas width="180" height="96"></canvas></article>
+                <article><b>Collapse 重建</b><canvas width="180" height="96"></canvas></article>
+            </section>
+        </section>
+    </main>
+
+    <aside class="feature-panel feature-info panorama-info">
+        <button id="panoramaInfoToggle" class="panorama-mobile-toggle" type="button" aria-expanded="false">状态详情</button>
+        <div class="panorama-info-content">
+            <div><span class="section-label">Application Status</span><h2 id="panoramaInfoTitle">双图上传拼接</h2></div>
+            <div class="feature-note blue"><b>当前步骤</b><p id="panoramaCurrentStep">等待输入</p></div>
+            <div class="feature-boundary"><b>输入图像状态</b><div id="panoramaInputStatus" class="feature-stat-list"></div></div>
+            <div class="feature-boundary"><b>匹配 / 几何状态</b><div id="panoramaGeometryStatus" class="feature-stat-list"></div></div>
+            <div class="feature-boundary"><b>融合与输出</b><div id="panoramaOutputStatus" class="feature-stat-list"></div></div>
+            <div class="feature-note green"><b>提示</b><p id="panoramaHint">实时预览为快速融合，最终导出使用多频段融合。</p></div>
+        </div>
+    </aside>
+</section>
+<section class="feature-panel feature-flow">
+    
+        
+        
+    
+    <strong>图像拼接与全景拍照流程</strong>
+    <div class="feature-flow-line">
+        
+        
+        <button type="button" class="flow-step is-active" data-match-step="0" aria-label="查看 Images 步骤"><i>1</i><b>Images</b><small>输入图像</small></button>
+        
+        
+        
+        <button type="button" class="flow-step " data-match-step="1" aria-label="查看 Match 步骤"><i>2</i><b>Match</b><small>特征匹配</small></button>
+        
+        
+        
+        <button type="button" class="flow-step " data-match-step="2" aria-label="查看 Align 步骤"><i>3</i><b>Align</b><small>几何对齐</small></button>
+        
+        
+        
+        <button type="button" class="flow-step " data-match-step="3" aria-label="查看 Blend 步骤"><i>4</i><b>Blend</b><small>图像融合</small></button>
+        
+        
+        
+        <button type="button" class="flow-step " data-match-step="4" aria-label="查看 Crop 步骤"><i>5</i><b>Crop</b><small>裁剪黑边</small></button>
+        
+        
+        
+        <button type="button" class="flow-step " data-match-step="5" aria-label="查看 Panorama 步骤"><i>6</i><b>Panorama</b><small>全景输出</small></button>
+        
+        
+    </div>
+</section>
+
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="/static/js/feature/feature_common.js"></script>
+<script src="/static/js/feature/feature_compute_frontend.js"></script>
+<script src="/static/js/feature/feature_panorama.js"></script>
+
+</body>
+</html>

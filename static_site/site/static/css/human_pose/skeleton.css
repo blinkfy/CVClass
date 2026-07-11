@@ -1,0 +1,599 @@
+﻿/* Keypoints and skeleton workbench styles. */
+
+.human-pose-stage {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 28px 28px;
+}
+
+.human-pose-stage-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.human-pose-stage-toolbar span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    padding: 0 10px;
+    color: #1d4ed8;
+    background: rgba(255, 255, 255, 0.88);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.human-pose-image-frame {
+    --pose-aspect: 640 / 427;
+    --pose-aspect-ratio: 1.4988;
+    --pose-max-stage-height: clamp(420px, 64vh, 720px);
+    position: relative;
+    width: min(100%, 980px, calc(var(--pose-max-stage-height) * var(--pose-aspect-ratio)));
+    max-width: 980px;
+    aspect-ratio: var(--pose-aspect);
+    justify-self: center;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: #e2e8f0;
+    box-shadow: 0 18px 38px rgba(37, 99, 235, 0.12);
+}
+
+.human-pose-image-frame img,
+.human-pose-image-frame svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.human-pose-image-frame img {
+    object-fit: fill;
+}
+
+.human-pose-image-frame svg {
+    pointer-events: none;
+}
+
+.human-pose-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #1d4ed8;
+    background: rgba(248, 251, 255, 0.86);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.human-pose-image-frame.is-loaded .human-pose-loading {
+    display: none;
+}
+
+.pose-bbox {
+    fill: var(--person-fill, rgba(245, 158, 11, 0.07));
+    stroke: var(--person-color, var(--pose-orange));
+    stroke-width: 2.2;
+    stroke-dasharray: 8 6;
+    opacity: 0;
+    transition: opacity 420ms var(--pose-motion);
+}
+
+.pose-person-tag {
+    opacity: 0;
+    paint-order: stroke;
+    stroke: #ffffff;
+    stroke-width: 4px;
+    fill: var(--person-color, var(--pose-blue));
+    font-size: 13px;
+    font-weight: 950;
+    transition: opacity 420ms var(--pose-motion);
+}
+
+.pose-stage--phase-1 .pose-bbox,
+.pose-stage--phase-2 .pose-bbox,
+.pose-stage--phase-3 .pose-bbox,
+.pose-stage--phase-4 .pose-bbox,
+.pose-stage--phase-5 .pose-bbox {
+    opacity: 1;
+    animation: poseDecompose 520ms var(--pose-motion) both;
+}
+
+.pose-stage--phase-1 .pose-person-tag,
+.pose-stage--phase-2 .pose-person-tag,
+.pose-stage--phase-3 .pose-person-tag,
+.pose-stage--phase-4 .pose-person-tag,
+.pose-stage--phase-5 .pose-person-tag {
+    opacity: 1;
+}
+
+.pose-skeleton-line {
+    stroke: var(--person-color, var(--pose-cyan));
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    filter: drop-shadow(0 2px 4px rgba(14, 165, 233, 0.14));
+    stroke-dasharray: var(--line-length, 1);
+    stroke-dashoffset: var(--line-length, 1);
+    transition:
+        opacity 360ms var(--pose-motion),
+        stroke-dashoffset 620ms var(--pose-motion),
+        stroke 240ms var(--pose-motion);
+}
+
+.pose-stage--phase-4 .pose-skeleton-line,
+.pose-stage--phase-5 .pose-skeleton-line {
+    opacity: 0.78;
+    stroke-dashoffset: 0;
+    animation: poseExtend 620ms var(--pose-motion) both;
+}
+
+.pose-skeleton-line.is-muted {
+    stroke: #94a3b8;
+    opacity: 0.42;
+}
+
+.pose-keypoint {
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+        opacity 360ms var(--pose-motion),
+        filter 240ms var(--pose-motion);
+}
+
+.pose-stage--phase-2 .pose-keypoint,
+.pose-stage--phase-3 .pose-keypoint,
+.pose-stage--phase-4 .pose-keypoint,
+.pose-stage--phase-5 .pose-keypoint {
+    opacity: 1;
+}
+
+.pose-keypoint-marker {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 360ms var(--pose-motion);
+}
+
+.pose-stage--phase-2 .pose-keypoint-marker,
+.pose-stage--phase-3 .pose-keypoint-marker,
+.pose-stage--phase-4 .pose-keypoint-marker,
+.pose-stage--phase-5 .pose-keypoint-marker {
+    animation: poseKeypointReveal 420ms var(--pose-motion) both;
+}
+
+.pose-keypoint-halo {
+    fill: #ffffff;
+    stroke: var(--person-color, var(--pose-blue));
+    stroke-width: 2;
+    opacity: 0.72;
+    filter:
+        drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+        drop-shadow(0 3px 7px rgba(37, 99, 235, 0.2));
+}
+
+.pose-keypoint-core {
+    fill: var(--person-color, var(--pose-blue));
+    stroke: #ffffff;
+    stroke-width: 1.2;
+    opacity: 0.86;
+}
+
+.pose-keypoint:hover,
+.pose-keypoint.is-selected {
+    filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.18));
+}
+
+.pose-keypoint:hover .pose-keypoint-marker,
+.pose-keypoint.is-selected .pose-keypoint-marker {
+    transform: scale(1.16);
+}
+
+.pose-keypoint.is-selected .pose-keypoint-halo {
+    stroke: var(--pose-orange);
+    opacity: 0.92;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.42));
+    animation: posePulse 900ms var(--pose-motion) infinite;
+}
+
+.pose-keypoint.is-selected .pose-keypoint-core {
+    fill: var(--pose-orange);
+    opacity: 0.94;
+}
+
+.pose-keypoint.is-muted .pose-keypoint-halo {
+    fill: #f8fafc;
+    stroke: #94a3b8;
+    filter: none;
+}
+
+.pose-keypoint.is-muted .pose-keypoint-core {
+    fill: #cbd5e1;
+    stroke: #ffffff;
+}
+
+.pose-keypoint.is-hidden,
+.pose-skeleton-line.is-hidden {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.pose-point-label,
+.pose-point-coord {
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms var(--pose-motion);
+}
+
+.pose-point-label text,
+.pose-point-coord text {
+    paint-order: stroke;
+    stroke: #ffffff;
+    stroke-width: 3px;
+    fill: #1d4ed8;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.pose-point-coord text {
+    fill: #475569;
+    font-size: 11px;
+}
+
+.human-pose-lab.show-labels .pose-point-label,
+.human-pose-lab.show-coords .pose-point-coord {
+    opacity: 1;
+}
+
+.human-pose-lab.hide-keypoints .pose-keypoint,
+.human-pose-lab.hide-keypoints .pose-point-label,
+.human-pose-lab.hide-keypoints .pose-point-coord,
+.human-pose-lab.hide-skeleton .pose-skeleton-line {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.human-pose-vector-card {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 11px 12px;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.human-vector-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.human-vector-head > span {
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.human-vector-head strong {
+    flex: 0 0 auto;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.human-vector-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.human-vector-stats span {
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #475569;
+    background: #f8fbff;
+    font-size: 10px;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.human-vector-preview {
+    display: grid;
+    gap: 8px;
+    color: #172554;
+    font-size: 11px;
+}
+
+.human-vector-person-row {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.human-vector-person-row > strong {
+    color: #172554;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.human-vector-tokens {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 1px 0 6px;
+    scrollbar-width: thin;
+}
+
+.human-vector-token {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 4px 7px;
+    color: #1e3a8a;
+    background: rgba(239, 246, 255, 0.72);
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 10px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.human-vector-token em {
+    display: inline-grid;
+    place-items: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    color: #ffffff;
+    background: #2563eb;
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 950;
+}
+
+.human-vector-details {
+    border-top: 1px dashed #bfdbfe;
+    padding-top: 7px;
+}
+
+.human-vector-details summary {
+    cursor: pointer;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.human-vector-table {
+    display: grid;
+    gap: 8px;
+    max-height: 150px;
+    overflow: auto;
+    padding-top: 8px;
+}
+
+.pose-stage--phase-5 + .human-stage-caption + .human-pose-vector-card,
+.human-pose-vector-card.is-active {
+    border-color: #93c5fd;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.1);
+    animation: poseMerge 520ms var(--pose-motion) both;
+}
+
+.human-limb-readout {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.human-limb-readout span {
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.human-limb-readout strong {
+    color: #172554;
+    font-size: 14px;
+}
+
+.human-limb-readout p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@keyframes posePulse {
+    0%, 100% {
+        r: 4.8;
+        stroke-width: 2.4;
+    }
+    50% {
+        r: 6.4;
+        stroke-width: 3;
+    }
+}
+
+@keyframes poseDecompose {
+    from {
+        opacity: 0;
+        transform: scale(0.84);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes poseKeypointReveal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes poseExtend {
+    from {
+        stroke-dashoffset: var(--line-length, 1);
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes poseMerge {
+    from {
+        opacity: 0.48;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes poseCollision {
+    0%, 100% {
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+    }
+    50% {
+        box-shadow: 0 12px 24px rgba(245, 158, 11, 0.18);
+    }
+}
+
+@keyframes posePulsePanel {
+    0%, 100% {
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.1);
+    }
+    50% {
+        box-shadow: 0 12px 24px rgba(245, 158, 11, 0.18);
+    }
+}
+
+.human-pose-stage-placeholder {
+    display: grid;
+    place-items: center;
+    gap: 12px;
+    min-height: 520px;
+    padding: 20px;
+    background:
+        linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        #f8fbff;
+    background-size: 28px 28px;
+}
+
+.human-demo-frame {
+    position: relative;
+    width: min(360px, 92%);
+    aspect-ratio: 360 / 460;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 16px 34px rgba(37, 99, 235, 0.12);
+}
+
+.human-demo-frame svg,
+.human-demo-bbox {
+    position: absolute;
+    inset: 0;
+}
+
+.human-demo-bbox {
+    inset: 38px 76px 38px 76px;
+    border: 2px dashed rgba(245, 158, 11, 0.8);
+    border-radius: 18px;
+}
+
+.human-demo-skeleton line {
+    stroke: var(--pose-cyan);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.human-demo-keypoints circle {
+    fill: #ffffff;
+    stroke: var(--pose-blue);
+    stroke-width: 4;
+}
+
+.human-stage-caption {
+    display: grid;
+    gap: 2px;
+    text-align: center;
+}
+
+.human-stage-caption strong {
+    color: #172554;
+}
+
+.human-stage-caption span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.human-keypoint-readout span,
+.human-vector-demo span {
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.human-keypoint-readout strong {
+    color: #172554;
+}
+
+.human-keypoint-readout dl {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.human-keypoint-readout dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.human-keypoint-readout dt,
+.human-keypoint-readout dd {
+    margin: 0;
+    font-size: 12px;
+}
+
+.human-keypoint-readout dt {
+    color: #64748b;
+}
+
+.human-keypoint-readout dd {
+    color: #0f172a;
+    font-weight: 850;
+}
+
+.human-pose-stepper {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+

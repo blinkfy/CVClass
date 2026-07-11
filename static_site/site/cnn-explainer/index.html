@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNN 如何学习图像</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="/static/css/cnn/explainer_port.css">
+
+</head>
+<body class="cv-shell sidebar-collapsed       ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "cnn";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "cnn_explainer";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="active" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="active" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<section
+    id="cnnExplainerPort"
+    class="cnn-explainer-port"
+    data-assets-base="/static/assets/img/"
+    data-model-url="/static/assets/data/cnn_explainer/model.json"
+>
+    <header class="ce-course-header station-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 05 · CNN LEARNING</span>
+            <h1 class="station-title">CNN 如何学习图像</h1>
+            <p class="station-summary">Conv、ReLU、Pooling、FC、Softmax、Loss、Backpropagation 与参数更新过程可视化。</p>
+        </div>
+        <strong class="station-badge">FORWARD · BACKWARD · GRADIENT</strong>
+    </header>
+
+    <nav class="ce-third-tabs station-tabs" aria-label="CNN 实验模块">
+        <a href="/cnn-visualization">前向与反向传播</a>
+        <a class="is-active" href="/cnn-explainer">数据传播细节</a>
+        <a href="/conv-gradient-lab">卷积梯度显微镜</a>
+    </nav>
+
+    <div class="ce-controls" aria-label="CNN Explainer controls">
+        <div class="ce-image-strip" id="ceImageStrip"></div>
+        <input id="ceImageUpload" class="ce-image-upload-input" type="file" accept="image/*">
+        <div class="ce-digit-drawer" id="ceDigitDrawer" hidden>
+            <canvas id="ceDigitCanvas" width="280" height="280" aria-label="手写数字绘图区"></canvas>
+            <div class="ce-digit-actions">
+                <button type="button" id="ceClearDigit">清空</button>
+                <span id="ceDigitStatus">在绘图区写一个 0~9 数字</span>
+            </div>
+        </div>
+        <div class="ce-control-spacer"></div>
+        <div class="ce-mode-switch" id="ceModeSwitch" aria-label="层级计算模式">
+            <button class="active" type="button" data-ce-mode="forward">前向计算</button>
+            <button type="button" data-ce-mode="backward">反向梯度</button>
+            <button type="button" data-ce-mode="update">参数更新</button>
+        </div>
+        <button class="ce-gradient-clear" id="ceClearGrad" type="button">清除梯度热力</button>
+        <div class="ce-hover-pill" id="ceHoverPill" aria-live="polite">悬停特征图</div>
+        <button class="ce-detail-button" id="ceDetailToggle" type="button">显示细节</button>
+        <label class="ce-model-select">
+            <span>当前模型</span>
+            <select id="ceModelSelect">
+                <option value="image">Tiny VGG 图片分类模型</option>
+                <option value="digit">手写数字识别模型</option>
+            </select>
+        </label>
+        <label class="ce-scale-select">
+            <span>归一化范围</span>
+            <select id="ceScaleSelect">
+                <option value="local">单元</option>
+                <option value="module">模块</option>
+                <option value="global">全局</option>
+            </select>
+        </label>
+    </div>
+
+    <section class="ce-principle-panel" id="cePrinciplePanel" hidden>
+        <div id="cePrincipleContent"></div>
+    </section>
+
+    <main class="ce-main">
+        <section class="ce-network-panel" aria-label="CNN 网络总览">
+            <svg id="ceNetworkSvg" class="ce-network-svg" role="img" aria-label="可交互 CNN Explainer 网络"></svg>
+        </section>
+
+        <aside class="ce-side-panel" aria-label="当前选中层说明">
+            <h2 id="ceLayerTitle">Input</h2>
+            <div class="ce-side-tabs" id="ceSideTabs" aria-label="Layer inspector tabs">
+                <button class="active" type="button" data-ce-side-tab="info">层说明</button>
+                <button type="button" data-ce-side-tab="params">参数</button>
+                <button type="button" data-ce-side-tab="grads">梯度/更新</button>
+            </div>
+            <div id="ceLayerInfo" class="ce-side-tab-panel">
+                <dl class="ce-layer-meta">
+                    <div>
+                        <dt>输入尺寸</dt>
+                        <dd id="ceLayerInput">64 × 64 × 3</dd>
+                    </div>
+                    <div>
+                        <dt>输出尺寸</dt>
+                        <dd id="ceLayerOutput">64 × 64 × 3</dd>
+                    </div>
+                </dl>
+                <p id="ceLayerDesc"></p>
+                <div class="ce-formula-box">
+                    <span>核心公式</span>
+                    <div id="ceLayerFormula" class="ce-latex-block"></div>
+                </div>
+            </div>
+            <div class="ce-mini-view" id="ceMiniView"></div>
+        </aside>
+    </main>
+
+    <section class="ce-bottom-panel">
+        <div>
+            <span class="ce-eyebrow">交互说明</span>
+            <p id="ceInteractionText">点击或悬停网络中的 feature map，可以高亮该层与相关连接，并在右侧查看层说明。</p>
+        </div>
+        <div class="ce-legend" id="ceLegend"></div>
+    </section>
+    <div id="ceDetailOverlay" class="ce-detail-overlay" hidden></div>
+</section>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="/static/js/convolution/client_digit_model.js"></script>
+<script src="/static/js/cnn/explainer_port.js"></script>
+
+</body>
+</html>

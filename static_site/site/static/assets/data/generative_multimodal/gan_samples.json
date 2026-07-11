@@ -1,0 +1,153 @@
+{
+  "defaultSample": "digit",
+  "samples": [
+    {
+      "id": "digit",
+      "title": "手写数字",
+      "scene": "digit",
+      "latentDim": 100,
+      "stages": {
+        "early": {
+          "dReal": 0.91,
+          "dFake": 0.12,
+          "gLoss": 2.18,
+          "dLoss": 0.31,
+          "fakeQuality": "噪声块",
+          "description": "生成器尚未学到稳定结构，判别器很容易分清真假。"
+        },
+        "middle": {
+          "dReal": 0.86,
+          "dFake": 0.41,
+          "gLoss": 1.12,
+          "dLoss": 0.63,
+          "fakeQuality": "粗略轮廓",
+          "description": "生成结果开始出现数字轮廓，判别器仍有明显优势。"
+        },
+        "late": {
+          "dReal": 0.73,
+          "dFake": 0.67,
+          "gLoss": 0.54,
+          "dLoss": 0.82,
+          "fakeQuality": "较清晰",
+          "description": "生成器更容易骗过判别器，真假分数开始接近。"
+        }
+      },
+      "latentPoints": [
+        { "id": "z1", "vector2d": [0.2, 0.7], "label": "细笔画" },
+        { "id": "z2", "vector2d": [0.8, 0.4], "label": "粗笔画" },
+        { "id": "z3", "vector2d": [0.5, 0.2], "label": "圆润" }
+      ]
+    },
+    {
+      "id": "face",
+      "title": "人脸草图",
+      "scene": "face",
+      "latentDim": 100,
+      "stages": {
+        "early": {
+          "dReal": 0.94,
+          "dFake": 0.08,
+          "gLoss": 2.46,
+          "dLoss": 0.27,
+          "fakeQuality": "纹理噪声",
+          "description": "脸部结构还没有稳定出现，生成批次多为局部纹理。"
+        },
+        "middle": {
+          "dReal": 0.83,
+          "dFake": 0.38,
+          "gLoss": 1.24,
+          "dLoss": 0.59,
+          "fakeQuality": "五官轮廓",
+          "description": "生成器开始组织眼睛、轮廓和明暗关系。"
+        },
+        "late": {
+          "dReal": 0.76,
+          "dFake": 0.63,
+          "gLoss": 0.68,
+          "dLoss": 0.78,
+          "fakeQuality": "稳定草图",
+          "description": "生成图像具有更完整的脸部布局，但仍可能出现伪影。"
+        }
+      },
+      "latentPoints": [
+        { "id": "z1", "vector2d": [0.22, 0.32], "label": "柔和" },
+        { "id": "z2", "vector2d": [0.72, 0.58], "label": "锐利" },
+        { "id": "z3", "vector2d": [0.47, 0.82], "label": "宽脸" }
+      ]
+    },
+    {
+      "id": "flower",
+      "title": "花朵",
+      "scene": "flower",
+      "latentDim": 100,
+      "stages": {
+        "early": {
+          "dReal": 0.9,
+          "dFake": 0.16,
+          "gLoss": 1.96,
+          "dLoss": 0.36,
+          "fakeQuality": "色块噪声",
+          "description": "颜色开始聚集，但主体形状尚不稳定。"
+        },
+        "middle": {
+          "dReal": 0.81,
+          "dFake": 0.45,
+          "gLoss": 1.04,
+          "dLoss": 0.66,
+          "fakeQuality": "花瓣轮廓",
+          "description": "花瓣和中心区域逐渐形成，但细节仍模糊。"
+        },
+        "late": {
+          "dReal": 0.72,
+          "dFake": 0.69,
+          "gLoss": 0.5,
+          "dLoss": 0.86,
+          "fakeQuality": "较清晰花朵",
+          "description": "生成器能够输出较稳定的花朵结构。"
+        }
+      },
+      "latentPoints": [
+        { "id": "z1", "vector2d": [0.18, 0.56], "label": "花瓣" },
+        { "id": "z2", "vector2d": [0.76, 0.26], "label": "明亮" },
+        { "id": "z3", "vector2d": [0.58, 0.78], "label": "密集" }
+      ]
+    },
+    {
+      "id": "object",
+      "title": "简单物体",
+      "scene": "object",
+      "latentDim": 100,
+      "stages": {
+        "early": {
+          "dReal": 0.88,
+          "dFake": 0.18,
+          "gLoss": 1.82,
+          "dLoss": 0.42,
+          "fakeQuality": "几何噪声",
+          "description": "只有大致明暗和几何块，类别信息很弱。"
+        },
+        "middle": {
+          "dReal": 0.79,
+          "dFake": 0.48,
+          "gLoss": 0.96,
+          "dLoss": 0.7,
+          "fakeQuality": "物体轮廓",
+          "description": "生成器开始形成边界和简单体积感。"
+        },
+        "late": {
+          "dReal": 0.71,
+          "dFake": 0.65,
+          "gLoss": 0.62,
+          "dLoss": 0.81,
+          "fakeQuality": "稳定物体",
+          "description": "生成图像能保留主要轮廓，但多样性仍需要观察。"
+        }
+      },
+      "latentPoints": [
+        { "id": "z1", "vector2d": [0.3, 0.24], "label": "方块" },
+        { "id": "z2", "vector2d": [0.82, 0.52], "label": "高瘦" },
+        { "id": "z3", "vector2d": [0.44, 0.76], "label": "圆润" }
+      ]
+    }
+  ]
+}

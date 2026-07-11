@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-label="Street scene before image editing">
+  <defs>
+    <linearGradient id="editSky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#bfeaff"/>
+      <stop offset=".58" stop-color="#eef8ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="editRoad" x1=".18" x2=".82" y1=".08" y2="1">
+      <stop offset="0" stop-color="#6c7f94"/>
+      <stop offset=".55" stop-color="#46566b"/>
+      <stop offset="1" stop-color="#263244"/>
+    </linearGradient>
+    <linearGradient id="editGlass" x1="0" x2="1">
+      <stop offset="0" stop-color="#e0f2fe"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <filter id="editNoise">
+      <feTurbulence baseFrequency=".72" numOctaves="2" seed="11" type="fractalNoise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 .08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+    <filter id="editShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#0f172a" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="820" fill="url(#editSky)"/>
+  <path d="M0 326c154-46 288-66 424-44 112 18 194 58 312 44 178-20 270-92 464-42v190H0z" fill="#d9f99d" opacity=".72"/>
+  <path d="M0 392c180-76 334-84 482-56 128 24 226 70 376 40 136-28 222-76 342-50v204H0z" fill="#bbf7d0" opacity=".55"/>
+  <g opacity=".68">
+    <path d="M46 366h286v114H46z" fill="#dbeafe"/>
+    <path d="M92 288h206v192H92z" fill="#f8fafc"/>
+    <path d="M124 318h42v52h-42zm76 0h42v52h-42z" fill="url(#editGlass)"/>
+    <path d="M930 250h180v250H930z" fill="#dbeafe"/>
+    <path d="M968 284h42v64h-42zm64 0h42v64h-42z" fill="#bfdbfe"/>
+  </g>
+  <path d="M428 382h344l390 438H38z" fill="url(#editRoad)"/>
+  <path d="M592 392 508 820M648 392l88 428" stroke="#e5efff" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+  <path d="M94 526c220 42 466 34 1006-40" stroke="#f8fafc" stroke-width="3" opacity=".22"/>
+  <path d="M142 622c262 48 528 32 930-54" stroke="#0f172a" stroke-width="3" opacity=".18"/>
+  <g filter="url(#editShadow)">
+    <path d="M150 466h258c42 0 82 28 98 68l42 102H118l24-126c4-26 20-44 8-44z" fill="#f59e0b"/>
+    <path d="M188 406h204c42 0 76 26 96 74H150c14-42 20-74 38-74z" fill="#fde68a"/>
+    <path d="M218 430h78v60h-92zm104 0h96l34 60H322z" fill="#e0f2fe"/>
+    <circle cx="226" cy="644" r="44" fill="#0f172a"/>
+    <circle cx="462" cy="644" r="44" fill="#0f172a"/>
+    <circle cx="226" cy="644" r="18" fill="#94a3b8"/>
+    <circle cx="462" cy="644" r="18" fill="#94a3b8"/>
+  </g>
+  <g filter="url(#editShadow)">
+    <path d="M852 514h190c28 0 52 22 52 50v70H808l18-84c4-22 6-36 26-36z" fill="#2563eb"/>
+    <path d="M878 468h144c34 0 62 20 78 58H842c10-38 20-58 36-58z" fill="#93c5fd"/>
+    <path d="M900 486h64v44h-78zm82 0h74l24 44h-98z" fill="#dbeafe"/>
+    <circle cx="874" cy="648" r="34" fill="#111827"/>
+    <circle cx="1042" cy="648" r="34" fill="#111827"/>
+  </g>
+  <g opacity=".94">
+    <ellipse cx="668" cy="344" rx="54" ry="118" fill="#16a34a"/>
+    <path d="M650 262c-24 36-34 78-24 126 18-24 44-38 84-42-4-40-20-68-60-84z" fill="#22c55e"/>
+    <rect x="764" y="286" width="34" height="150" rx="16" fill="#111827"/>
+    <circle cx="781" cy="260" r="28" fill="#0f172a"/>
+  </g>
+  <rect width="1200" height="820" fill="transparent" filter="url(#editNoise)"/>
+</svg>

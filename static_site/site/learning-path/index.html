@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV 学习路径 - 计算机视觉教学平台</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/learning_path.css?v=20260628-removeplanned">
+
+</head>
+<body class="cv-shell sidebar-collapsed home-page-shell      ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "learning_path";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="/" aria-label="计算机视觉教学平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="/static/assets/img/icon.webp" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉教学平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="" href="/">首页</a>
+            <a href="/#featured-modules">实验模块</a>
+            <a class="active" href="/learning-path">学习路径</a>
+            <a class="" href="/knowledge-graph">知识图谱</a>
+            <a class="" href="/principles">算法原理</a>
+            <a class="" href="/frontier">前沿探索</a>
+            <a class="" href="/about-author">关于作者</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="active" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div
+    class="cv-quest-page"
+    data-quest-map-url="/static/assets/data/cv_quest_map.json?v=20260628-world04-order"
+>
+    <section class="cv-quest-hero" aria-labelledby="questHeroTitle">
+        <div class="cv-quest-hero-copy">
+            <h1 id="questHeroTitle">CV 学习路径</h1>
+            <p>以闯关地图方式串联计算机视觉算法：从像素矩阵到三维视觉与多模态前沿。</p>
+            <div class="cv-quest-stats" aria-label="学习路径统计">
+                <article class="cv-quest-stat">
+                    <span id="questTotalCount">--</span>
+                    <strong>总关卡数</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--completed">
+                    <span id="questCompletedCount">--</span>
+                    <strong>已学习</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--mechanism">
+                    <span id="questMechanismCount">--</span>
+                    <strong>机制演示</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--inference">
+                    <span id="questInferenceCount">--</span>
+                    <strong>真实推理</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--frontier">
+                    <span id="questFrontierCount">--</span>
+                    <strong>前沿案例</strong>
+                </article>
+                <article class="cv-quest-stat cv-quest-stat--worlds">
+                    <span id="questWorldCount">--</span>
+                    <strong>覆盖方向数</strong>
+                </article>
+            </div>
+        </div>
+        <div class="cv-quest-hero-actions">
+            <a class="home-secondary-button" href="/">返回首页</a>
+            <a class="home-primary-button" href="/knowledge-graph">打开知识图谱</a>
+        </div>
+    </section>
+
+    <section class="cv-quest-overview" aria-labelledby="questOverviewTitle">
+        <div class="cv-quest-section-head">
+            <div>
+                <span>Quest Overview</span>
+                <h2 id="questOverviewTitle">总览路线</h2>
+            </div>
+        </div>
+        <div id="questOverviewRoute" class="cv-quest-overview-route" aria-live="polite"></div>
+    </section>
+
+    <section class="cv-quest-board" aria-label="World Quest Map">
+        <div class="cv-quest-worlds">
+            <div class="cv-quest-section-head">
+                <div>
+                    <span>World Quest Map</span>
+                    <h2>四大学习世界</h2>
+                </div>
+                <p>所有 World 默认展开，点击任意关卡查看右侧 Level Panel。</p>
+            </div>
+            <div id="questWorldList" class="cv-quest-world-list" aria-live="polite"></div>
+        </div>
+
+        <aside class="cv-level-panel" aria-labelledby="levelPanelTitle">
+            <div class="cv-level-panel-head">
+                <span id="levelPanelWorld">World --</span>
+                <h2 id="levelPanelTitle">选择一个关卡</h2>
+                <strong id="levelPanelStatus" class="cv-level-status">--</strong>
+            </div>
+            <div id="levelPanelDifficulty" class="cv-level-stars" aria-label="难度星级"></div>
+            <p id="levelPanelTask" class="cv-level-task">点击地图中的关卡节点查看学习任务、输入输出结构和模块入口。</p>
+
+            <dl class="cv-level-detail-list">
+                <div>
+                    <dt>学习任务</dt>
+                    <dd id="levelTask"></dd>
+                </div>
+                <div>
+                    <dt>输入结构</dt>
+                    <dd id="levelInput"></dd>
+                </div>
+                <div>
+                    <dt>核心计算</dt>
+                    <dd id="levelCompute"></dd>
+                </div>
+                <div>
+                    <dt>输出结构</dt>
+                    <dd id="levelOutput"></dd>
+                </div>
+                <div>
+                    <dt>关键概念</dt>
+                    <dd id="levelKeywords" class="cv-level-tags"></dd>
+                </div>
+                <div>
+                    <dt>关联指标</dt>
+                    <dd id="levelMetrics"></dd>
+                </div>
+                <div>
+                    <dt>前置关卡</dt>
+                    <dd id="levelPrerequisites"></dd>
+                </div>
+            </dl>
+            <a id="levelEnterButton" class="home-primary-button cv-level-enter" href="#" aria-disabled="true">规划中</a>
+        </aside>
+    </section>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/pages/learning_path.js?v=20260628-removeplanned"></script>
+
+</body>
+</html>

@@ -1,0 +1,463 @@
+/* Overview-only layout and visual comparison styles for the Human Pose module. */
+
+.human-overview-workbench {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.62fr) minmax(520px, 1.5fr) minmax(280px, 0.7fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.human-overview-panel,
+.human-overview-compare-panel,
+.human-overview-metrics article {
+    border: 1px solid var(--pose-line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.human-overview-panel {
+    padding: 16px;
+}
+
+.human-overview-methods,
+.human-overview-step-buttons,
+.human-overview-readout,
+.human-overview-pipeline {
+    display: grid;
+    gap: 10px;
+}
+
+.human-overview-methods {
+    margin-top: 16px;
+}
+
+.human-overview-methods button,
+.human-overview-step-buttons button,
+.human-overview-play {
+    min-height: 36px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1d4ed8;
+    background: #f8fbff;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: background 220ms var(--pose-motion), border-color 220ms var(--pose-motion), color 220ms var(--pose-motion), box-shadow 220ms var(--pose-motion);
+}
+
+.human-overview-methods button:hover,
+.human-overview-step-buttons button:hover,
+.human-overview-play:hover,
+.human-overview-methods button.is-active,
+.human-overview-step-buttons button.is-active {
+    border-color: #60a5fa;
+    color: #0f3ea8;
+    background: #eff6ff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.11);
+}
+
+.human-overview-control-block {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 14px;
+}
+
+.human-overview-control-block strong {
+    color: #172554;
+    font-size: 13px;
+}
+
+.human-overview-play {
+    color: #ffffff;
+    background: linear-gradient(135deg, #2563eb 0%, #12b5d0 100%);
+}
+
+.human-overview-stage {
+    overflow: hidden;
+    padding: 0;
+}
+
+.human-overview-stage-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.human-overview-stage-head span {
+    color: var(--pose-blue);
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+}
+
+.human-overview-stage-head h3 {
+    margin: 4px 0 0;
+    color: #0f172a;
+    font-size: 18px;
+}
+
+.human-overview-stage-head strong {
+    flex: 0 0 auto;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    padding: 7px 11px;
+    color: #1d4ed8;
+    background: #f0f9ff;
+    font-size: 11px;
+}
+
+.human-overview-visual {
+    position: relative;
+    min-height: 360px;
+    border-bottom: 1px solid #e2e8f0;
+    background:
+        linear-gradient(#eaf3ff 1px, transparent 1px),
+        linear-gradient(90deg, #eaf3ff 1px, transparent 1px),
+        linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%);
+    background-size: 30px 30px, 30px 30px, auto;
+}
+
+.human-overview-visual svg {
+    display: block;
+    width: 100%;
+    height: 360px;
+}
+
+.overview-image-plane {
+    fill: url(#overviewImageFill);
+    stroke: #bfdbfe;
+    stroke-width: 2;
+}
+
+.overview-floor {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.overview-person {
+    opacity: .24;
+    fill: none;
+    stroke: #64748b;
+    stroke-width: 14;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: opacity 360ms var(--pose-motion), transform 520ms var(--pose-motion);
+}
+
+.overview-person circle {
+    fill: #e2e8f0;
+    stroke-width: 5;
+}
+
+.overview-person-secondary {
+    opacity: 0;
+}
+
+.overview-detect-box {
+    opacity: 0;
+    fill: rgba(255, 255, 255, 0.12);
+    stroke: var(--pose-orange);
+    stroke-width: 3;
+    stroke-dasharray: 7 7;
+    transition: opacity 360ms var(--pose-motion), transform 520ms var(--pose-motion);
+}
+
+.overview-detect-box-secondary {
+    opacity: 0;
+}
+
+.overview-heatmaps {
+    opacity: 0;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.overview-heatmaps circle {
+    fill: url(#overviewHeatA);
+    transform-origin: center;
+    animation: humanOverviewPulse 880ms var(--pose-motion) infinite alternate;
+}
+
+.overview-skeleton {
+    opacity: 0;
+    fill: none;
+    stroke: var(--pose-cyan);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: opacity 360ms var(--pose-motion);
+}
+
+.overview-skeleton path {
+    stroke-dasharray: 260;
+    stroke-dashoffset: 260;
+}
+
+.overview-keypoints {
+    opacity: 0;
+    transition: opacity 320ms var(--pose-motion);
+}
+
+.overview-keypoints circle {
+    fill: #2563eb;
+    stroke: #ffffff;
+    stroke-width: 3;
+    animation: humanOverviewPulse 760ms var(--pose-motion) infinite alternate;
+}
+
+.overview-vector {
+    opacity: 0;
+    transition: opacity 360ms var(--pose-motion), transform 520ms var(--pose-motion);
+}
+
+.overview-vector rect {
+    fill: #eff6ff;
+    stroke: #93c5fd;
+    stroke-width: 2;
+}
+
+.overview-vector path {
+    fill: none;
+    stroke: #2563eb;
+    stroke-width: 7;
+    stroke-linecap: round;
+}
+
+.overview-vector .overview-flow-line {
+    stroke: #12b5d0;
+    stroke-width: 4;
+    stroke-dasharray: 190;
+    stroke-dashoffset: 190;
+}
+
+.human-overview-workbench[data-method="bottomup"] .overview-person-secondary,
+.human-overview-workbench[data-method="bottomup"] .overview-detect-box-secondary {
+    opacity: .72;
+}
+
+.human-overview-workbench[data-method="bottomup"] .overview-detect-box-main,
+.human-overview-workbench[data-method="bottomup"] .overview-detect-box-secondary {
+    stroke: #12b5d0;
+}
+
+.human-overview-workbench[data-method="regression"] .overview-heatmaps {
+    opacity: .18;
+}
+
+.human-overview-workbench[data-method="transformer"] .overview-flow-line {
+    stroke: #f59e0b;
+}
+
+.human-overview-workbench[data-step="input"] .overview-person-main {
+    opacity: .34;
+}
+
+.human-overview-workbench[data-step="person"] .overview-person-main,
+.human-overview-workbench[data-step="person"] .overview-detect-box-main,
+.human-overview-workbench[data-step="keypoints"] .overview-person-main,
+.human-overview-workbench[data-step="keypoints"] .overview-detect-box-main,
+.human-overview-workbench[data-step="skeleton"] .overview-person-main,
+.human-overview-workbench[data-step="skeleton"] .overview-detect-box-main,
+.human-overview-workbench[data-step="vector"] .overview-person-main,
+.human-overview-workbench[data-step="vector"] .overview-detect-box-main {
+    opacity: .86;
+}
+
+.human-overview-workbench[data-step="keypoints"] .overview-heatmaps,
+.human-overview-workbench[data-step="keypoints"] .overview-keypoints,
+.human-overview-workbench[data-step="skeleton"] .overview-heatmaps,
+.human-overview-workbench[data-step="skeleton"] .overview-keypoints,
+.human-overview-workbench[data-step="vector"] .overview-heatmaps,
+.human-overview-workbench[data-step="vector"] .overview-keypoints {
+    opacity: 1;
+}
+
+.human-overview-workbench[data-step="skeleton"] .overview-skeleton,
+.human-overview-workbench[data-step="vector"] .overview-skeleton {
+    opacity: 1;
+}
+
+.human-overview-workbench[data-step="skeleton"] .overview-skeleton path,
+.human-overview-workbench[data-step="vector"] .overview-skeleton path,
+.human-overview-workbench[data-step="vector"] .overview-flow-line {
+    animation: humanOverviewExtend 720ms var(--pose-motion) forwards;
+}
+
+.human-overview-workbench[data-step="vector"] .overview-vector {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.human-overview-pipeline {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 14px;
+}
+
+.human-overview-pipeline article {
+    min-height: 92px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 12px;
+    background: #ffffff;
+    transition: border-color 240ms var(--pose-motion), background 240ms var(--pose-motion), box-shadow 240ms var(--pose-motion);
+}
+
+.human-overview-pipeline article.is-active {
+    border-color: #60a5fa;
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .08);
+}
+
+.human-overview-pipeline span {
+    color: var(--pose-cyan);
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.human-overview-pipeline strong {
+    display: block;
+    margin-top: 4px;
+    color: #172554;
+    font-size: 13px;
+}
+
+.human-overview-pipeline small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.human-overview-readout div {
+    display: grid;
+    gap: 4px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+}
+
+.human-overview-readout dt,
+.human-overview-readout dd {
+    margin: 0;
+}
+
+.human-overview-readout dt {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.human-overview-readout dd {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.5;
+}
+
+.human-overview-formula {
+    margin-top: 14px;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 12px;
+    color: #1e3a8a;
+    background: #eff6ff;
+    font-family: Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.human-overview-compare-panel,
+.human-overview-metrics {
+    margin-top: 16px;
+}
+
+.human-overview-compare-panel {
+    padding: 16px;
+}
+
+.human-overview-table {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.human-overview-row {
+    display: grid;
+    grid-template-columns: .72fr 1.12fr 1.4fr 1.2fr 1.2fr;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #334155;
+    background: #ffffff;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.human-overview-row-head {
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-weight: 950;
+}
+
+.human-overview-row.is-active {
+    border-color: #60a5fa;
+    background: #f0f9ff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
+}
+
+.human-overview-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.human-overview-metrics article {
+    display: grid;
+    gap: 7px;
+    padding: 14px;
+}
+
+.human-overview-metrics span {
+    color: var(--pose-blue);
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: .06em;
+}
+
+.human-overview-metrics strong {
+    color: #172554;
+    font-size: 15px;
+}
+
+.human-overview-metrics p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@keyframes humanOverviewPulse {
+    from {
+        transform: scale(.9);
+        opacity: .72;
+    }
+    to {
+        transform: scale(1.06);
+        opacity: 1;
+    }
+}
+
+@keyframes humanOverviewExtend {
+    to {
+        stroke-dashoffset: 0;
+    }
+}

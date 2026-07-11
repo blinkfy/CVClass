@@ -1,0 +1,40 @@
+.katex-lite {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18em;
+    color: inherit;
+    font-family: "Times New Roman", Cambria, Georgia, serif;
+    font-size: 1em;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.katex-lite sup {
+    font-size: 0.72em;
+    line-height: 0;
+}
+
+.katex-lite-dot {
+    padding: 0 0.08em;
+}
+
+.katex-lite-frac {
+    display: inline-grid;
+    grid-template-rows: auto auto;
+    align-items: center;
+    justify-items: center;
+    min-width: 2.2em;
+    padding: 0 0.08em;
+    vertical-align: middle;
+}
+
+.katex-lite-frac span:first-child {
+    display: block;
+    border-bottom: 1px solid currentColor;
+    padding: 0 0.18em 0.08em;
+}
+
+.katex-lite-frac span:last-child {
+    display: block;
+    padding: 0.08em 0.18em 0;
+}

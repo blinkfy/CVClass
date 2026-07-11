@@ -1,0 +1,16 @@
+{
+  "task": "instance_segmentation",
+  "modelName": "YOLO11n-seg ONNX",
+  "modelPath": "/static/models/instance/yolo_seg.onnx",
+  "labelsPath": "/static/models/instance/labels_coco.json",
+  "inputSize": 640,
+  "backendDefault": "wasm",
+  "backendOptions": ["wasm", "webgpu"],
+  "confidenceThreshold": 0.35,
+  "iouThreshold": 0.50,
+  "maskThreshold": 0.50,
+  "expectedOutputHint": {
+    "boxes": "[1, 116, 8400] or equivalent",
+    "prototypes": "[1, 32, 160, 160] or equivalent"
+  }
+}

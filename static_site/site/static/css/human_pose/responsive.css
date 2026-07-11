@@ -1,0 +1,68 @@
+﻿/* Responsive adjustments for the Human Pose module. */
+
+@media (max-width: 1180px) {
+    .human-overview-grid,
+    .human-overview-workbench,
+    .human-mechanism-layout,
+    .human-mechanism-workbench,
+    .human-pose-workbench,
+    .human-action-workbench {
+        grid-template-columns: 1fr;
+    }
+
+    .human-mechanism-canvas {
+        grid-template-columns: 1fr;
+    }
+
+    .human-pose-page-title {
+        display: grid;
+    }
+
+    .human-overview-metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .human-overview-flow,
+    .human-overview-pipeline,
+    .human-overview-row,
+    .human-process-chain,
+    .human-action-pipeline,
+    .human-frame-strip,
+    .human-pose-stepper {
+        grid-template-columns: 1fr;
+    }
+
+    .human-overview-stage-head {
+        display: grid;
+    }
+
+    .human-overview-visual {
+        min-height: 290px;
+    }
+
+    .human-overview-visual svg {
+        height: 290px;
+    }
+
+    .human-process-chain b,
+    .human-action-pipeline b {
+        height: 18px;
+        width: 2px;
+        justify-self: center;
+    }
+
+    .human-probability-list div {
+        grid-template-columns: 76px minmax(0, 1fr) 38px;
+    }
+
+    .human-coordinate-grid,
+    .human-heatmap-strip {
+        grid-template-columns: 1fr;
+    }
+
+    body.human-pose-page-shell .ai-assistant-fab {
+        display: none;
+    }
+}

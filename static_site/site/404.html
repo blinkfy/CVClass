@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计算机视觉教学平台</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+</head>
+<body class="cv-shell sidebar-collapsed home-page-shell      ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "home";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <header class="site-header" aria-label="主页导航">
+        <a class="site-brand" href="/" aria-label="计算机视觉教学平台首页">
+            <span class="site-brand-icon" aria-hidden="true">
+                <img src="/static/assets/img/icon.webp" alt="">
+            </span>
+            <span class="site-brand-text">
+                <strong>计算机视觉教学平台</strong>
+                <span>Computer Vision Lab</span>
+            </span>
+        </a>
+        <nav class="site-nav" aria-label="首页导航">
+            <a class="active" href="/">首页</a>
+            <a href="/#featured-modules">实验模块</a>
+            <a class="" href="/learning-path">学习路径</a>
+            <a class="" href="/knowledge-graph">知识图谱</a>
+            <a class="" href="/principles">算法原理</a>
+            <a class="" href="/frontier">前沿探索</a>
+            <a class="" href="/about-author">关于作者</a>
+        </nav>
+        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
+            </svg>
+            GitHub
+        </a>
+    </header>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="active" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="home-page">
+    <section class="home-hero" aria-labelledby="homeHeroTitle">
+        <div class="home-hero-copy">
+            <span class="section-label">COMPUTER VISION LAB</span>
+            <h1 id="homeHeroTitle">从像素到视觉理解</h1>
+            <p class="home-hero-subtitle">计算机视觉通识与算法可视化平台</p>
+            <p class="home-hero-description">覆盖图像处理、卷积滤波、边缘轮廓、特征提取、CNN、检测、分割到前沿视觉模型。</p>
+            <div class="home-hero-actions">
+                <a class="home-primary-button" href="#learning-domains">进入系统 <span aria-hidden="true">&rsaquo;</span></a>
+                <a class="home-secondary-button" href="/knowledge-graph">
+                    <svg class="button-node-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="18" cy="5" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <circle cx="6" cy="12" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <circle cx="18" cy="19" r="2.5" fill="currentColor" fill-opacity="0.18"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    查看知识图谱
+                </a>
+            </div>
+        </div>
+
+        <div class="home-hero-visual" aria-label="计算机视觉流程示意">
+            <img class="hero-bg-image" src="/static/assets/img/bg.webp" alt="" aria-hidden="true">
+            <div class="hero-flow">
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home01.webp" alt="" aria-hidden="true">
+                    <strong>像素</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home02.webp" alt="" aria-hidden="true">
+                    <strong>卷积滤波</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home03.webp" alt="" aria-hidden="true">
+                    <strong>边缘轮廓</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home04.webp" alt="" aria-hidden="true">
+                    <strong>特征提取</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home05.webp" alt="" aria-hidden="true">
+                    <strong>CNN</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home06.webp" alt="" aria-hidden="true">
+                    <strong>检测与分割</strong>
+                </div>
+                <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+                <div class="flow-step">
+                    <img class="flow-icon" src="/static/assets/img/home07.webp" alt="" aria-hidden="true">
+                    <strong>前沿视觉</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="learning-domains" class="home-panel learning-domains" aria-labelledby="learningDomainsTitle">
+        <h2 id="learningDomainsTitle" class="panel-title">
+            <span class="panel-title-icon panel-title-icon--grid" aria-hidden="true"></span>
+            四大学习域
+        </h2>
+
+        <div class="domain-grid">
+            <article class="domain-card domain-card--basic">
+                <div class="domain-card-head">
+                    <span class="domain-number">01</span>
+                    <span class="domain-icon mini-icon--cube" aria-hidden="true"></span>
+                </div>
+                <h3>基础图像计算</h3>
+                <p>从像素到滤波、边缘与形态学。</p>
+                <div class="domain-tags" aria-label="基础图像计算模块">
+                    <span>图像基础</span>
+                    <span>卷积与滤波</span>
+                    <span>边缘轮廓</span>
+                    <span>角点特征</span>
+                    <span>图像拼接</span>
+                </div>
+                <a class="domain-link" href="/learning-path#domain-basic">进入学习域 <span aria-hidden="true">&rarr;</span></a>
+            </article>
+
+            <article class="domain-card domain-card--deep">
+                <div class="domain-card-head">
+                    <span class="domain-number">02</span>
+                    <span class="domain-icon mini-icon--cnn" aria-hidden="true"></span>
+                </div>
+                <h3>深度视觉任务</h3>
+                <p>识别、检测、分割与人体理解任务。</p>
+                <div class="domain-tags" aria-label="深度视觉任务模块">
+                    <span>CNN 学习</span>
+                    <span>图像分类</span>
+                    <span>目标检测</span>
+                    <span>语义分割</span>
+                    <span>实例分割</span>
+                    <span>人体姿态估计</span>
+                    <span>动作识别</span>
+                </div>
+                <a class="domain-link" href="/learning-path#domain-deep">进入学习域 <span aria-hidden="true">&rarr;</span></a>
+            </article>
+
+            <article class="domain-card domain-card--geometry">
+                <div class="domain-card-head">
+                    <span class="domain-number">03</span>
+                    <span class="domain-icon mini-icon--match" aria-hidden="true"></span>
+                </div>
+                <h3>几何运动与三维视觉</h3>
+                <p>几何、运动与三维重建方法。</p>
+                <div class="domain-tags" aria-label="几何运动与三维视觉模块">
+                    <span>相机标定</span>
+                    <span>光流</span>
+                    <span>双目视觉</span>
+                    <span>三维重建</span>
+                </div>
+                <a class="domain-link" href="/learning-path#domain-geometry">进入学习域 <span aria-hidden="true">&rarr;</span></a>
+            </article>
+
+            <article class="domain-card domain-card--frontier">
+                <div class="domain-card-head">
+                    <span class="domain-number">04</span>
+                    <span class="domain-icon mini-icon--globe" aria-hidden="true"></span>
+                </div>
+                <h3>生成式与多模态前沿</h3>
+                <p>生成模型与多模态视觉语言技术。</p>
+                <div class="domain-tags" aria-label="生成式与多模态前沿模块">
+                    <span>Transformer / ViT</span>
+                    <span>CLIP</span>
+                    <span>SAM</span>
+                    <span>GAN</span>
+                    <span>Diffusion</span>
+                    <span>VLM</span>
+                    <span>Vision Banana</span>
+                </div>
+                <a class="domain-link" href="/learning-path#domain-frontier">进入学习域 <span aria-hidden="true">&rarr;</span></a>
+            </article>
+        </div>
+    </section>
+
+    <section id="featured-modules" class="home-panel featured-modules" aria-labelledby="featuredModulesTitle">
+        <h2 id="featuredModulesTitle" class="panel-title">
+            <span class="panel-title-icon panel-title-icon--grid" aria-hidden="true"></span>
+            精选实验模块
+        </h2>
+
+        <div class="module-grid featured-module-grid">
+            <article class="module-card" data-learn-module="image-basic">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--cube" aria-hidden="true"></span>
+                </div>
+                <h3>图像基础</h3>
+                <p>像素表示、灰度化、二值化、直方图与基础图像变换。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="image-basic" href="/grayscale">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="convolution-filter">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--kernel" aria-hidden="true"></span>
+                </div>
+                <h3>卷积与滤波</h3>
+                <p>卷积核、Padding、步长、膨胀卷积与滤波器可视化。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="convolution-filter" href="/convolution">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="edge-contour">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--edge" aria-hidden="true"></span>
+                </div>
+                <h3>边缘轮廓</h3>
+                <p>Sobel、Canny、Hough 变换与形态学边缘提取。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="edge-contour" href="/edge-detection">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="feature-panorama">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--match" aria-hidden="true"></span>
+                </div>
+                <h3>特征拼接</h3>
+                <p>Harris、SIFT、RANSAC 与特征匹配、图像拼接可视化。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="feature-panorama" href="/feature-detection">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="cnn-learning">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--cnn" aria-hidden="true"></span>
+                </div>
+                <h3>CNN 学习</h3>
+                <p>从卷积特征、激活函数到反向传播的完整实验。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="cnn-learning" href="/cnn-visualization">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="object-detection">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--detect" aria-hidden="true"></span>
+                </div>
+                <h3>目标检测</h3>
+                <p>YOLO、Faster R-CNN 等主流检测方法与评测。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="object-detection" href="/object-detection">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="semantic-segmentation">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--tasks" aria-hidden="true"></span>
+                </div>
+                <h3>语义 / 实例分割</h3>
+                <p>对比语义 mask、实例 mask、检测框与像素级输出结构。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="semantic-segmentation" href="/segmentation-lab">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+            <article class="module-card" data-learn-module="human-pose">
+                <div class="module-card-head">
+                    <span class="module-mini-icon mini-icon--pose" aria-hidden="true"></span>
+                </div>
+                <h3>人体姿态估计与动作识别</h3>
+                <p>人体关键点、骨架结构、姿态向量、时空特征与动作分类。</p>
+                <div class="module-card-foot">
+                    <span class="module-status module-status--pending">待学习</span>
+                    <a class="module-action" data-learn-link="human-pose" href="/human-pose">开始学习 <span aria-hidden="true">&rarr;</span></a>
+                </div>
+            </article>
+
+        </div>
+    </section>
+
+    <section class="home-lower-grid" aria-label="学习路径与知识图谱入口">
+        <div id="learning-path" class="home-panel learning-path path-summary-panel" aria-labelledby="learningPathTitle">
+            <h2 id="learningPathTitle" class="panel-title">
+                <span class="panel-title-icon panel-title-icon--path" aria-hidden="true"></span>
+                推荐学习路径
+            </h2>
+
+            <div class="path-summary-list">
+                <a class="path-summary-card path-summary-card--classic" href="/learning-path#path-classic">
+                    <span class="path-summary-icon" aria-hidden="true">01</span>
+                    <strong>经典图像处理路线</strong>
+                    <span class="path-summary-steps">图像基础 <b>&rarr;</b> 卷积滤波 <b>&rarr;</b> 边缘轮廓 <b>&rarr;</b> 特征拼接</span>
+                    <span class="path-summary-arrow" aria-hidden="true">&rsaquo;</span>
+                </a>
+                <a class="path-summary-card path-summary-card--deep" href="/learning-path#path-deep">
+                    <span class="path-summary-icon" aria-hidden="true">02</span>
+                    <strong>深度视觉任务路线</strong>
+                    <span class="path-summary-steps">CNN 分类 <b>&rarr;</b> 目标检测 <b>&rarr;</b> 语义分割 <b>&rarr;</b> 实例分割 <b>&rarr;</b> 姿态估计 <b>&rarr;</b> 动作识别</span>
+                    <span class="path-summary-arrow" aria-hidden="true">&rsaquo;</span>
+                </a>
+                <a class="path-summary-card path-summary-card--geometry" href="/learning-path#path-geometry">
+                    <span class="path-summary-icon" aria-hidden="true">03</span>
+                    <strong>几何三维路线</strong>
+                    <span class="path-summary-steps">特征匹配 <b>&rarr;</b> 相机标定 <b>&rarr;</b> 光流 <b>&rarr;</b> 双目视觉 <b>&rarr;</b> 三维重建</span>
+                    <span class="path-summary-arrow" aria-hidden="true">&rsaquo;</span>
+                </a>
+                <a class="path-summary-card path-summary-card--frontier" href="/learning-path#path-frontier">
+                    <span class="path-summary-icon" aria-hidden="true">04</span>
+                    <strong>前沿模型路线</strong>
+                    <span class="path-summary-steps">CLIP <b>&rarr;</b> SAM <b>&rarr;</b> GAN / Diffusion <b>&rarr;</b> VLM <b>&rarr;</b> Vision Banana</span>
+                    <span class="path-summary-arrow" aria-hidden="true">&rsaquo;</span>
+                </a>
+            </div>
+        </div>
+
+        <div id="knowledge-graph-entry" class="home-panel graph-entry" aria-labelledby="knowledgeGraphTitle">
+            <h2 class="panel-title">
+                <span class="panel-title-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <circle cx="6" cy="12" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <circle cx="18" cy="19" r="3" fill="currentColor" fill-opacity="0.15"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                </span>
+                知识图谱入口
+            </h2>
+            <div class="graph-entry-card">
+                <div>
+                    <h3 id="knowledgeGraphTitle">CV 算法知识图谱</h3>
+                    <p>探索计算机视觉知识体系，发现概念之间的关联与脉络，支持搜索与导航。</p>
+                    <a class="home-primary-button graph-button" href="/knowledge-graph">打开知识图谱</a>
+                </div>
+                <div class="graph-illustration" aria-hidden="true">
+                    <svg viewBox="0 0 360 150" width="360" height="150" xmlns="http://www.w3.org/2000/svg" style="display: block; width: 100%; height: auto;">
+                        <defs>
+                            <linearGradient id="graph-label-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#3b82f6"/>
+                                <stop offset="100%" stop-color="#1d5cff"/>
+                            </linearGradient>
+                            <linearGradient id="graph-label-green" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#39b996"/>
+                                <stop offset="100%" stop-color="#15987c"/>
+                            </linearGradient>
+                            <linearGradient id="graph-label-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#9b6ee8"/>
+                                <stop offset="100%" stop-color="#7453d5"/>
+                            </linearGradient>
+                            <linearGradient id="graph-label-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ffb05f"/>
+                                <stop offset="100%" stop-color="#ff8b2d"/>
+                            </linearGradient>
+                        </defs>
+                        <g fill="none" stroke="#8cb7ee" stroke-linecap="round">
+                            <path d="M28 45L105 55L165 77L238 38L310 78L340 51" stroke-width="2.1" opacity="0.42"/>
+                            <path d="M52 114L82 111L165 77L190 121L290 121L340 117" stroke-width="1.9" opacity="0.36"/>
+                            <path d="M110 25L105 55L128 95L165 77L214 25L238 38M128 95L190 121" stroke-width="1.7" opacity="0.34"/>
+                            <path d="M28 45L52 114M238 38L290 121M310 78L340 117" stroke-width="1.2" stroke-dasharray="5 6" opacity="0.28"/>
+                        </g>
+                        <g fill="#ffffff" stroke-width="3">
+                            <circle cx="28" cy="45" r="7" stroke="#1d5cff"/>
+                            <circle cx="52" cy="114" r="7" stroke="#94a3b8"/>
+                            <circle cx="110" cy="25" r="8" stroke="#93c5fd"/>
+                            <circle cx="128" cy="91" r="8" stroke="#67d5d0"/>
+                            <circle cx="214" cy="25" r="8" stroke="#8ec5ff"/>
+                            <circle cx="250" cy="96" r="7" stroke="#94a3b8"/>
+                            <circle cx="340" cy="117" r="7" stroke="#1d5cff"/>
+                            <circle cx="340" cy="51" r="6" stroke="#94a3b8"/>
+                        </g>
+                        <g fill="#ffffff" font-family="Inter, Microsoft YaHei, sans-serif" font-weight="850" text-anchor="middle">
+                            <rect x="83" y="44" width="44" height="22" rx="11" fill="url(#graph-label-blue)" filter="drop-shadow(0 5px 8px rgba(29, 92, 255, 0.16))"/>
+                            <text x="105" y="59" font-size="11">卷积</text>
+
+                            <rect x="139" y="63" width="52" height="28" rx="14" fill="#1d5cff" filter="drop-shadow(0 7px 10px rgba(29, 92, 255, 0.2))"/>
+                            <text x="165" y="82" font-size="14">CNN</text>
+
+                            <rect x="205" y="27" width="66" height="22" rx="11" fill="url(#graph-label-blue)" filter="drop-shadow(0 5px 8px rgba(29, 92, 255, 0.14))"/>
+                            <text x="238" y="42" font-size="11">特征提取</text>
+
+                            <rect x="277" y="67" width="66" height="22" rx="11" fill="url(#graph-label-green)" filter="drop-shadow(0 5px 8px rgba(22, 163, 116, 0.14))"/>
+                            <text x="310" y="82" font-size="11">目标检测</text>
+
+                            <rect x="49" y="100" width="66" height="22" rx="11" fill="url(#graph-label-purple)" filter="drop-shadow(0 5px 8px rgba(124, 83, 213, 0.14))"/>
+                            <text x="82" y="115" font-size="11">语义分割</text>
+
+                            <rect x="160" y="111" width="60" height="20" rx="10" fill="url(#graph-label-orange)" filter="drop-shadow(0 5px 8px rgba(249, 115, 22, 0.12))"/>
+                            <text x="190" y="125" font-size="10.5">生成模型</text>
+
+                            <rect x="253" y="111" width="74" height="20" rx="10" fill="url(#graph-label-purple)" filter="drop-shadow(0 5px 8px rgba(124, 83, 213, 0.14))"/>
+                            <text x="290" y="125" font-size="10.5">Transformer</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+</body>
+</html>

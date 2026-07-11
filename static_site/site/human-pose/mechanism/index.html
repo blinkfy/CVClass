@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>姿态估计机制 - 人体姿态估计与动作识别</title>
+    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_base.css?v=20260625-split6">
+<link rel="stylesheet" href="/static/css/vision_tasks/vision_tasks_components.css?v=20260625-samples4">
+<link rel="stylesheet" href="/static/css/human_pose/common.css?v=20260627-upload1">
+
+<link rel="stylesheet" href="/static/css/human_pose/mechanism.css?v=20260628-mechanism-cn1">
+
+<link rel="stylesheet" href="/static/css/human_pose/responsive.css?v=20260627-csssplit1">
+
+</head>
+<body class="cv-shell sidebar-collapsed     human-pose-page-shell  ">
+    <script>
+        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
+        window.CVCLASS_ACTIVE_PAGE = "human_pose";
+        window.CVCLASS_ACTIVE_SUB_PAGE = "mechanism";
+        window.CVCLASS_AI_ENABLED = true;
+    </script>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
+    <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
+        <div class="sidebar-brand">
+            <span>CV Lab</span>
+            <strong>计算机视觉教学平台</strong>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-category">学习入口</div>
+            <a class="" href="/">首页</a>
+            <a class="" href="/learning-path">完整学习路径</a>
+            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/principles">算法原理文档</a>
+
+            <div class="sidebar-category">基础视觉</div>
+            <a class="" href="/grayscale">图像基础</a>
+            <a class="" href="/convolution">卷积与滤波</a>
+            <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
+                <a class="" href="/convolution">卷积可视化</a>
+                <a class="" href="/image-convolution">图像卷积应用</a>
+                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/digit-recognition">卷积模型应用</a>
+            </div>
+
+            <div class="sidebar-category">结构与特征</div>
+            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <div class="sidebar-subnav" aria-label="边缘检测子页面">
+                <a class="" href="/edge-detection/compare">方法对比</a>
+                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/edge-detection/applications">应用实践</a>
+            </div>
+            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <div class="sidebar-subnav" aria-label="特征检测子页面">
+                <a class="" href="/feature-detection/compare">方法对比</a>
+                <a class="" href="/feature-detection/corner">角点检测</a>
+                <a class="" href="/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/feature-detection/matching">特征匹配</a>
+                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+            </div>
+
+            <div class="sidebar-category">深度视觉</div>
+            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <div class="sidebar-subnav" aria-label="CNN子页面">
+                <a class="" href="/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/cnn-explainer">数据传播细节</a>
+                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+            </div>
+
+            <div class="sidebar-category">视觉识别与分割</div>
+            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
+                <a class="" href="/classification-lab">任务谱系</a>
+                <a class="" href="/classification-lab/classification">图像分类实验</a>
+            </div>
+            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
+                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+            </div>
+            <a class="" href="/object-detection">目标检测</a>
+            <div class="sidebar-subnav" aria-label="目标检测子页面">
+                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+            </div>
+            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
+                <a class="" href="/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/segmentation-lab/instance">实例分割</a>
+            </div>
+
+            <div class="sidebar-category">人体视觉理解</div>
+            <a class="active" href="/human-pose">人体姿态估计与动作识别</a>
+            <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
+                <a class="" href="/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+                <a class="active" href="/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/human-pose/action">动作识别</a>
+            </div>
+
+            <div class="sidebar-category">几何运动与三维视觉</div>
+            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
+                <a class="" href="/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+            </div>
+            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
+                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+            </div>
+            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
+                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+            </div>
+            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
+                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+            </div>
+
+            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
+                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+            </div>
+
+            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
+                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/frontier/multimodal">多模态理解</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
+                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+            </div>
+
+            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
+                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+            </div>
+
+            <a class="" href="/frontier">CV 前沿探索</a>
+            <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
+                <a class="" href="/frontier">前沿总览</a>
+                <a class="" href="/frontier/vision-banana">Vision Banana 案例</a>
+            </div>
+        </nav>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <main class="main-content">
+        <div class="content-shell">
+            
+<div class="vision-lab human-pose-lab" data-human-pose-page="mechanism">
+    <header class="vision-hero station-hero human-pose-hero">
+        <div>
+            <span class="section-label station-eyebrow">STATION 10 · HUMAN POSE &amp; ACTION</span>
+            <h1 class="station-title">人体姿态估计与动作识别 · 姿态估计机制</h1>
+            <p class="station-summary">对比 DeepPose 坐标回归与 Heatmap 峰值定位两类典型机制。</p>
+        </div>
+        <div class="station-hero-actions human-pose-hero-actions">
+            <span class="human-pose-state">预设样例 · 机制拆解</span>
+            <strong class="station-badge">POSE · SKELETON · ACTION</strong>
+        </div>
+    </header>
+
+    <nav class="vision-tabs station-tabs vision-module-tabs" aria-label="人体姿态估计与动作识别内部导航">
+        
+        <a class="" href="/human-pose/overview">姿态估计总览</a>
+        
+        <a class="" href="/human-pose/skeleton">关键点与骨架</a>
+        
+        <a class="is-active" href="/human-pose/mechanism">姿态估计机制</a>
+        
+        <a class="" href="/human-pose/action">动作识别</a>
+        
+    </nav>
+
+    
+<section
+    class="vision-workbench human-mechanism-workbench"
+    data-human-pose-mechanism
+    data-mechanism-data-url="/static/assets/data/human_pose/pose_mechanism.json?v=20260628-cn1"
+    data-pose-samples-url="/static/assets/data/human_pose/pose_samples.json?v=20260627-round6"
+    data-pose-skeletons-url="/static/assets/data/human_pose/pose_skeletons.json?v=20260627-round6"
+    aria-label="姿态估计机制工作台"
+>
+    <aside class="vision-panel vision-control-panel human-control-panel human-mechanism-controls">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">01</span>
+            <div><h3>机制模式</h3><p>DeepPose / Heatmap</p></div>
+        </div>
+
+        <div class="human-mode-switch" role="tablist" aria-label="姿态估计机制模式">
+            <button class="is-active" type="button" data-mechanism-mode="deeppose">DeepPose 坐标回归</button>
+            <button type="button" data-mechanism-mode="heatmap">Heatmap 峰值定位</button>
+        </div>
+
+        <div class="human-mechanism-step-list" data-mechanism-step-list aria-label="机制阶段选择"></div>
+
+        <div class="human-button-row">
+            <button type="button" data-mechanism-play>播放流程</button>
+            <button type="button" data-mechanism-prev>上一步</button>
+            <button type="button" data-mechanism-next>下一步</button>
+            <button type="button" data-mechanism-reset>重置</button>
+        </div>
+
+        <label class="mechanism-speed-control">
+            <span>播放速度</span>
+            <select data-mechanism-speed aria-label="播放速度">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+            </select>
+        </label>
+
+        <div class="vision-shape-card">
+            <span>当前版本</span>
+            <strong data-mechanism-version>预设样例 · 机制拆解</strong>
+            <small>本页使用手工教学标注和预设 heatmap 响应解释机制，不执行真实模型推理。</small>
+        </div>
+    </aside>
+
+    <div class="vision-stage-panel human-mechanism-stage">
+        <div class="vision-stage-header">
+            <div>
+                <span>机制演示</span>
+                <h3 data-mechanism-title>DeepPose 坐标回归</h3>
+            </div>
+            <span class="vision-status-chip" data-mechanism-chip>DeepPose</span>
+        </div>
+
+        <div class="human-mechanism-canvas" data-mechanism-canvas>
+            <div class="human-mechanism-image-frame" data-mechanism-image-frame>
+                <img data-mechanism-image alt="姿态估计机制预设样例图">
+                <svg data-mechanism-overlay aria-label="姿态估计机制可视化覆盖层">
+                    <defs>
+                        <mask id="mechanismCropMask" data-mechanism-mask maskUnits="userSpaceOnUse">
+                            <rect width="100%" height="100%" fill="white"></rect>
+                            <rect data-mechanism-mask-cut fill="black" rx="10"></rect>
+                        </mask>
+                    </defs>
+                    <rect class="mechanism-crop-dim" width="100%" height="100%" mask="url(#mechanismCropMask)"></rect>
+                    <g data-mechanism-bbox-layer></g>
+                    <g data-mechanism-skeleton-layer></g>
+                    <g data-mechanism-point-layer></g>
+                    <g data-mechanism-heat-layer></g>
+                </svg>
+                <div class="mechanism-operation-layer" data-mechanism-operation-layer aria-hidden="true"></div>
+                <div class="human-pose-loading" data-mechanism-loading>正在加载姿态机制样例...</div>
+            </div>
+
+            <div class="human-mechanism-side">
+                <div class="human-stage-caption">
+                    <strong data-mechanism-stage-label>人体裁剪</strong>
+                    <span data-mechanism-stage-note>检测框裁出人体区域，后续网络只处理人体 crop。</span>
+                </div>
+
+                <div class="mechanism-compute-board" data-mechanism-compute-board aria-label="姿态估计计算过程可视化">
+                    <div class="mechanism-data-node mechanism-source-node" data-compute-node="crop">
+                        <div class="mechanism-node-head">
+                            <span>01</span>
+                            <strong>裁剪张量</strong>
+                        </div>
+                        <div class="mechanism-crop-preview" data-mechanism-crop-preview>
+                            <span>人体 crop</span>
+                        </div>
+                        <div class="mechanism-channel-split" aria-label="RGB 通道分解">
+                            <i></i><i></i><i></i>
+                        </div>
+                    </div>
+
+                    <i class="mechanism-transfer-line" data-line="crop-feature"></i>
+
+                    <div class="mechanism-data-node mechanism-feature-node" data-compute-node="feature">
+                        <div class="mechanism-node-head">
+                            <span>02</span>
+                            <strong>CNN 特征图</strong>
+                        </div>
+                        <div class="human-feature-tiles" data-mechanism-feature-grid aria-label="CNN 特征图预设示意"></div>
+                        <div class="mechanism-feature-caption" data-mechanism-feature-caption>边缘 / 肢体 / 纹理响应</div>
+                    </div>
+
+                    <i class="mechanism-transfer-line" data-line="feature-output"></i>
+
+                    <div class="mechanism-data-node mechanism-output-node" data-compute-node="output">
+                        <div class="mechanism-node-head">
+                            <span>03</span>
+                            <strong data-mechanism-output-head>回归头</strong>
+                        </div>
+
+                        <div class="mechanism-deeppose-output" data-mechanism-deeppose-output>
+                            <div class="mechanism-vector-machine" data-mechanism-vector-card>
+                                <span>姿态向量回归</span>
+                                <div class="mechanism-vector-stream" data-mechanism-vector>[nx0, ny0, nx5, ny5, ...]</div>
+                            </div>
+                            <div class="human-coordinate-grid" data-mechanism-coordinate-grid aria-label="归一化坐标到原图坐标"></div>
+                        </div>
+
+                        <div class="mechanism-heatmap-output" data-mechanism-heatmap-output>
+                            <div class="human-heatmap-strip" data-mechanism-heatmap-list aria-label="关节点 heatmap 预设响应"></div>
+                            <div class="mechanism-argmax-panel" data-mechanism-argmax aria-label="Argmax 峰值竞争"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="human-process-chain human-mechanism-flow" data-mechanism-flow aria-label="当前机制流程"></div>
+    </div>
+
+    <aside class="vision-panel vision-notes-panel human-notes-panel human-mechanism-notes">
+        <div class="vision-panel-heading">
+            <span class="vision-panel-index">02</span>
+            <div><h3>过程说明</h3><p>当前阶段输入输出</p></div>
+        </div>
+
+        <div class="human-keypoint-readout human-mechanism-readout">
+            <span data-mechanism-readout-kind>DeepPose</span>
+            <strong data-mechanism-readout-title>人体裁剪</strong>
+            <dl>
+                <div><dt>输入</dt><dd data-mechanism-input>原图 + 人体检测框 bbox</dd></div>
+                <div><dt>输出</dt><dd data-mechanism-output>人体区域 crop</dd></div>
+                <div><dt>模式</dt><dd data-mechanism-mode-label>坐标回归</dd></div>
+                <div><dt>样例</dt><dd data-mechanism-sample>pose_sample_01</dd></div>
+            </dl>
+        </div>
+
+        <div class="vision-formula-card">
+            <span>核心公式</span>
+            <strong data-mechanism-formula>normalized_x = (x - bbox_x) / bbox_w</strong>
+            <small data-mechanism-formula-note>坐标回归先预测归一化姿态向量，再映射回原图坐标。</small>
+        </div>
+
+        <div class="human-limb-readout">
+            <span>机制摘要</span>
+            <strong data-mechanism-summary-title>DeepPose 坐标回归</strong>
+            <p data-mechanism-summary>用 CNN 直接回归人体关键点坐标向量，再把归一化坐标映射回原图坐标。</p>
+        </div>
+
+        <div class="vision-output-schema">
+            <span>状态说明</span>
+            <code data-mechanism-status>预设样例 · 机制拆解；未接入真实推理模型。</code>
+        </div>
+    </aside>
+</section>
+
+<ol class="vision-stepper human-pose-stepper human-mechanism-stepper" aria-label="姿态估计机制流程" data-mechanism-stepper></ol>
+
+</div>
+
+        </div>
+    </main>
+
+    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    
+<script src="/static/js/human_pose/common.js?v=20260627-keypoint2"></script>
+
+<script src="/static/js/human_pose/mechanism.js?v=20260628-mechanism-cn1"></script>
+
+
+</body>
+</html>
