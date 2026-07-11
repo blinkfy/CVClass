@@ -5,8 +5,8 @@
     "missing_required_refs": 0,
     "secret_findings": 0,
     "runtime_assets_checked": 19,
-    "sdxs_mode": "teaching-only-explicit-degradation",
-    "sdxs_remote_host": "",
+    "sdxs_mode": "remote-browser-inference",
+    "sdxs_remote_host": "huggingface.co",
     "base_path": "/CVClass"
   },
   "pages": [

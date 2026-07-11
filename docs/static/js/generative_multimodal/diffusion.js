@@ -1134,10 +1134,7 @@
         state.player.setSteps(STEPS);
         bindEvents();
         updateRealModelUi();
-        state.realModel.supported = false;
-        updateRealModelUi();
-        setRealStatus("本静态包未包含可选的 0.9 GB SDXS 权重；教学动画与预设样例仍可完整使用。", { pct: 0 });
-        renderRealPlaceholder("真实生成资源未打包", "如需启用，请按 static_site/README.md 放置 UNet 与 Text Encoder 模型后重新构建。");
+        probeRealModelSupport();
 
         fetchJson(root.dataset.samplesUrl)
             .then(initWithData)
