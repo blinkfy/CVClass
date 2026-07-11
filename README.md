@@ -81,6 +81,18 @@ python app.py
 http://127.0.0.1:5000/
 ```
 
+### Diffusion 真实推理资源（可选）
+
+`/generative-multimodal/diffusion` 的 SDXS 实验台在浏览器端运行 UNet、VAE 与 CLIP 文本编码器；后端不加载或执行这些模型。浏览器会从仓库内的 `static/assets/data/generative_multimodal/diffusion/sdxs-512-dreamshaper/` 读取模型文件。
+
+该目录包含 `unet/model.fp16.onnx`、`vae_decoder/model.fp16.onnx`、`text_encoder/model.fp16.onnx`、`tokenizer/vocab.json` 和 `tokenizer/merges.txt`。若只有原始的 `text_encoder/model.safetensors`，请先在具备 `torch`、`transformers`、`safetensors`、`onnx` 与 `onnxconverter-common` 的 Python 环境中运行：
+
+```powershell
+python scripts/export_sdxs_text_encoder_onnx.py --model-dir 'F:\path\to\source-sdxs-512-dreamshaper' --output 'static/assets/data/generative_multimodal/diffusion/sdxs-512-dreamshaper/text_encoder/model.fp16.onnx' --fp16
+```
+
+若替换 ONNX 模型文件，请同步更新 `static/js/generative_multimodal/diffusion_text_to_image.js` 中的 `MODEL_REVISION`，让浏览器下载新版权重。
+
 ## 项目结构
 
 ```text

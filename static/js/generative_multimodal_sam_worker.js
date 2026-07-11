@@ -3,7 +3,7 @@ try { basePath = self.location.pathname.substring(0, self.location.pathname.inde
 
 const ORT_SCRIPT = basePath + "/static/vendor/onnxruntime-web/ort.min.js";
 const ORT_WASM_PATH = basePath + "/static/vendor/onnxruntime-web/";
-const DEFAULT_MANIFEST_URL = basePath + "/static/assets/models/generative_multimodal/sam/sam_model_manifest.json";
+const DEFAULT_MANIFEST_URL = basePath + "/static/assets/data/generative_multimodal/sam/model/sam_model_manifest.json";
 const DEFAULT_MASK_INPUT_SHAPE = [1, 1, 256, 256];
 const DEFAULT_ENCODER_LONG_SIDE = 1024;
 

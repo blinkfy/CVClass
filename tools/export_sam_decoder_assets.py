@@ -135,8 +135,8 @@ def update_samples_json(samples_path: Path, raster_dir: Path, embedding_dir: Pat
         sample_id = sample.get("id")
         if sample_id not in SAMPLE_IDS:
             continue
-        sample["realImage"] = f"/static/assets/generative_multimodal/sam_real/{sample_id}.png"
-        sample["embedding"] = f"/static/assets/models/generative_multimodal/sam/embeddings/{sample_id}.fp16.bin"
+        sample["realImage"] = f"/static/assets/data/generative_multimodal/sam/real/{sample_id}.png"
+        sample["embedding"] = f"/static/assets/data/generative_multimodal/sam/model/embeddings/{sample_id}.fp16.bin"
         sample["embeddingShape"] = shapes.get(sample_id, [1, 256, 64, 64])
         sample["embeddingDtype"] = "float16"
         sample["realInferenceReady"] = (
@@ -158,7 +158,7 @@ def update_manifest(
         {
             "version": "generated-sam-decoder-assets",
             "modelName": "SAM ViT-B Mask Decoder",
-            "modelUrl": "/static/assets/models/generative_multimodal/sam/sam_vit_b_mask_decoder.onnx",
+            "modelUrl": "/static/assets/data/generative_multimodal/sam/model/sam_vit_b_mask_decoder.onnx",
             "modelAvailable": model_path.exists(),
             "defaultBackend": "wasm",
             "embeddingShape": [1, 256, 64, 64],
@@ -182,8 +182,8 @@ def update_manifest(
     )
     for sample_id in SAMPLE_IDS:
         manifest["samples"][sample_id] = {
-            "image": f"/static/assets/generative_multimodal/sam_real/{sample_id}.png",
-            "embedding": f"/static/assets/models/generative_multimodal/sam/embeddings/{sample_id}.fp16.bin",
+            "image": f"/static/assets/data/generative_multimodal/sam/real/{sample_id}.png",
+            "embedding": f"/static/assets/data/generative_multimodal/sam/model/embeddings/{sample_id}.fp16.bin",
             "embeddingShape": shapes.get(sample_id, [1, 256, 64, 64]),
             "embeddingDtype": "float16",
             "embeddingAvailable": (embedding_dir / f"{sample_id}.fp16.bin").exists(),
@@ -197,9 +197,9 @@ def main() -> None:
     parser.add_argument("--model-type", default="vit_b", choices=["vit_b", "vit_l", "vit_h"])
     parser.add_argument("--sam-repo", type=Path, help="Optional local clone of facebookresearch/segment-anything.")
     parser.add_argument("--samples-json", type=Path, default=Path("static/assets/data/generative_multimodal/sam_samples.json"))
-    parser.add_argument("--source-image-dir", type=Path, default=Path("static/assets/generative_multimodal/sam"))
-    parser.add_argument("--raster-dir", type=Path, default=Path("static/assets/generative_multimodal/sam_real"))
-    parser.add_argument("--output-dir", type=Path, default=Path("static/assets/models/generative_multimodal/sam"))
+    parser.add_argument("--source-image-dir", type=Path, default=Path("static/assets/data/generative_multimodal/sam"))
+    parser.add_argument("--raster-dir", type=Path, default=Path("static/assets/data/generative_multimodal/sam/real"))
+    parser.add_argument("--output-dir", type=Path, default=Path("static/assets/data/generative_multimodal/sam/model"))
     parser.add_argument("--image-size", default="640x420")
     parser.add_argument("--opset", type=int, default=17)
     parser.add_argument("--skip-onnx", action="store_true")

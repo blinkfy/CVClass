@@ -6,14 +6,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_base.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vision_tasks/vision_tasks_components.css') }}?v=20260626-fontup4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/frontier_algorithm.css') }}?v=20260628-module-b1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/generative_multimodal/diffusion.css') }}?v=20260628-diffusion1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/generative_multimodal/diffusion.css') }}?v=20260711-diffusion-sdxs7">
 {% endblock %}
 
 {% block content %}
 <div
     class="vision-lab frontier-algo gm-algo gm-diffusion"
     data-gm-diffusion
-    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/diffusion_samples.json') }}?v=20260628-diffusion1"
+    data-samples-url="{{ url_for('static', filename='assets/data/generative_multimodal/diffusion_samples.json') }}?v=20260711-diffusion-sdxs2"
 >
     <header class="vision-hero station-hero frontier-algo-hero gm-hero diffusion-hero">
         <div>
@@ -22,7 +22,8 @@
             <p class="station-summary">通过前向加噪和反向去噪过程，理解扩散模型如何从随机噪声逐步恢复并生成图像。</p>
             <div class="gm-status-pills" aria-label="Diffusion 页面状态">
                 <span>机制拆解 · 教学动画</span>
-                <span>预渲染序列 · 去噪过程演示</span>
+                <span>真实推理 · SDXS / WebGPU</span>
+                <span class="gm-status-honest">浏览器加载约 0.9 GB · UNet、VAE 与 CLIP 均在本机运行</span>
             </div>
         </div>
         <div class="station-hero-actions frontier-algo-hero-actions">
@@ -55,6 +56,33 @@
                 <span>Prompt</span>
                 <input type="text" data-diff-control="prompt" aria-label="编辑 prompt" value="a small cat">
             </label>
+
+            <section class="diff-sidebar-real" aria-labelledby="diffRealPanelTitle">
+                <div class="diff-sidebar-real-head">
+                    <div>
+                        <span>真实图像生成</span>
+                        <strong id="diffRealPanelTitle">SDXS 真实生成</strong>
+                    </div>
+                    <div class="diff-real-badges" aria-label="真实推理状态">
+                        <span data-diff-real-meta="backend">等待检测 WebGPU</span>
+                        <span data-diff-real-meta="runtime">模型未加载</span>
+                    </div>
+                </div>
+                <label class="vision-field diff-real-seed-field">
+                    <span>Seed</span>
+                    <input type="number" data-diff-real-control="seed" value="42" step="1" aria-label="设置随机种子">
+                </label>
+                <div class="diff-real-actions">
+                    <button type="button" data-diff-real-action="load">加载模型</button>
+                    <button type="button" data-diff-real-action="generate">生成 512×512</button>
+                    <button type="button" data-diff-real-action="cancel">取消生成</button>
+                    <a href="#" download="diffusion-generated.png" data-diff-real-action="download" aria-disabled="true">下载结果</a>
+                </div>
+                <div class="diff-real-progress" aria-hidden="true">
+                    <b data-diff-real-progress></b>
+                </div>
+                <p class="diff-real-status" data-diff-real-status>页面加载后将自动在后台加载模型并生成首张真实图像。</p>
+            </section>
 
             <div class="frontier-control-group" role="radiogroup" aria-label="Timestep">
                 <strong>Timestep</strong>
@@ -109,14 +137,6 @@
                 </div>
             </div>
 
-            <div class="vision-kv-grid frontier-status-summary gm-status-summary">
-                <div><span>当前 prompt</span><strong data-diff-summary="prompt">--</strong></div>
-                <div><span>当前 timestep</span><strong data-diff-summary="timestep">t = 50</strong></div>
-                <div><span>当前阶段</span><strong data-diff-summary="phase">前向加噪</strong></div>
-                <div><span>噪声强度</span><strong data-diff-summary="noise">0.50</strong></div>
-                <div><span>引导强度</span><strong data-diff-summary="guidance">7.5</strong></div>
-                <div><span>采样步数</span><strong data-diff-summary="steps">30</strong></div>
-            </div>
         </aside>
 
         <div class="vision-stage-panel frontier-algo-stage gm-stage-panel diffusion-stage-panel">
@@ -150,6 +170,15 @@
                 <div><h3>过程笔记</h3><p>当前步骤输入、计算和输出</p></div>
             </div>
 
+            <div class="vision-kv-grid frontier-status-summary gm-status-summary diff-notes-summary">
+                <div><span>当前 prompt</span><strong data-diff-summary="prompt">--</strong></div>
+                <div><span>当前 timestep</span><strong data-diff-summary="timestep">t = 50</strong></div>
+                <div><span>当前阶段</span><strong data-diff-summary="phase">前向加噪</strong></div>
+                <div><span>噪声强度</span><strong data-diff-summary="noise">0.50</strong></div>
+                <div><span>引导强度</span><strong data-diff-summary="guidance">7.5</strong></div>
+                <div><span>采样步数</span><strong data-diff-summary="steps">30</strong></div>
+            </div>
+
             <div class="frontier-note-card">
                 <span>当前步骤</span>
                 <strong data-diff-note="step">Clean Image</strong>
@@ -167,14 +196,15 @@
             <div class="vision-formula-card frontier-formula-card gm-formula-card">
                 <span>概念公式</span>
                 <strong data-diff-note="formula">x0</strong>
-                <small data-diff-note="formulaNote">本页使用预渲染序列和前端 fallback 演示去噪过程，不运行真实 Diffusion 推理。</small>
+                <small data-diff-note="formulaNote">生成完成后，主舞台会使用真实最终图；模型未返回的中间帧会明确标为教学模拟。</small>
             </div>
         </aside>
     </section>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/frontier_player.js') }}?v=20260628-module-b1"></script>
-<script src="{{ url_for('static', filename='js/generative_multimodal/diffusion.js') }}?v=20260628-diffusion1"></script>
+<script src="{{ url_for('static', filename='js/generative_multimodal/diffusion.js') }}?v=20260711-diffusion-sdxs9"></script>
 {% endblock %}

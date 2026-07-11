@@ -9,10 +9,10 @@
       "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
       "usedFor": ["/human-pose/skeleton", "/human-pose/action"],
       "status": "default_real_inference_local_model",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/multipose-lightning/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/multipose-lightning/model.json",
-        "/static/assets/models/human_pose/movenet/multipose-lightning/movenet-multipose.bin"
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/movenet-multipose.bin"
       ],
       "source": "https://tfhub.dev/google/tfjs-model/movenet/multipose/lightning/1",
       "downloadMirror": "https://github.com/vladmandic/movenet/tree/main/models",
@@ -24,10 +24,10 @@
       "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
       "usedFor": ["/human-pose/skeleton"],
       "status": "single_person_high_accuracy_mode",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/singlepose-thunder/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/singlepose-thunder/model.json",
-        "/static/assets/models/human_pose/movenet/singlepose-thunder/movenet-thunder.bin"
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/movenet-thunder.bin"
       ],
       "source": "https://tfhub.dev/google/movenet/singlepose/thunder/4",
       "downloadMirror": "https://github.com/vladmandic/movenet/tree/main/models",
@@ -39,11 +39,11 @@
       "runtime": "TensorFlow.js CPU backend by default; WebGL script is available as an acceleration option",
       "usedFor": ["/human-pose/skeleton"],
       "status": "real_inference_local_model_fallback",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/singlepose-lightning/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/model.json",
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/group1-shard1of2.bin",
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/group1-shard2of2.bin"
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard1of2.bin",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard2of2.bin"
       ],
       "source": "https://www.tensorflow.org/hub/tutorials/movenet",
       "note": "Used only as a local fallback when the Thunder detector cannot be created. If both local models fail, the page labels the state as preset fallback and keeps preset samples visible."
@@ -54,9 +54,9 @@
       "runtime": "Vanilla JavaScript linear softmax over pose-sequence features",
       "usedFor": ["/human-pose/action"],
       "status": "default_real_inference_local_model",
-      "localModelRoute": "/static/assets/models/human_pose/action/pose_sequence_classifier.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json",
       "localFiles": [
-        "/static/assets/models/human_pose/action/pose_sequence_classifier.json"
+        "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json"
       ],
       "source": "Project-trained lightweight classifier from synthetic teaching pose sequences",
       "note": "The page loads local weights and runs a real forward pass for probability bars. It is not presented as a pretrained C3D/MoViNet video classifier."

@@ -1,6 +1,6 @@
 {
   "pageStatus": "真实推理 · 本地姿态序列分类器",
-  "modelStatus": "Action page can extract uploaded or preset video frames, run local MoveNet Lightning keypoint inference in a Worker, then load /static/assets/models/human_pose/action/pose_sequence_classifier.json for a real local softmax forward pass over pose-sequence features; sample probabilities are fallback and preset-video calibration prior only.",
+  "modelStatus": "Action page can extract uploaded or preset video frames, run local MoveNet Lightning keypoint inference in a Worker, then load /static/assets/data/human_pose/models/action/pose_sequence_classifier.json for a real local softmax forward pass over pose-sequence features; sample probabilities are fallback and preset-video calibration prior only.",
   "inputShape": {
     "height": 112,
     "width": 112,
@@ -268,5 +268,5 @@
       ]
     }
   ],
-  "modelUrl": "/static/assets/models/human_pose/action/pose_sequence_classifier.json"
+  "modelUrl": "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json"
 }

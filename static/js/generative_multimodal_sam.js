@@ -10,7 +10,7 @@
             {
                 id: "street_vehicle",
                 title: "街道车辆",
-                image: "static/assets/generative_multimodal/sam/street_vehicle.svg",
+                image: "static/assets/data/generative_multimodal/sam/street_vehicle.svg",
                 scene: "street",
                 size: [640, 420],
                 defaultObjectId: "car_1",
@@ -30,7 +30,7 @@
             {
                 id: "desktop_objects",
                 title: "桌面物体",
-                image: "static/assets/generative_multimodal/sam/desktop_objects.svg",
+                image: "static/assets/data/generative_multimodal/sam/desktop_objects.svg",
                 scene: "desktop",
                 size: [640, 420],
                 defaultObjectId: "laptop_1",
@@ -50,7 +50,7 @@
             {
                 id: "animal_subject",
                 title: "动物主体",
-                image: "static/assets/generative_multimodal/sam/animal_subject.svg",
+                image: "static/assets/data/generative_multimodal/sam/animal_subject.svg",
                 scene: "animal",
                 size: [640, 420],
                 defaultObjectId: "animal_1",

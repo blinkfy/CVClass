@@ -15,10 +15,10 @@
       "status": "default_real_inference_local_model",
       "keypoints": "17 per person",
       "outputSchema": "Up to 6 COCO-style poses; each pose has keypoints with x, y and score plus a bounding box",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/multipose-lightning/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/multipose-lightning/model.json",
-        "/static/assets/models/human_pose/movenet/multipose-lightning/movenet-multipose.bin"
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/multipose-lightning/movenet-multipose.bin"
       ],
       "cdnScripts": [
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
@@ -42,10 +42,10 @@
       "status": "single_person_high_accuracy_mode",
       "keypoints": 17,
       "outputSchema": "COCO-style keypoints with x, y and score",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/singlepose-thunder/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/singlepose-thunder/model.json",
-        "/static/assets/models/human_pose/movenet/singlepose-thunder/movenet-thunder.bin"
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-thunder/movenet-thunder.bin"
       ],
       "cdnScripts": [
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
@@ -70,11 +70,11 @@
       "status": "real_inference_local_model_fallback",
       "keypoints": 17,
       "outputSchema": "COCO-style keypoints with x, y and score",
-      "localModelRoute": "/static/assets/models/human_pose/movenet/singlepose-lightning/model.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
       "localFiles": [
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/model.json",
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/group1-shard1of2.bin",
-        "/static/assets/models/human_pose/movenet/singlepose-lightning/group1-shard2of2.bin"
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/model.json",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard1of2.bin",
+        "/static/assets/data/human_pose/models/movenet/singlepose-lightning/group1-shard2of2.bin"
       ],
       "cdnScripts": [
         "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js",
@@ -98,9 +98,9 @@
       "status": "default_real_inference_local_model",
       "classes": ["waving", "jumping", "running", "standing", "walking", "clapping"],
       "inputSchema": "14 pose-sequence motion features from generated frame keypoints",
-      "localModelRoute": "/static/assets/models/human_pose/action/pose_sequence_classifier.json",
+      "localModelRoute": "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json",
       "localFiles": [
-        "/static/assets/models/human_pose/action/pose_sequence_classifier.json"
+        "/static/assets/data/human_pose/models/action/pose_sequence_classifier.json"
       ],
       "sourceUrls": [
         "https://onnxruntime.ai/docs/tutorials/web/",

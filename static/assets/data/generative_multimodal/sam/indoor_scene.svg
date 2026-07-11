@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="室内场景样例">
+  <rect width="640" height="420" fill="#f8fafc"/>
+  <path d="M0 0h640v252H0z" fill="#eff6ff"/>
+  <path d="M0 252h640v168H0z" fill="#dbeafe"/>
+  <path d="M76 54h144v116H76zM420 54h144v116H420z" fill="#bfdbfe" stroke="#93c5fd" stroke-width="4"/>
+  <path d="M148 54v116M76 112h144M492 54v116M420 112h144" stroke="#f8fafc" stroke-width="4"/>
+  <g transform="translate(144 196)">
+    <rect x="0" y="62" width="342" height="94" rx="20" fill="#2563eb"/>
+    <rect x="34" y="0" width="118" height="94" rx="18" fill="#60a5fa"/>
+    <rect x="190" y="0" width="118" height="94" rx="18" fill="#60a5fa"/>
+    <rect x="30" y="136" width="28" height="42" rx="8" fill="#1e3a8a"/>
+    <rect x="284" y="136" width="28" height="42" rx="8" fill="#1e3a8a"/>
+    <path d="M0 92h342" stroke="#1d4ed8" stroke-width="8" opacity=".5"/>
+  </g>
+  <g transform="translate(456 226)">
+    <rect x="0" y="0" width="92" height="110" rx="12" fill="#14b8a6"/>
+    <rect x="12" y="16" width="68" height="28" rx="4" fill="#ccfbf1"/>
+    <path d="M16 110v34m60-34v34" stroke="#0f766e" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="310" cy="376" rx="226" ry="24" fill="#64748b" opacity=".16"/>
+</svg>

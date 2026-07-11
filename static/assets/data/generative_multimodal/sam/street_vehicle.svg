@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="街道车辆样例">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#dbeafe"/>
+      <stop offset="1" stop-color="#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="1" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" fill="url(#sky)"/>
+  <rect x="0" y="212" width="640" height="208" fill="url(#road)"/>
+  <path d="M0 212h640v36H0z" fill="#dbeafe"/>
+  <path d="M80 68h92v148H80zM472 56h94v160h-94z" fill="#bfdbfe" stroke="#93c5fd" stroke-width="2"/>
+  <path d="M106 92h18v22h-18zm30 0h18v22h-18zm-30 42h18v22h-18zm30 42h18v22h-18zm388-72h18v24h-18zm-30 0h18v24h-18zm30 44h18v24h-18zm-30 44h18v24h-18z" fill="#f8fafc" opacity=".75"/>
+  <path d="M0 342h180m100 0h110m100 0h150" stroke="#f8fafc" stroke-width="8" stroke-linecap="round" stroke-dasharray="72 44" opacity=".8"/>
+  <g transform="translate(174 154)">
+    <path d="M24 104h300c16 0 30 12 33 28l8 38H0l9-40c4-15 16-26 31-26z" fill="#2563eb"/>
+    <path d="M74 50h178c26 0 45 14 58 54H38c11-34 21-54 36-54z" fill="#60a5fa"/>
+    <path d="M86 64h62v40H62c8-23 13-35 24-40zm82 0h80c20 0 34 13 45 40H168z" fill="#dbeafe"/>
+    <circle cx="70" cy="174" r="28" fill="#111827"/>
+    <circle cx="70" cy="174" r="12" fill="#cbd5e1"/>
+    <circle cx="286" cy="174" r="28" fill="#111827"/>
+    <circle cx="286" cy="174" r="12" fill="#cbd5e1"/>
+    <path d="M18 138h330" stroke="#1d4ed8" stroke-width="8" opacity=".45"/>
+    <circle cx="26" cy="132" r="9" fill="#fef3c7"/>
+    <circle cx="346" cy="132" r="9" fill="#fecaca"/>
+  </g>
+</svg>
