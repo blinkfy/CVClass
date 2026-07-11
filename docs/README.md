@@ -1,21 +1,17 @@
-# CVClass 纯静态版
+# CVClass GitHub Pages 静态版
 
-本目录是与原 Flask 项目隔离的静态版本。构建过程只读取上级目录，所有生成结果都写入 `static_site/site/`。
+`docs/` 根目录可直接作为 `main /docs` 的 GitHub Pages 发布源。项目站点前缀固定为 `/CVClass`，入口是 `https://blinkfy.github.io/CVClass/`，不要使用 `/CVClass/index`。
 
 ## 构建与预览
 
 ```powershell
-python static_site/build_static.py
-python static_site/serve_static.py --port 8000
+python docs/build_github_pages.py --base-path /CVClass
+python docs/serve_static.py --port 8001
 ```
 
-访问 `http://127.0.0.1:8000/`。部署到子目录时先指定前缀，例如：
+访问 `http://127.0.0.1:8001/CVClass/`；访问本地根路径时预览服务器也会自动跳转到该地址。
 
-```powershell
-python static_site/build_static.py --base-path /CVClass
-```
-
-然后把 `static_site/site/` 的内容部署到对应的 `/CVClass` 路径。
+在 GitHub 仓库的 `Settings → Pages` 中选择 `Deploy from a branch`、`main`、`/docs`。`.nojekyll` 已包含在发布根目录中。
 
 ## 静态 AI 助手
 
@@ -34,43 +30,19 @@ Base URL 和模型名保存在 `localStorage`。API Key 默认只保存在当前
 - 使用 HTTP(S) 静态服务器，不能直接双击 `file://` 打开。
 - `.wasm` 应返回 `application/wasm`，`.mjs` 应返回 JavaScript MIME。
 - `.m3u8` 与 `.ts` 应分别配置 HLS 播放列表和 MPEG-TS MIME。
-- 当前完整 SDXS 构建约 1.23 GiB；未带可选权重的教学构建约 363 MiB。模型按需加载，建议对版本化资源启用长期缓存。
+- GitHub Pages 版本约 363 MiB，最大单文件约 25 MiB，符合 GitHub Pages 与普通 Git 文件限制。
 - 不能把原项目的 `compute_config.json` 或任何服务端密钥复制到静态目录。
 
-### 可选 SDXS 真实文生图模型
+### SDXS 在 GitHub Pages 上的边界
 
-当前交付的 `static_site/model-assets/` 与 `site/` 已包含完整浏览器 ONNX，`build-manifest.json` 中应显示 `sdxs_mode: full-browser-inference`。
+完整 SDXS 版本约 1.23 GiB，UNet 与 Text Encoder 分别约 658 MiB、235 MiB。GitHub 普通仓库拒绝超过 100 MiB 的单文件，Pages 发布站点也不能超过 1 GiB，因此 `docs/` 版本明确使用教学模式，不把两个 ONNX 文件提交到 GitHub。
 
-仓库的 `static/` 目录没有包含浏览器可直接执行的 SDXS UNet 与 Text Encoder ONNX，但本机 Hugging Face 缓存可能已有原始 `.safetensors` 参数。构建器需要两个浏览器 ONNX 文件；未提供时会明确进入“教学演示”模式，禁用真实生成按钮且不会产生 404。
-
-若本机已缓存 `IDKiro/sdxs-512-dreamshaper`，可在具备 PyTorch、Diffusers 与 ONNX 工具的环境中执行一次转换：
-
-```powershell
-python static_site/export_cached_sdxs.py
-python static_site/build_static.py
-```
-
-转换器会自动查找 Hugging Face snapshot，并仅将生成结果写入 `static_site/model-assets/`，不会修改原项目或缓存参数。
-
-如果已经有完整的浏览器 ONNX 模型目录，也可以直接指定它，无需先复制：
-
-```powershell
-python static_site/build_static.py --sdxs-model-dir 'F:\path\to\sdxs-512-dreamshaper'
-```
-
-如需启用完整浏览器端真实生成，将下列两个文件放入后重新构建：
-
-```text
-static_site/model-assets/sdxs-512-dreamshaper/unet/model.fp16.onnx
-static_site/model-assets/sdxs-512-dreamshaper/text_encoder/model.fp16.onnx
-```
-
-构建器会校验两者必须同时存在，并把它们加入最终 `site/`。
+教学动画、参数、预设样例和其余课程不受影响。若要在公网启用真实 SDXS，应把大模型放在支持大文件与 CORS 的对象存储或模型托管服务中，再将浏览器模型地址指向该服务；不要直接提交到 GitHub Pages。
 
 ## 目录
 
-- `build_static.py`：静态导出、隔离复制和自检。
+- `build_github_pages.py`：生成 `/CVClass` 前缀的 Pages 版本、提升到 `docs/` 根目录并检查 GitHub 大小限制。
+- `build_static.py`：底层静态导出与自检，由 Pages 构建器调用。
 - `static_ai_assistant.js`：部署版浏览器 AI 助手源文件。
-- `serve_static.py`：带正确 WASM、ES module 和 HLS MIME 的本地预览服务器。
-- `site/`：可直接部署的最终产物。
-- `review-stage/`：构建与审查证据。
+- `serve_static.py`：支持 `/CVClass` 前缀并带正确 WASM、ES module 和 HLS MIME 的本地预览服务器。
+- `.nojekyll`：要求 GitHub Pages 直接发布静态文件，不经过 Jekyll 处理。

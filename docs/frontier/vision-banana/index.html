@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vision Banana 案例</title>
-    <link rel="icon" href="/static/assets/img/icon.webp">
+    <link rel="icon" href="/CVClass/static/assets/img/icon.webp">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="stylesheet" href="/static/css/core/base.css?v=20260627-quest-map2">
+    <link rel="stylesheet" href="/CVClass/static/css/core/base.css?v=20260627-quest-map2">
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
     
-<link rel="stylesheet" href="/static/css/frontier.css?v=20260619-frontier4">
-<link rel="stylesheet" href="/static/css/vision_banana.css?v=20260619-official11">
+<link rel="stylesheet" href="/CVClass/static/css/frontier.css?v=20260619-frontier4">
+<link rel="stylesheet" href="/CVClass/static/css/vision_banana.css?v=20260619-official11">
 
 </head>
 <body class="cv-shell sidebar-collapsed home-page-shell  frontier-page-shell    ">
     <script>
-        window.CVCLASS_BASE_PATH = "";
+        window.CVCLASS_BASE_PATH = "/CVClass";
         window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
         window.CVCLASS_ACTIVE_PAGE = "frontier";
         window.CVCLASS_ACTIVE_SUB_PAGE = "vision_banana";
@@ -26,9 +26,9 @@
     </script>
     
     <header class="site-header" aria-label="主页导航">
-        <a class="site-brand" href="/" aria-label="计算机视觉教学平台首页">
+        <a class="site-brand" href="/CVClass/" aria-label="计算机视觉教学平台首页">
             <span class="site-brand-icon" aria-hidden="true">
-                <img src="/static/assets/img/icon.webp" alt="">
+                <img src="/CVClass/static/assets/img/icon.webp" alt="">
             </span>
             <span class="site-brand-text">
                 <strong>计算机视觉教学平台</strong>
@@ -36,13 +36,13 @@
             </span>
         </a>
         <nav class="site-nav" aria-label="首页导航">
-            <a class="" href="/">首页</a>
-            <a href="/#featured-modules">实验模块</a>
-            <a class="" href="/learning-path">学习路径</a>
-            <a class="" href="/knowledge-graph">知识图谱</a>
-            <a class="" href="/principles">算法原理</a>
-            <a class="active" href="/frontier">前沿探索</a>
-            <a class="" href="/about-author">关于作者</a>
+            <a class="" href="/CVClass/">首页</a>
+            <a href="/CVClass/#featured-modules">实验模块</a>
+            <a class="" href="/CVClass/learning-path">学习路径</a>
+            <a class="" href="/CVClass/knowledge-graph">知识图谱</a>
+            <a class="" href="/CVClass/principles">算法原理</a>
+            <a class="active" href="/CVClass/frontier">前沿探索</a>
+            <a class="" href="/CVClass/about-author">关于作者</a>
         </nav>
         <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -60,134 +60,134 @@
         </div>
         <nav class="sidebar-nav">
             <div class="sidebar-category">学习入口</div>
-            <a class="" href="/">首页</a>
-            <a class="" href="/learning-path">完整学习路径</a>
-            <a class="" href="/knowledge-graph">CV 算法知识图谱</a>
-            <a class="" href="/principles">算法原理文档</a>
+            <a class="" href="/CVClass/">首页</a>
+            <a class="" href="/CVClass/learning-path">完整学习路径</a>
+            <a class="" href="/CVClass/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/CVClass/principles">算法原理文档</a>
 
             <div class="sidebar-category">基础视觉</div>
-            <a class="" href="/grayscale">图像基础</a>
-            <a class="" href="/convolution">卷积与滤波</a>
+            <a class="" href="/CVClass/grayscale">图像基础</a>
+            <a class="" href="/CVClass/convolution">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
-                <a class="" href="/convolution">卷积可视化</a>
-                <a class="" href="/image-convolution">图像卷积应用</a>
-                <a href="/convolution#convAdvancedPanel">卷积结构调研</a>
-                <a class="" href="/digit-recognition">卷积模型应用</a>
+                <a class="" href="/CVClass/convolution">卷积可视化</a>
+                <a class="" href="/CVClass/image-convolution">图像卷积应用</a>
+                <a href="/CVClass/convolution#convAdvancedPanel">卷积结构调研</a>
+                <a class="" href="/CVClass/digit-recognition">卷积模型应用</a>
             </div>
 
             <div class="sidebar-category">结构与特征</div>
-            <a class="" href="/edge-detection">边缘、轮廓与形态学</a>
+            <a class="" href="/CVClass/edge-detection">边缘、轮廓与形态学</a>
             <div class="sidebar-subnav" aria-label="边缘检测子页面">
-                <a class="" href="/edge-detection/compare">方法对比</a>
-                <a class="" href="/edge-detection/kernel">局部卷积响应</a>
-                <a class="" href="/edge-detection/canny">Canny 流水线</a>
-                <a class="" href="/edge-detection/teed">深度边缘检测拓展</a>
-                <a class="" href="/edge-detection/applications">应用实践</a>
+                <a class="" href="/CVClass/edge-detection/compare">方法对比</a>
+                <a class="" href="/CVClass/edge-detection/kernel">局部卷积响应</a>
+                <a class="" href="/CVClass/edge-detection/canny">Canny 流水线</a>
+                <a class="" href="/CVClass/edge-detection/teed">深度边缘检测拓展</a>
+                <a class="" href="/CVClass/edge-detection/applications">应用实践</a>
             </div>
-            <a class="" href="/feature-detection">角点、特征与图像拼接</a>
+            <a class="" href="/CVClass/feature-detection">角点、特征与图像拼接</a>
             <div class="sidebar-subnav" aria-label="特征检测子页面">
-                <a class="" href="/feature-detection/compare">方法对比</a>
-                <a class="" href="/feature-detection/corner">角点检测</a>
-                <a class="" href="/feature-detection/sift">SIFT 特征</a>
-                <a class="" href="/feature-detection/matching">特征匹配</a>
-                <a class="" href="/feature-detection/panorama">图像拼接与全景拍照</a>
+                <a class="" href="/CVClass/feature-detection/compare">方法对比</a>
+                <a class="" href="/CVClass/feature-detection/corner">角点检测</a>
+                <a class="" href="/CVClass/feature-detection/sift">SIFT 特征</a>
+                <a class="" href="/CVClass/feature-detection/matching">特征匹配</a>
+                <a class="" href="/CVClass/feature-detection/panorama">图像拼接与全景拍照</a>
             </div>
 
             <div class="sidebar-category">深度视觉</div>
-            <a class="" href="/cnn-visualization">CNN 如何学习图像</a>
+            <a class="" href="/CVClass/cnn-visualization">CNN 如何学习图像</a>
             <div class="sidebar-subnav" aria-label="CNN子页面">
-                <a class="" href="/cnn-visualization">前向与反向传播</a>
-                <a class="" href="/cnn-explainer">数据传播细节</a>
-                <a class="" href="/conv-gradient-lab">卷积梯度显微镜</a>
+                <a class="" href="/CVClass/cnn-visualization">前向与反向传播</a>
+                <a class="" href="/CVClass/cnn-explainer">数据传播细节</a>
+                <a class="" href="/CVClass/conv-gradient-lab">卷积梯度显微镜</a>
             </div>
 
             <div class="sidebar-category">视觉识别与分割</div>
-            <a class="" href="/classification-lab">图像分类与任务谱系</a>
+            <a class="" href="/CVClass/classification-lab">图像分类与任务谱系</a>
             <div class="sidebar-subnav" aria-label="图像分类与任务谱系子页面">
-                <a class="" href="/classification-lab">任务谱系</a>
-                <a class="" href="/classification-lab/classification">图像分类实验</a>
+                <a class="" href="/CVClass/classification-lab">任务谱系</a>
+                <a class="" href="/CVClass/classification-lab/classification">图像分类实验</a>
             </div>
-            <a class="" href="/segmentation-basic">图像分割与区域提取</a>
+            <a class="" href="/CVClass/segmentation-basic">图像分割与区域提取</a>
             <div class="sidebar-subnav" aria-label="图像分割与区域提取子页面">
-                <a class="" href="/segmentation-basic/cluster">聚类分割</a>
-                <a class="" href="/segmentation-basic/graph">图模型与交互分割</a>
-                <a class="" href="/segmentation-basic/region">区域分割与属性分析</a>
+                <a class="" href="/CVClass/segmentation-basic/cluster">聚类分割</a>
+                <a class="" href="/CVClass/segmentation-basic/graph">图模型与交互分割</a>
+                <a class="" href="/CVClass/segmentation-basic/region">区域分割与属性分析</a>
             </div>
-            <a class="" href="/object-detection">目标检测</a>
+            <a class="" href="/CVClass/object-detection">目标检测</a>
             <div class="sidebar-subnav" aria-label="目标检测子页面">
-                <a class="" href="/object-detection/yolo">真实推理：YOLO 检测</a>
-                <a class="" href="/object-detection/rcnn">机制拆解：R-CNN 流程</a>
+                <a class="" href="/CVClass/object-detection/yolo">真实推理：YOLO 检测</a>
+                <a class="" href="/CVClass/object-detection/rcnn">机制拆解：R-CNN 流程</a>
             </div>
-            <a class="" href="/segmentation-lab">语义 vs 实例</a>
+            <a class="" href="/CVClass/segmentation-lab">语义 vs 实例</a>
             <div class="sidebar-subnav" aria-label="语义分割与实例分割子页面">
-                <a class="" href="/segmentation-lab/semantic">语义分割</a>
-                <a class="" href="/segmentation-lab/instance">实例分割</a>
+                <a class="" href="/CVClass/segmentation-lab/semantic">语义分割</a>
+                <a class="" href="/CVClass/segmentation-lab/instance">实例分割</a>
             </div>
 
             <div class="sidebar-category">人体视觉理解</div>
-            <a class="" href="/human-pose">人体姿态估计与动作识别</a>
+            <a class="" href="/CVClass/human-pose">人体姿态估计与动作识别</a>
             <div class="sidebar-subnav" aria-label="人体姿态估计与动作识别子页面">
-                <a class="" href="/human-pose/overview">姿态估计总览</a>
-                <a class="" href="/human-pose/skeleton">关键点与骨架</a>
-                <a class="" href="/human-pose/mechanism">姿态估计机制</a>
-                <a class="" href="/human-pose/action">动作识别</a>
+                <a class="" href="/CVClass/human-pose/overview">姿态估计总览</a>
+                <a class="" href="/CVClass/human-pose/skeleton">关键点与骨架</a>
+                <a class="" href="/CVClass/human-pose/mechanism">姿态估计机制</a>
+                <a class="" href="/CVClass/human-pose/action">动作识别</a>
             </div>
 
             <div class="sidebar-category">几何运动与三维视觉</div>
-            <a class="" href="/camera-geometry">相机几何与标定</a>
+            <a class="" href="/CVClass/camera-geometry">相机几何与标定</a>
             <div class="sidebar-subnav" aria-label="相机几何与标定子页面">
-                <a class="" href="/camera-geometry/model">相机成像模型</a>
-                <a class="" href="/camera-geometry/projection-matrix">内外参与投影矩阵</a>
-                <a class="" href="/camera-geometry/calibration">棋盘格标定实验</a>
+                <a class="" href="/CVClass/camera-geometry/model">相机成像模型</a>
+                <a class="" href="/CVClass/camera-geometry/projection-matrix">内外参与投影矩阵</a>
+                <a class="" href="/CVClass/camera-geometry/calibration">棋盘格标定实验</a>
             </div>
-            <a class="" href="/motion-estimation">运动估计与光流</a>
+            <a class="" href="/CVClass/motion-estimation">运动估计与光流</a>
             <div class="sidebar-subnav" aria-label="运动估计与光流子页面">
-                <a class="" href="/motion-estimation/flow-constraint">运动场与光流约束</a>
-                <a class="" href="/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
-                <a class="" href="/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
-                <a class="" href="/motion-estimation/real-flow">真实视频光流</a>
+                <a class="" href="/CVClass/motion-estimation/flow-constraint">运动场与光流约束</a>
+                <a class="" href="/CVClass/motion-estimation/lucas-kanade">Lucas-Kanade 光流</a>
+                <a class="" href="/CVClass/motion-estimation/pyramid-tracking">金字塔光流与运动追踪</a>
+                <a class="" href="/CVClass/motion-estimation/real-flow">真实视频光流</a>
             </div>
-            <a class="" href="/stereo-depth">双目视觉与深度</a>
+            <a class="" href="/CVClass/stereo-depth">双目视觉与深度</a>
             <div class="sidebar-subnav" aria-label="双目视觉与深度子页面">
-                <a class="" href="/stereo-depth/parallel">平行双目与极线约束</a>
-                <a class="" href="/stereo-depth/disparity">视差与深度三角关系</a>
-                <a class="" href="/stereo-depth/block-matching">块匹配与视差图</a>
+                <a class="" href="/CVClass/stereo-depth/parallel">平行双目与极线约束</a>
+                <a class="" href="/CVClass/stereo-depth/disparity">视差与深度三角关系</a>
+                <a class="" href="/CVClass/stereo-depth/block-matching">块匹配与视差图</a>
             </div>
-            <a class="" href="/multiview-reconstruction">多视图几何与三维重建</a>
+            <a class="" href="/CVClass/multiview-reconstruction">多视图几何与三维重建</a>
             <div class="sidebar-subnav" aria-label="多视图几何与三维重建子页面">
-                <a class="" href="/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
-                <a class="" href="/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
-                <a class="" href="/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
+                <a class="" href="/CVClass/multiview-reconstruction/epipolar-geometry">对极几何与基础矩阵</a>
+                <a class="" href="/CVClass/multiview-reconstruction/essential-pose">本质矩阵与相机位姿</a>
+                <a class="" href="/CVClass/multiview-reconstruction/triangulation">三角测量与稀疏点云</a>
             </div>
 
-            <a class="" href="/vision-transformer">视觉 Transformer</a>
+            <a class="" href="/CVClass/vision-transformer">视觉 Transformer</a>
             <div class="sidebar-subnav" aria-label="视觉 Transformer 子页面">
-                <a class="" href="/vision-transformer/vit">ViT / Transformer</a>
-                <a class="" href="/vision-transformer/dino">DINO 自监督表征</a>
+                <a class="" href="/CVClass/vision-transformer/vit">ViT / Transformer</a>
+                <a class="" href="/CVClass/vision-transformer/dino">DINO 自监督表征</a>
             </div>
 
-            <a class="" href="/frontier/clip">图文对齐与视觉语言模型</a>
+            <a class="" href="/CVClass/frontier/clip">图文对齐与视觉语言模型</a>
             <div class="sidebar-subnav" aria-label="图文对齐与视觉语言模型子页面">
-                <a class="" href="/frontier/clip">CLIP 图文对齐</a>
-                <a class="" href="/frontier/vlm">VLM 视觉语言模型</a>
-                <a class="" href="/frontier/multimodal">多模态理解</a>
+                <a class="" href="/CVClass/frontier/clip">CLIP 图文对齐</a>
+                <a class="" href="/CVClass/frontier/vlm">VLM 视觉语言模型</a>
+                <a class="" href="/CVClass/frontier/multimodal">多模态理解</a>
             </div>
 
-            <a class="" href="/generative-multimodal/sam">提示式视觉基础模型</a>
+            <a class="" href="/CVClass/generative-multimodal/sam">提示式视觉基础模型</a>
             <div class="sidebar-subnav" aria-label="提示式视觉基础模型子页面">
-                <a class="" href="/generative-multimodal/sam">SAM 提示式图像分割</a>
+                <a class="" href="/CVClass/generative-multimodal/sam">SAM 提示式图像分割</a>
             </div>
 
-            <a class="" href="/generative-multimodal/gan">生成式视觉模型</a>
+            <a class="" href="/CVClass/generative-multimodal/gan">生成式视觉模型</a>
             <div class="sidebar-subnav" aria-label="生成式视觉模型子页面">
-                <a class="" href="/generative-multimodal/gan">GAN 对抗生成</a>
-                <a class="" href="/generative-multimodal/diffusion">Diffusion 去噪生成</a>
+                <a class="" href="/CVClass/generative-multimodal/gan">GAN 对抗生成</a>
+                <a class="" href="/CVClass/generative-multimodal/diffusion">Diffusion 去噪生成</a>
             </div>
 
-            <a class="active" href="/frontier">CV 前沿探索</a>
+            <a class="active" href="/CVClass/frontier">CV 前沿探索</a>
             <div class="sidebar-subnav" aria-label="CV 前沿探索子页面">
-                <a class="" href="/frontier">前沿总览</a>
-                <a class="active" href="/frontier/vision-banana">Vision Banana 案例</a>
+                <a class="" href="/CVClass/frontier">前沿总览</a>
+                <a class="active" href="/CVClass/frontier/vision-banana">Vision Banana 案例</a>
             </div>
         </nav>
     </aside>
@@ -199,7 +199,7 @@
 <div class="banana-page vb-page" data-banana-page>
     <section class="vb-hero" aria-labelledby="bananaHeroTitle">
         <div class="vb-hero-copy">
-            <a class="vb-back-link" href="/frontier">返回 CV 前沿探索</a>
+            <a class="vb-back-link" href="/CVClass/frontier">返回 CV 前沿探索</a>
             <h1 id="bananaHeroTitle">Vision Banana：Image Generators are Generalist Vision Learners</h1>
             <h2>把视觉理解任务转化为图像生成</h2>
             <p>输入图像与指令共同定义任务，模型生成 RGB 结果，再解码为分割、深度、法线或编辑结果。</p>
@@ -215,7 +215,7 @@
             <span class="vb-stage-label">统一 RGB 视觉接口</span>
             <div class="vb-flow-card vb-flow-card--input" style="--flow-delay: 0ms">
                 <span>输入原图</span>
-                <img src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="输入图像示例">
+                <img src="/CVClass/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="输入图像示例">
             </div>
             <div class="vb-flow-card vb-flow-card--prompt" style="--flow-delay: 140ms">
                 <span>任务指令</span>
@@ -224,7 +224,7 @@
             <span class="vb-flow-line vb-flow-line--a" aria-hidden="true"></span>
             <div class="vb-core-node" style="--flow-delay: 280ms">
                 <span class="vb-core-ring" aria-hidden="true"></span>
-                <img src="/static/assets/frontier/vision-banana/official-logo.png" alt="">
+                <img src="/CVClass/static/assets/frontier/vision-banana/official-logo.png" alt="">
                 <strong>Vision Banana</strong>
                 <small>共享图像生成器接口</small>
             </div>
@@ -338,7 +338,7 @@
             <p>官方主页把重点放在能力结果图和 hover reveal 上。本页保留这种“大图优先、结果优先”的表达方式，并适配为 CVClass 的蓝白科技风。</p>
         </div>
         <figure class="vb-teaser">
-            <img src="/static/assets/frontier/vision-banana/official-teaser.png" alt="Vision Banana 官方总览图">
+            <img src="/CVClass/static/assets/frontier/vision-banana/official-teaser.png" alt="Vision Banana 官方总览图">
         </figure>
     </section>
 
@@ -352,8 +352,8 @@
         <div class="vb-capability-grid">
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="Semantic segmentation input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img2-output.png" alt="Semantic segmentation RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt="Semantic segmentation input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/img2-output.png" alt="Semantic segmentation RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -368,8 +368,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt="Instance segmentation input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/wine-output.png" alt="Instance segmentation RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt="Instance segmentation input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/wine-output.png" alt="Instance segmentation RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -384,8 +384,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/refseg/controller-input.png" alt="Referring segmentation input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/controller-output.png" alt="Referring expression segmentation output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/refseg/controller-input.png" alt="Referring segmentation input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/controller-output.png" alt="Referring expression segmentation output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -400,8 +400,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt="Metric depth input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/banana-output.png" alt="Metric depth RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt="Metric depth input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/depth/banana-output.png" alt="Metric depth RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -416,8 +416,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/normal/room-input.jpg" alt="Surface normal input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/room-output.jpg" alt="Surface normal RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/normal/room-input.jpg" alt="Surface normal input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/normal/room-output.jpg" alt="Surface normal RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -432,8 +432,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/edit-input.svg?v=20260619-cap2" alt="Image editing input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/edit-output.svg?v=20260619-cap2" alt="Image editing RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/generated/edit-input.svg?v=20260619-cap2" alt="Image editing input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/generated/edit-output.svg?v=20260619-cap2" alt="Image editing RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -448,8 +448,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/background-input.svg?v=20260619-cap2" alt="Background removal input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/background-output.svg?v=20260619-cap2" alt="Background removal RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/generated/background-input.svg?v=20260619-cap2" alt="Background removal input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/generated/background-output.svg?v=20260619-cap2" alt="Background removal RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -464,8 +464,8 @@
 
             <article class="vb-cap-card" data-vb-reveal-card tabindex="0">
                 <div class="vb-cap-media">
-                    <img class="vb-input-img" src="/static/assets/frontier/vision-banana/generated/edge-input.svg?v=20260619-cap2" alt="Edge map input">
-                    <div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/generated/edge-output.svg?v=20260619-cap2" alt="Edge structure RGB output"></div>
+                    <img class="vb-input-img" src="/CVClass/static/assets/frontier/vision-banana/generated/edge-input.svg?v=20260619-cap2" alt="Edge map input">
+                    <div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/generated/edge-output.svg?v=20260619-cap2" alt="Edge structure RGB output"></div>
                     <span class="vb-state-label vb-state-label--input">输入原图</span>
                     <span class="vb-state-label vb-state-label--output">模型输出</span>
                     <span class="vb-reveal-hint">悬停/点击查看</span>
@@ -490,15 +490,15 @@
             <header><span>01</span><h3>语义分割</h3><p>同一种 RGB mask 输出，可以由不同类别集合和 prompt 约束生成。</p></header>
             <div class="vb-sample-strip" aria-label="Semantic segmentation official samples">
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img2-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/img2-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/img2-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p><mark>per-pixel class labeling</mark> for dessert, menu, plates and background.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/img1-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/img1-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/img1-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/img1-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Generate semantic colors for <mark>cat ears</mark>, exit sign and background.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/semseg/ocean-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/semseg/ocean-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/ocean-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/semseg/ocean-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Conduct per-class segmentation for people, <mark>ocean</mark>, sky and street lights.</p>
                 </article>
             </div>
@@ -508,19 +508,19 @@
             <header><span>02</span><h3>实例分割</h3><p>颜色不再代表类别，而是代表不同实例，展示 RGB 输出如何承载实例 ID。</p></header>
             <div class="vb-sample-strip" aria-label="Instance segmentation official samples">
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/food-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/food-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/food-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/food-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Color each <mark>garlic instance</mark> differently.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/wine-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/wine-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/wine-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Segment all <mark>price tags</mark> with distinct instance colors.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/tags-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/tags-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/tags-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/tags-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Each price tag is represented by a <mark>unique solid color</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/insseg/basketball-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/insseg/basketball-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/basketball-input.png" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/insseg/basketball-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Render each <mark>basketball</mark> as an individual circular mask.</p>
                 </article>
             </div>
@@ -530,19 +530,19 @@
             <header><span>03</span><h3>指代性语言分割</h3><p>语言指代决定被分割对象，展示模型对自然语言 prompt 的绑定能力。</p></header>
             <div class="vb-sample-strip" aria-label="Referring expression segmentation official samples">
                 <article class="vb-sample-card vb-sample-card--focus-bottom" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/menu-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/menu-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/menu-input.png" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/menu-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Highlight the chef names in <mark>Chinese and English</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/cats-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/cats-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/cats-input.jpeg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/cats-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Separate the <mark>stretching cat</mark> from another cat by color.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/controller-input.png" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/controller-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/controller-input.png" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/controller-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>The <mark>game control device</mark> is represented by a solid yellow mask.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/refseg/people-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/refseg/people-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/people-input.jpeg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/refseg/people-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Render the man in a <mark>pink t shirt</mark> as the referred mask.</p>
                 </article>
             </div>
@@ -552,19 +552,19 @@
             <header><span>04</span><h3>深度估计</h3><p>从室内、建筑、自然场景到物体近景，深度都先以 RGB 色带输出。</p></header>
             <div class="vb-sample-strip" aria-label="Metric depth official samples">
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/fallingwater-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/fallingwater-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/depth/fallingwater-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/depth/fallingwater-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Predict metric depth with a <mark>rainbow colormap</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/laguna-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/laguna-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/depth/laguna-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/depth/laguna-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Outdoor scene depth encoded as <mark>warm-to-cool RGB</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/banana-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/depth/banana-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/depth/banana-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Close-range object depth from a single <mark>RGB image</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/depth/eth3d-input.jpeg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/depth/eth3d-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/depth/eth3d-input.jpeg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/depth/eth3d-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Dense indoor geometry represented as <mark>decodable color</mark>.</p>
                 </article>
             </div>
@@ -574,19 +574,19 @@
             <header><span>05</span><h3>表面法线估计</h3><p>RGB 三通道可以承载几何方向场，把法线估计也纳入图像生成接口。</p></header>
             <div class="vb-sample-strip" aria-label="Surface normal official samples">
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/jazz-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/jazz-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/normal/jazz-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/normal/jazz-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Predict <mark>surface normal</mark> of a complex indoor scene.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/desk-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/desk-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/normal/desk-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/normal/desk-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Indoor object surfaces mapped to <mark>RGB normal channels</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/room-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/room-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/normal/room-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/normal/room-output.jpg" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Room layout recovered as a <mark>direction field</mark>.</p>
                 </article>
                 <article class="vb-sample-card" data-vb-reveal-card tabindex="0">
-                    <div class="vb-sample-media"><img src="/static/assets/frontier/vision-banana/normal/statue-input.jpg" alt=""><div class="vb-output-layer"><img src="/static/assets/frontier/vision-banana/normal/statue-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
+                    <div class="vb-sample-media"><img src="/CVClass/static/assets/frontier/vision-banana/normal/statue-input.jpg" alt=""><div class="vb-output-layer"><img src="/CVClass/static/assets/frontier/vision-banana/normal/statue-output.png" alt=""></div><span class="vb-state-label vb-state-label--input">输入原图</span><span class="vb-state-label vb-state-label--output">模型输出</span></div>
                     <p>Object shape encoded through <mark>surface orientation</mark>.</p>
                 </article>
             </div>
@@ -607,12 +607,12 @@
                 </div>
             </div>
             <div class="vb-pointcloud-controls" aria-label="点云数据与视角控制">
-                <button type="button" class="is-active" data-pc-key="nyu_500" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_500.bin">NYU 1</button>
-                <button type="button" data-pc-key="nyu_162" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_162.bin">NYU 2</button>
-                <button type="button" data-pc-key="nyu_200" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/nyu_200.bin">NYU 3</button>
-                <button type="button" data-pc-key="eth3d_20" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_20.bin">ETH3D 1</button>
-                <button type="button" data-pc-key="eth3d_110" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_110.bin">ETH3D 2</button>
-                <button type="button" data-pc-key="eth3d_205" data-pc-src="/static/assets/frontier/vision-banana/pointcloud/eth3d_205.bin">ETH3D 3</button>
+                <button type="button" class="is-active" data-pc-key="nyu_500" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/nyu_500.bin">NYU 1</button>
+                <button type="button" data-pc-key="nyu_162" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/nyu_162.bin">NYU 2</button>
+                <button type="button" data-pc-key="nyu_200" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/nyu_200.bin">NYU 3</button>
+                <button type="button" data-pc-key="eth3d_20" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/eth3d_20.bin">ETH3D 1</button>
+                <button type="button" data-pc-key="eth3d_110" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/eth3d_110.bin">ETH3D 2</button>
+                <button type="button" data-pc-key="eth3d_205" data-pc-src="/CVClass/static/assets/frontier/vision-banana/pointcloud/eth3d_205.bin">ETH3D 3</button>
                 <span class="vb-pointcloud-divider" aria-hidden="true"></span>
                 <button type="button" class="is-active" data-vb-pc-rotate>自动旋转</button>
                 <button type="button" data-vb-pc-reset>重置视角</button>
@@ -912,8 +912,8 @@
         </div>
         <div class="vb-figure-grid">
             <article class="vb-figure-card">
-                <button type="button" data-vb-lightbox-src="/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" data-vb-lightbox-title="Official Results Mosaic · Multi-task RGB Outputs">
-                    <img src="/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" alt="Vision Banana 多任务 RGB 输出矩阵">
+                <button type="button" data-vb-lightbox-src="/CVClass/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" data-vb-lightbox-title="Official Results Mosaic · Multi-task RGB Outputs">
+                    <img src="/CVClass/static/assets/frontier/vision-banana/gallery/official-results-mosaic.png" alt="Vision Banana 多任务 RGB 输出矩阵">
                 </button>
                 <div>
                     <span>官方结果样例 · 来源 Vision Banana 官方主页资源</span>
@@ -922,8 +922,8 @@
                 </div>
             </article>
             <article class="vb-figure-card">
-                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-1.webp" data-vb-lightbox-title="Figure 01 · Unified RGB Interface">
-                    <img src="/static/assets/frontier/paper-figure-1.webp" alt="Vision Banana unified RGB interface figure">
+                <button type="button" data-vb-lightbox-src="/CVClass/static/assets/frontier/paper-figure-1.webp" data-vb-lightbox-title="Figure 01 · Unified RGB Interface">
+                    <img src="/CVClass/static/assets/frontier/paper-figure-1.webp" alt="Vision Banana unified RGB interface figure">
                 </button>
                 <div>
                     <span>Figure 01 · 来源 arXiv:2604.20329v1</span>
@@ -932,8 +932,8 @@
                 </div>
             </article>
             <article class="vb-figure-card">
-                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-2.webp" data-vb-lightbox-title="Figure 04 · Referring Segmentation">
-                    <img src="/static/assets/frontier/paper-figure-2.webp" alt="Vision Banana referring segmentation figure">
+                <button type="button" data-vb-lightbox-src="/CVClass/static/assets/frontier/paper-figure-2.webp" data-vb-lightbox-title="Figure 04 · Referring Segmentation">
+                    <img src="/CVClass/static/assets/frontier/paper-figure-2.webp" alt="Vision Banana referring segmentation figure">
                 </button>
                 <div>
                     <span>Figure 04 · 来源 arXiv:2604.20329v1</span>
@@ -942,8 +942,8 @@
                 </div>
             </article>
             <article class="vb-figure-card">
-                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-3.webp" data-vb-lightbox-title="Figure 06 · Metric Depth">
-                    <img src="/static/assets/frontier/paper-figure-3.webp" alt="Vision Banana metric depth figure">
+                <button type="button" data-vb-lightbox-src="/CVClass/static/assets/frontier/paper-figure-3.webp" data-vb-lightbox-title="Figure 06 · Metric Depth">
+                    <img src="/CVClass/static/assets/frontier/paper-figure-3.webp" alt="Vision Banana metric depth figure">
                 </button>
                 <div>
                     <span>Figure 06 · 来源 arXiv:2604.20329v1</span>
@@ -952,8 +952,8 @@
                 </div>
             </article>
             <article class="vb-figure-card">
-                <button type="button" data-vb-lightbox-src="/static/assets/frontier/paper-figure-4.webp" data-vb-lightbox-title="Figure 10 · Image Editing">
-                    <img src="/static/assets/frontier/paper-figure-4.webp" alt="Vision Banana image editing figure">
+                <button type="button" data-vb-lightbox-src="/CVClass/static/assets/frontier/paper-figure-4.webp" data-vb-lightbox-title="Figure 10 · Image Editing">
+                    <img src="/CVClass/static/assets/frontier/paper-figure-4.webp" alt="Vision Banana image editing figure">
                 </button>
                 <div>
                     <span>Figure 10 · 来源 arXiv:2604.20329v1</span>
@@ -970,12 +970,12 @@
             <p>把基础模块中的表示、卷积、边缘、特征和深度学习任务整合到统一视觉模型接口中。</p>
         </div>
         <ol class="vb-route-list">
-            <li><a href="/grayscale">图像基础</a><span>像素与颜色表示</span></li>
-            <li><a href="/convolution">卷积与滤波</a><span>局部响应与特征提取</span></li>
-            <li><a href="/edge-detection">边缘轮廓</a><span>结构线和形态线索</span></li>
-            <li><a href="/feature-detection">特征几何</a><span>局部特征与匹配</span></li>
-            <li><a href="/cnn-visualization">CNN 学习</a><span>表征学习与任务头</span></li>
-            <li><a href="/classification-lab">分类与任务谱系</a><span>高层视觉任务输出</span></li>
+            <li><a href="/CVClass/grayscale">图像基础</a><span>像素与颜色表示</span></li>
+            <li><a href="/CVClass/convolution">卷积与滤波</a><span>局部响应与特征提取</span></li>
+            <li><a href="/CVClass/edge-detection">边缘轮廓</a><span>结构线和形态线索</span></li>
+            <li><a href="/CVClass/feature-detection">特征几何</a><span>局部特征与匹配</span></li>
+            <li><a href="/CVClass/cnn-visualization">CNN 学习</a><span>表征学习与任务头</span></li>
+            <li><a href="/CVClass/classification-lab">分类与任务谱系</a><span>高层视觉任务输出</span></li>
             <li><strong>Vision Banana</strong><span>统一 RGB 视觉接口</span></li>
         </ol>
     </section>
@@ -1372,10 +1372,10 @@
         </div>
     </main>
 
-    <script src="/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
-    <script src="/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
+    <script src="/CVClass/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
+    <script src="/CVClass/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
     
-<script src="/static/js/vision_banana.js?v=20260619-official6"></script>
+<script src="/CVClass/static/js/vision_banana.js?v=20260619-official6"></script>
 
 </body>
 </html>

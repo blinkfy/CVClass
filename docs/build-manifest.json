@@ -4,295 +4,295 @@
     "html_resource_refs_checked": 870,
     "missing_required_refs": 0,
     "secret_findings": 0,
-    "runtime_assets_checked": 21,
-    "sdxs_mode": "full-browser-inference",
-    "base_path": ""
+    "runtime_assets_checked": 19,
+    "sdxs_mode": "teaching-only-explicit-degradation",
+    "base_path": "/CVClass"
   },
   "pages": [
     {
       "route": "/",
       "output": "index.html",
-      "bytes": 34773
+      "bytes": 35701
     },
     {
       "route": "/about-author",
       "output": "about-author/index.html",
-      "bytes": 24462
+      "bytes": 25334
     },
     {
       "route": "/camera-geometry",
       "output": "camera-geometry/index.html",
-      "bytes": 20648
+      "bytes": 21352
     },
     {
       "route": "/classification-lab",
       "output": "classification-lab/index.html",
-      "bytes": 33784
+      "bytes": 34512
     },
     {
       "route": "/cnn-explainer",
       "output": "cnn-explainer/index.html",
-      "bytes": 15824
+      "bytes": 16536
     },
     {
       "route": "/cnn-visualization",
       "output": "cnn-visualization/index.html",
-      "bytes": 21161
+      "bytes": 21873
     },
     {
       "route": "/conv-gradient-lab",
       "output": "conv-gradient-lab/index.html",
-      "bytes": 17812
+      "bytes": 18500
     },
     {
       "route": "/convolution",
       "output": "convolution/index.html",
-      "bytes": 35104
+      "bytes": 35800
     },
     {
       "route": "/digit-recognition",
       "output": "digit-recognition/index.html",
-      "bytes": 14733
+      "bytes": 15453
     },
     {
       "route": "/edge-detection",
       "output": "edge-detection/index.html",
-      "bytes": 31146
+      "bytes": 31890
     },
     {
       "route": "/feature-detection",
       "output": "feature-detection/index.html",
-      "bytes": 21129
+      "bytes": 21865
     },
     {
       "route": "/frontier",
       "output": "frontier/index.html",
-      "bytes": 30505
+      "bytes": 31329
     },
     {
       "route": "/grayscale",
       "output": "grayscale/index.html",
-      "bytes": 24544
+      "bytes": 25208
     },
     {
       "route": "/human-pose",
       "output": "human-pose/index.html",
-      "bytes": 20408
+      "bytes": 21200
     },
     {
       "route": "/image-convolution",
       "output": "image-convolution/index.html",
-      "bytes": 19977
+      "bytes": 20689
     },
     {
       "route": "/instance-segmentation",
       "output": "instance-segmentation/index.html",
-      "bytes": 24782
+      "bytes": 25502
     },
     {
       "route": "/knowledge-graph",
       "output": "knowledge-graph/index.html",
-      "bytes": 17100
+      "bytes": 17844
     },
     {
       "route": "/learning-path",
       "output": "learning-path/index.html",
-      "bytes": 16889
+      "bytes": 17649
     },
     {
       "route": "/motion-estimation",
       "output": "motion-estimation/index.html",
-      "bytes": 21882
+      "bytes": 22594
     },
     {
       "route": "/multiview-reconstruction",
       "output": "multiview-reconstruction/index.html",
-      "bytes": 22158
+      "bytes": 22862
     },
     {
       "route": "/object-detection",
       "output": "object-detection/index.html",
-      "bytes": 25804
+      "bytes": 26518
     },
     {
       "route": "/principles",
       "output": "principles/index.html",
-      "bytes": 35000
+      "bytes": 35720
     },
     {
       "route": "/segmentation-basic",
       "output": "segmentation-basic/index.html",
-      "bytes": 36098
+      "bytes": 36804
     },
     {
       "route": "/segmentation-lab",
       "output": "segmentation-lab/index.html",
-      "bytes": 26345
+      "bytes": 27089
     },
     {
       "route": "/semantic-segmentation",
       "output": "semantic-segmentation/index.html",
-      "bytes": 27347
+      "bytes": 28059
     },
     {
       "route": "/stereo-depth",
       "output": "stereo-depth/index.html",
-      "bytes": 19944
+      "bytes": 20648
     },
     {
       "route": "/vision-transformer",
       "output": "vision-transformer/index.html",
-      "bytes": 18834
+      "bytes": 19554
     },
     {
       "route": "/camera-geometry/calibration",
       "output": "camera-geometry/calibration/index.html",
-      "bytes": 22484
+      "bytes": 23188
     },
     {
       "route": "/camera-geometry/model",
       "output": "camera-geometry/model/index.html",
-      "bytes": 20648
+      "bytes": 21352
     },
     {
       "route": "/camera-geometry/projection-matrix",
       "output": "camera-geometry/projection-matrix/index.html",
-      "bytes": 21841
+      "bytes": 22545
     },
     {
       "route": "/classification-lab/classification",
       "output": "classification-lab/classification/index.html",
-      "bytes": 31412
+      "bytes": 32124
     },
     {
       "route": "/edge-detection/applications",
       "output": "edge-detection/applications/index.html",
-      "bytes": 24459
+      "bytes": 25171
     },
     {
       "route": "/edge-detection/canny",
       "output": "edge-detection/canny/index.html",
-      "bytes": 31134
+      "bytes": 31878
     },
     {
       "route": "/edge-detection/compare",
       "output": "edge-detection/compare/index.html",
-      "bytes": 31146
+      "bytes": 31890
     },
     {
       "route": "/edge-detection/kernel",
       "output": "edge-detection/kernel/index.html",
-      "bytes": 31131
+      "bytes": 31875
     },
     {
       "route": "/edge-detection/teed",
       "output": "edge-detection/teed/index.html",
-      "bytes": 23285
+      "bytes": 24021
     },
     {
       "route": "/feature-detection/compare",
       "output": "feature-detection/compare/index.html",
-      "bytes": 21129
+      "bytes": 21865
     },
     {
       "route": "/feature-detection/corner",
       "output": "feature-detection/corner/index.html",
-      "bytes": 20721
+      "bytes": 21449
     },
     {
       "route": "/feature-detection/harris",
       "output": "feature-detection/harris/index.html",
-      "bytes": 20721
+      "bytes": 21449
     },
     {
       "route": "/feature-detection/matching",
       "output": "feature-detection/matching/index.html",
-      "bytes": 25499
+      "bytes": 26227
     },
     {
       "route": "/feature-detection/panorama",
       "output": "feature-detection/panorama/index.html",
-      "bytes": 22909
+      "bytes": 23637
     },
     {
       "route": "/feature-detection/sift",
       "output": "feature-detection/sift/index.html",
-      "bytes": 22423
+      "bytes": 23151
     },
     {
       "route": "/feature-detection/sift_descriptor",
       "output": "feature-detection/sift_descriptor/index.html",
-      "bytes": 22423
+      "bytes": 23151
     },
     {
       "route": "/feature-detection/sift_scale",
       "output": "feature-detection/sift_scale/index.html",
-      "bytes": 22423
+      "bytes": 23151
     },
     {
       "route": "/frontier/clip",
       "output": "frontier/clip/index.html",
-      "bytes": 19170
+      "bytes": 19898
     },
     {
       "route": "/frontier/dino",
       "output": "frontier/dino/index.html",
-      "bytes": 19595
+      "bytes": 20315
     },
     {
       "route": "/frontier/multimodal",
       "output": "frontier/multimodal/index.html",
-      "bytes": 19831
+      "bytes": 20559
     },
     {
       "route": "/frontier/vision-banana",
       "output": "frontier/vision-banana/index.html",
-      "bytes": 95781
+      "bytes": 97165
     },
     {
       "route": "/frontier/vit",
       "output": "frontier/vit/index.html",
-      "bytes": 18834
+      "bytes": 19554
     },
     {
       "route": "/frontier/vlm",
       "output": "frontier/vlm/index.html",
-      "bytes": 18335
+      "bytes": 19063
     },
     {
       "route": "/generative-multimodal/diffusion",
       "output": "generative-multimodal/diffusion/index.html",
-      "bytes": 22237
+      "bytes": 22957
     },
     {
       "route": "/generative-multimodal/gan",
       "output": "generative-multimodal/gan/index.html",
-      "bytes": 19795
+      "bytes": 20515
     },
     {
       "route": "/generative-multimodal/sam",
       "output": "generative-multimodal/sam/index.html",
-      "bytes": 23156
+      "bytes": 23884
     },
     {
       "route": "/human-pose/action",
       "output": "human-pose/action/index.html",
-      "bytes": 21264
+      "bytes": 22032
     },
     {
       "route": "/human-pose/mechanism",
       "output": "human-pose/mechanism/index.html",
-      "bytes": 21376
+      "bytes": 22136
     },
     {
       "route": "/human-pose/overview",
       "output": "human-pose/overview/index.html",
-      "bytes": 23231
+      "bytes": 23967
     },
     {
       "route": "/human-pose/skeleton",
       "output": "human-pose/skeleton/index.html",
-      "bytes": 20408
+      "bytes": 21200
     },
     {
       "route": "/learning-path/frontier",
@@ -302,127 +302,127 @@
     {
       "route": "/motion-estimation/flow-constraint",
       "output": "motion-estimation/flow-constraint/index.html",
-      "bytes": 21882
+      "bytes": 22594
     },
     {
       "route": "/motion-estimation/lucas-kanade",
       "output": "motion-estimation/lucas-kanade/index.html",
-      "bytes": 23717
+      "bytes": 24429
     },
     {
       "route": "/motion-estimation/pyramid-tracking",
       "output": "motion-estimation/pyramid-tracking/index.html",
-      "bytes": 21438
+      "bytes": 22150
     },
     {
       "route": "/motion-estimation/real-flow",
       "output": "motion-estimation/real-flow/index.html",
-      "bytes": 21486
+      "bytes": 22206
     },
     {
       "route": "/multiview-reconstruction/epipolar-geometry",
       "output": "multiview-reconstruction/epipolar-geometry/index.html",
-      "bytes": 22158
+      "bytes": 22862
     },
     {
       "route": "/multiview-reconstruction/essential-pose",
       "output": "multiview-reconstruction/essential-pose/index.html",
-      "bytes": 22123
+      "bytes": 22827
     },
     {
       "route": "/multiview-reconstruction/triangulation",
       "output": "multiview-reconstruction/triangulation/index.html",
-      "bytes": 23514
+      "bytes": 24218
     },
     {
       "route": "/object-detection/rcnn",
       "output": "object-detection/rcnn/index.html",
-      "bytes": 25804
+      "bytes": 26518
     },
     {
       "route": "/object-detection/yolo",
       "output": "object-detection/yolo/index.html",
-      "bytes": 25804
+      "bytes": 26518
     },
     {
       "route": "/segmentation-basic/cluster",
       "output": "segmentation-basic/cluster/index.html",
-      "bytes": 36098
+      "bytes": 36804
     },
     {
       "route": "/segmentation-basic/graph",
       "output": "segmentation-basic/graph/index.html",
-      "bytes": 36098
+      "bytes": 36804
     },
     {
       "route": "/segmentation-basic/region",
       "output": "segmentation-basic/region/index.html",
-      "bytes": 36098
+      "bytes": 36804
     },
     {
       "route": "/segmentation-lab/instance",
       "output": "segmentation-lab/instance/index.html",
-      "bytes": 24782
+      "bytes": 25502
     },
     {
       "route": "/segmentation-lab/semantic",
       "output": "segmentation-lab/semantic/index.html",
-      "bytes": 27347
+      "bytes": 28059
     },
     {
       "route": "/stereo-depth/block-matching",
       "output": "stereo-depth/block-matching/index.html",
-      "bytes": 20541
+      "bytes": 21245
     },
     {
       "route": "/stereo-depth/disparity",
       "output": "stereo-depth/disparity/index.html",
-      "bytes": 19944
+      "bytes": 20648
     },
     {
       "route": "/stereo-depth/parallel",
       "output": "stereo-depth/parallel/index.html",
-      "bytes": 19701
+      "bytes": 20405
     },
     {
       "route": "/vision-tasks/classification",
       "output": "vision-tasks/classification/index.html",
-      "bytes": 31412
+      "bytes": 32124
     },
     {
       "route": "/vision-tasks/detection",
       "output": "vision-tasks/detection/index.html",
-      "bytes": 25798
+      "bytes": 26518
     },
     {
       "route": "/vision-tasks/instance",
       "output": "vision-tasks/instance/index.html",
-      "bytes": 24782
+      "bytes": 25502
     },
     {
       "route": "/vision-tasks/overview",
       "output": "vision-tasks/overview/index.html",
-      "bytes": 33784
+      "bytes": 34512
     },
     {
       "route": "/vision-tasks/segmentation-basic",
       "output": "vision-tasks/segmentation-basic/index.html",
-      "bytes": 36092
+      "bytes": 36804
     },
     {
       "route": "/vision-tasks/semantic",
       "output": "vision-tasks/semantic/index.html",
-      "bytes": 27347
+      "bytes": 28059
     },
     {
       "route": "/vision-transformer/dino",
       "output": "vision-transformer/dino/index.html",
-      "bytes": 19595
+      "bytes": 20315
     },
     {
       "route": "/vision-transformer/vit",
       "output": "vision-transformer/vit/index.html",
-      "bytes": 18834
+      "bytes": 19554
     }
   ]
 }
