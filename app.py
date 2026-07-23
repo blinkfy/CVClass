@@ -3,17 +3,14 @@ import mimetypes
 from io import BytesIO
 import base64
 import json
-from waitress import serve
+from pathlib import Path
 from time import perf_counter
 from flask import Flask, jsonify, request
-from PIL import Image, UnidentifiedImageError
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
-from models.digit_infer_numpy import get_model_status, predict_digit
-from models.edge_visualization import build_edge_response
-from models.feature_utils import build_feature_match_response, build_feature_response
-from models.image_utils import convolve_gray_image, make_histogram, process_image
-from models.multiview_real import build_multiview_real_response
+# 注意：models.* 子模块（image_utils / edge_visualization / feature_utils /
+# digit_infer_numpy / mycnn / multiview_real）顶层依赖 numpy 与 numba，
+# PIL 仅在 backend 路由内使用，waitress / DispatcherMiddleware 仅在 __main__ 块使用，
+# 均改为按需延迟导入；frontend 模式下不触发这些导入，从而降低内存与启动开销。
 from page_routes import register_page_routes
 from ai_routes import register_ai_routes
 
@@ -52,6 +49,15 @@ ALLOWED_INVERT_MODES = {"rgb", "gray"}
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 COMPUTE_CONFIG_PATH = os.path.join(app.root_path, "compute_config.json")
+# 与 models/digit_infer_numpy.py 中的 MODEL_PATH 等价，但此处仅用于文件存在性检查，
+# 不触发 numpy / numba 加载；frontend 模式下 /digit-recognition 页面仍可正常显示状态。
+MODEL_PATH = Path(app.root_path) / "models" / "numpy_mnist_cnn.npz"
+
+
+def get_model_status():
+    if not MODEL_PATH.exists():
+        return False, f"未找到模型参数文件：{MODEL_PATH}"
+    return True, "模型参数文件已就绪"
 
 
 def load_compute_config():
@@ -62,11 +68,7 @@ def load_compute_config():
         "digit_recognition": "backend",
         "feature_detection": "backend",
     }
-    try:
-        with open(COMPUTE_CONFIG_PATH, "r", encoding="utf-8") as config_file:
-            user_config = json.load(config_file)
-    except (OSError, json.JSONDecodeError):
-        user_config = {}
+    user_config = _load_config_raw()
 
     config = default_config.copy()
     for key, value in user_config.items():
@@ -75,13 +77,33 @@ def load_compute_config():
     return config
 
 
-def load_full_config():
-    """Load the full compute_config.json including ai_assistant section."""
+# compute_config.json 的 mtime 缓存：避免每个请求重复读磁盘 + json 解析。
+# 先更新 raw 再更新 mtime，确保并发线程不会读到“新 mtime + 旧 raw”的不一致状态。
+_CONFIG_CACHE = {"mtime": None, "raw": {}}
+
+
+def _load_config_raw():
+    """读取 compute_config.json 原始 dict，命中 mtime 则直接返回缓存。"""
+    try:
+        mtime = os.path.getmtime(COMPUTE_CONFIG_PATH)
+    except OSError:
+        return {}
+    if _CONFIG_CACHE["mtime"] == mtime:
+        return _CONFIG_CACHE["raw"]
     try:
         with open(COMPUTE_CONFIG_PATH, "r", encoding="utf-8") as config_file:
-            return json.load(config_file)
+            raw = json.load(config_file)
     except (OSError, json.JSONDecodeError):
-        return {}
+        raw = {}
+    _CONFIG_CACHE["raw"] = raw
+    _CONFIG_CACHE["mtime"] = mtime
+    return raw
+
+
+def load_full_config():
+    """Load the full compute_config.json including ai_assistant section.
+    返回顶层浅拷贝以保持“调用方可自由修改返回值”的原语义，避免污染 mtime 缓存。"""
+    return dict(_load_config_raw())
 
 
 def get_ai_config():
@@ -148,6 +170,9 @@ def parse_threshold(value):
 def handle_process_request(default_operation="grayscale", allow_operation_param=True):
     if compute_mode("grayscale") == "frontend":
         return frontend_only_response("图像处理")
+
+    from models.image_utils import make_histogram, process_image
+    from PIL import Image, UnidentifiedImageError
 
     if "image" not in request.files:
         return jsonify({"error": "请先选择并上传图片文件"}), 400
@@ -264,6 +289,9 @@ def convolve_image():
     if compute_mode("image_convolution") == "frontend":
         return frontend_only_response("图像卷积")
 
+    from models.image_utils import convolve_gray_image
+    from PIL import Image, UnidentifiedImageError
+
     if "image" not in request.files:
         return jsonify({"error": "请先选择并上传图片文件"}), 400
 
@@ -327,6 +355,9 @@ def edge_detect_api():
     if compute_mode("edge_detection") == "frontend":
         return frontend_only_response("边缘检测")
 
+    from models.edge_visualization import build_edge_response
+    from PIL import UnidentifiedImageError
+
     try:
         return jsonify(build_edge_response(request.form, request.files, app.static_folder, allowed_file))
     except (UnidentifiedImageError, ValueError) as error:
@@ -340,6 +371,9 @@ def edge_detect_api():
 def feature_detect_api():
     if compute_mode("feature_detection") == "frontend":
         return frontend_only_response("特征检测")
+
+    from models.feature_utils import build_feature_response
+    from PIL import UnidentifiedImageError
 
     try:
         return jsonify(build_feature_response(request.form, request.files, app.static_folder, allowed_file))
@@ -355,6 +389,9 @@ def feature_match_api():
     if compute_mode("feature_detection") == "frontend":
         return frontend_only_response("特征匹配")
 
+    from models.feature_utils import build_feature_match_response
+    from PIL import UnidentifiedImageError
+
     try:
         return jsonify(build_feature_match_response(request.form, request.files, app.static_folder, allowed_file))
     except (UnidentifiedImageError, ValueError) as error:
@@ -366,6 +403,11 @@ def feature_match_api():
 
 @app.route("/api/multiview-reconstruction/real-run", methods=["POST"])
 def multiview_real_run_api():
+    # 注意：multiview 无前端本地实现（SIFT/RANSAC/三角化），后端 OpenCV 是
+    # preset 缺失时的唯一数据源，故不设 frontend 开关，始终执行后端计算。
+    # 保留延迟导入，使其他 frontend 路由不触发 cv2 加载。
+    from models.multiview_real import build_multiview_real_response
+
     try:
         return jsonify(build_multiview_real_response(request.form, app.static_folder))
     except ValueError as error:
@@ -379,6 +421,8 @@ def multiview_real_run_api():
 def digit_recognize():
     if compute_mode("digit_recognition") == "frontend":
         return frontend_only_response("手写数字识别")
+
+    from models.digit_infer_numpy import predict_digit
 
     data = request.get_json(silent=True) or {}
     canvas_28x28 = data.get("canvas")
@@ -421,6 +465,8 @@ if __name__ == "__main__":
     app.run(debug=True)
 
     # port = int(os.environ.get("CVCLASS_PORT", "5001"))
+    # # 取消下方注释前需先导入：from waitress import serve
+    # #                       from werkzeug.middleware.dispatcher import DispatcherMiddleware
     # # Mount the app under the prefix
     # application = DispatcherMiddleware(
     #     Flask("dummy"),  # dummy root app

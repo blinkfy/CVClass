@@ -18,7 +18,7 @@
         </div>
         <div class="station-hero-actions multiview-hero-actions">
             <span class="multiview-state">{{ multiview_status }}</span>
-            <span class="multiview-state multiview-state--real">真实图片 · OpenCV 双图演示</span>
+            <span class="multiview-state multiview-state--real">真实图片 · 双图演示</span>
             <span class="multiview-state">机制拆解 · 多视图几何</span>
             <span class="multiview-state">公式推导 · \( \mathbf{F} \) / \( \mathbf{E} \) / Triangulation</span>
             <strong class="station-badge">{{ multiview_badge }}</strong>
@@ -36,6 +36,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<div id="featurePage" style="display:none" data-compute-mode="frontend"></div>
 <script>
 window.MathJax = {
     tex: {
@@ -51,5 +52,8 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<script src="{{ url_for('static', filename='js/geometry_vision/multiview_reconstruction.js') }}?v=20260628-mv27"></script>
+<script src="{{ url_for('static', filename='js/feature/feature_common.js') }}?v=20260724-mvfe"></script>
+<script src="{{ url_for('static', filename='js/feature/feature_compute_frontend.js') }}?v=20260724-mvfe"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/multiview_real_frontend.js') }}?v=20260724-mvfe"></script>
+<script src="{{ url_for('static', filename='js/geometry_vision/multiview_reconstruction.js') }}?v=20260724-mvfe"></script>
 {% endblock %}

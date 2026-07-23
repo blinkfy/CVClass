@@ -76,19 +76,34 @@
         return normalized;
     }
 
-    function fetchLiveRealData() {
-        const form = new FormData();
-        form.set("sample", "middlebury_cones");
-        form.set("max_features", "700");
-        form.set("ratio_threshold", "0.74");
-        form.set("ransac_threshold", "1.35");
-        return fetch(`${basePath}/api/multiview-reconstruction/real-run`, {
-            method: "POST",
-            body: form,
-        }).then(async (response) => {
-            const data = await response.json();
-            if (!response.ok || data.error) {
-                throw new Error(data.error || "真实多视图几何计算失败");
+    const REAL_SAMPLE_DIR = "assets/examples/multiview/middlebury_cones";
+    const REAL_W = 320, REAL_H = 220;
+
+    function fetchLocalRealData(onProgress) {
+        const MF = window.MultiviewRealFrontend;
+        if (!MF || typeof MF.buildMultiviewRealLocal !== "function") {
+            return Promise.reject(new Error("前端推理模块未加载"));
+        }
+        const leftUrl = staticAssetUrl(`${REAL_SAMPLE_DIR}/im2.png`);
+        const rightUrl = staticAssetUrl(`${REAL_SAMPLE_DIR}/im6.png`);
+        realState.progress = { stage: "sift", value: 0 };
+        return Promise.all([
+            MF.loadGrayResized(leftUrl, REAL_W, REAL_H),
+            MF.loadGrayResized(rightUrl, REAL_W, REAL_H),
+        ]).then(([grayL, grayR]) => {
+            return MF.buildMultiviewRealLocal(grayL, grayR, REAL_W, REAL_H, {
+                maxFeatures: 700,
+                ratioThreshold: 0.74,
+                ransacThreshold: 1.35,
+                sample: { key: "middlebury_cones", title: "Middlebury Cones", source: "前端纯 JS 复刻" },
+                images: { left: leftUrl, right: rightUrl },
+            }, (stage, value) => {
+                realState.progress = { stage, value };
+                if (onProgress) onProgress();
+            });
+        }).then((data) => {
+            if (!data || data.success === false) {
+                throw new Error(data && data.error ? data.error : "前端多视图几何计算失败");
             }
             return normalizeRealData(data, "live");
         });
@@ -97,27 +112,41 @@
     function ensureRealData(render) {
         if (realState.data || realState.promise) return;
         realState.error = "";
-        realState.promise = fetch(staticAssetUrl(realPresetPath), {cache: "force-cache"})
-            .then(async (response) => {
-                if (!response.ok) throw new Error("preset missing");
-                const data = await response.json();
-                realState.data = normalizeRealData(data, "preset");
-            })
-            .catch(() => fetchLiveRealData().then((data) => {
+        realState.progress = { stage: "sift", value: 0 };
+        realState.promise = fetchLocalRealData(() => render(false))
+            .then((data) => {
                 realState.data = data;
             })
+            .catch(() => fetch(staticAssetUrl(realPresetPath), {cache: "force-cache"})
+                .then(async (response) => {
+                    if (!response.ok) throw new Error("preset missing");
+                    const data = await response.json();
+                    realState.data = normalizeRealData(data, "preset");
+                })
+            )
             .catch((error) => {
                 realState.error = error?.message || "真实多视图几何计算失败";
-            }))
+            })
             .finally(() => {
                 realState.promise = null;
+                realState.progress = null;
                 render(false);
             });
     }
 
     function realPendingMessage() {
         if (realState.error) return `真实算法失败：${escapeHtml(realState.error)}`;
-        return realState.promise ? "真实 OpenCV 双图几何计算中..." : "准备加载真实样例...";
+        if (realState.promise) {
+            const p = realState.progress;
+            if (p) {
+                const labels = { sift: "SIFT 特征", match: "特征匹配", ransac: "RANSAC 估计 F", pose: "位姿恢复" };
+                const label = labels[p.stage] || p.stage;
+                const pct = Math.round((p.value || 0) * 100);
+                return `真实 JS 多视图几何计算中 · ${label} ${pct}%`;
+            }
+            return "真实 JS 多视图几何计算中...";
+        }
+        return "准备加载真实样例...";
     }
 
     function matrixValue(matrix, row, col, digits = 3) {

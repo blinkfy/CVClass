@@ -309,7 +309,7 @@ def build_multiview_real_response(form, static_folder):
     return {
         "success": True,
         "mode": "real",
-        "algorithm": "OpenCV SIFT + RANSAC F/E + recoverPose + triangulatePoints",
+        "algorithm": "SIFT + RANSAC F/E + recoverPose + triangulatePoints",
         "sample": {
             "key": sample_key,
             "title": sample["title"],
