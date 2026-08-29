@@ -41,6 +41,10 @@
 
             <div class="sidebar-category">基础视觉</div>
             <a class="" href="/CVClass/grayscale">图像基础</a>
+            <div class="sidebar-subnav" aria-label="图像基础子页面">
+                <a class="" href="/CVClass/grayscale">图像处理实验</a>
+                <a class="" href="/CVClass/pixel-zoom">像素放大镜</a>
+            </div>
             <a class="" href="/CVClass/convolution">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
                 <a class="" href="/CVClass/convolution">卷积可视化</a>
@@ -339,7 +343,7 @@
         </div>
 
         <div class="motion-code-card">
-            <span>OpenCV 稠密光流</span>
+            <span>稠密光流</span>
             <code>flow = cv2.calcOpticalFlowFarneback(
     prev, next, None,
     pyr_scale=0.5, levels=3,

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CV 算法知识图谱</title>
+    <title>Station 01 · Pixel Zoom Inspector</title>
     <link rel="icon" href="/CVClass/static/assets/img/icon.webp">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="stylesheet" href="/CVClass/static/css/core/base.css?v=20260627-quest-map2">
@@ -12,44 +12,18 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
     
-<link rel="stylesheet" href="/CVClass/static/css/pages/knowledge_graph.css?v=4">
+<link rel="stylesheet" href="/CVClass/static/css/pages/grayscale.css">
+<link rel="stylesheet" href="/CVClass/static/css/pages/pixel_zoom.css">
 
 </head>
-<body class="cv-shell sidebar-collapsed home-page-shell knowledge-page-shell     ">
+<body class="cv-shell sidebar-collapsed       ">
     <script>
         window.CVCLASS_BASE_PATH = "/CVClass";
         window.CVCLASS_COMPUTE_CONFIG = {"digit_recognition": "frontend", "edge_detection": "frontend", "feature_detection": "frontend", "grayscale": "frontend", "image_convolution": "frontend"};
-        window.CVCLASS_ACTIVE_PAGE = "knowledge_graph";
+        window.CVCLASS_ACTIVE_PAGE = "pixel_zoom";
         window.CVCLASS_ACTIVE_SUB_PAGE = "";
         window.CVCLASS_AI_ENABLED = true;
     </script>
-    
-    <header class="site-header" aria-label="主页导航">
-        <a class="site-brand" href="/CVClass/" aria-label="计算机视觉教学平台首页">
-            <span class="site-brand-icon" aria-hidden="true">
-                <img src="/CVClass/static/assets/img/icon.webp" alt="">
-            </span>
-            <span class="site-brand-text">
-                <strong>计算机视觉教学平台</strong>
-                <span>Computer Vision Lab</span>
-            </span>
-        </a>
-        <nav class="site-nav" aria-label="首页导航">
-            <a class="" href="/CVClass/">首页</a>
-            <a href="/CVClass/#featured-modules">实验模块</a>
-            <a class="" href="/CVClass/learning-path">学习路径</a>
-            <a class="active" href="/CVClass/knowledge-graph">知识图谱</a>
-            <a class="" href="/CVClass/principles">算法原理</a>
-            <a class="" href="/CVClass/frontier">前沿探索</a>
-            <a class="" href="/CVClass/about-author">关于作者</a>
-        </nav>
-        <a class="github-button" href="https://github.com/blinkfy/CVClass" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 .8a11.2 11.2 0 0 0-3.5 21.8c.6.1.8-.2.8-.5v-2c-3.4.7-4.1-1.4-4.1-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.2c-.1-.3-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.9.1 3.2a4.7 4.7 0 0 1 1.2 3.2c0 4.7-2.8 5.7-5.5 6 .5.4.8 1.1.8 2.3v3.4c0 .3.2.6.8.5A11.2 11.2 0 0 0 12 .8Z"></path>
-            </svg>
-            GitHub
-        </a>
-    </header>
     
     <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="展开或收起侧边栏">☰</button>
     <aside id="sidebar" class="sidebar" aria-label="课程实验导航">
@@ -61,14 +35,14 @@
             <div class="sidebar-category">学习入口</div>
             <a class="" href="/CVClass/">首页</a>
             <a class="" href="/CVClass/learning-path">完整学习路径</a>
-            <a class="active" href="/CVClass/knowledge-graph">CV 算法知识图谱</a>
+            <a class="" href="/CVClass/knowledge-graph">CV 算法知识图谱</a>
             <a class="" href="/CVClass/principles">算法原理文档</a>
 
             <div class="sidebar-category">基础视觉</div>
-            <a class="" href="/CVClass/grayscale">图像基础</a>
+            <a class="active" href="/CVClass/grayscale">图像基础</a>
             <div class="sidebar-subnav" aria-label="图像基础子页面">
                 <a class="" href="/CVClass/grayscale">图像处理实验</a>
-                <a class="" href="/CVClass/pixel-zoom">像素放大镜</a>
+                <a class="active" href="/CVClass/pixel-zoom">像素放大镜</a>
             </div>
             <a class="" href="/CVClass/convolution">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
@@ -199,99 +173,186 @@
     <main class="main-content">
         <div class="content-shell">
             
-<div class="knowledge-graph-page" data-graph-data-url="/CVClass/static/assets/data/common/knowledge_graph.json">
-    <section class="kg-workspace" aria-label="CV 算法知识图谱交互区">
-        <div class="kg-main-panel">
-            <div class="kg-toolbar">
-                <h1 class="kg-view-title" id="kgViewTitle">机器学习</h1>
-                <div class="kg-actions" aria-label="图谱操作">
-                    <button class="kg-tool-button" id="kgBackButton" type="button">返回上一级</button>
-                    <button class="kg-tool-button" id="kgRootButton" type="button">回到根节点</button>
-                    <button class="kg-tool-button kg-tool-button--primary" id="kgFullButton" type="button">查看全量图谱</button>
-                </div>
-                <div class="kg-stats" id="kgStats">0 个节点 · 0 条关系</div>
-            </div>
-            <div class="kg-full-hint" id="kgFullHint" hidden>全量图谱节点较多，可拖拽、滚轮缩放查看。</div>
-            <div class="kg-chart-shell" id="kgChartShell">
-                <div id="knowledgeGraphChart" class="kg-chart" role="img" aria-label="CV 算法知识图谱"></div>
-                <div class="kg-loading" id="kgLoading" hidden>正在加载图谱数据...</div>
-                <div class="kg-chart-tip" aria-hidden="true">拖拽空白处平移画布，滚轮缩放，点击节点查看详情</div>
-            </div>
+<section class="station01-page">
+    <header class="station01-hero">
+        <div class="station01-hero-copy">
+            <p class="station01-eyebrow">STATION 01 · PIXEL ZOOM INSPECTOR</p>
+            <h1>像素放大镜：放大到像素级</h1>
+            <p>导入图片后连续放大，关闭插值让每个像素变成一个方块；移动鼠标读取该像素的 RGB 与 CMYK 数值。</p>
         </div>
+        <strong class="station01-badge">ZOOM · GRID · RGB · CMYK</strong>
+    </header>
 
-        <aside class="kg-info-panel" aria-labelledby="kgInfoTitle">
-            <div class="kg-info-head">
-                <div class="kg-panel-kicker">NODE DETAIL</div>
-                <span class="kg-status-pill" id="kgDetailBadge">浏览中</span>
-            </div>
-            <h2 id="kgInfoTitle">当前视图</h2>
-            <p id="kgInfoDescription">默认显示当前视图说明。点击节点后可查看节点类别、状态、说明和可进入的实验模块。</p>
-
-            <div class="kg-path-card">
-                <span class="kg-path-icon" aria-hidden="true"></span>
-                <div>
-                    <span>路径</span>
-                    <strong id="kgBreadcrumb">机器学习</strong>
-                </div>
+    <section class="station01-grid">
+        <aside class="station01-panel station01-left" aria-label="输入与视图控制">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">INPUT AND VIEW</span>
+                <h2>输入与视图控制</h2>
             </div>
 
-            <div class="kg-metric-grid" aria-label="当前视图统计">
-                <div class="kg-metric-card kg-metric-card--blue">
-                    <span class="kg-metric-icon" aria-hidden="true"></span>
-                    <strong id="kgMetricNodes">0</strong>
-                    <span>节点数</span>
+            <section class="station01-block">
+                <div class="station01-block-title">1. 上传图片</div>
+                <label class="station01-drop-zone" id="dropZone" for="imageInput">
+                    <input id="imageInput" type="file" accept="image/png,image/jpeg,image/bmp">
+                    <span class="station01-upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h2v-2H5a1 1 0 0 1 0-2h4V8a3 3 0 0 1 6 0v3h4a1 1 0 0 1 0 2h-2v2h2a3 3 0 0 0 0-6h-2V8a5 5 0 0 0-5-5Z"></path>
+                            <path d="M11 11h2v7h-2z"></path>
+                            <path d="m8.5 13.5 3.5-3.5 3.5 3.5-1.4 1.4-2.1-2.1-2.1 2.1z"></path>
+                        </svg>
+                    </span>
+                    <strong>点击或拖拽图片到此处</strong>
+                    <small>支持 JPG / PNG / BMP，最大 10MB</small>
+                </label>
+                <div class="station01-samples" id="sampleStrip" aria-label="示例图"></div>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">2. 缩放</div>
+                <div class="pz-zoom-row">
+                    <button id="zoomOutButton" class="station01-button station01-button-ghost" type="button" aria-label="缩小">−</button>
+                    <input id="zoomSlider" class="pz-zoom-slider" type="range" min="0.25" max="64" step="0.05" value="1" aria-label="缩放倍率">
+                    <button id="zoomInButton" class="station01-button station01-button-ghost" type="button" aria-label="放大">＋</button>
                 </div>
-                <div class="kg-metric-card kg-metric-card--green">
-                    <span class="kg-metric-icon" aria-hidden="true"></span>
-                    <strong id="kgMetricLinks">0</strong>
-                    <span>关系数</span>
+                <div class="pz-zoom-readout"><span>当前倍率</span><strong id="zoomValue">1.00x</strong></div>
+                <div class="pz-zoom-actions">
+                    <button id="fitButton" class="station01-button station01-button-ghost" type="button">适应窗口</button>
+                    <button id="resetButton" class="station01-button station01-button-primary" type="button">1:1 原始尺寸</button>
                 </div>
-                <div class="kg-metric-card kg-metric-card--orange">
-                    <span class="kg-metric-icon" aria-hidden="true"></span>
-                    <strong id="kgMetricDrillable">0</strong>
-                    <span>可展开</span>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">3. 视图选项</div>
+                <label class="pz-switch-row">
+                    <input id="gridToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素网格</span>
+                    <em>≥ 8x 自动显示</em>
+                </label>
+                <label class="pz-switch-row">
+                    <input id="highlightToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素高亮</span>
+                    <em>描边当前像素格</em>
+                </label>
+                <label class="pz-switch-row">
+                    <input id="labelToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素值叠加</span>
+                    <em>≥ 24x 显示数值</em>
+                </label>
+                <div class="pz-mode-row">
+                    <span class="pz-mode-label">颜色模式</span>
+                    <select id="colorMode" class="pz-mode-select" aria-label="颜色模式">
+                        <option value="rgb">RGB</option>
+                        <option value="cmyk">CMYK</option>
+                        <option value="hex">HEX</option>
+                        <option value="gray">Grayscale</option>
+                        <option value="hsv">HSV</option>
+                    </select>
                 </div>
-                <div class="kg-metric-card kg-metric-card--purple">
-                    <span class="kg-metric-icon" aria-hidden="true"></span>
-                    <strong id="kgMetricEnterable">0</strong>
-                    <span>可进入模块</span>
+            </section>
+
+            <section class="station01-tip">
+                <p>页面打开后自动加载示例图。滚轮以鼠标为锚点缩放，拖拽平移，双击复位到适应窗口。</p>
+            </section>
+        </aside>
+
+        <main class="station01-panel station01-center" aria-label="像素级缩放舞台">
+            <div class="station01-panel-head station01-panel-head-inline">
+                <div>
+                    <span class="station01-section-label">PIXEL STAGE</span>
+                    <h2>像素级缩放舞台</h2>
                 </div>
+                <div id="messageBar" class="station01-message" hidden>正在加载示例图...</div>
             </div>
 
-            <div class="kg-section-title">属性信息</div>
-            <dl class="kg-attribute-list">
-                <div>
-                    <dt>类型</dt>
-                    <dd id="kgInfoType">当前视图</dd>
-                </div>
-                <div>
-                    <dt>状态</dt>
-                    <dd id="kgInfoStatus">-</dd>
-                </div>
-                <div>
-                    <dt>分类</dt>
-                    <dd id="kgInfoCategory">-</dd>
-                </div>
-                <div>
-                    <dt>视图 ID</dt>
-                    <dd id="kgInfoViewId">-</dd>
-                </div>
-                <div>
-                    <dt>关联模块</dt>
-                    <dd id="kgInfoModules">-</dd>
-                </div>
-            </dl>
+            <section class="station01-status" aria-label="图像状态">
+                <div><span>分辨率</span><strong id="statusResolution">-</strong></div>
+                <div><span>像素总数</span><strong id="statusPixels">-</strong></div>
+                <div><span>缩放</span><strong id="statusZoom">-</strong></div>
+                <div><span>格式</span><strong id="statusFormat">-</strong></div>
+                <div><span>文件大小</span><strong id="statusSize">-</strong></div>
+            </section>
 
-            <div class="kg-section-title">操作</div>
-            <div class="kg-panel-actions">
-                <button class="kg-panel-button kg-panel-button--primary" id="kgDrillButton" type="button" disabled>展开节点</button>
-                <a class="kg-panel-button" id="kgEnterButton" href="#" aria-disabled="true">进入模块</a>
-                <button class="kg-panel-button" id="kgPanelFullButton" type="button">查看全量图谱</button>
+            <section class="pz-stage-wrap" aria-label="缩放画布">
+                <div id="pzStage" class="pz-stage is-empty">
+                    <canvas id="pzCanvas"></canvas>
+                    <div class="pz-empty" id="pzEmpty">
+                        <strong>PIXEL STAGE</strong>
+                        <span>上传图片后将显示像素级缩放画布</span>
+                    </div>
+                </div>
+                <div class="pz-stage-hint">滚轮缩放 · 拖拽平移 · 双击复位</div>
+            </section>
+        </main>
+
+        <aside class="station01-panel station01-right" aria-label="像素信息">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">PIXEL PROBE</span>
+                <h2>像素信息</h2>
             </div>
-            <div class="kg-panel-tip" id="kgPlanBadge">提示：点击图谱中的节点查看详细信息</div>
+
+            <section class="station01-card pz-probe-card">
+                <div class="station01-card-head">
+                    <h3>当前像素</h3>
+                    <span id="probeCoord">(-, -)</span>
+                </div>
+                <div class="pz-swatch-wrap">
+                    <i id="probeSwatch" class="pz-swatch" aria-hidden="true"></i>
+                    <div class="pz-swatch-meta">
+                        <strong id="probeHex">#-</strong>
+                        <span id="probeGray">Gray -</span>
+                    </div>
+                </div>
+                <div class="pz-channel-group">
+                    <div class="pz-channel-title">RGB</div>
+                    <div class="station01-channel-bar is-red"><span>R</span><strong id="probeR">-</strong><i id="probeRBar"></i></div>
+                    <div class="station01-channel-bar is-green"><span>G</span><strong id="probeG">-</strong><i id="probeGBar"></i></div>
+                    <div class="station01-channel-bar is-blue"><span>B</span><strong id="probeB">-</strong><i id="probeBBar"></i></div>
+                </div>
+                <div class="pz-channel-group">
+                    <div class="pz-channel-title">CMYK</div>
+                    <div class="pz-channel-bar is-cyan"><span>C</span><strong id="probeC">-</strong><i id="probeCBar"></i></div>
+                    <div class="pz-channel-bar is-magenta"><span>M</span><strong id="probeM">-</strong><i id="probeMBar"></i></div>
+                    <div class="pz-channel-bar is-yellow"><span>Y</span><strong id="probeY">-</strong><i id="probeYBar"></i></div>
+                    <div class="pz-channel-bar is-key"><span>K</span><strong id="probeK">-</strong><i id="probeKBar"></i></div>
+                </div>
+            </section>
+
+            <section class="station01-card">
+                <div class="station01-card-head">
+                    <h3>图像信息</h3>
+                </div>
+                <dl class="station01-info-list">
+                    <div><dt>文件名</dt><dd id="infoName">-</dd></div>
+                    <div><dt>尺寸</dt><dd id="infoResolution">-</dd></div>
+                    <div><dt>像素总数</dt><dd id="infoPixels">-</dd></div>
+                    <div><dt>格式</dt><dd id="infoFormat">-</dd></div>
+                    <div><dt>文件大小</dt><dd id="infoSize">-</dd></div>
+                </dl>
+            </section>
+
+            <section class="station01-card pz-formula-card">
+                <div class="station01-card-head">
+                    <h3>CMYK 换算</h3>
+                </div>
+                <div class="pz-formula">K = 1 − max(R′, G′, B′)</div>
+                <div class="pz-formula">C = (1 − R′ − K) / (1 − K)</div>
+                <div class="pz-formula">M = (1 − G′ − K) / (1 − K)</div>
+                <div class="pz-formula">Y = (1 − B′ − K) / (1 − K)</div>
+                <p class="pz-formula-note">R′、G′、B′ 为归一化到 0-1 的通道值；K = 1 时 C = M = Y = 0。</p>
+            </section>
         </aside>
     </section>
-</div>
+
+    <section class="station01-stepper" aria-label="实验流程">
+        <div class="is-active"><strong>1. 导入图像</strong><span>上传或选择示例</span></div>
+        <div><strong>2. 连续放大</strong><span>滚轮或滑块</span></div>
+        <div><strong>3. 观察像素方块</strong><span>网格与高亮</span></div>
+        <div><strong>4. 读取像素值</strong><span>RGB · CMYK</span></div>
+    </section>
+</section>
 
         </div>
     </main>
@@ -299,8 +360,7 @@
     <script src="/CVClass/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
     <script src="/CVClass/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
     
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="/CVClass/static/js/pages/knowledge_graph.js?v=20260621-kg-link-visibility1"></script>
+<script src="/CVClass/static/js/pages/pixel_zoom.js"></script>
 
 </body>
 </html>

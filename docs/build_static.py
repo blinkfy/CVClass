@@ -303,6 +303,9 @@ def export_algorithm_document() -> None:
 def disable_multiview_backend_fallback() -> None:
     path = OUTPUT_ROOT / "static" / "js" / "geometry_vision" / "multiview_reconstruction.js"
     text = path.read_text(encoding="utf-8")
+    # 若源码中已不存在 Flask 后端回调，直接跳过
+    if "fetchLiveRealData" not in text and "/api/multiview-reconstruction/real-run" not in text:
+        return
     fn_start = text.find("    function fetchLiveRealData() {")
     fn_end = text.find("    function ensureRealData(render) {", fn_start)
     if fn_start < 0 or fn_end < 0:

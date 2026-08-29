@@ -1,7 +1,7 @@
 const MODEL_ID = "sdxs-512-dreamshaper";
 const MODEL_REVISION = "sdxs-512-dreamshaper-20260711-browser-clip1";
 const VENDOR_MODULE_PATH = "/static/vendor/web-txt2img/index.js?v=20260711-browser-clip1";
-const MODEL_BASE_PATH = "https://huggingface.co/blinkfy/CVClass-SDXS-ONNX/resolve/1fd4b780fb0ead12bbf73f60b90ab2f5d03b53a5";
+const MODEL_BASE_PATH = "/static/assets/data/generative_multimodal/diffusion/sdxs-512-dreamshaper";
 
 let runtimeModulePromise = null;
 let client = null;
@@ -31,7 +31,6 @@ function normalizeResult(result, fallbackMessage) {
 }
 
 function appUrl(path) {
-    if (/^https?:\/\//i.test(path)) return new URL(path).href;
     const relativePath = typeof window.cvclassUrl === "function"
         ? window.cvclassUrl(path)
         : path;

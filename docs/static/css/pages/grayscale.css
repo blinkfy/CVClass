@@ -266,11 +266,12 @@ body {
 
 .station01-sample {
     display: grid;
-    gap: 4px;
+    gap: 0;
     min-width: 0;
-    padding: 6px;
+    padding: 0;
     border: 1px solid #dce9fb;
     border-radius: 14px;
+    overflow: hidden;
     color: var(--s01-ink);
     text-align: left;
     cursor: pointer;
@@ -296,7 +297,7 @@ body {
     width: 100%;
     aspect-ratio: 1 / 1;
     object-fit: cover;
-    border-radius: 10px;
+    border-radius: 0;
     transition: var(--s01-transition);
 }
 

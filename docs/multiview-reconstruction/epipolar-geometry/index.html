@@ -41,6 +41,10 @@
 
             <div class="sidebar-category">基础视觉</div>
             <a class="" href="/CVClass/grayscale">图像基础</a>
+            <div class="sidebar-subnav" aria-label="图像基础子页面">
+                <a class="" href="/CVClass/grayscale">图像处理实验</a>
+                <a class="" href="/CVClass/pixel-zoom">像素放大镜</a>
+            </div>
             <a class="" href="/CVClass/convolution">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
                 <a class="" href="/CVClass/convolution">卷积可视化</a>
@@ -179,7 +183,7 @@
         </div>
         <div class="station-hero-actions multiview-hero-actions">
             <span class="multiview-state">预设样例 · 可解释演示</span>
-            <span class="multiview-state multiview-state--real">真实图片 · OpenCV 双图演示</span>
+            <span class="multiview-state multiview-state--real">真实图片 · 双图演示</span>
             <span class="multiview-state">机制拆解 · 多视图几何</span>
             <span class="multiview-state">公式推导 · \( \mathbf{F} \) / \( \mathbf{E} \) / Triangulation</span>
             <strong class="station-badge">\( \mathbf{F} \) · \( \mathbf{E} \) · \( \mathbf{R},\mathbf{t} \) · \( \mathbf{X} \)</strong>
@@ -217,7 +221,7 @@
             <span>算法模式</span>
             <select data-mv-epipolar-input="algorithmMode">
                 <option value="synthetic" selected>教学合成 / Synthetic Demo</option>
-                <option value="real">真实样例 / Real OpenCV</option>
+                <option value="real">真实样例</option>
             </select>
         </label>
         <label class="vision-field">
@@ -361,6 +365,7 @@
     <script src="/CVClass/static/js/core/base.js?v=20260628-quest-learned-maps"></script>
     <script src="/CVClass/static/js/core/ai_assistant.js?v=20260628-screenshot-fallback"></script>
     
+<div id="featurePage" style="display:none" data-compute-mode="frontend"></div>
 <script>
 window.MathJax = {
     tex: {
@@ -376,7 +381,10 @@ window.MathJax = {
 };
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<script src="/CVClass/static/js/geometry_vision/multiview_reconstruction.js?v=20260628-mv27"></script>
+<script src="/CVClass/static/js/feature/feature_common.js?v=20260724-mvfe"></script>
+<script src="/CVClass/static/js/feature/feature_compute_frontend.js?v=20260724-mvfe"></script>
+<script src="/CVClass/static/js/geometry_vision/multiview_real_frontend.js?v=20260724-mvfe"></script>
+<script src="/CVClass/static/js/geometry_vision/multiview_reconstruction.js?v=20260724-mvfe"></script>
 
 </body>
 </html>
