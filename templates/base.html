@@ -63,7 +63,11 @@
             <a class="{{ 'active' if active_page == 'principles' else '' }}" href="{{ url_for('algorithm_principles_page') }}">算法原理文档</a>
 
             <div class="sidebar-category">基础视觉</div>
-            <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像基础</a>
+            <a class="{{ 'active' if active_page in ['grayscale', 'pixel_zoom'] else '' }}" href="{{ url_for('grayscale_page') }}">图像基础</a>
+            <div class="sidebar-subnav" aria-label="图像基础子页面">
+                <a class="{{ 'active' if active_page == 'grayscale' else '' }}" href="{{ url_for('grayscale_page') }}">图像处理实验</a>
+                <a class="{{ 'active' if active_page == 'pixel_zoom' else '' }}" href="{{ url_for('pixel_zoom_page') }}">像素放大镜</a>
+            </div>
             <a class="{{ 'active' if active_page == 'convolution' else '' }}" href="{{ url_for('convolution_page') }}">卷积与滤波</a>
             <div class="sidebar-subnav" aria-label="卷积与滤波子页面">
                 <a class="{{ 'active' if active_page == 'convolution' and active_sub_page|default('') == 'visual' else '' }}" href="{{ url_for('convolution_page') }}">卷积可视化</a>

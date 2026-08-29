@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Station 01 · Pixel Zoom Inspector{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/grayscale.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/pixel_zoom.css') }}">
+{% endblock %}
+{% block content %}
+<section class="station01-page">
+    <header class="station01-hero">
+        <div class="station01-hero-copy">
+            <p class="station01-eyebrow">STATION 01 · PIXEL ZOOM INSPECTOR</p>
+            <h1>像素放大镜：放大到像素级</h1>
+            <p>导入图片后连续放大，关闭插值让每个像素变成一个方块；移动鼠标读取该像素的 RGB 与 CMYK 数值。</p>
+        </div>
+        <strong class="station01-badge">ZOOM · GRID · RGB · CMYK</strong>
+    </header>
+
+    <section class="station01-grid">
+        <aside class="station01-panel station01-left" aria-label="输入与视图控制">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">INPUT AND VIEW</span>
+                <h2>输入与视图控制</h2>
+            </div>
+
+            <section class="station01-block">
+                <div class="station01-block-title">1. 上传图片</div>
+                <label class="station01-drop-zone" id="dropZone" for="imageInput">
+                    <input id="imageInput" type="file" accept="image/png,image/jpeg,image/bmp">
+                    <span class="station01-upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 3a5 5 0 0 0-5 5v1H5a3 3 0 0 0 0 6h2v-2H5a1 1 0 0 1 0-2h4V8a3 3 0 0 1 6 0v3h4a1 1 0 0 1 0 2h-2v2h2a3 3 0 0 0 0-6h-2V8a5 5 0 0 0-5-5Z"></path>
+                            <path d="M11 11h2v7h-2z"></path>
+                            <path d="m8.5 13.5 3.5-3.5 3.5 3.5-1.4 1.4-2.1-2.1-2.1 2.1z"></path>
+                        </svg>
+                    </span>
+                    <strong>点击或拖拽图片到此处</strong>
+                    <small>支持 JPG / PNG / BMP，最大 10MB</small>
+                </label>
+                <div class="station01-samples" id="sampleStrip" aria-label="示例图"></div>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">2. 缩放</div>
+                <div class="pz-zoom-row">
+                    <button id="zoomOutButton" class="station01-button station01-button-ghost" type="button" aria-label="缩小">−</button>
+                    <input id="zoomSlider" class="pz-zoom-slider" type="range" min="0.25" max="64" step="0.05" value="1" aria-label="缩放倍率">
+                    <button id="zoomInButton" class="station01-button station01-button-ghost" type="button" aria-label="放大">＋</button>
+                </div>
+                <div class="pz-zoom-readout"><span>当前倍率</span><strong id="zoomValue">1.00x</strong></div>
+                <div class="pz-zoom-actions">
+                    <button id="fitButton" class="station01-button station01-button-ghost" type="button">适应窗口</button>
+                    <button id="resetButton" class="station01-button station01-button-primary" type="button">1:1 原始尺寸</button>
+                </div>
+            </section>
+
+            <section class="station01-block">
+                <div class="station01-block-title">3. 视图选项</div>
+                <label class="pz-switch-row">
+                    <input id="gridToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素网格</span>
+                    <em>≥ 8x 自动显示</em>
+                </label>
+                <label class="pz-switch-row">
+                    <input id="highlightToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素高亮</span>
+                    <em>描边当前像素格</em>
+                </label>
+                <label class="pz-switch-row">
+                    <input id="labelToggle" type="checkbox" checked>
+                    <i aria-hidden="true"></i>
+                    <span>像素值叠加</span>
+                    <em>≥ 24x 显示数值</em>
+                </label>
+                <div class="pz-mode-row">
+                    <span class="pz-mode-label">颜色模式</span>
+                    <select id="colorMode" class="pz-mode-select" aria-label="颜色模式">
+                        <option value="rgb">RGB</option>
+                        <option value="cmyk">CMYK</option>
+                        <option value="hex">HEX</option>
+                        <option value="gray">Grayscale</option>
+                        <option value="hsv">HSV</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="station01-tip">
+                <p>页面打开后自动加载示例图。滚轮以鼠标为锚点缩放，拖拽平移，双击复位到适应窗口。</p>
+            </section>
+        </aside>
+
+        <main class="station01-panel station01-center" aria-label="像素级缩放舞台">
+            <div class="station01-panel-head station01-panel-head-inline">
+                <div>
+                    <span class="station01-section-label">PIXEL STAGE</span>
+                    <h2>像素级缩放舞台</h2>
+                </div>
+                <div id="messageBar" class="station01-message" hidden>正在加载示例图...</div>
+            </div>
+
+            <section class="station01-status" aria-label="图像状态">
+                <div><span>分辨率</span><strong id="statusResolution">-</strong></div>
+                <div><span>像素总数</span><strong id="statusPixels">-</strong></div>
+                <div><span>缩放</span><strong id="statusZoom">-</strong></div>
+                <div><span>格式</span><strong id="statusFormat">-</strong></div>
+                <div><span>文件大小</span><strong id="statusSize">-</strong></div>
+            </section>
+
+            <section class="pz-stage-wrap" aria-label="缩放画布">
+                <div id="pzStage" class="pz-stage is-empty">
+                    <canvas id="pzCanvas"></canvas>
+                    <div class="pz-empty" id="pzEmpty">
+                        <strong>PIXEL STAGE</strong>
+                        <span>上传图片后将显示像素级缩放画布</span>
+                    </div>
+                </div>
+                <div class="pz-stage-hint">滚轮缩放 · 拖拽平移 · 双击复位</div>
+            </section>
+        </main>
+
+        <aside class="station01-panel station01-right" aria-label="像素信息">
+            <div class="station01-panel-head">
+                <span class="station01-section-label">PIXEL PROBE</span>
+                <h2>像素信息</h2>
+            </div>
+
+            <section class="station01-card pz-probe-card">
+                <div class="station01-card-head">
+                    <h3>当前像素</h3>
+                    <span id="probeCoord">(-, -)</span>
+                </div>
+                <div class="pz-swatch-wrap">
+                    <i id="probeSwatch" class="pz-swatch" aria-hidden="true"></i>
+                    <div class="pz-swatch-meta">
+                        <strong id="probeHex">#-</strong>
+                        <span id="probeGray">Gray -</span>
+                    </div>
+                </div>
+                <div class="pz-channel-group">
+                    <div class="pz-channel-title">RGB</div>
+                    <div class="station01-channel-bar is-red"><span>R</span><strong id="probeR">-</strong><i id="probeRBar"></i></div>
+                    <div class="station01-channel-bar is-green"><span>G</span><strong id="probeG">-</strong><i id="probeGBar"></i></div>
+                    <div class="station01-channel-bar is-blue"><span>B</span><strong id="probeB">-</strong><i id="probeBBar"></i></div>
+                </div>
+                <div class="pz-channel-group">
+                    <div class="pz-channel-title">CMYK</div>
+                    <div class="pz-channel-bar is-cyan"><span>C</span><strong id="probeC">-</strong><i id="probeCBar"></i></div>
+                    <div class="pz-channel-bar is-magenta"><span>M</span><strong id="probeM">-</strong><i id="probeMBar"></i></div>
+                    <div class="pz-channel-bar is-yellow"><span>Y</span><strong id="probeY">-</strong><i id="probeYBar"></i></div>
+                    <div class="pz-channel-bar is-key"><span>K</span><strong id="probeK">-</strong><i id="probeKBar"></i></div>
+                </div>
+            </section>
+
+            <section class="station01-card">
+                <div class="station01-card-head">
+                    <h3>图像信息</h3>
+                </div>
+                <dl class="station01-info-list">
+                    <div><dt>文件名</dt><dd id="infoName">-</dd></div>
+                    <div><dt>尺寸</dt><dd id="infoResolution">-</dd></div>
+                    <div><dt>像素总数</dt><dd id="infoPixels">-</dd></div>
+                    <div><dt>格式</dt><dd id="infoFormat">-</dd></div>
+                    <div><dt>文件大小</dt><dd id="infoSize">-</dd></div>
+                </dl>
+            </section>
+
+            <section class="station01-card pz-formula-card">
+                <div class="station01-card-head">
+                    <h3>CMYK 换算</h3>
+                </div>
+                <div class="pz-formula">K = 1 − max(R′, G′, B′)</div>
+                <div class="pz-formula">C = (1 − R′ − K) / (1 − K)</div>
+                <div class="pz-formula">M = (1 − G′ − K) / (1 − K)</div>
+                <div class="pz-formula">Y = (1 − B′ − K) / (1 − K)</div>
+                <p class="pz-formula-note">R′、G′、B′ 为归一化到 0-1 的通道值；K = 1 时 C = M = Y = 0。</p>
+            </section>
+        </aside>
+    </section>
+
+    <section class="station01-stepper" aria-label="实验流程">
+        <div class="is-active"><strong>1. 导入图像</strong><span>上传或选择示例</span></div>
+        <div><strong>2. 连续放大</strong><span>滚轮或滑块</span></div>
+        <div><strong>3. 观察像素方块</strong><span>网格与高亮</span></div>
+        <div><strong>4. 读取像素值</strong><span>RGB · CMYK</span></div>
+    </section>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/pages/pixel_zoom.js') }}"></script>
+{% endblock %}

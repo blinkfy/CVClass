@@ -1,0 +1,428 @@
+/* pixel_zoom.css — 像素放大镜页面专属样式（station01-* 共享样式来自 grayscale.css） */
+
+/* ---------- 左栏：缩放控制 ---------- */
+
+.pz-zoom-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    gap: 8px;
+    align-items: center;
+}
+
+.pz-zoom-row .station01-button {
+    justify-content: center;
+    min-height: 34px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.pz-zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #dbeafe, #bfdbfe);
+    outline: none;
+    cursor: pointer;
+}
+
+.pz-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: var(--s01-blue);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    cursor: grab;
+}
+
+.pz-zoom-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: var(--s01-blue);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    cursor: grab;
+}
+
+.pz-zoom-readout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px 0;
+}
+
+.pz-zoom-readout span {
+    color: var(--s01-muted);
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.pz-zoom-readout strong {
+    color: var(--s01-blue-dark);
+    font-size: 14px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.pz-zoom-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* ---------- 左栏：开关行 ---------- */
+
+.pz-switch-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #dce8fa;
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: var(--s01-transition);
+}
+
+.pz-switch-row:hover {
+    border-color: #b7cdf2;
+}
+
+.pz-switch-row input {
+    display: none;
+}
+
+.pz-switch-row i {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border-radius: 999px;
+    background: #dbe7f8;
+    transition: var(--s01-transition);
+}
+
+.pz-switch-row i::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+    transition: var(--s01-transition);
+}
+
+.pz-switch-row input:checked + i {
+    background: var(--s01-blue);
+}
+
+.pz-switch-row input:checked + i::after {
+    transform: translateX(16px);
+}
+
+.pz-switch-row span {
+    color: var(--s01-ink);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.pz-switch-row em {
+    color: var(--s01-muted);
+    font-size: 11px;
+    font-style: normal;
+    text-align: right;
+}
+
+/* ---------- 左栏：颜色模式选择 ---------- */
+
+.pz-mode-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid #dce8fa;
+    border-radius: 12px;
+    background: #ffffff;
+    transition: var(--s01-transition);
+}
+
+.pz-mode-row:hover {
+    border-color: #b7cdf2;
+}
+
+.pz-mode-label {
+    color: var(--s01-ink);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.pz-mode-select {
+    width: 100%;
+    min-height: 32px;
+    padding: 4px 10px;
+    border: 1px solid #cfdef5;
+    border-radius: 9px;
+    color: var(--s01-blue-dark);
+    font-size: 12px;
+    font-weight: 800;
+    background: #f8fbff;
+    outline: none;
+    cursor: pointer;
+    transition: var(--s01-transition);
+}
+
+.pz-mode-select:hover,
+.pz-mode-select:focus {
+    border-color: var(--s01-blue);
+    background: #ffffff;
+}
+
+/* ---------- 中栏：画布舞台 ---------- */
+
+.pz-stage-wrap {
+    display: grid;
+    gap: 8px;
+}
+
+.pz-stage {
+    position: relative;
+    height: clamp(420px, 56vh, 640px);
+    border: 1px solid rgba(219, 231, 248, 0.9);
+    border-radius: 18px;
+    background:
+        linear-gradient(45deg, #f1f6fd 25%, transparent 25%, transparent 75%, #f1f6fd 75%),
+        linear-gradient(45deg, #f1f6fd 25%, #fafcff 25%, #fafcff 75%, #f1f6fd 75%);
+    background-size: 22px 22px;
+    background-position: 0 0, 11px 11px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.pz-stage canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+.pz-stage canvas.is-panning {
+    cursor: grabbing;
+}
+
+.pz-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 6px;
+    text-align: center;
+    color: var(--s01-muted);
+    background: rgba(248, 251, 255, 0.88);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.pz-stage.is-empty .pz-empty {
+    opacity: 1;
+}
+
+.pz-stage:not(.is-empty) .pz-empty {
+    opacity: 0;
+}
+
+.pz-empty strong {
+    color: var(--s01-blue);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+}
+
+.pz-empty span {
+    font-size: 12px;
+}
+
+.pz-stage-hint {
+    color: var(--s01-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* ---------- 右栏：像素探针 ---------- */
+
+.pz-probe-card {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 14px;
+}
+
+.pz-swatch-wrap {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.pz-swatch {
+    display: block;
+    width: 64px;
+    height: 64px;
+    border: 1px solid rgba(219, 231, 248, 0.9);
+    border-radius: 14px;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    transition: background 0.12s linear;
+}
+
+.pz-swatch-meta {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pz-swatch-meta strong {
+    color: var(--s01-blue-dark);
+    font-size: 20px;
+    font-weight: 905;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.pz-swatch-meta span {
+    color: var(--s01-muted);
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.pz-channel-group {
+    display: grid;
+    gap: 6px;
+}
+
+.pz-channel-title {
+    color: var(--s01-blue);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.pz-channel-bar {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 52px;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 28px;
+    overflow: hidden;
+    padding: 6px 12px;
+    border: 1px solid rgba(219, 231, 248, 0.6);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.pz-channel-bar span,
+.pz-channel-bar strong {
+    position: relative;
+    z-index: 1;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.pz-channel-bar span {
+    color: #475569;
+}
+
+.pz-channel-bar strong {
+    text-align: right;
+    color: var(--s01-blue-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.pz-channel-bar i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    opacity: 0.18;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pz-channel-bar.is-cyan i {
+    background: linear-gradient(90deg, #06b6d4, #22d3ee);
+}
+
+.pz-channel-bar.is-magenta i {
+    background: linear-gradient(90deg, #db2777, #f472b6);
+}
+
+.pz-channel-bar.is-yellow i {
+    background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.pz-channel-bar.is-key i {
+    background: linear-gradient(90deg, #1e293b, #64748b);
+}
+
+/* ---------- 右栏：CMYK 公式卡 ---------- */
+
+.pz-formula-card {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 14px;
+}
+
+.pz-formula {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e3edfb;
+    color: var(--s01-blue-dark);
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.pz-formula-note {
+    margin: 0;
+    color: var(--s01-muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+/* ---------- 本页步骤条为 4 步 ---------- */
+
+.station01-stepper {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* ---------- 窄屏适配 ---------- */
+
+@media (max-width: 1180px) {
+    .station01-grid {
+        grid-template-columns: 260px minmax(0, 1fr) 280px;
+    }
+}
+
+@media (max-width: 960px) {
+    .station01-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pz-stage {
+        height: clamp(360px, 48vh, 520px);
+    }
+}

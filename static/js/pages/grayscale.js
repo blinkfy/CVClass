@@ -675,9 +675,8 @@
 
     function renderSamples() {
         els.sampleStrip.innerHTML = samples.map((sample) => `
-            <button class="station01-sample ${state.activeSampleId === sample.id ? "is-active" : ""}" type="button" data-sample="${sample.id}">
+            <button class="station01-sample ${state.activeSampleId === sample.id ? "is-active" : ""}" type="button" data-sample="${sample.id}" title="${sample.name}">
                 <img src="${sample.src}" alt="${sample.name}">
-                <strong>${sample.name}</strong>
             </button>
         `).join("");
     }

@@ -416,6 +416,10 @@ def register_page_routes(app, get_model_status):
     def grayscale_page():
         return render_template("pages/grayscale.html", active_page="grayscale")
 
+    @app.route("/pixel-zoom", methods=["GET"])
+    def pixel_zoom_page():
+        return render_template("pages/pixel_zoom.html", active_page="pixel_zoom")
+
     @app.route("/convolution", methods=["GET"])
     def convolution_page():
         return render_template("convolution/convolution.html", active_page="convolution", active_sub_page="visual")
